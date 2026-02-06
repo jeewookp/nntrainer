@@ -130,6 +130,9 @@ static void run_int4_gemv_test_(const uint32_t K, const uint32_t N,
   // Reference Q4_0 GEMM
   std::vector<float> ref_dst(N, 0.0f);
   float mse_q4 = 0.0f;
+
+  unsigned int run_count = 100;
+
   if (K % Q4_0 == 0 && N % 8 == 0) {
     size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
     std::vector<float> q4_output_fp32(N);
@@ -139,8 +142,18 @@ static void run_int4_gemv_test_(const uint32_t K, const uint32_t N,
                              nullptr);
     nntrainer::repack_q4_0(q4_weight_repack.data(), q4_weight.data(),
                            q4_data_size, N, K);
-    nntrainer::gemm_q4_0(1, N, K, input_fp32.data(), K, q4_weight_repack.data(),
+  
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (unsigned int i = 0; i < run_count; ++i) {
+      nntrainer::gemm_q4_0(1, N, K, input_fp32.data(), K, q4_weight_repack.data(),
                          N, q4_output_fp32.data(), N);
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    auto cpu_dt = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    std::cout << " - time : CPU = " << cpu_dt.count() / (run_count * 1.0f)
+            << " ms" << std::endl;
+
     mse_q4 = mse<float>(ref_dst.data(), q4_output_fp32.data(), N);
   }
 
@@ -163,7 +176,7 @@ static void run_int4_gemv_test_(const uint32_t K, const uint32_t N,
   }
 
   // Warmup & Calibration
-  unsigned int run_count = 5;
+  run_count = 5;
   auto t_w1 = std::chrono::high_resolution_clock::now();
   for (unsigned int i = 0; i < run_count; ++i) {
     nntrainer::gemv_int4_cl(weight_ptr, scale_ptr, input_ptr, output_ptr, K, N,
@@ -173,12 +186,14 @@ static void run_int4_gemv_test_(const uint32_t K, const uint32_t N,
   double avg_time =
     std::chrono::duration<double>(t_w2 - t_w1).count() / run_count;
 
-  if (avg_time > 0) {
-    run_count = std::max(1u, (unsigned int)(0.5 / avg_time));
-  } else {
-    run_count = 100;
-  }
+  // if (avg_time > 0) {
+  //   run_count = std::max(1u, (unsigned int)(0.5 / avg_time));
+  // } else {
+  //   run_count = 100;
+  // }
 
+  run_count = 100;
+  
   auto t3 = std::chrono::high_resolution_clock::now();
   for (unsigned int i = 0; i < run_count; ++i) {
     nntrainer::gemv_int4_cl(weight_ptr, scale_ptr, input_ptr, output_ptr, K, N,
@@ -442,6 +457,8 @@ static void run_int4_gemm_test_(const uint32_t M, const uint32_t K,
   nntrainer::sgemm(0, false, true, M, N, K, 1.F, input.data(), K,
                    weight_fp32.data(), K, 0.F, ref_dst.data(), N);
 
+  unsigned int run_count = 100;
+
   // Reference Q4_0 GEMM
   float mse_q4 = 0.0f;
   if (K % Q4_0 == 0 && N % 8 == 0) {
@@ -453,8 +470,19 @@ static void run_int4_gemm_test_(const uint32_t M, const uint32_t K,
                              nullptr);
     nntrainer::repack_q4_0(q4_weight_repack.data(), q4_weight.data(),
                            q4_data_size, N, K);
-    nntrainer::gemm_q4_0(M, N, K, input.data(), K, q4_weight_repack.data(), N,
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (unsigned int i = 0; i < run_count; ++i) {
+      nntrainer::gemm_q4_0(M, N, K, input.data(), K, q4_weight_repack.data(), N,
                          q4_output_fp32.data(), N);
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto cpu_dt =
+      std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+    std::cout << " - time : CPU = " << cpu_dt / (run_count * 1.0f) << " ms"
+            << std::endl;
+
     mse_q4 = mse<float>(ref_dst.data(), q4_output_fp32.data(), M * N);
   }
 
@@ -493,7 +521,7 @@ static void run_int4_gemm_test_(const uint32_t M, const uint32_t K,
   blas_cc->command_queue_inst_.enqueueSVMUnmap(weight_ptr);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(scale_ptr);
   // Warmup & Calibration
-  unsigned int run_count = 5;
+  run_count = 5;
   auto t_w1 = std::chrono::high_resolution_clock::now();
   for (unsigned int i = 0; i < run_count; ++i) {
     nntrainer::gemm_int4_cl(input_ptr, weight_ptr, scale_ptr, output_ptr, M,
@@ -508,6 +536,8 @@ static void run_int4_gemm_test_(const uint32_t M, const uint32_t K,
   } else {
     run_count = 100;
   }
+
+  run_count = 100;
 
   // GPU INT4 GEMM
   auto t3 = std::chrono::high_resolution_clock::now();
