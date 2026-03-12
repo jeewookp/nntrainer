@@ -11,6 +11,7 @@
 
 #include <tensor.h>
 #include <tensor_base.h>
+#include <iostream>
 
 namespace nntrainer {
 
@@ -63,12 +64,12 @@ void TensorBase::read(std::ifstream &file, size_t start_offset,
   if (start_offset == std::numeric_limits<size_t>::max()) {
     start_offset = file_offset;
   }
+  
   std::streamsize sz = static_cast<std::streamsize>(bytes());
 
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
     << "read size: " << bytes()
     << " is too big. It cannot be represented by std::streamsize";
-
   checkedRead(file, (char *)getData(), sz, "[Tensor::read] operation failed",
               start_offset, read_from_offset);
   putData();

@@ -192,4 +192,4 @@ void nntr_kai_gemm_qsi8d32p_qsi4c32p_olp(size_t m, size_t n, size_t k,
 void nntr_kai_repack_osv32_to_qsi4c32p(
   size_t n, size_t k, const uint8_t *osv32_weights,
   const uint16_t *osv32_scales, void *qsi4c32p_packed, size_t &packed_size,
-  uint32_t kernel_idx = 3, bool transB = true);
+  uint32_t kernel_idx, bool transB);

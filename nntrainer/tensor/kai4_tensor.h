@@ -43,7 +43,7 @@ public:
    */
   Kai4Tensor(const TensorDim &d, bool alloc_now,
               Initializer init = Initializer::NONE, std::string name = "",
-              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE, unsigned int idx_variant = 4);
+              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE, unsigned int idx_variant = 5);
 
   /**
    * @brief Construct a new Kai4Tensor object
@@ -256,7 +256,7 @@ private:
   
   // Kernel variant index (default to variant 6: 8x8x32 GEMM dotprod for wider hardware support)
   // dotprod (ARMv8.2-A) is more widely available than i8mm (ARMv8.6-A)
-  uint32_t _idx_variant = 4;
+  uint32_t _idx_variant;
 
   // Trans or Not
   // Set to True because kxn format is not supported currently (Date : 2026/01/19)

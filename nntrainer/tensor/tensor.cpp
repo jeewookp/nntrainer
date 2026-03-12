@@ -23,6 +23,8 @@
 #include <tensor.h>
 #include <uint4_tensor.h>
 #include <uint_tensor.h>
+#include <iostream>
+
 
 #ifdef ENABLE_FP16
 #include <half_tensor.h>
@@ -1437,7 +1439,7 @@ void Tensor::read(std::ifstream &file, size_t start_offset,
     fd = file_fd;
     return;
   }
-
+  //std::cout << start_offset << std::endl;
   itensor_->read(file, start_offset, read_from_offset);
 }
 

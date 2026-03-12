@@ -151,9 +151,9 @@ static void test_q40_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   size_t num_blocks = (N * K) / block_size;
   size_t q4_0_size = num_blocks * sizeof(block_q4_0);
   std::vector<uint8_t> q4_0_data(q4_0_size);
-  nntrainer::quantize_q4_0(weight_fp32.data(), (void *)q4_0_data.data(), K, N, nullptr);
+  nntrainer::quantize_q4_0(weight_fp32.data(), (void *)q4_0_data.data(), N, K, nullptr);
   std::vector<uint8_t> q4_0_repacked(q4_0_size);
-  nntrainer::repack_q4_0(q4_0_data.data(), q4_0_repacked.data(), q4_0_size, K, N);
+  nntrainer::repack_q4_0(q4_0_data.data(), q4_0_repacked.data(), q4_0_size, N, K);
   
   // Allocate and set Q4_0 tensor data
   q4_0_weight_tensor.allocate();
@@ -252,7 +252,7 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
 static void test_q40_vs_kai(unsigned int M, unsigned int K, unsigned int N) {
 
-  const int T = 30; // T iterations
+  const int T = 50; // T iterations
   
   std::string uname[8] = {"matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod", "matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod", "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod"};
   // 1. Generate random FP32 data 
@@ -315,73 +315,70 @@ static void test_q40_vs_kai(unsigned int M, unsigned int K, unsigned int N) {
 
     std::vector<uint8_t> kai_packed_data(packed_size);
 
+    // Copy i-th acvitvation chunk
+    std::memcpy(activation_tensor.getData<float>(), activation_fp32.data(), M * K * sizeof(float));
+    // 4. Create Kai weight tensor using QINT4 datatype (creates Kai4Tensor on ARM64)
+    
+    nntrainer::nntr_quant_qs4cx_f32(N, K, weight_fp32.data(), kai_quant_data.data(), kai_quant_scale.data());
+
+    nntr_kai_qsi4cxp_qs4cxs1s0_rhs_pack(N, K,
+                                        kai_packed_data.data(),
+                                        kai_quant_data.data(),
+                                        kai_quant_scale.data(),
+                                        idx_variant, transB);                                        
+
+    // Allocate and set Kai tensor data with packed weights
+
     
     
-    for (unsigned int i = 0; i < T; i ++){
+    std::memcpy(kai_weight_tensor.getData(), kai_packed_data.data(), packed_size);
+    
+   
       // i-th iteraiton
       
-      // Copy i-th acvitvation chunk
-      std::memcpy(activation_tensor.getData<float>(), activation_fp32.data() + i * M * K, M * K * sizeof(float));
-      // 4. Create Kai weight tensor using QINT4 datatype (creates Kai4Tensor on ARM64)
       
-      nntrainer::nntr_quant_qs4cx_f32(N, K, weight_fp32.data() + i * N * K, kai_quant_data.data(), kai_quant_scale.data());
-
-      nntr_kai_qsi4cxp_qs4cxs1s0_rhs_pack(N, K,
-                                          kai_packed_data.data(),
-                                          kai_quant_data.data(),
-                                          kai_quant_scale.data(),
-                                          idx_variant, transB);                                        
-
-      // Allocate and set Kai tensor data with packed weights
-
-      
-      
-      std::memcpy(kai_weight_tensor.getData(), kai_packed_data.data(), packed_size);
       
       // 4. Run through Tensor::dot() API - goes through FloatTensor::dot() -> dotQInteger()
-      auto t0 = high_resolution_clock::now();
-      activation_tensor.dot(kai_weight_tensor, kai_output_tensor, false, false, 0.0f);
-      auto t1 = high_resolution_clock::now(); 
-      
-      if (i == 0){
-        execution_time = duration_cast<microseconds>(t1 - t0);
-      } else {
-        execution_time += duration_cast<microseconds>(t1 - t0);
-      }
-
-      if (i == T - 1){
-        std::cout << "QINT4 kernel " << uname[j] << " : " << execution_time.count()/T << " ms " << std::endl;
-      }
-    }
-  }
-
-  for (unsigned int i = 0; i < T; i ++){
-    
-    // Quantize using low-level API (since Tensor::copyData doesn't support QINT4)
-    std::memcpy(activation_tensor.getData<float>(), activation_fp32.data() + i * M * K, M * K * sizeof(float));
-
-    nntrainer::quantize_q4_0(weight_fp32.data() + i * N * K, (void *)q4_0_data.data(), K, N, nullptr);
-    nntrainer::repack_q4_0(q4_0_data.data(), q4_0_repacked.data(), q4_0_size, K, N);
-    
-    
-    std::memcpy(q4_0_weight_tensor.getData(), q4_0_repacked.data(), q4_0_size);
-    
-    
-    
     auto t0 = high_resolution_clock::now();
-    activation_tensor.dot(q4_0_weight_tensor, q4_0_output_tensor, false, false, 0.0f);
+    for (unsigned int i = 0; i < T; i ++){
+      activation_tensor.dot(kai_weight_tensor, kai_output_tensor, false, false, 0.0f);
+    }
     auto t1 = high_resolution_clock::now(); 
 
-    if (i == 0){
-        execution_time = duration_cast<microseconds>(t1 - t0);
-    } else {
-        execution_time += duration_cast<microseconds>(t1 - t0);
-    }
-
-    if (i == T - 1){
-      std::cout << "Q40 kernel : " << execution_time.count()/T << " ms " << std::endl;
-    }
+    execution_time = duration_cast<microseconds>(t1 - t0);
+      
+    std::cout << "QINT4 kernel " << uname[j] << " : " << execution_time.count()/T << " ms " << std::endl;
+      
+    
   }
+
+  // Quantize using low-level API (since Tensor::copyData doesn't support QINT4)
+  std::memcpy(activation_tensor.getData<float>(), activation_fp32.data(), M * K * sizeof(float));
+
+  nntrainer::quantize_q4_0(weight_fp32.data(), (void *)q4_0_data.data(), K, N, nullptr);
+  nntrainer::repack_q4_0(q4_0_data.data(), q4_0_repacked.data(), q4_0_size, K, N);
+  
+  
+  std::memcpy(q4_0_weight_tensor.getData(), q4_0_repacked.data(), q4_0_size);
+
+ 
+    
+    
+    
+    
+    
+  auto t0 = high_resolution_clock::now();
+  for (unsigned int i = 0; i < T; i ++){
+    activation_tensor.dot(q4_0_weight_tensor, q4_0_output_tensor, false, false, 0.0f);
+  }
+  auto t1 = high_resolution_clock::now(); 
+
+  execution_time = duration_cast<microseconds>(t1 - t0);
+
+  
+  std::cout << "Q40 kernel : " << execution_time.count()/T << " ms " << std::endl;
+    
+  
  
 }
 
@@ -389,215 +386,443 @@ static void test_q40_vs_kai(unsigned int M, unsigned int K, unsigned int N) {
 
 
 #if defined(ENABLE_FP16) && defined(__aarch64__)
-TEST(Q40_acc, GEMM_8192x2560x4096) {
-  test_q40_tensor_dot_api(8192, 2560, 4096);
+TEST(Q40_acc, GEMM_1024x2560x1024) {
+  test_q40_tensor_dot_api(1024, 2560, 1024);
 }
 
-TEST(KAI_acc0, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 0);
+TEST(KAI_acc0, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 0);
 }
 
-TEST(KAI_acc1, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 1);
+TEST(KAI_acc1, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 1);
 }
 
-TEST(KAI_acc2, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 2);
+TEST(KAI_acc2, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 2);
 }
 
-TEST(KAI_acc3, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 3);
+TEST(KAI_acc3, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 3);
 }
 
-TEST(KAI_acc4, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 4);
+TEST(KAI_acc4, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 4);
 }
 
-TEST(KAI_acc5, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 5);
+TEST(KAI_acc5, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 5);
 }
 
-TEST(KAI_acc6, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 6);
+TEST(KAI_acc6, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 6);
 }
 
-TEST(KAI_acc7, GEMM_8192x2560x4096) {
-  test_kai_tensor_dot_api(8192, 2560, 4096, 7);
-}
-
-
-TEST(Q40_acc_2, GEMM_1x2560x4096) {
-  test_q40_tensor_dot_api(1, 2560, 4096);
-}
-
-TEST(KAI_acc0_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 0);
-}
-
-TEST(KAI_acc1_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 1);
-}
-
-TEST(KAI_acc2_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 2);
-}
-
-TEST(KAI_acc3_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 3);
-}
-
-TEST(KAI_acc4_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 4);
-}
-
-TEST(KAI_acc5_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 5);
-}
-
-TEST(KAI_acc6_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 6);
-}
-
-TEST(KAI_acc7_2, GEMM_1x2560x4096) {
-  test_kai_tensor_dot_api(1, 2560, 4096, 7);
+TEST(KAI_acc7, GEMM_1024x2560x1024) {
+  test_kai_tensor_dot_api(1024, 2560, 1024, 7);
 }
 
 
-TEST(Q40_acc_3, GEMM_8192x2560x1024) {
-  test_q40_tensor_dot_api(8192, 2560, 1024);
-}
 
-TEST(KAI_acc0_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 0);
-}
 
-TEST(KAI_acc1_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 1);
-}
 
-TEST(KAI_acc2_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 2);
-}
-
-TEST(KAI_acc3_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 3);
-}
-
-TEST(KAI_acc4_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 4);
-}
-
-TEST(KAI_acc5_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 5);
-}
-
-TEST(KAI_acc6_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 6);
-}
-
-TEST(KAI_acc7_3, GEMM_8192x2560x1024) {
-  test_kai_tensor_dot_api(8192, 2560, 1024, 7);
-}
-
-TEST(Q40_acc_4, GEMM_1x2560x1024) {
+TEST(Q40_acc2, GEMV_1x2560x1024) {
   test_q40_tensor_dot_api(1, 2560, 1024);
 }
 
-TEST(KAI_acc0_4, GEMM_1x2560x1024) {
+TEST(KAI_acc02, GEMV_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 0);
 }
 
-TEST(KAI_acc1_4, GEMM_1x2560x1024) {
+TEST(KAI_acc12, GEMV_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 1);
 }
 
-TEST(KAI_acc2_4, GEMM_1x2560x1024) {
+TEST(KAI_acc22, GEMV_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 2);
 }
 
-TEST(KAI_acc3_4, GEMM_1x2560x1024) {
+TEST(KAI_acc32, GEMV_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 3);
 }
 
-TEST(KAI_acc4_4, GEMM_1x2560x1024) {
+TEST(KAI_acc42, GEMV_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 4);
 }
 
-TEST(KAI_acc5_4, GEMM_1x2560x1024) {
+TEST(KAI_acc52, GEMM_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 5);
 }
 
-TEST(KAI_acc6_4, GEMM_1x2560x1024) {
+TEST(KAI_acc62, GEMM_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 6);
 }
 
-TEST(KAI_acc7_4, GEMM_1x2560x1024) {
+TEST(KAI_acc72, GEMM_1x2560x1024) {
   test_kai_tensor_dot_api(1, 2560, 1024, 7);
 }
 
 
-TEST(Q40_acc_5, GEMM_8192x4096x2560) {
-  test_q40_tensor_dot_api(8192, 4096, 2560);
+
+
+TEST(Q40_acc3, GEMM_1024x2560x4096) {
+  test_q40_tensor_dot_api(1024, 2560, 4096);
 }
 
-TEST(KAI_acc0_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 0);
+TEST(KAI_acc03, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 0);
 }
 
-TEST(KAI_acc1_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 1);
+TEST(KAI_acc13, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 1);
 }
 
-TEST(KAI_acc2_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 2);
+TEST(KAI_acc23, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 2);
 }
 
-TEST(KAI_acc3_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 3);
+TEST(KAI_acc33, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 3);
 }
 
-TEST(KAI_acc4_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 4);
+TEST(KAI_acc43, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 4);
 }
 
-TEST(KAI_acc5_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 5);
+TEST(KAI_acc53, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 5);
 }
 
-TEST(KAI_acc6_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 6);
+TEST(KAI_acc63, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 6);
 }
 
-TEST(KAI_acc7_5, GEMM_8192x4096x2560) {
-  test_kai_tensor_dot_api(8192, 4096, 2560, 7);
+TEST(KAI_acc73, GEMM_1024x2560x4096) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 7);
+}
+
+
+
+TEST(Q40_acc4, GEMV_1x2560x4096) {
+  test_q40_tensor_dot_api(1, 2560, 4096);
+}
+
+TEST(KAI_acc04, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 0);
+}
+
+TEST(KAI_acc14, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 1);
+}
+
+TEST(KAI_acc24, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 2);
+}
+
+TEST(KAI_acc34, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 3);
+}
+
+TEST(KAI_acc44, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 4);
+}
+
+TEST(KAI_acc54, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 5);
+}
+
+TEST(KAI_acc64, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 6);
+}
+
+TEST(KAI_acc74, GEMV_1x2560x4096) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 7);
 }
 
 
 
 
-TEST(Q40_vs_kai, GEMM_8192x2560x4096) {
-  test_q40_vs_kai(8192, 2560, 4096);
+TEST(Q40_acc5, GEMM_1024x2560x9728) {
+  test_q40_tensor_dot_api(1024, 2560, 9728);
 }
 
-TEST(Q40_vs_kai, GEMV_1x2560x4096) {
-  test_q40_vs_kai(1, 2560, 4096 );
+TEST(KAI_acc05, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 4096, 0);
 }
 
-TEST(Q40_vs_kai, GEMM_8192x2560x1024) {
-  test_q40_vs_kai(8192, 2560, 1024);
+TEST(KAI_acc15, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 1);
+}
+
+TEST(KAI_acc25, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 2);
+}
+
+TEST(KAI_acc35, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 3);
+}
+
+TEST(KAI_acc45, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 4);
+}
+
+TEST(KAI_acc55, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 5);
+}
+
+TEST(KAI_acc65, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 6);
+}
+
+TEST(KAI_acc75, GEMM_1024x2560x9728) {
+  test_kai_tensor_dot_api(1024, 2560, 9728, 7);
+}
+
+
+
+
+TEST(Q40_acc6, GEMV_1x2560x9728) {
+  test_q40_tensor_dot_api(1, 2560, 9728);
+}
+
+TEST(KAI_acc06, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 4096, 0);
+}
+
+TEST(KAI_acc16, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 1);
+}
+
+TEST(KAI_acc26, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 2);
+}
+
+TEST(KAI_acc36, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 3);
+}
+
+TEST(KAI_acc46, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 4);
+}
+
+TEST(KAI_acc56, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 5);
+}
+
+TEST(KAI_acc66, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 6);
+}
+
+TEST(KAI_acc76, GEMV_1x2560x9728) {
+  test_kai_tensor_dot_api(1, 2560, 9728, 7);
+}
+
+
+
+TEST(Q40_acc7, GEMM_1024x4096x2560) {
+  test_q40_tensor_dot_api(1024, 4096, 2560);
+}
+
+TEST(KAI_acc07, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 0);
+}
+
+TEST(KAI_acc17, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 1);
+}
+
+TEST(KAI_acc27, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 2);
+}
+
+TEST(KAI_acc37, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 3);
+}
+
+TEST(KAI_acc47, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 4);
+}
+
+TEST(KAI_acc57, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 5);
+}
+
+TEST(KAI_acc67, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 6);
+}
+
+TEST(KAI_acc77, GEMM_1024x4096x2560) {
+  test_kai_tensor_dot_api(1024, 4096, 2560, 7);
+}
+
+
+
+
+TEST(Q40_acc8, GEMV_1x4096x2560) {
+  test_q40_tensor_dot_api(1, 4096, 2560);
+}
+
+TEST(KAI_acc08, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 0);
+}
+
+TEST(KAI_acc18, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 1);
+}
+
+TEST(KAI_acc28, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 2);
+}
+
+TEST(KAI_acc38, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 3);
+}
+
+TEST(KAI_acc48, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 4);
+}
+
+TEST(KAI_acc58, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 5);
+}
+
+TEST(KAI_acc68, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 6);
+}
+
+TEST(KAI_acc78, GEMV_1x4096x2560) {
+  test_kai_tensor_dot_api(1, 4096, 2560, 7);
+}
+
+
+
+
+TEST(Q40_acc9, GEMM_1024x9728x2560) {
+  test_q40_tensor_dot_api(1024, 9728, 2560);
+}
+
+TEST(KAI_acc09, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 0);
+}
+
+TEST(KAI_acc19, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 1);
+}
+
+TEST(KAI_acc29, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 2);
+}
+
+TEST(KAI_acc39, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 3);
+}
+
+TEST(KAI_acc49, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 4);
+}
+
+TEST(KAI_acc59, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 5);
+}
+
+TEST(KAI_acc69, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 6);
+}
+
+TEST(KAI_acc79, GEMM_1024x9728x2560) {
+  test_kai_tensor_dot_api(1024, 9728, 2560, 7);
+}
+
+
+
+
+
+TEST(Q40_acc10, GEMV_1x9728x2560) {
+  test_q40_tensor_dot_api(1, 9728, 2560);
+}
+
+TEST(KAI_acc10, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 0);
+}
+
+TEST(KAI_acc110, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 1);
+}
+
+TEST(KAI_acc210, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 2);
+}
+
+TEST(KAI_acc310, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 3);
+}
+
+TEST(KAI_acc410, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 4);
+}
+
+TEST(KAI_acc510, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 5);
+}
+
+TEST(KAI_acc610, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 6);
+}
+
+TEST(KAI_acc710, GEMV_1x9728x2560) {
+  test_kai_tensor_dot_api(1, 9728, 2560, 7);
+}
+
+
+
+
+
+
+
+
+
+
+TEST(Q40_vs_kai, GEMM_1024x2560x1024) {
+  test_q40_vs_kai(1024, 2560, 1024);
 }
 
 TEST(Q40_vs_kai, GEMV_1x2560x1024) {
   test_q40_vs_kai(1, 2560, 1024);
 }
 
-TEST(Q40_vs_kai, GEMM_8192x4096x2560) {
-  test_q40_vs_kai(8192, 4096, 2560);
+TEST(Q40_vs_kai, GEMM_1024x2560x4096) {
+  test_q40_vs_kai(1024, 2560, 4096);
+}
+
+TEST(Q40_vs_kai, GEMV_1x2560x4096) {
+  test_q40_vs_kai(1, 2560, 4096);
+}
+
+TEST(Q40_vs_kai, GEMM_1024x2560x9728) {
+  test_q40_vs_kai(1024, 2560, 9728);
+}
+
+TEST(Q40_vs_kai, GEMV_1x2560x9728) {
+  test_q40_vs_kai(1, 2560, 9728);
+}
+
+TEST(Q40_vs_kai, GEMM_1024x4096x2560) {
+  test_q40_vs_kai(1024, 4096, 2560);
 }
 
 TEST(Q40_vs_kai, GEMV_1x4096x2560) {
   test_q40_vs_kai(1, 4096, 2560);
 }
+
+TEST(Q40_vs_kai, GEMM_1024x9728x2560) {
+  test_q40_vs_kai(1024, 9728, 2560);
+}
+
+TEST(Q40_vs_kai, GEMV_1x9728x2560) {
+  test_q40_vs_kai(1, 9728, 2560);
+}
+
+
 
 
 #endif

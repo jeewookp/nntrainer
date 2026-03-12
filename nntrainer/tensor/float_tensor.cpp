@@ -1013,7 +1013,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
   unsigned int M = getDim().height();
   unsigned int K = getDim().width();
-  unsigned int N = input.getDim().width();
+  unsigned int N = output.getDim().width();
   
 #ifndef ENABLE_OPENCL
 #if defined(ENABLE_FP16) && defined(__aarch64__)

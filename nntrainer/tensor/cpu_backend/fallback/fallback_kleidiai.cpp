@@ -139,6 +139,7 @@ static void quant_nxk_qs4cx_f32(size_t n, size_t k, const float *rhs_f32,
     const float rmin0 = std::min(0.0f, min0);
     const float rmax0 = std::max(0.0f, max0);
 
+
     const float scale0 = rmin0 == rmax0 ? 1.f : (qmax - qmin) / (rmax0 - rmin0);
 
     // Reciprocal to quantize
@@ -167,6 +168,7 @@ static void quant_nxk_qs4cx_f32(size_t n, size_t k, const float *rhs_f32,
       }
       rhs_qs4cx[dst_addr] = rhs_v0;
     }
+
 
     rhs_scales_f32[n_idx] = recip_scale0;
   }

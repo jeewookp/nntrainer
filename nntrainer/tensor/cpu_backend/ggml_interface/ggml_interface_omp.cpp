@@ -135,8 +135,8 @@ void __ggml_q4_0_4x8_q8_0_GEMM(const unsigned int M, const unsigned int N,
       nntr_quantize_mat_q8_0_4x8(A + 4 * i * K, QA.data() + i * qa_4_rows_size,
                                  K);
     }
-    //int thread_num = std::thread::hardware_concurrency() / 2;
-    int thread_num = 4;
+    int thread_num = std::thread::hardware_concurrency() / 2;
+    //int thread_num = 4;
     unsigned int B_step = sizeof(block_q4_0) * (K / QK4_0);
 
 #pragma omp parallel for num_threads(thread_num)

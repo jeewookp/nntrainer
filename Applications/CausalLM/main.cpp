@@ -253,6 +253,7 @@ int main(int argc, char *argv[]) {
                                                       generation_cfg, nntr_cfg);
     model->initialize();
     model->load_weight(weight_file);
+    std::cout << "load finished" << std::endl;
 
     bool do_sample = generation_cfg.value("do_sample", false);
 
@@ -264,6 +265,7 @@ int main(int argc, char *argv[]) {
                system_tail_prompt.c_str());
 #else
     model->run(input_text, do_sample, system_head_prompt, system_tail_prompt);
+    model->save_weight("./nntr_qwen3-0.6b-q6k-qint4-qint4-fp32-arm.bin");
 #endif
 #ifdef PROFILE
     stop_and_print_peak();
