@@ -1,3 +1,59 @@
-sh tools/test_android.sh 실행 시 아래와 같은 에러
+sh tools/test_android.sh 실행 시 아래와 같은 결과 repack 시간과 adreno kernel 실행 시간 분리해서 측정해 주고 값 틀리는 거 해결해줘
 
-C++ exception with description "Failed to set kernel argument 1 for input_transpose" thrown in the test body.
+[ RUN      ] KAI_acc3.GEMM_1024x2560x1024
+GPU Adreno kernel : 7.38 ms 
+GPU MSE vs FP32 ref: 2776.81
+CPU KAI kernel   : 10.08 ms 
+CPU MSE vs FP32 ref: 1.28063
+Speedup (CPU/GPU): 1.36585x
+-------------------------------------------
+[       OK ] KAI_acc3.GEMM_1024x2560x1024 (2256 ms)
+[----------] 1 test from KAI_acc3 (2256 ms total)
+
+[----------] 1 test from KAI_acc33
+[ RUN      ] KAI_acc33.GEMM_1024x2560x4096
+GPU Adreno kernel : 19.06 ms 
+GPU MSE vs FP32 ref: 1421.5
+CPU KAI kernel   : 25.88 ms 
+CPU MSE vs FP32 ref: 1.27036
+Speedup (CPU/GPU): 1.35782x
+-------------------------------------------
+[       OK ] KAI_acc33.GEMM_1024x2560x4096 (3286 ms)
+[----------] 1 test from KAI_acc33 (3287 ms total)
+
+[----------] 1 test from KAI_acc35
+[ RUN      ] KAI_acc35.GEMM_1024x2560x9728
+GPU Adreno kernel : 40.2 ms 
+GPU MSE vs FP32 ref: 1160.55
+CPU KAI kernel   : 61.08 ms 
+CPU MSE vs FP32 ref: 1.26923
+Speedup (CPU/GPU): 1.5194x
+-------------------------------------------
+[       OK ] KAI_acc35.GEMM_1024x2560x9728 (7334 ms)
+[----------] 1 test from KAI_acc35 (7334 ms total)
+
+[----------] 1 test from KAI_acc37
+[ RUN      ] KAI_acc37.GEMM_1024x4096x2560
+GPU Adreno kernel : 20.3 ms 
+GPU MSE vs FP32 ref: 3346.38
+CPU KAI kernel   : 27.84 ms 
+CPU MSE vs FP32 ref: 2.0407
+Speedup (CPU/GPU): 1.37143x
+-------------------------------------------
+[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3499 ms)
+[----------] 1 test from KAI_acc37 (3499 ms total)
+
+[----------] 1 test from KAI_acc39
+[ RUN      ] KAI_acc39.GEMM_1024x9728x2560
+GPU Adreno kernel : 41.28 ms 
+GPU MSE vs FP32 ref: 10799.4
+CPU KAI kernel   : 72.5 ms 
+CPU MSE vs FP32 ref: 4.91032
+Speedup (CPU/GPU): 1.7563x
+-------------------------------------------
+[       OK ] KAI_acc39.GEMM_1024x9728x2560 (7961 ms)
+[----------] 1 test from KAI_acc39 (7961 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 5 test suites ran. (24339 ms total)
+[  PASSED  ] 5 tests.
