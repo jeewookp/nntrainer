@@ -32,6 +32,7 @@
 #include <opencl_buffer_manager.h>
 #include "nntrainer_test_util.h"
 #include <blas_kernels.h>
+#include <fp16.h>
 
 
 using std::chrono::duration_cast;
@@ -232,33 +233,57 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
   nntrainer::repack_kai_to_adreno(kai_packed_data_ptr, weights, scales, N, K, rhs_packed_stride, 32);
 
+  // --- GPU Adreno INT4 GEMM ---
+  uint32_t alignK = ((K + 31) / 32) * 32;
 
+  // Allocate SVM buffers for GPU input/output
+  uint16_t *input_ptr = (uint16_t *)allocateSVM(M * alignK * sizeof(uint16_t));
+  uint16_t *input_transpose_ptr = (uint16_t *)allocateSVM(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t));
+  uint16_t *output_ptr = (uint16_t *)allocateSVM(M * N * sizeof(uint16_t));
 
+  // Convert FP32 activation to FP16 and copy to SVM
+  blas_cc->command_queue_inst_.enqueueSVMMap(input_ptr, M * alignK * sizeof(uint16_t), false);
+  for (unsigned int i = 0; i < M * alignK; ++i) {
+    if ((i % alignK) < K)
+      input_ptr[i] = compute_fp32_to_fp16(activation_fp32[((i / alignK) * K) + (i % alignK)]);
+    else
+      input_ptr[i] = 0;
+  }
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(input_ptr);
 
+  // GPU warmup
+  for (unsigned int i = 0; i < 10; i++) {
+    nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weights, scales, output_ptr, M, N, K, 32);
+  }
 
+  // GPU timing
+  const int T_GPU = 50;
+  auto t_gpu0 = high_resolution_clock::now();
+  for (unsigned int i = 0; i < T_GPU; i++) {
+    nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weights, scales, output_ptr, M, N, K, 32);
+  }
+  auto t_gpu1 = high_resolution_clock::now();
+  auto gpu_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_gpu1 - t_gpu0).count();
 
+  // Convert GPU FP16 output to FP32
+  std::vector<float> gpu_output_fp32(M * N, 0.0f);
+  for (unsigned int i = 0; i < M * N; ++i) {
+    gpu_output_fp32[i] = compute_fp16_to_fp32(output_ptr[i]);
+  }
 
+  float gpu_mse = compute_mse(reference_output, gpu_output_fp32);
 
+  std::cout << "GPU Adreno kernel : " << gpu_time / (T_GPU * 1.0f) << " ms " << std::endl;
+  std::cout << "GPU MSE vs FP32 ref: " << gpu_mse << std::endl;
 
-
-
-
-
-
-
-
-
-
-
-  
+  // --- CPU KAI GEMM ---
   // Allocate and set Kai tensor data with packed weights
   kai_weight_tensor.allocate();
   std::memcpy(kai_weight_tensor.getData(), kai_packed_data.data(), packed_size);
-  
-  // 5. Run through Tensor::dot() API - goes through FloatTensor::dot() -> dotQInteger()
+
+  // Run through Tensor::dot() API - goes through FloatTensor::dot() -> dotQInteger()
   nntrainer::TensorDim output_dim(1, 1, M, N, nntrainer::Tformat::NCHW, nntrainer::Tdatatype::FP32);
   nntrainer::Tensor kai_output_tensor(output_dim);
-
 
   for (unsigned int i = 0; i < 10; i ++){
     activation_tensor.dot(kai_weight_tensor, kai_output_tensor, false, false, 0.0f);
@@ -268,31 +293,36 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   for (unsigned int i = 0; i < T; i ++){
     activation_tensor.dot(kai_weight_tensor, kai_output_tensor, false, false, 0.0f);
   }
-  auto t1 = high_resolution_clock::now(); 
-  
-  auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count(); 
+  auto t1 = high_resolution_clock::now();
 
-  std::cout << "CPU kernel " << " : " << execution_time/(T*1.0f) << " ms " << std::endl;
+  auto cpu_time = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
 
+  std::cout << "CPU KAI kernel   : " << cpu_time / (T * 1.0f) << " ms " << std::endl;
 
-
-
-
-
-
-
-  // 6. Compare Kai Tensor::dot() output vs FP32 reference
-  std::vector<float> kai_vec(kai_output_tensor.getData<float>(), 
+  // Compare
+  std::vector<float> kai_vec(kai_output_tensor.getData<float>(),
                               kai_output_tensor.getData<float>() + M * N);
-  float mse = compute_mse(reference_output, kai_vec);
-  
-  // Same tolerance as kernel tests
+  float cpu_mse = compute_mse(reference_output, kai_vec);
+
+  std::cout << "CPU MSE vs FP32 ref: " << cpu_mse << std::endl;
+  std::cout << "Speedup (CPU/GPU): " << (cpu_time * 1.0f) / (gpu_time > 0 ? gpu_time : 1) << "x" << std::endl;
+  std::cout << "-------------------------------------------" << std::endl;
+
+  // Tolerance check
   constexpr float eps = 1e-5;
   const float tolerance_value = eps * M * K * N;
-  
-  EXPECT_LT(mse, tolerance_value) 
-    << "Tensor::dot() API: MSE too high for M=" << M << ", K=" << K << ", N=" << N
-    << ": MSE=" << mse << ", tolerance=" << tolerance_value;
+
+  EXPECT_LT(cpu_mse, tolerance_value)
+    << "CPU Tensor::dot() API: MSE too high for M=" << M << ", K=" << K << ", N=" << N
+    << ": MSE=" << cpu_mse << ", tolerance=" << tolerance_value;
+
+  // Free SVM buffers
+  freeSVM(input_ptr);
+  freeSVM(input_transpose_ptr);
+  freeSVM(output_ptr);
+  freeSVM(kai_packed_data_ptr);
+  freeSVM(weights);
+  freeSVM(scales);
 }
 // #endif
 
