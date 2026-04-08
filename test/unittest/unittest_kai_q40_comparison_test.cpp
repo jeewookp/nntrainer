@@ -225,7 +225,12 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
   blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_packed_data_ptr);
 
+  // Repack timing
+  auto t_repack0 = high_resolution_clock::now();
   nntrainer::repack_kai_to_adreno(kai_packed_data_ptr, weights, scales, N, K, rhs_packed_stride, 32);
+  auto t_repack1 = high_resolution_clock::now();
+  auto repack_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_repack1 - t_repack0).count();
+  std::cout << "Repack KAI->Adreno: " << repack_time << " ms " << std::endl;
 
   // --- GPU Adreno INT4 GEMM ---
 

@@ -50,7 +50,10 @@ repack_kai_to_adreno(const __global uchar* kai_packed_data,
                     nibble = (byte_val >> 4) & 0x0F;
                 }
 
-                packed |= ((ushort)nibble) << (nibble_idx * 4);
+                // XOR 0x8 to convert KAI encoding to unsigned affine [0,15]
+                // Adreno kernel applies (val - 8) to get signed [-8,7]
+                uchar val = nibble ^ 0x8;
+                packed |= ((ushort)val) << (nibble_idx * 4);
             }
 
             weights[(k_base / 4) * N + global_n] = packed;
