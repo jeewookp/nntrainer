@@ -246,7 +246,7 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   blas_cc->command_queue_inst_.enqueueSVMMap(input_ptr, M * alignK * sizeof(uint16_t), false);
   for (unsigned int i = 0; i < M * alignK; ++i) {
     if ((i % alignK) < K)
-      input_ptr[i] = compute_fp32_to_fp16(activation_fp32[((i / alignK) * K) + (i % alignK)]);
+      input_ptr[i] = nntrainer::compute_fp32_to_fp16(activation_fp32[((i / alignK) * K) + (i % alignK)]);
     else
       input_ptr[i] = 0;
   }
@@ -269,7 +269,7 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   // Convert GPU FP16 output to FP32
   std::vector<float> gpu_output_fp32(M * N, 0.0f);
   for (unsigned int i = 0; i < M * N; ++i) {
-    gpu_output_fp32[i] = compute_fp16_to_fp32(output_ptr[i]);
+    gpu_output_fp32[i] = nntrainer::compute_fp16_to_fp32(output_ptr[i]);
   }
 
   float gpu_mse = compute_mse(reference_output, gpu_output_fp32);
