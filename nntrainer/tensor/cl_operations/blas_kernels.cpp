@@ -804,6 +804,90 @@ void gemm_int4_cl(void *input, void *weights, void *scales, void *output,
   }
 }
 
+void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
+                  unsigned int N, unsigned int K, unsigned int rhs_packed_stride,
+                  unsigned int quantization_group_size) {
+  bool result = false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  auto &clbuffInstance = ClBufferManager::Global();
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    repack_kai_to_adreno_kernel, "repack_kai_to_adreno");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to get kernel_ptr for repack_kai_to_adreno");
+    return;
+  }
+
+  int arg = 0;
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, kai_packed_data);
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 0 for "
+                              "repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 1 for "
+                              "repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 2 for "
+                              "repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &N, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 3 for repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &K, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 for repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &rhs_packed_stride, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 for repack_kai_to_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &quantization_group_size, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 for repack_kai_to_adreno");      
+
+  const int work_groups_count[3] = {(int) K/32, (int) N/4, 1};
+  const int work_group_size[3] = {1, 64, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+      kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to dispatch kernel for repack_kai_to_adreno");
+    return;
+  }
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(weights, K * N * sizeof(uint16_t) / 4, true);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to read output data for repack_kai_to_adreno");
+    return;
+  }
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(scales, (K/32) * N * sizeof(uint16_t), true);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to read output data for repack_kai_to_adreno");
+    return;
+  }
+
+}
+
+
+
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;

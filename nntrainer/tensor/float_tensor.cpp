@@ -1015,7 +1015,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   unsigned int K = getDim().width();
   unsigned int N = output.getDim().width();
   
-#ifndef ENABLE_OPENCL
+// #ifndef ENABLE_OPENCL
 #if defined(ENABLE_FP16) && defined(__aarch64__)
   // On ARM64 with FP16, QINT4 uses Kai4Tensor (check datatype or q_scheme)
   if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE && 
@@ -1050,21 +1050,21 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
   }
 #endif
-#else
-  if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
-      getMemoryData()->isSVM()) {
-    if (M == 1) {
-      gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
-                   Int4QTensor::getGroupSize());
-    } else {
-      sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
-                    Int4QTensor::getGroupSize());
-    }
-  } else {
-    /// @todo This should be replaced with standard CPU INT4 computation
-    gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
-  }
-#endif
+// #else
+//   if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
+//       getMemoryData()->isSVM()) {
+//     if (M == 1) {
+//       gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
+//                    Int4QTensor::getGroupSize());
+//     } else {
+//       sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
+//                     Int4QTensor::getGroupSize());
+//     }
+//   } else {
+//     /// @todo This should be replaced with standard CPU INT4 computation
+//     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
+//   }
+// #endif
 
   return output;
 }

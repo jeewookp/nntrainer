@@ -32,7 +32,7 @@ namespace nntrainer {
 Kai4Tensor::Kai4Tensor(std::string name_, Tformat fm, QScheme qscheme_) : 
   TensorBase(name_, fm, Tdatatype::QINT4), qscheme(qscheme_) {
   offset = 0;
-  _idx_variant = 4; //Default idx
+  _idx_variant = 3; //Default idx
   transB = true;
 }
 

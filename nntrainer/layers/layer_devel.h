@@ -490,7 +490,7 @@ public:
                                         W_qint4.getData(),
                                         unpacked_weight.data(),
                                         kai_quant_scale.data(),
-                                        4, true);    
+                                        3, true);    
               //std::cout << W_qint4.getFileOffset() << std::endl;
               //std::cout <<"here3?" << std::endl;                                           
 

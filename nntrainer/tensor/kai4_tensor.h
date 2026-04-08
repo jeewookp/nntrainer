@@ -43,7 +43,7 @@ public:
    */
   Kai4Tensor(const TensorDim &d, bool alloc_now,
               Initializer init = Initializer::NONE, std::string name = "",
-              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE, unsigned int idx_variant = 5);
+              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE, unsigned int idx_variant = 3);
 
   /**
    * @brief Construct a new Kai4Tensor object
