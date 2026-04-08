@@ -218,9 +218,12 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   // #endif
 
 
+  uint32_t alignK = ((K + 31) / 32) * 32;
+  uint32_t alignN = ((N + 31) / 32) * 32;
+
   uint8_t *kai_packed_data_ptr = (uint8_t *)allocateSVM(packed_size * sizeof(uint8_t));
   uint16_t *weights = (uint16_t *)allocateSVM(K * N * sizeof(uint16_t) / 4);
-  uint16_t *scales = (uint16_t *)allocateSVM((K/32) * N * sizeof(uint16_t));
+  uint16_t *scales = (uint16_t *)allocateSVM((K/32) * alignN * sizeof(uint16_t));
 
   blas_cc->command_queue_inst_.enqueueSVMMap(kai_packed_data_ptr, packed_size * sizeof(uint8_t), false);
 
@@ -230,11 +233,9 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
   blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_packed_data_ptr);
 
-
   nntrainer::repack_kai_to_adreno(kai_packed_data_ptr, weights, scales, N, K, rhs_packed_stride, 32);
 
   // --- GPU Adreno INT4 GEMM ---
-  uint32_t alignK = ((K + 31) / 32) * 32;
 
   // Allocate SVM buffers for GPU input/output
   uint16_t *input_ptr = (uint16_t *)allocateSVM(M * alignK * sizeof(uint16_t));
