@@ -179,14 +179,6 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
 
 
-  float *temp_scale = (float *) kai_packed_data.data();
-  for (int y = 0; y < N; y++) {
-    printf("%10.5f ", temp_scale[((y/nr) * rhs_packed_stride + nr * (((((K+31)/32)*32) / 2) + 4))/4 + y%4]*16);
-  }
-  printf("\n---------------------------\n");
-
-
-
 
   for (int x = 0; x < K; x++) {
     for (int y = 0; y < N; y++) {

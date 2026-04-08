@@ -944,7 +944,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
   input_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
     input_size,
     input_transposed,
     &err
@@ -964,7 +964,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
   cl_mem input_transposed_img = clCreateImage(
     blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY,
+    CL_MEM_READ_WRITE,
     &image_format,
     &image_desc,
     nullptr,
