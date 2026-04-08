@@ -255,19 +255,28 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   }
   blas_cc->command_queue_inst_.enqueueSVMUnmap(input_ptr);
 
-  // GPU warmup
+  // GPU warmup (repack + GEMM)
   for (unsigned int i = 0; i < 10; i++) {
+    nntrainer::repack_kai_to_adreno(kai_packed_data_ptr, weights, scales, N, K, rhs_packed_stride, 32);
     nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weights, scales, output_ptr, M, N, K, 32);
   }
 
-  // GPU timing
+  // GPU timing: repack + GEMM together, and GEMM-only separately
   const int T_GPU = 50;
   auto t_gpu0 = high_resolution_clock::now();
   for (unsigned int i = 0; i < T_GPU; i++) {
+    nntrainer::repack_kai_to_adreno(kai_packed_data_ptr, weights, scales, N, K, rhs_packed_stride, 32);
     nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weights, scales, output_ptr, M, N, K, 32);
   }
   auto t_gpu1 = high_resolution_clock::now();
-  auto gpu_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_gpu1 - t_gpu0).count();
+  auto gpu_total_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_gpu1 - t_gpu0).count();
+
+  auto t_gemm0 = high_resolution_clock::now();
+  for (unsigned int i = 0; i < T_GPU; i++) {
+    nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weights, scales, output_ptr, M, N, K, 32);
+  }
+  auto t_gemm1 = high_resolution_clock::now();
+  auto gpu_gemm_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_gemm1 - t_gemm0).count();
 
   // Convert GPU FP16 output to FP32
   std::vector<float> gpu_output_fp32(M * N, 0.0f);
@@ -277,7 +286,9 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
 
   float gpu_mse = compute_mse(reference_output, gpu_output_fp32);
 
-  std::cout << "GPU Adreno kernel : " << gpu_time / (T_GPU * 1.0f) << " ms " << std::endl;
+  std::cout << "GPU repack+GEMM  : " << gpu_total_time / (T_GPU * 1.0f) << " ms " << std::endl;
+  std::cout << "GPU GEMM only    : " << gpu_gemm_time / (T_GPU * 1.0f) << " ms " << std::endl;
+  std::cout << "GPU repack only  : " << repack_time / (T_REPACK * 1.0f) << " ms " << std::endl;
   std::cout << "GPU MSE vs FP32 ref: " << gpu_mse << std::endl;
 
   // --- CPU KAI GEMM ---
