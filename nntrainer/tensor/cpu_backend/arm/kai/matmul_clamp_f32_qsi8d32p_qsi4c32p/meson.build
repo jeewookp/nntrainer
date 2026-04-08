@@ -15,7 +15,9 @@ matmul_clamp_f32_qsi8d32p_qsi4c32p_sources = [
     'kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c',
 ]
 
-if cxx.has_argument('-march=armv8.2-a+fp16+sve+i8mm')
+arm_arch_opt = get_option('arm-arch')
+
+if arm_arch_opt == 'armv9.2-a'
   matmul_clamp_f32_qsi8d32p_qsi4c32p_headers += [
     'kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p8x4_1x8_sve_dotprod.h',
     'kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p8x8_1x8_sve_dotprod.h',
@@ -30,6 +32,7 @@ if cxx.has_argument('-march=armv8.2-a+fp16+sve+i8mm')
     'kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p8x8_16x8_sve_i8mm_asm.S'
   ]
 endif
+
 
 foreach s : matmul_clamp_f32_qsi8d32p_qsi4c32p_sources
   nntrainer_sources += meson.current_source_dir() / s

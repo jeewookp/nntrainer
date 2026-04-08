@@ -297,7 +297,6 @@ static inline void __ggml_q4_0_8x8_q8_0_GEMM_GEMV(
   std::vector<char> QA = std::vector<char>(qa_size);
 
   auto qa_data = QA.data();
-
   nntr_quantize_row_q8_0(A, qa_data, K);
   int B_step = sizeof(block_q4_0) * (K / QK4_0);
 

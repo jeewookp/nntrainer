@@ -868,6 +868,31 @@ TEST(nntrainer_cpu_backend_standalone, qsi8d32p_qsi4c32p_1x3072x512_CMP) {
   ASSERT_LE(qsi8d32p_qsi4c32p_mse_packed, eps * M * K * N);
 }
 
+// New test for dimension that fails in Q4_0 comparison test
+TEST(nntrainer_cpu_backend_standalone, qsi8d32p_qsi4c32p_256x1024x512_CMP) {
+  const unsigned int M = 256;
+  const unsigned int K = 1024;
+  const unsigned int N = 512;
+  float qsi8d32p_qsi4c32p_mse;
+  float qsi8d32p_qsi4c32p_mse_packed;
+  constexpr float eps = 1e-5;
+  const uint32_t TC = 20;
+  std::vector<uint32_t> opt_idx_variant_candidates;
+  uint32_t opt_idx_variant = 0;
+  for (uint32_t tc = 0; tc < TC; ++tc) {
+    opt_idx_variant = run_qsi8d32p_qsi4c32p_test_unpacked(
+      M, K, N, qsi8d32p_qsi4c32p_mse, true, false);
+    opt_idx_variant_candidates.push_back(opt_idx_variant);
+  }
+  auto result = most_frequent(opt_idx_variant_candidates);
+  opt_idx_variant = result.first;
+
+  run_qsi8d32p_qsi4c32p_test_packed(M, K, N, qsi8d32p_qsi4c32p_mse_packed,
+                                    opt_idx_variant, true, false);
+  ASSERT_LE(qsi8d32p_qsi4c32p_mse, eps * M * K * N);
+  ASSERT_LE(qsi8d32p_qsi4c32p_mse_packed, eps * M * K * N);
+}
+
 TEST(nntrainer_cpu_backend_standalone, qsi8d32p_qsi4c32p_768x768x768_CMP) {
   const unsigned int M = 768;
   const unsigned int K = 768;
@@ -1077,7 +1102,7 @@ void run_gemm_benchmark_comparison(const uint32_t M, const uint32_t K,
                                    const uint32_t N,
                                    const uint32_t warmup_iters = 3,
                                    const uint32_t test_iters = 5,
-                                   bool print = false) {
+                                   bool print = true) {
   nntrainer::init_backend();
 
   if (print) {

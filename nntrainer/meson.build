@@ -76,6 +76,9 @@ nntrainer_common_sources = [
 nntrainer_inc_abs += meson.source_root() / 'subprojects' / 'ruy'
 
 if get_option('enable-opencl')
+  nntrainer_headers += meson.current_source_dir() / 'layers' / 'cl_layers' / 'layer_impl_cl.h'
+  nntrainer_headers += meson.current_source_dir() / 'opencl' / 'opencl_buffer.h'
+  nntrainer_headers += meson.current_source_dir() / 'opencl' / 'opencl_device_info.h'
   nntrainer_headers += meson.current_source_dir() / 'cl_context.h'
   nntrainer_common_sources += 'cl_context.cpp'
 endif

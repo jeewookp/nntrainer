@@ -1921,9 +1921,16 @@ public:
   size_t scale_size() const;
 
   /**
+   * @brief     return kernel variant index
+   * @retval    kernel variant index
+   */
+  uint32_t getKernelVariant() const;
+
+  /**
    * @brief     return Tensor quantization scheme
    * @retval    Qscheme qscheme
    */
+  
   QScheme q_scheme() const;
 
   /**

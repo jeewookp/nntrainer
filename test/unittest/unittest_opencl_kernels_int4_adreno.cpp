@@ -75,10 +75,11 @@ static void run_int4_gemm_adreno_test_(const uint32_t M, const uint32_t K,
 
   std::vector<float> q4_output_fp32(M * N);
 
+  size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
+  std::vector<uint8_t> q4_weight_repack(q4_data_size);
+
   if (K % Q4_0 == 0 && N % 8 == 0) {
-    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
     std::vector<uint8_t> q4_weight(q4_data_size);
-    std::vector<uint8_t> q4_weight_repack(q4_data_size);
     nntrainer::quantize_q4_0(weight_fp32.data(), q4_weight.data(), N, K,
                              nullptr);
     nntrainer::repack_q4_0(q4_weight_repack.data(), q4_weight.data(),
@@ -155,6 +156,11 @@ static void run_int4_gemm_adreno_test_(const uint32_t M, const uint32_t K,
   blas_cc->command_queue_inst_.enqueueSVMUnmap(weight_ptr);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(scale_ptr);
 
+
+  
+
+
+
   #ifndef DEBUG
   for (unsigned int i = 0; i < 10; ++i) {
     nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weight_ptr, scale_ptr, output_ptr, M,
@@ -163,6 +169,57 @@ static void run_int4_gemm_adreno_test_(const uint32_t M, const uint32_t K,
   #endif
   auto t3 = std::chrono::high_resolution_clock::now();
   for (unsigned int i = 0; i < run_count; ++i) {
+
+
+
+    for (int j=0;j<K;j++){
+      for (int i=0;i<N;i++){
+        weight_ptr[(j/4) * N + i] = 0;
+      }
+    }
+
+    for (int j=0;j<K;j++){
+      for (int i=0;i<N;i++){
+        if (j%32<16) {
+          int k_block = K/Q4_0;
+          int n_block = N/4;
+          uint8_t temp = q4_weight_repack.data()[(i/4 * k_block + j/Q4_0) * 4 * sizeof(block_q4_0) + 8 + ((j/8)%2)*32 + (i%4)*8 + j%8];
+          if (j%4==0) {
+            weight_ptr[(j/4 + 4) * N + i] += (temp >> 4)^(0x8);
+          }
+          else if (j%4==1) {
+            weight_ptr[(j/4 + 4) * N + i] += ((temp >> 4)^(0x8)) << 4;
+          }
+          else if (j%4==2) {
+            weight_ptr[(j/4 + 4) * N + i] += ((temp >> 4)^(0x8)) << 8;
+          }
+          else if (j%4==3) {
+            weight_ptr[(j/4 + 4) * N + i] += ((temp >> 4)^(0x8)) << 12;
+          }
+          if (j%4==0) {
+            weight_ptr[(j/4) * N + i] += (temp & 0xF)^(0x8);
+          }
+          else if (j%4==1) {
+            weight_ptr[(j/4) * N + i] += ((temp & 0xF)^(0x8)) << 4;
+          }
+          else if (j%4==2) {
+            weight_ptr[(j/4) * N + i] += ((temp & 0xF)^(0x8)) << 8;
+          }
+          else if (j%4==3) {
+            weight_ptr[(j/4) * N + i] += ((temp & 0xF)^(0x8)) << 12;
+          }
+        }
+      }
+    }
+
+    block_q4_0x4 * temp = (block_q4_0x4 *) q4_weight_repack.data();
+    for (int i=0;i<K/32;i++){
+      for (int j=0;j<N;j++){
+        scale_ptr[i * N + j] = temp[(j/4) * (K/32) + i].d[j % 4];
+      }
+    }
+
+
     nntrainer::gemm_int4_cl_adreno(input_ptr, input_transpose_ptr, weight_ptr, scale_ptr, output_ptr, M,
                                 N, K, scale_group_size);
   }
@@ -188,8 +245,8 @@ static void run_int4_gemm_adreno_test_(const uint32_t M, const uint32_t K,
   }
   #endif
 
-  float mse_int4_err =
-    mse<float>(ref_dst.data(), output_fp32.data(), M*N);
+  float mse_int4_err = mse<float>(ref_dst.data(), output_fp32.data(), M*N);
+  // float mse_int4_err = mse<float>(output_fp32.data(), q4_output_fp32.data(), M * N);
 
   std::cout << "MSE int4: " << mse_int4_err << std::endl;
 
@@ -207,15 +264,20 @@ static void run_int4_gemm_adreno_test_(const uint32_t M, const uint32_t K,
   }
 
 #ifdef DEBUG
-DECLARE_int4_gemm_adreno_test_M_K_N(32, 32, 32, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(32, 32, 32, 32);
 #else
-DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1024, 1024, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(1025, 1024, 1024, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1028, 1024, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1024, 1028, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(4096, 1024, 1024, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(1024, 4096, 4096, 32);
-DECLARE_int4_gemm_adreno_test_M_K_N(4096, 4096, 4096, 32);
+DECLARE_int4_gemm_adreno_test_M_K_N(512, 1024, 2048, 32);
+DECLARE_int4_gemm_adreno_test_M_K_N(512, 1024, 1024, 32);
+DECLARE_int4_gemm_adreno_test_M_K_N(512, 2048, 1024, 32);
+DECLARE_int4_gemm_adreno_test_M_K_N(512, 1024, 3072, 32);
+
+// DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1024, 1024, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(1025, 1024, 1024, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1028, 1024, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(1024, 1024, 1028, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(4096, 1024, 1024, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(1024, 4096, 4096, 32);
+// DECLARE_int4_gemm_adreno_test_M_K_N(4096, 4096, 4096, 32);
 #endif
 
 

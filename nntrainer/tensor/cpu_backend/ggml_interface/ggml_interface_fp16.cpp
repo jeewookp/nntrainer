@@ -20,7 +20,6 @@
 #include <bs_thread_pool_manager.hpp>
 #include <cmath>
 #include <cstring>
-#include <iostream>
 #include <math.h>
 #include <stdint.h>
 

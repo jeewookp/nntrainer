@@ -47,7 +47,7 @@
 #include "kai/kai_common.h"
 
 #include <chrono>
-#include <iostream>
+
 using std::chrono::duration_cast;
 using std::chrono::high_resolution_clock;
 using std::chrono::microseconds; // or microseconds

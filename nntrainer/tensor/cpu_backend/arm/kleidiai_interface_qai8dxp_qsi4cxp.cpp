@@ -441,7 +441,7 @@ void nntr_kai_gemm_qai8dxp_qsi4cxp_olp_n_parallel(
   int n_threads = 4;
   assert(n % n_threads == 0);
   size_t n_ukernel = n / n_threads;
-#pragma omp parallel for num_thread(n_threads)
+#pragma omp parallel for num_threads(n_threads)
   for (int current_thread = 0; current_thread < n_threads; ++current_thread) {
     const size_t dst_stride = n * sizeof(float);
     const size_t lhs_offset =
@@ -480,7 +480,7 @@ void nntr_kai_gemm_qai8dxp_qsi4cxp_olp(size_t m, size_t n, size_t k,
                                        uint32_t idx_variant, bool transB,
                                        float lower_bound, float upper_bound) {
   if (m == 1) {
-    return nntr_kai_gemm_qai8dxp_qsi4cxp_olp_single_thread(
+    return nntr_kai_gemm_qai8dxp_qsi4cxp_olp_n_parallel(
       m, n, k, lhs_native_mtx_f32, rhs_packed_mtx_qs4cx, dst_act_mtx_f32,
       idx_variant, transB, lower_bound, upper_bound);
   } else {

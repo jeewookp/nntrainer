@@ -139,6 +139,11 @@ void gemm_int4_async_cl(float *input, std::vector<void *> weights,
  * @param[in] M number of rows in matrix A
  * @param[in] N number of columns in matrix A
  */
+
+ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
+                  unsigned int N, unsigned int K, unsigned int rhs_packed_stride,
+                  unsigned int quantization_group_size);
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N);
 

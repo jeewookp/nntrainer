@@ -28,6 +28,7 @@
 #include <arm_sve.h>
 #include <nntr_ggml_impl.h>
 #include <nntr_ggml_impl_utils.h>
+#include <iostream>
 
 void nntr_gemv_q4_0_4x8_q8_0(int n, float *__restrict s, size_t bs,
                              const void *__restrict vx,

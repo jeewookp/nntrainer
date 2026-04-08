@@ -22,6 +22,15 @@
 #include <tensor.h>
 #include <tensor_dim.h>
 
+#include <chrono>
+#include <iostream>
+using std::chrono::duration_cast;
+using std::chrono::high_resolution_clock;
+using std::chrono::microseconds;
+using std::chrono::milliseconds;
+using std::chrono::nanoseconds;
+using std::chrono::seconds;
+
 #define EXPECT_IN_RANGE(VAL, MIN, MAX) \
   EXPECT_GE((VAL), (MIN));             \
   EXPECT_LE((VAL), (MAX))
@@ -1602,6 +1611,7 @@ TEST(nntrainer_Tensor, transpose_check_with_gemm_fp16) {
 
   EXPECT_EQ(C_T, C_transposed);
 }
+
 
 GTEST_API_ int main(int argc, char **argv) {
   int result = -1;

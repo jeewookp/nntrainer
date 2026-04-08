@@ -9,6 +9,7 @@ tensor_sources = [
   'float_tensor.cpp',
   'int4_tensor.cpp',
   'int4_utils.cpp',
+  'kai4_tensor.cpp',
   'uint4_tensor.cpp',
   'uint_tensor.cpp',
   'char_tensor.cpp',

@@ -17,10 +17,15 @@
 #include <cpu_backend.h>
 #include <float_tensor.h>
 #include <int4_tensor.h>
+#include <kai4_tensor.h>
+#if defined(ENABLE_FP16) && defined(__aarch64__)
+#include <cpu_backend/arm/kleidiai_interface.h>
+#endif
 #include <q4_0_utils.h>
 
 #include <tensor.h>
 #include <util_func.h>
+#include <iostream>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include "blas_kernels.h"
@@ -725,6 +730,7 @@ Tensor &FloatTensor::dot(Tensor const &input, Tensor &output, bool trans,
    * @note FP32.dot(input);
    * according to the input type, invoked kernels can be varied.
    */
+  
   switch (input.getDataType()) {
   /** applying sgemm/sgemv after type casting to FP32 */
   case Tdatatype::FP32:
@@ -998,8 +1004,8 @@ Tensor &FloatTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
 }
 
 Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
-                                 bool trans, bool trans_in, float beta,
-                                 Tdatatype dtype) const {
+                                  bool trans, bool trans_in, float beta,
+                                  Tdatatype dtype) const {
 
   float *data = (float *)getData();
   char *mdata = input.getData<char>();
@@ -1008,39 +1014,57 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   unsigned int M = getDim().height();
   unsigned int K = getDim().width();
   unsigned int N = output.getDim().width();
+  
+// #ifndef ENABLE_OPENCL
+#if defined(ENABLE_FP16) && defined(__aarch64__)
+  // On ARM64 with FP16, QINT4 uses Kai4Tensor (check datatype or q_scheme)
+  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE && 
+      (dtype == Tdatatype::QINT4)) {
+    // Use block-32 Kai kernels (qsi8d32p_qsi4c32p) as a default
+    // TO BE IMPLEMENTED : Channel-wise quantization
+    // Assume input (weight) data is already packed for KAI GEMM or GEMV
 
-#ifndef ENABLE_OPENCL
-#ifdef ENABLE_FP16
-  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE) {
-    uint32_t opt_kernel_idx = (M == 1) ? 1 : 5;
-    nntr_gemm_qai8dxp_qsi4cxp_packed(
-      M, N, K, (void *)data, (void *)mdata, rdata, opt_kernel_idx,
-      true); /// @todo kernel supports both trans / noTrans situation
+    
+    // Get variant from input Kai4Tensor (via Tensor wrapper)
+    uint32_t idx_variant = input.getKernelVariant();
+    
+    // Call Kai block-32 offline-packed GEMM
+    nntr_kai_gemm_qai8dxp_qsi4cxp_olp(
+      M, N, K,
+      (void *)data,        // LHS (activations) - will be packed internally
+      (void *)mdata,       // RHS (weights) - assumed already packed in block-32 format
+      rdata,               // Output
+      idx_variant,
+      true,                // transB
+      -std::numeric_limits<float>::infinity(),  // lower_bound
+      std::numeric_limits<float>::infinity()    // upper_bound
+    );
   } else {
     throw std::runtime_error(
-      "Error: QINT4 Dot on CPU only supports PER_CHANNEL_AFFINE scheme");
+      "Error: QINT4 Dot on CPU only supports PER_CHANNEL_AFFINE");
   }
 #else
-  /// @note It is essential to understand that this section of the code requires
-  /// the `input` data to be converted to Q4_0 type, not QINT4 type. This should
-  /// be replaced with standard CPU INT4 computation instead of using Q4_0.
-  gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
-#endif
-#else
-  if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
-      getMemoryData()->isSVM()) {
-    if (M == 1) {
-      gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
-                   Int4QTensor::getGroupSize());
-    } else {
-      sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
-                    Int4QTensor::getGroupSize());
-    }
-  } else {
-    /// @todo This should be replaced with standard CPU INT4 computation
+  /// @note Kai kernels require ENABLE_FP16 and ARM64 architecture
+  /// Fallback to Q4_0 for other configurations
+  {
     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
   }
 #endif
+// #else
+//   if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
+//       getMemoryData()->isSVM()) {
+//     if (M == 1) {
+//       gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
+//                    Int4QTensor::getGroupSize());
+//     } else {
+//       sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
+//                     Int4QTensor::getGroupSize());
+//     }
+//   } else {
+//     /// @todo This should be replaced with standard CPU INT4 computation
+//     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
+//   }
+// #endif
 
   return output;
 }
