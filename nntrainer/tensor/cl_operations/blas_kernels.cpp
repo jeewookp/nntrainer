@@ -888,8 +888,8 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
 void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, void *scales, void *output,
                   unsigned int M, unsigned int N, unsigned int K,
                   unsigned int quantization_group_size) {
-  if (((N%8)!=0) | ((K%4)!=0)){
-    printf("N should be divisible by 8 and K by 4, this error is occured in File : %s, Line : %d\n", __FILE__,__LINE__);
+  if (((N%4)!=0) | ((K%4)!=0)){
+    printf("N and K should be divisible by 4, this error is occured in File : %s, Line : %d\n", __FILE__,__LINE__);
     fflush(stdout);
     abort();
   }
@@ -1076,8 +1076,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error(
       "Failed to set kernel argument 7 for gpu_int4_gemm_adreno");
 
-  const int work_groups_count_mm[3] = {(int)ceilDiv(M,8), (int)N/8, 1};
-  const int work_group_size_mm[3] = {1, 64, 1};
+  const int work_groups_count_mm[3] = {(int)ceilDiv(M,8), (int)N/4, 1};
+  const int work_group_size_mm[3] = {1, 128, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(
       kernel_ptr, work_groups_count_mm, work_group_size_mm);
