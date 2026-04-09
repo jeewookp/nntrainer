@@ -1030,7 +1030,52 @@ thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_svm;
 thread_local SVMCache g_input_tr_svm;
-thread_local SVMCache g_output_svm;
+thread_local SVMCache g_output_svm[2];  // double-buffered for pipelining
+thread_local int g_output_idx = 0;
+
+// Pending state for pipelined output sync
+thread_local float *g_pending_rdata = nullptr;
+thread_local uint16_t *g_pending_output_svm = nullptr;
+thread_local unsigned int g_pending_M = 0;
+thread_local unsigned int g_pending_N = 0;
+thread_local ClContext *g_pending_blas_cc = nullptr;
+
+// Flush pending output: sync GEMM, memcpy, convert FP16->FP32
+static void flush_pending_dotQ_output() {
+  if (!g_pending_rdata) return;
+  auto *blas_cc = g_pending_blas_cc;
+  uint16_t *osvm = g_pending_output_svm;
+  unsigned int M = g_pending_M;
+  unsigned int N = g_pending_N;
+  float *rdata = g_pending_rdata;
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(osvm, M * N * sizeof(uint16_t), true);
+
+  static thread_local std::vector<uint16_t> host_fp16_output;
+  if (host_fp16_output.size() < M * N) host_fp16_output.resize(M * N);
+  std::memcpy(host_fp16_output.data(), osvm, M * N * sizeof(uint16_t));
+
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+  {
+    const __fp16 *src = (const __fp16 *)host_fp16_output.data();
+    unsigned int total = M * N;
+    unsigned int i = 0;
+    for (; i + 4 <= total; i += 4) {
+      float16x4_t h = vld1_f16(src + i);
+      vst1q_f32(rdata + i, vcvt_f32_f16(h));
+    }
+    for (; i < total; i++) {
+      rdata[i] = (float)src[i];
+    }
+  }
+#else
+  for (unsigned int i = 0; i < M * N; i++) {
+    rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
+  }
+#endif
+
+  g_pending_rdata = nullptr;
+}
 }
 #endif
 
@@ -1059,16 +1104,22 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     unsigned int nr = 4;
     unsigned int rhs_packed_stride = nr * (((alignK) / 2) + 12);
 
+    // Flush pending output from previous call (GEMM(N-1) may still be running,
+    // this syncs it, giving overlap between current call's prep and GEMM(N-1))
+    flush_pending_dotQ_output();
+
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
     // Use cached SVM buffers (grow on demand, no per-call alloc/free)
+    // Double-buffer output_svm to enable pipelining across calls
     size_t kai_size = input.getMemoryBytes();
     uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     uint16_t *scales_svm = (uint16_t *)g_scales_svm.get(N * sizeof(uint16_t), blas_cc);
     uint16_t *input_svm = (uint16_t *)g_input_svm.get(M * alignK * sizeof(uint16_t), blas_cc);
     uint16_t *input_tr_svm = (uint16_t *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t), blas_cc);
-    uint16_t *output_svm = (uint16_t *)g_output_svm.get(M * N * sizeof(uint16_t), blas_cc);
+    uint16_t *output_svm = (uint16_t *)g_output_svm[g_output_idx].get(M * N * sizeof(uint16_t), blas_cc);
+    g_output_idx = 1 - g_output_idx;
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1148,31 +1199,12 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Copy FP16 output from SVM to host buffer (DMA-friendly) then convert to FP32
-    static thread_local std::vector<uint16_t> host_fp16_output;
-    host_fp16_output.resize(M * N);
-    std::memcpy(host_fp16_output.data(), output_svm, M * N * sizeof(uint16_t));
-
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
-    {
-      const __fp16 *src = (const __fp16 *)host_fp16_output.data();
-      unsigned int total = M * N;
-      unsigned int i = 0;
-      for (; i + 4 <= total; i += 4) {
-        float16x4_t h = vld1_f16(src + i);
-        vst1q_f32(rdata + i, vcvt_f32_f16(h));
-      }
-      for (; i < total; i++) {
-        rdata[i] = (float)src[i];
-      }
-    }
-#else
-    for (unsigned int i = 0; i < M * N; i++) {
-      rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
-    }
-#endif
-
-    // SVM buffers cached, no free
+    // Pipeline: defer sync + copy to next call (flushed at start of next call)
+    g_pending_rdata = rdata;
+    g_pending_output_svm = output_svm;
+    g_pending_M = M;
+    g_pending_N = N;
+    g_pending_blas_cc = blas_cc;
 
     auto t_total_end = std::chrono::high_resolution_clock::now();
 
@@ -1190,6 +1222,10 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   } else
 #endif
   {
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // Flush any pending GPU output before CPU path (prevents stale data)
+    flush_pending_dotQ_output();
+#endif
     auto t_cpu_start = std::chrono::high_resolution_clock::now();
 #if defined(ENABLE_FP16) && defined(__aarch64__)
     if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
