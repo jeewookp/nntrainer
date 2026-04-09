@@ -871,6 +871,79 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
   // No sync: output (weights/scales) consumed only by GEMM kernel in same queue
 }
 
+void fp32_to_fp16_pad_cl(cl_mem src_fp32_buf, void *dst_fp16_svm,
+                         unsigned int M, unsigned int K, unsigned int alignK) {
+  bool result = false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    fp32_to_fp16_pad_kernel, "fp32_to_fp16_pad");
+  if (!kernel_ptr) {
+    throw std::runtime_error("Failed to get kernel_ptr for fp32_to_fp16_pad");
+    return;
+  }
+
+  int arg = 0;
+  result = kernel_ptr->SetKernelArguments(arg++, &src_fp32_buf, sizeof(cl_mem));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 0 for fp32_to_fp16_pad");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, dst_fp16_svm);
+  if (!result) throw std::runtime_error("Failed to set kernel argument 1 for fp32_to_fp16_pad");
+
+  int M_i = M, K_i = K, alignK_i = alignK;
+  result = kernel_ptr->SetKernelArguments(arg++, &M_i, sizeof(int));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 2 for fp32_to_fp16_pad");
+  result = kernel_ptr->SetKernelArguments(arg++, &K_i, sizeof(int));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 3 for fp32_to_fp16_pad");
+  result = kernel_ptr->SetKernelArguments(arg++, &alignK_i, sizeof(int));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 4 for fp32_to_fp16_pad");
+
+  const int work_groups_count[3] = {(int)M, (int)(alignK / 4), 1};
+  const int work_group_size[3] = {1, 64, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+    kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error("Failed to dispatch kernel for fp32_to_fp16_pad");
+    return;
+  }
+}
+
+void fp16_to_fp32_cl(void *src_fp16_svm, cl_mem dst_fp32_buf, unsigned int total) {
+  bool result = false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    fp16_to_fp32_kernel, "fp16_to_fp32");
+  if (!kernel_ptr) {
+    throw std::runtime_error("Failed to get kernel_ptr for fp16_to_fp32");
+    return;
+  }
+
+  int arg = 0;
+  result = kernel_ptr->SetKernelSVMArguments(arg++, src_fp16_svm);
+  if (!result) throw std::runtime_error("Failed to set kernel argument 0 for fp16_to_fp32");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &dst_fp32_buf, sizeof(cl_mem));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 1 for fp16_to_fp32");
+
+  int total_i = total;
+  result = kernel_ptr->SetKernelArguments(arg++, &total_i, sizeof(int));
+  if (!result) throw std::runtime_error("Failed to set kernel argument 2 for fp16_to_fp32");
+
+  const int work_groups_count[3] = {(int)((total + 3) / 4), 1, 1};
+  const int work_group_size[3] = {64, 1, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+    kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error("Failed to dispatch kernel for fp16_to_fp32");
+    return;
+  }
+}
+
 void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, void *scales, void *output,
                   unsigned int M, unsigned int N, unsigned int K,
                   unsigned int quantization_group_size) {

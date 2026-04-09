@@ -14,6 +14,8 @@ cl_op_kernels = [
   'int4_gemm_adreno.cl',
   'input_transpose.cl',
   'repack_kai_to_adreno.cl',
+  'fp32_to_fp16_pad.cl',
+  'fp16_to_fp32.cl',
   'q4_0_ab_bi_8x4.cl',
   'q6_k_sgemv.cl',
   'restore_block_q4_0.cl',
