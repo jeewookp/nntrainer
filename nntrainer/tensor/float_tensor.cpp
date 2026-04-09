@@ -1127,9 +1127,11 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
 #endif
     auto t_cpu_end = std::chrono::high_resolution_clock::now();
-    auto cpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_cpu_end - t_cpu_start).count() / 1000.0;
-    printf("[CPU dotQInt] M=%u K=%u N=%u | total=%.2f ms\n", M, K, N, cpu_ms);
-    fflush(stdout);
+    if (M > 1) {
+      auto cpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_cpu_end - t_cpu_start).count() / 1000.0;
+      printf("[CPU dotQInt] M=%u K=%u N=%u | total=%.2f ms\n", M, K, N, cpu_ms);
+      fflush(stdout);
+    }
   }
 
   return output;
