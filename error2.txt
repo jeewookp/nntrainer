@@ -1,0 +1,69 @@
+sh tools/test_android.sh 실행 시 gpu gemm 더 느려졌어 error.txt보다도 더 빠른 속도를 원했던건데
+
+[ RUN      ] KAI_acc3.GEMM_1024x2560x1024
+Repack KAI->Adreno: 0.64 ms 
+GPU repack+GEMM  : 7.42 ms 
+GPU GEMM only    : 6.54 ms 
+GPU repack only  : 0.64 ms 
+GPU MSE vs FP32 ref: 1.27686
+CPU KAI kernel   : 7.76 ms 
+CPU MSE vs FP32 ref: 1.28063
+Speedup (CPU/GPU): 1.04582x
+-------------------------------------------
+[       OK ] KAI_acc3.GEMM_1024x2560x1024 (2074 ms)
+[----------] 1 test from KAI_acc3 (2074 ms total)
+
+[----------] 1 test from KAI_acc33
+[ RUN      ] KAI_acc33.GEMM_1024x2560x4096
+Repack KAI->Adreno: 1.78 ms 
+GPU repack+GEMM  : 28.46 ms 
+GPU GEMM only    : 24.26 ms 
+GPU repack only  : 1.78 ms 
+GPU MSE vs FP32 ref: 1.26637
+CPU KAI kernel   : 19.9 ms 
+CPU MSE vs FP32 ref: 1.27036
+Speedup (CPU/GPU): 0.699227x
+-------------------------------------------
+[       OK ] KAI_acc33.GEMM_1024x2560x4096 (4665 ms)
+[----------] 1 test from KAI_acc33 (4665 ms total)
+
+[----------] 1 test from KAI_acc35
+[ RUN      ] KAI_acc35.GEMM_1024x2560x9728
+Repack KAI->Adreno: 3.64 ms 
+GPU repack+GEMM  : 59.54 ms 
+GPU GEMM only    : 54.98 ms 
+GPU repack only  : 3.64 ms 
+GPU MSE vs FP32 ref: 1.26522
+CPU KAI kernel   : 41.68 ms 
+CPU MSE vs FP32 ref: 1.26923
+Speedup (CPU/GPU): 0.700034x
+-------------------------------------------
+[       OK ] KAI_acc35.GEMM_1024x2560x9728 (9830 ms)
+[----------] 1 test from KAI_acc35 (9830 ms total)
+
+[----------] 1 test from KAI_acc37
+[ RUN      ] KAI_acc37.GEMM_1024x4096x2560
+Repack KAI->Adreno: 1.64 ms 
+GPU repack+GEMM  : 29.78 ms 
+GPU GEMM only    : 28.24 ms 
+GPU repack only  : 1.64 ms 
+GPU MSE vs FP32 ref: 2.03424
+CPU KAI kernel   : 21.96 ms 
+CPU MSE vs FP32 ref: 2.0407
+Speedup (CPU/GPU): 0.737408x
+-------------------------------------------
+[       OK ] KAI_acc37.GEMM_1024x4096x2560 (5034 ms)
+[----------] 1 test from KAI_acc37 (5034 ms total)
+
+[----------] 1 test from KAI_acc39
+[ RUN      ] KAI_acc39.GEMM_1024x9728x2560
+Repack KAI->Adreno: 3.7 ms 
+GPU repack+GEMM  : 62.56 ms 
+GPU GEMM only    : 59 ms 
+GPU repack only  : 3.7 ms 
+GPU MSE vs FP32 ref: 4.89859
+CPU KAI kernel   : 52.1 ms 
+CPU MSE vs FP32 ref: 4.91032
+Speedup (CPU/GPU): 0.832801x
+-------------------------------------------
+[       OK ] KAI_acc39.GEMM_1024x9728x2560 (10871 ms)
