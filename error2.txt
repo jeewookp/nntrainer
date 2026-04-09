@@ -1,73 +1,80 @@
 sh tools/test_android.sh 실행 시 KAI_acc39.GEMM_1024x9728x2560에서 GPU repack+GEMM  < 20 ms 로 만들어 줄 수 있어?
-속도 오히려 늦어졌어 틀린 건 해결됐네 속도 느리지 않으면서 안 틀리게 해줘
+방금 수정으로 오히려 느려졌어
+아래는 결과야
+
 
 [==========] Running 5 tests from 5 test suites.
 [----------] Global test environment set-up.
 [----------] 1 test from KAI_acc3
 [ RUN      ] KAI_acc3.GEMM_1024x2560x1024
-Repack KAI->Adreno: 0.64 ms 
-GPU repack+GEMM  : 4.28 ms 
-GPU GEMM only    : 3.62 ms 
-GPU repack only  : 0.64 ms 
+Repack KAI->Adreno: 0.66 ms 
+GPU repack+GEMM  : 6.98 ms 
+GPU GEMM only    : 6.16 ms 
+GPU repack only  : 0.66 ms 
 GPU MSE vs FP32 ref: 1.28975
-CPU KAI kernel   : 8.14 ms 
+CPU KAI kernel   : 11.22 ms 
 CPU MSE vs FP32 ref: 1.28063
-Speedup (CPU/GPU): 1.90187x
+Speedup (CPU/GPU): 1.60745x
 -------------------------------------------
-[       OK ] KAI_acc3.GEMM_1024x2560x1024 (1726 ms)
-[----------] 1 test from KAI_acc3 (1726 ms total)
+[       OK ] KAI_acc3.GEMM_1024x2560x1024 (2158 ms)
+[----------] 1 test from KAI_acc3 (2158 ms total)
 
 [----------] 1 test from KAI_acc33
 [ RUN      ] KAI_acc33.GEMM_1024x2560x4096
-Repack KAI->Adreno: 1.78 ms 
-GPU repack+GEMM  : 14.8 ms 
-GPU GEMM only    : 14.18 ms 
-GPU repack only  : 1.78 ms 
+Repack KAI->Adreno: 1.66 ms 
+GPU repack+GEMM  : 26.68 ms 
+GPU GEMM only    : 23.6 ms 
+GPU repack only  : 1.66 ms 
 GPU MSE vs FP32 ref: 1.27049
-CPU KAI kernel   : 19.9 ms 
+CPU KAI kernel   : 25.54 ms 
 CPU MSE vs FP32 ref: 1.27036
-Speedup (CPU/GPU): 1.34459x
+Speedup (CPU/GPU): 0.957271x
 -------------------------------------------
-[       OK ] KAI_acc33.GEMM_1024x2560x4096 (3351 ms)
-[----------] 1 test from KAI_acc33 (3351 ms total)
+[       OK ] KAI_acc33.GEMM_1024x2560x4096 (5114 ms)
+[----------] 1 test from KAI_acc33 (5114 ms total)
 
 [----------] 1 test from KAI_acc35
 [ RUN      ] KAI_acc35.GEMM_1024x2560x9728
-Repack KAI->Adreno: 3.64 ms 
-GPU repack+GEMM  : 34.22 ms 
-GPU GEMM only    : 28.74 ms 
-GPU repack only  : 3.64 ms 
+Repack KAI->Adreno: 3.66 ms 
+GPU repack+GEMM  : 56.14 ms 
+GPU GEMM only    : 51.28 ms 
+GPU repack only  : 3.66 ms 
 GPU MSE vs FP32 ref: 1.2677
-CPU KAI kernel   : 41.02 ms 
+CPU KAI kernel   : 39.1 ms 
 CPU MSE vs FP32 ref: 1.26923
-Speedup (CPU/GPU): 1.19871x
+Speedup (CPU/GPU): 0.696473x
 -------------------------------------------
-[       OK ] KAI_acc35.GEMM_1024x2560x9728 (6968 ms)
-[----------] 1 test from KAI_acc35 (6968 ms total)
+[       OK ] KAI_acc35.GEMM_1024x2560x9728 (9322 ms)
+[----------] 1 test from KAI_acc35 (9323 ms total)
 
 [----------] 1 test from KAI_acc37
 [ RUN      ] KAI_acc37.GEMM_1024x4096x2560
-Repack KAI->Adreno: 1.64 ms 
-GPU repack+GEMM  : 15.52 ms 
-GPU GEMM only    : 15.24 ms 
-GPU repack only  : 1.64 ms 
+Repack KAI->Adreno: 1.62 ms 
+GPU repack+GEMM  : 28.18 ms 
+GPU GEMM only    : 24.58 ms 
+GPU repack only  : 1.62 ms 
 GPU MSE vs FP32 ref: 2.04778
-CPU KAI kernel   : 22.26 ms 
+CPU KAI kernel   : 21.72 ms 
 CPU MSE vs FP32 ref: 2.0407
-Speedup (CPU/GPU): 1.43428x
+Speedup (CPU/GPU): 0.770759x
 -------------------------------------------
-[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3549 ms)
-[----------] 1 test from KAI_acc37 (3549 ms total)
+[       OK ] KAI_acc37.GEMM_1024x4096x2560 (4687 ms)
+[----------] 1 test from KAI_acc37 (4687 ms total)
 
 [----------] 1 test from KAI_acc39
 [ RUN      ] KAI_acc39.GEMM_1024x9728x2560
-Repack KAI->Adreno: 3.68 ms 
-GPU repack+GEMM  : 35.84 ms 
-GPU GEMM only    : 30.78 ms 
-GPU repack only  : 3.68 ms 
+Repack KAI->Adreno: 3.7 ms 
+GPU repack+GEMM  : 61.96 ms 
+GPU GEMM only    : 56.24 ms 
+GPU repack only  : 3.7 ms 
 GPU MSE vs FP32 ref: 4.96808
-CPU KAI kernel   : 51.56 ms 
+CPU KAI kernel   : 51.42 ms 
 CPU MSE vs FP32 ref: 4.91032
-Speedup (CPU/GPU): 1.43862x
+Speedup (CPU/GPU): 0.82989x
 -------------------------------------------
-[       OK ] KAI_acc39.GEMM_1024x9728x2560 (7811 ms)
+[       OK ] KAI_acc39.GEMM_1024x9728x2560 (10638 ms)
+[----------] 1 test from KAI_acc39 (10638 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 5 test suites ran. (31922 ms total)
+[  PASSED  ] 5 tests.
