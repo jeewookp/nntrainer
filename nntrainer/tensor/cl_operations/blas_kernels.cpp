@@ -1007,6 +1007,34 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   }
 
   // GEMM kernel - no sync needed, same queue guarantees ordering
+  // Create weight image1d_buffer for texture cache
+  size_t weight_size = (alignK / 4) * N * sizeof(uint16_t);
+  cl_mem weight_buf = clCreateBuffer(
+    blas_cc->context_inst_.GetContext(),
+    CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+    weight_size,
+    weights,
+    &err
+  );
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Failed to create weight buffer");
+
+  memset(&image_desc, 0, sizeof(image_desc));
+  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  image_desc.image_width = (alignK / 4) * N / 4;
+  image_desc.buffer = weight_buf;
+
+  cl_mem weight_img = clCreateImage(
+    blas_cc->context_inst_.GetContext(),
+    CL_MEM_READ_ONLY,
+    &image_format,
+    &image_desc,
+    nullptr,
+    &err
+  );
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Failed to create image1d_buffer for weights");
+
   kernel_ptr = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
   if (!kernel_ptr) {
@@ -1021,7 +1049,6 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   // Split-K for large K to maintain FP16 precision
   const int K_SPLIT_THRESHOLD = 4096;
   int num_splits = (K > K_SPLIT_THRESHOLD) ? ((K + K_SPLIT_THRESHOLD - 1) / K_SPLIT_THRESHOLD) : 1;
-  // Align split size to 32 (quantization group)
   int k_chunk = ((K / num_splits + 31) / 32) * 32;
 
   for (int split = 0; split < num_splits; split++) {
@@ -1040,7 +1067,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     result = kernel_ptr->SetKernelSVMArguments(arg++, output);
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+    result = kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
