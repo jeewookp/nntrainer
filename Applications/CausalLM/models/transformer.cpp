@@ -104,8 +104,8 @@ void Transformer::setupParameters(json &cfg, json &generation_cfg,
   EMBEDDING_DTYPE = nntr_cfg["embedding_dtype"];
   FC_LAYER_DTYPE = nntr_cfg["fc_layer_dtype"];
 
-  // Experiment: Q4_0 weight (matches bin file) + FP16 activation
-  MODEL_TENSOR_TYPE = "Q4_0-FP16";
+  // Experiment: QINT4 (Kai4Tensor on Android) weight + FP16 activation
+  MODEL_TENSOR_TYPE = "QINT4-FP16";
 
   if (cfg.contains("is_causal")) {
     IS_CAUSAL = cfg["is_causal"].get<bool>();
