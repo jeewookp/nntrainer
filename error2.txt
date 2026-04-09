@@ -1,7 +1,41 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
 
+./include/nntrainer/layer_context.h
+./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
+./include/nntrainer/rmsnorm.h
+./Android.mk
+./examples/
+./conf/
+./conf/nntrainer.ini
+~/projects/nntrainer ~/projects/nntrainer
+~/projects/nntrainer
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ cd Applications/CausalLM
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer/Applications/CausalLM$ sh build_android.sh
+build_android.sh: 14: Bad substitution
+NNTRAINER_ROOT: /home/jwhero94/projects/nntrainer
+ANDROID_NDK: /home/jwhero94/neo/android-ndk-r26d/
+nntrainer for Android already built.
+Build Tokenizer Library If not Present
+Tokenizer Library Built Successfully
+Building CausalLM application...
+[arm64-v8a] OpenMP libs/arm64-v8a/libomp.so:
+[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
+[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
+[arm64-v8a] Compile++      : nntrainer_causallm <= huggingface_tokenizer.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= qwen2_embedding.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= qwen3_embedding.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= llm_util.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= transformer.cpp
 ./../models/transformer.cpp:417:67: error: no member named 'SwiGLULayer' in namespace 'causallm'
     app_context->registerFactory(nntrainer::createLayer<causallm::SwiGLULayer>);
                                                         ~~~~~~~~~~^
 1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer_causallm/__/models/transformer.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer_causallm <= embedding_normalize_layer.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= embedding_pooling_layer.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= embedding_layer.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= qwen3_causallm.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= qwen2_causal
