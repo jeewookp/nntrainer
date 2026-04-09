@@ -1,18 +1,9 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
 
-[arm64-v8a] Install        : nntrainer_causallm => libs/arm64-v8a/nntrainer_causallm
-Build completed successfully!
-Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
-
-Executable: nntrainer_causallm
-Libraries: libnntrainer.so, libccapi-nntrainer.so, libc++_shared.so
-jni/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.0 MB/s (1822720 bytes in 0.056s)
-jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.1 MB/s (129336 bytes in 0.006s)
-jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10960680 bytes in 0.326s)
-jni/libs/arm64-v8a/libomp.so: 1 file pushed. 31.0 MB/s (1205616 bytes in 0.037s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.9 MB/s (5165264 bytes in 0.150s)
-5 files pushed. 31.8 MB/s (19283616 bytes in 0.578s)
+jni/libs/arm64-v8a/libomp.so: 1 file pushed. 30.2 MB/s (1205616 bytes in 0.038s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.8 MB/s (5165264 bytes in 0.160s)
+5 files pushed. 31.5 MB/s (19283616 bytes in 0.584s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 load finished
@@ -24,10 +15,7 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
-libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
-libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
-libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
-Aborted 
+
+[!] FATAL ERROR: Error: not yet implemented for this data type
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
