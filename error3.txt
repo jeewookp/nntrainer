@@ -1,86 +1,33 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
-5 files pushed. 31.4 MB/s (19283552 bytes in 0.585s)
+
+[arm64-v8a] Install        : nntrainer_causallm => libs/arm64-v8a/nntrainer_causallm
+Build completed successfully!
+Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+
+Executable: nntrainer_causallm
+Libraries: libnntrainer.so, libccapi-nntrainer.so, libc++_shared.so
+jni/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.0 MB/s (1822720 bytes in 0.056s)
+jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.1 MB/s (129336 bytes in 0.006s)
+jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10960680 bytes in 0.326s)
+jni/libs/arm64-v8a/libomp.so: 1 file pushed. 31.0 MB/s (1205616 bytes in 0.037s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.9 MB/s (5165264 bytes in 0.150s)
+5 files pushed. 31.8 MB/s (19283616 bytes in 0.578s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-[TensorRead FAIL] name=layer33_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2192848896 shape=1x1x1x2560
-libc++abi: [TensorRead FAIL] name=layer33_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2192854016 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2198752256 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2150818816 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2164832256 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2198752512 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2150823936 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2200227328 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2257008384 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2257008640 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2306411520 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2264386560 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2349184512 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2315264512 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2144920576 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2221613568 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer34_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2255533568 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2235621888 shape=1x1x9728x2560
-[TensorRead FAIL] name=layer34_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2258483200 shape=1x1x4096x2560
-[TensorRead FAIL] name=layer35_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2313789696 shape=1x1x1x128
-[TensorRead FAIL] name=layer35_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2312314880 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2201701888 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2321162752 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2200227072 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2178840576 shape=1x1x9728x2560
-[TensorRead FAIL] name=layer33_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2207605248 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2249630208 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2249635328 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2278394880 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer35_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2306416640 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=output_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2363192832 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2255533824 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2264381440 shape=1x1x1x2560
-[TensorRead FAIL] name=layer33_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2207600128 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2335176192 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer35_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2313789952 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2292403200 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2312315136 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2321167872 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+load finished
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
+libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
+libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
+libc++abi: terminating due to uncaught exception of type std::invalid_argument: input word index is greater than in_dim
 Aborted 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
