@@ -73,8 +73,9 @@ void InputLayer::exportTo(Exporter &exporter,
 void InputLayer::finalize(InitLayerContext &context) {
 
   std::vector<TensorDim> output_dims = context.getInputDimensions();
+  // Force FP32 for input tensor to preserve token IDs (FP16 max=65504 < vocab size)
   for (auto &d : output_dims) {
-    d.setDataType(context.getActivationDataType());
+    d.setDataType(ml::train::TensorDim::DataType::FP32);
   }
 
   context.setOutputDimensions(output_dims);
