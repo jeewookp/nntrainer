@@ -1077,7 +1077,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     std::memcpy(kai_svm, mdata, kai_size);
     blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
 
-    auto t_repack_start = std::chrono::high_resolution_clock::now();
+    auto t_kai_copy_end = std::chrono::high_resolution_clock::now();
+    auto t_repack_start = t_kai_copy_end;
 
     // Dispatch repack KAI → Adreno format (ASYNC, no sync at end)
     repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
@@ -1158,14 +1159,15 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto t_total_end = std::chrono::high_resolution_clock::now();
 
     auto alloc_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_alloc_end - t_alloc_start).count() / 1000.0;
+    auto kai_copy_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_kai_copy_end - t_alloc_end).count() / 1000.0;
     auto repack_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_repack_end - t_repack_start).count() / 1000.0;
     auto input_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_start - t_repack_end).count() / 1000.0;
     auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_gemm_start).count() / 1000.0;
     auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_gemm_end).count() / 1000.0;
     auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_total_start).count() / 1000.0;
 
-    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32=%.2f | total=%.2f ms\n",
-           M, K, N, alloc_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
+    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32=%.2f | total=%.2f ms\n",
+           M, K, N, alloc_ms, kai_copy_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
     fflush(stdout);
   } else
 #endif
