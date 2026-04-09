@@ -123,18 +123,6 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
                   unsigned int quantization_group_size);
 
 /**
- * @brief INT8 x INT4 GEMM on Adreno
- * @param input SVM int8 [M, K] (per-row symmetric quantized)
- * @param lhs_scale SVM float [M] per-row scales
- * @param rhs_scale SVM float [N] per-channel scales
- * @param output SVM float [M, N]
- * @param weights SVM ushort [K/4, N] (INT4 packed)
- */
-void gemm_int8_int4_cl_adreno(void *input, void *lhs_scale, void *rhs_scale,
-                              void *output, void *weights,
-                              unsigned int M, unsigned int N, unsigned int K);
-
-/**
  * @brief INT4 GEMM async computation
  */
 void gemm_int4_async_cl(float *input, std::vector<void *> weights,

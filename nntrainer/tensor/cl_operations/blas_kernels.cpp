@@ -871,62 +871,6 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
   // No sync: output (weights/scales) consumed only by GEMM kernel in same queue
 }
 
-void gemm_int8_int4_cl_adreno(void *input, void *lhs_scale, void *rhs_scale,
-                              void *output, void *weights,
-                              unsigned int M, unsigned int N, unsigned int K) {
-  if ((N % 4) != 0 || (K % 4) != 0) {
-    printf("N and K must be divisible by 4 for gemm_int8_int4\n");
-    abort();
-  }
-  bool result = false;
-  auto *blas_cc =
-    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-
-  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
-    int8_int4_gemm_adreno_kernel, "gpu_int8_int4_gemm_adreno");
-  if (!kernel_ptr) {
-    throw std::runtime_error("Failed to get kernel_ptr for gpu_int8_int4_gemm_adreno");
-    return;
-  }
-
-  int arg = 0;
-  result = kernel_ptr->SetKernelSVMArguments(arg++, input);
-  if (!result) throw std::runtime_error("Failed to set kernel argument 0");
-  result = kernel_ptr->SetKernelSVMArguments(arg++, lhs_scale);
-  if (!result) throw std::runtime_error("Failed to set kernel argument 1");
-  result = kernel_ptr->SetKernelSVMArguments(arg++, rhs_scale);
-  if (!result) throw std::runtime_error("Failed to set kernel argument 2");
-  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
-  if (!result) throw std::runtime_error("Failed to set kernel argument 3");
-  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
-  if (!result) throw std::runtime_error("Failed to set kernel argument 4");
-
-  int K_i = K, N_i = N, M_i = M;
-  int k_off = 0, beta_val = 0;
-  result = kernel_ptr->SetKernelArguments(arg++, &K_i, sizeof(int));
-  if (!result) throw std::runtime_error("Failed to set kernel argument 5");
-  result = kernel_ptr->SetKernelArguments(arg++, &N_i, sizeof(int));
-  if (!result) throw std::runtime_error("Failed to set kernel argument 6");
-  result = kernel_ptr->SetKernelArguments(arg++, &M_i, sizeof(int));
-  if (!result) throw std::runtime_error("Failed to set kernel argument 7");
-  result = kernel_ptr->SetKernelArguments(arg++, &k_off, sizeof(int));
-  if (!result) throw std::runtime_error("Failed to set kernel argument 8");
-  result = kernel_ptr->SetKernelArguments(arg++, &beta_val, sizeof(int));
-  if (!result) throw std::runtime_error("Failed to set kernel argument 9");
-
-  const int work_groups_count[3] = {(int)ceilDiv(M, 8), (int)N / 4, 1};
-  const int work_group_size[3] = {1, 64, 1};
-
-  result = blas_cc->command_queue_inst_.DispatchCommand(
-    kernel_ptr, work_groups_count, work_group_size);
-  if (!result) {
-    throw std::runtime_error("Failed to dispatch gpu_int8_int4_gemm_adreno");
-    return;
-  }
-
-  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(float), true);
-}
-
 void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, void *scales, void *output,
                   unsigned int M, unsigned int N, unsigned int K,
                   unsigned int quantization_group_size) {

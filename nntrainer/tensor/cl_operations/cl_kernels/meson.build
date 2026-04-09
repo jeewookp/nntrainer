@@ -12,7 +12,6 @@ cl_op_kernels = [
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'int4_gemm_adreno.cl',
-  'int8_int4_gemm_adreno.cl',
   'input_transpose.cl',
   'repack_kai_to_adreno.cl',
   'q4_0_ab_bi_8x4.cl',

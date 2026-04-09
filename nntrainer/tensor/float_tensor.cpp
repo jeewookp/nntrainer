@@ -1031,11 +1031,6 @@ thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_svm;
 thread_local SVMCache g_input_tr_svm;
 thread_local SVMCache g_output_svm;
-// INT8 GEMM additional caches
-thread_local SVMCache g_int8_input_svm;
-thread_local SVMCache g_lhs_scale_svm;
-thread_local SVMCache g_rhs_scale_fp32_svm;
-thread_local SVMCache g_output_fp32_svm;
 }
 #endif
 
@@ -1090,104 +1085,92 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // INT8 GEMM path: quantize FP32 input to INT8 on CPU, dispatch INT8xINT4 GEMM
-    int8_t *int8_input_svm = (int8_t *)g_int8_input_svm.get(M * K * sizeof(int8_t), blas_cc);
-    float *lhs_scale_svm = (float *)g_lhs_scale_svm.get(M * sizeof(float), blas_cc);
-    float *rhs_scale_fp32_svm = (float *)g_rhs_scale_fp32_svm.get(N * sizeof(float), blas_cc);
-    float *output_fp32_svm = (float *)g_output_fp32_svm.get(M * N * sizeof(float), blas_cc);
-
-    // Cache by input pointer
+    // Convert FP32 input to FP16 on CPU (runs in parallel with GPU repack)
+    // Cache by input pointer: Q/K/V share input, gate/up share input in transformers
+    static thread_local std::vector<uint16_t> host_fp16_input;
     static thread_local const float *last_input_ptr = nullptr;
     static thread_local unsigned int last_input_M = 0;
     static thread_local unsigned int last_input_K = 0;
-    bool input_cached = (data == last_input_ptr && M == last_input_M && K == last_input_K);
+    static thread_local unsigned int last_input_alignK = 0;
+
+    bool input_cached = (data == last_input_ptr && M == last_input_M &&
+                         K == last_input_K && alignK == last_input_alignK);
+
+    if (host_fp16_input.size() < M * alignK) {
+      host_fp16_input.resize(M * alignK, 0);
+      input_cached = false;
+    }
 
     if (!input_cached) {
-      blas_cc->command_queue_inst_.enqueueSVMMap(int8_input_svm, M * K * sizeof(int8_t), false);
-      blas_cc->command_queue_inst_.enqueueSVMMap(lhs_scale_svm, M * sizeof(float), false);
-
-      // Per-row symmetric quantization (CPU NEON)
+      // Zero pad the tail region (k >= K) only if needed
+      if (alignK != K) {
+        for (unsigned int m = 0; m < M; m++) {
+          std::memset(host_fp16_input.data() + m * alignK + K, 0,
+                      (alignK - K) * sizeof(uint16_t));
+        }
+      }
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
       for (unsigned int m = 0; m < M; m++) {
         const float *src = data + m * K;
-        // Find max abs value
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
-        float32x4_t vmax = vdupq_n_f32(0.0f);
+        __fp16 *dst = (__fp16 *)(host_fp16_input.data() + m * alignK);
         unsigned int k = 0;
         for (; k + 4 <= K; k += 4) {
           float32x4_t v = vld1q_f32(src + k);
-          vmax = vmaxq_f32(vmax, vabsq_f32(v));
+          vst1_f16(dst + k, vcvt_f16_f32(v));
         }
-        float max_abs = vmaxvq_f32(vmax);
         for (; k < K; k++) {
-          float av = fabsf(src[k]);
-          if (av > max_abs) max_abs = av;
+          dst[k] = (__fp16)src[k];
         }
-#else
-        float max_abs = 0.0f;
-        for (unsigned int k = 0; k < K; k++) {
-          float av = fabsf(src[k]);
-          if (av > max_abs) max_abs = av;
-        }
-#endif
-        float scale = (max_abs > 0.0f) ? (max_abs / 127.0f) : 1.0f;
-        float inv_scale = 1.0f / scale;
-        lhs_scale_svm[m] = scale;
-
-        int8_t *dst = int8_input_svm + m * K;
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
-        float32x4_t vinv = vdupq_n_f32(inv_scale);
-        unsigned int k2 = 0;
-        for (; k2 + 8 <= K; k2 += 8) {
-          float32x4_t a = vmulq_f32(vld1q_f32(src + k2), vinv);
-          float32x4_t b = vmulq_f32(vld1q_f32(src + k2 + 4), vinv);
-          int32x4_t ia = vcvtnq_s32_f32(a);
-          int32x4_t ib = vcvtnq_s32_f32(b);
-          int16x8_t i16 = vcombine_s16(vmovn_s32(ia), vmovn_s32(ib));
-          int8x8_t i8 = vqmovn_s16(i16);
-          vst1_s8(dst + k2, i8);
-        }
-        for (; k2 < K; k2++) {
-          int v = (int)roundf(src[k2] * inv_scale);
-          if (v > 127) v = 127;
-          if (v < -128) v = -128;
-          dst[k2] = (int8_t)v;
-        }
-#else
-        for (unsigned int k = 0; k < K; k++) {
-          int v = (int)roundf(src[k] * inv_scale);
-          if (v > 127) v = 127;
-          if (v < -128) v = -128;
-          dst[k] = (int8_t)v;
-        }
-#endif
       }
-
-      blas_cc->command_queue_inst_.enqueueSVMUnmap(int8_input_svm);
-      blas_cc->command_queue_inst_.enqueueSVMUnmap(lhs_scale_svm);
+#else
+      for (unsigned int m = 0; m < M; m++) {
+        for (unsigned int k = 0; k < K; k++) {
+          host_fp16_input[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
+        }
+      }
+#endif
+      // Single memcpy to SVM (DMA-friendly sequential write)
+      blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
+      std::memcpy(input_svm, host_fp16_input.data(), M * alignK * sizeof(uint16_t));
+      blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
       last_input_ptr = data;
       last_input_M = M;
       last_input_K = K;
+      last_input_alignK = alignK;
     }
-
-    // Convert scales_svm (half) → rhs_scale_fp32_svm (float)
-    blas_cc->command_queue_inst_.enqueueSVMMap(rhs_scale_fp32_svm, N * sizeof(float), false);
-    const __fp16 *hs = (const __fp16 *)scales_svm;
-    for (unsigned int i = 0; i < N; i++) {
-      rhs_scale_fp32_svm[i] = (float)hs[i];
-    }
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(rhs_scale_fp32_svm);
 
     auto t_gemm_start = std::chrono::high_resolution_clock::now();
 
-    // Run INT8 x INT4 GEMM
-    gemm_int8_int4_cl_adreno(int8_input_svm, lhs_scale_svm, rhs_scale_fp32_svm,
-                             output_fp32_svm, weights_svm, M, N, K);
+    // Run Adreno GPU GEMM
+    gemm_int4_cl_adreno(input_svm, input_tr_svm, weights_svm, scales_svm,
+                        output_svm, M, N, K, 32);
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Copy FP32 output to rdata (no conversion needed)
-    std::memcpy(rdata, output_fp32_svm, M * N * sizeof(float));
+    // Copy FP16 output from SVM to host buffer (DMA-friendly) then convert to FP32
+    static thread_local std::vector<uint16_t> host_fp16_output;
+    host_fp16_output.resize(M * N);
+    std::memcpy(host_fp16_output.data(), output_svm, M * N * sizeof(uint16_t));
+
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+    {
+      const __fp16 *src = (const __fp16 *)host_fp16_output.data();
+      unsigned int total = M * N;
+      unsigned int i = 0;
+      for (; i + 4 <= total; i += 4) {
+        float16x4_t h = vld1_f16(src + i);
+        vst1q_f32(rdata + i, vcvt_f32_f16(h));
+      }
+      for (; i < total; i++) {
+        rdata[i] = (float)src[i];
+      }
+    }
+#else
+    for (unsigned int i = 0; i < M * N; i++) {
+      rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
+    }
+#endif
 
     // SVM buffers cached, no free
 
