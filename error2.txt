@@ -1,2 +1,512 @@
 sh temp.sh 실행 시 결과는 아래와 같아
-decode에서도 출력돼서 너무 많이 출력돼 prefill만 출력되게 해줘
+
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.00 repack=26.25 fp32->fp16=3.84 gemm=49.75 fp16->fp32+free=9.08 | total=94.31 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.82 repack=0.63 fp32->fp16=3.84 gemm=1.58 fp16->fp32+free=2.56 | total=10.85 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.76 repack=0.59 fp32->fp16=4.00 gemm=1.64 fp16->fp32+free=2.09 | total=10.48 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.25 repack=1.02 fp32->fp16=6.05 gemm=4.33 fp16->fp32+free=5.37 | total=22.41 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.79 repack=1.22 fp32->fp16=1.92 gemm=8.62 fp16->fp32+free=21.05 | total=45.66 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.52 repack=1.11 fp32->fp16=3.73 gemm=8.51 fp16->fp32+free=21.96 | total=47.28 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.09 repack=1.42 fp32->fp16=8.44 gemm=9.37 fp16->fp32+free=7.94 | total=41.25 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=3.97 repack=0.92 fp32->fp16=3.74 gemm=3.93 fp16->fp32+free=7.65 | total=21.57 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.75 repack=0.52 fp32->fp16=3.95 gemm=1.53 fp16->fp32+free=2.12 | total=10.24 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.69 repack=0.51 fp32->fp16=3.72 gemm=1.52 fp16->fp32+free=2.02 | total=9.82 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.15 repack=0.79 fp32->fp16=5.94 gemm=4.33 fp16->fp32+free=5.36 | total=21.86 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.79 repack=1.11 fp32->fp16=3.71 gemm=8.54 fp16->fp32+free=18.12 | total=42.35 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.70 repack=1.12 fp32->fp16=3.73 gemm=8.46 fp16->fp32+free=20.02 | total=44.11 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.02 repack=1.41 fp32->fp16=14.09 gemm=9.28 fp16->fp32+free=7.26 | total=44.12 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=3.78 repack=0.91 fp32->fp16=3.73 gemm=3.92 fp16->fp32+free=7.54 | total=21.19 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.64 repack=0.50 fp32->fp16=3.74 gemm=1.55 fp16->fp32+free=1.99 | total=9.79 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.62 repack=0.48 fp32->fp16=3.73 gemm=1.53 fp16->fp32+free=2.02 | total=9.71 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.17 repack=0.78 fp32->fp16=5.94 gemm=4.28 fp16->fp32+free=5.72 | total=22.20 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.62 repack=1.10 fp32->fp16=3.73 gemm=8.45 fp16->fp32+free=19.59 | total=44.58 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.76 repack=1.15 fp32->fp16=3.71 gemm=10.45 fp16->fp32+free=22.48 | total=48.60 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.29 repack=1.35 fp32->fp16=14.06 gemm=9.30 fp16->fp32+free=8.49 | total=45.50 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.25 repack=0.93 fp32->fp16=4.27 gemm=3.94 fp16->fp32+free=8.92 | total=23.83 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.97 repack=0.52 fp32->fp16=4.79 gemm=1.51 fp16->fp32+free=2.00 | total=11.27 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.64 repack=0.49 fp32->fp16=3.72 gemm=1.51 fp16->fp32+free=2.02 | total=9.72 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.04 repack=0.81 fp32->fp16=5.95 gemm=4.37 fp16->fp32+free=5.36 | total=21.86 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.74 repack=1.19 fp32->fp16=3.71 gemm=8.45 fp16->fp32+free=18.21 | total=42.35 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.46 repack=1.12 fp32->fp16=3.71 gemm=8.43 fp16->fp32+free=19.50 | total=44.35 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.03 repack=1.30 fp32->fp16=14.07 gemm=9.31 fp16->fp32+free=8.96 | total=45.78 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.31 repack=0.92 fp32->fp16=4.25 gemm=3.93 fp16->fp32+free=8.64 | total=23.57 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.88 repack=0.51 fp32->fp16=4.49 gemm=1.52 fp16->fp32+free=2.00 | total=10.78 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.64 repack=0.49 fp32->fp16=3.72 gemm=1.53 fp16->fp32+free=2.02 | total=9.76 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.09 repack=0.81 fp32->fp16=5.92 gemm=4.28 fp16->fp32+free=5.35 | total=21.79 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.78 repack=1.15 fp32->fp16=3.71 gemm=8.56 fp16->fp32+free=17.42 | total=41.69 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.71 repack=1.23 fp32->fp16=5.45 gemm=8.53 fp16->fp32+free=23.56 | total=50.55 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.09 repack=1.46 fp32->fp16=20.62 gemm=11.32 fp16->fp32+free=10.24 | total=59.74 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.09 repack=0.99 fp32->fp16=5.46 gemm=4.11 fp16->fp32+free=10.28 | total=27.67 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.52 fp32->fp16=5.46 gemm=1.62 fp16->fp32+free=2.87 | total=13.18 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.55 fp32->fp16=5.47 gemm=1.59 fp16->fp32+free=2.92 | total=13.25 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.47 repack=0.85 fp32->fp16=8.74 gemm=4.33 fp16->fp32+free=7.34 | total=28.48 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.34 repack=1.18 fp32->fp16=5.45 gemm=8.59 fp16->fp32+free=24.63 | total=54.27 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.34 repack=1.16 fp32->fp16=5.46 gemm=8.60 fp16->fp32+free=23.64 | total=53.26 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.04 repack=1.38 fp32->fp16=20.63 gemm=12.51 fp16->fp32+free=10.34 | total=60.93 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.11 repack=1.04 fp32->fp16=5.47 gemm=4.03 fp16->fp32+free=10.30 | total=27.66 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.51 fp32->fp16=5.47 gemm=1.59 fp16->fp32+free=2.88 | total=13.19 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.51 fp32->fp16=5.47 gemm=1.59 fp16->fp32+free=2.87 | total=13.09 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.51 repack=0.82 fp32->fp16=8.70 gemm=4.52 fp16->fp32+free=7.43 | total=28.81 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.42 repack=1.16 fp32->fp16=5.44 gemm=8.47 fp16->fp32+free=24.57 | total=54.20 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.34 repack=1.19 fp32->fp16=5.52 gemm=8.51 fp16->fp32+free=24.59 | total=54.41 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.07 repack=1.42 fp32->fp16=20.60 gemm=12.33 fp16->fp32+free=10.40 | total=61.00 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.41 repack=0.99 fp32->fp16=5.43 gemm=4.04 fp16->fp32+free=10.19 | total=27.90 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.22 repack=0.56 fp32->fp16=5.46 gemm=1.65 fp16->fp32+free=2.89 | total=13.22 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.18 repack=0.52 fp32->fp16=5.46 gemm=1.64 fp16->fp32+free=2.88 | total=13.10 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.47 repack=0.85 fp32->fp16=8.76 gemm=4.44 fp16->fp32+free=7.39 | total=28.63 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=11.06 repack=1.22 fp32->fp16=5.45 gemm=8.58 fp16->fp32+free=24.57 | total=55.22 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.40 repack=1.23 fp32->fp16=5.49 gemm=8.52 fp16->fp32+free=24.42 | total=54.19 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.99 repack=1.36 fp32->fp16=20.59 gemm=9.30 fp16->fp32+free=10.54 | total=57.79 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.33 repack=0.99 fp32->fp16=5.44 gemm=4.07 fp16->fp32+free=10.25 | total=27.81 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.56 fp32->fp16=5.47 gemm=1.64 fp16->fp32+free=2.83 | total=13.16 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.52 fp32->fp16=5.46 gemm=1.66 fp16->fp32+free=2.87 | total=13.13 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.45 repack=0.84 fp32->fp16=8.70 gemm=4.38 fp16->fp32+free=7.42 | total=28.49 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.93 repack=1.18 fp32->fp16=5.42 gemm=8.52 fp16->fp32+free=25.03 | total=55.09 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.52 repack=1.20 fp32->fp16=5.46 gemm=8.44 fp16->fp32+free=24.45 | total=54.11 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.97 repack=1.44 fp32->fp16=20.60 gemm=9.46 fp16->fp32+free=10.87 | total=58.37 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.14 repack=0.96 fp32->fp16=5.46 gemm=4.11 fp16->fp32+free=10.93 | total=28.37 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.35 repack=0.53 fp32->fp16=5.44 gemm=1.67 fp16->fp32+free=2.85 | total=13.39 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.59 fp32->fp16=5.46 gemm=1.64 fp16->fp32+free=2.85 | total=13.21 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.58 repack=0.79 fp32->fp16=8.70 gemm=4.53 fp16->fp32+free=7.86 | total=29.20 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.64 repack=1.19 fp32->fp16=5.47 gemm=8.58 fp16->fp32+free=23.73 | total=53.71 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.37 repack=1.29 fp32->fp16=5.44 gemm=8.60 fp16->fp32+free=24.52 | total=54.31 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.01 repack=1.53 fp32->fp16=20.60 gemm=9.42 fp16->fp32+free=10.09 | total=57.69 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.08 repack=1.05 fp32->fp16=5.46 gemm=4.11 fp16->fp32+free=10.23 | total=27.64 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.53 fp32->fp16=5.45 gemm=1.64 fp16->fp32+free=2.84 | total=13.16 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.55 fp32->fp16=5.44 gemm=1.63 fp16->fp32+free=2.88 | total=13.12 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.54 repack=0.82 fp32->fp16=8.72 gemm=4.45 fp16->fp32+free=7.39 | total=28.64 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.42 repack=1.24 fp32->fp16=5.43 gemm=8.61 fp16->fp32+free=23.75 | total=53.53 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.27 repack=1.22 fp32->fp16=5.46 gemm=10.56 fp16->fp32+free=23.73 | total=55.31 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.14 repack=1.44 fp32->fp16=20.67 gemm=9.39 fp16->fp32+free=10.17 | total=57.91 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.05 repack=1.06 fp32->fp16=5.48 gemm=4.03 fp16->fp32+free=10.19 | total=27.58 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.51 fp32->fp16=5.46 gemm=1.60 fp16->fp32+free=2.85 | total=13.13 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.55 fp32->fp16=5.46 gemm=1.64 fp16->fp32+free=2.88 | total=13.21 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.39 repack=0.81 fp32->fp16=8.72 gemm=4.39 fp16->fp32+free=7.38 | total=28.44 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.27 repack=1.18 fp32->fp16=5.45 gemm=8.66 fp16->fp32+free=27.14 | total=56.87 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.22 repack=1.22 fp32->fp16=5.44 gemm=8.55 fp16->fp32+free=24.62 | total=54.18 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.97 repack=1.40 fp32->fp16=20.65 gemm=11.88 fp16->fp32+free=16.31 | total=66.25 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.00 repack=0.98 fp32->fp16=5.46 gemm=4.07 fp16->fp32+free=10.19 | total=27.43 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.22 repack=0.56 fp32->fp16=5.44 gemm=1.68 fp16->fp32+free=2.83 | total=13.18 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.18 repack=0.56 fp32->fp16=5.47 gemm=1.67 fp16->fp32+free=2.85 | total=13.23 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.53 repack=0.82 fp32->fp16=8.73 gemm=4.41 fp16->fp32+free=7.38 | total=28.68 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.25 repack=1.29 fp32->fp16=5.47 gemm=8.60 fp16->fp32+free=24.49 | total=54.20 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.30 repack=1.21 fp32->fp16=5.44 gemm=8.56 fp16->fp32+free=24.42 | total=53.99 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.42 fp32->fp16=20.65 gemm=9.45 fp16->fp32+free=10.47 | total=58.08 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.31 repack=1.04 fp32->fp16=5.44 gemm=4.04 fp16->fp32+free=10.42 | total=27.99 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.42 repack=0.56 fp32->fp16=5.90 gemm=1.66 fp16->fp32+free=2.86 | total=13.88 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.16 repack=0.53 fp32->fp16=5.47 gemm=1.66 fp16->fp32+free=2.85 | total=13.17 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.51 repack=0.85 fp32->fp16=8.73 gemm=4.49 fp16->fp32+free=7.45 | total=28.78 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.94 repack=1.27 fp32->fp16=5.46 gemm=8.68 fp16->fp32+free=24.48 | total=55.01 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.29 repack=1.17 fp32->fp16=5.45 gemm=8.61 fp16->fp32+free=23.65 | total=53.23 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.44 fp32->fp16=20.72 gemm=12.46 fp16->fp32+free=10.32 | total=61.04 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.03 repack=1.07 fp32->fp16=5.45 gemm=4.06 fp16->fp32+free=10.21 | total=27.65 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.51 fp32->fp16=5.47 gemm=1.63 fp16->fp32+free=2.80 | total=13.10 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.51 fp32->fp16=5.44 gemm=1.55 fp16->fp32+free=2.82 | total=13.02 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.40 repack=0.81 fp32->fp16=8.71 gemm=4.36 fp16->fp32+free=7.77 | total=28.83 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.57 repack=1.20 fp32->fp16=5.47 gemm=8.50 fp16->fp32+free=24.39 | total=54.20 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.24 repack=1.10 fp32->fp16=5.44 gemm=8.53 fp16->fp32+free=30.60 | total=59.99 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.08 repack=1.40 fp32->fp16=20.70 gemm=11.88 fp16->fp32+free=15.74 | total=65.88 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.01 repack=0.99 fp32->fp16=5.45 gemm=4.00 fp16->fp32+free=10.13 | total=27.36 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.55 fp32->fp16=5.44 gemm=1.57 fp16->fp32+free=2.78 | total=12.99 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.17 repack=0.54 fp32->fp16=5.48 gemm=1.58 fp16->fp32+free=2.83 | total=13.08 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.54 repack=0.83 fp32->fp16=8.71 gemm=4.41 fp16->fp32+free=7.39 | total=28.69 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=9.73 repack=1.17 fp32->fp16=4.79 gemm=8.53 fp16->fp32+free=17.86 | total=45.76 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=9.71 repack=1.33 fp32->fp16=2.66 gemm=8.82 fp16->fp32+free=21.32 | total=47.14 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.01 repack=1.62 fp32->fp16=9.46 gemm=9.34 fp16->fp32+free=8.36 | total=44.26 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.54 repack=0.97 fp32->fp16=4.78 gemm=3.93 fp16->fp32+free=7.84 | total=23.62 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.73 repack=0.51 fp32->fp16=3.94 gemm=1.52 fp16->fp32+free=2.12 | total=10.16 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.70 repack=0.49 fp32->fp16=3.96 gemm=1.55 fp16->fp32+free=2.12 | total=10.15 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.12 repack=0.84 fp32->fp16=5.96 gemm=4.30 fp16->fp32+free=5.31 | total=21.83 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.09 repack=1.14 fp32->fp16=3.96 gemm=8.52 fp16->fp32+free=21.69 | total=46.63 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=9.41 repack=1.15 fp32->fp16=4.53 gemm=8.53 fp16->fp32+free=21.98 | total=49.11 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.76 repack=1.37 fp32->fp16=14.07 gemm=9.32 fp16->fp32+free=11.98 | total=49.56 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.50 repack=0.94 fp32->fp16=4.77 gemm=4.00 fp16->fp32+free=8.98 | total=24.76 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.98 repack=0.52 fp32->fp16=4.28 gemm=1.53 fp16->fp32+free=2.15 | total=10.86 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.72 repack=0.49 fp32->fp16=3.95 gemm=1.53 fp16->fp32+free=2.15 | total=10.20 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.10 repack=0.77 fp32->fp16=5.96 gemm=4.31 fp16->fp32+free=5.34 | total=21.79 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.13 repack=1.11 fp32->fp16=3.90 gemm=8.52 fp16->fp32+free=19.95 | total=44.76 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.12 repack=1.10 fp32->fp16=3.71 gemm=8.50 fp16->fp32+free=19.14 | total=43.63 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.06 repack=1.36 fp32->fp16=14.00 gemm=9.28 fp16->fp32+free=7.40 | total=44.18 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.54 repack=0.96 fp32->fp16=4.81 gemm=3.98 fp16->fp32+free=7.79 | total=23.66 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.71 repack=0.49 fp32->fp16=4.27 gemm=1.53 fp16->fp32+free=2.25 | total=10.62 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.78 repack=0.48 fp32->fp16=4.27 gemm=1.51 fp16->fp32+free=2.13 | total=10.53 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.12 repack=0.81 fp32->fp16=5.92 gemm=4.32 fp16->fp32+free=5.43 | total=21.91 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=8.10 repack=1.15 fp32->fp16=3.71 gemm=8.45 fp16->fp32+free=19.98 | total=44.53 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=7.75 repack=1.15 fp32->fp16=3.74 gemm=8.46 fp16->fp32+free=17.96 | total=42.06 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=9.04 repack=1.37 fp32->fp16=14.05 gemm=9.29 fp16->fp32+free=7.81 | total=44.66 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.85 repack=0.97 fp32->fp16=5.13 gemm=3.94 fp16->fp32+free=9.16 | total=27.10 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.99 repack=0.51 fp32->fp16=4.77 gemm=1.52 fp16->fp32+free=2.51 | total=11.72 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=1.93 repack=0.48 fp32->fp16=4.26 gemm=1.52 fp16->fp32+free=2.31 | total=10.86 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=4.15 repack=0.79 fp32->fp16=6.00 gemm=4.37 fp16->fp32+free=5.61 | total=22.24 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=9.80 repack=1.18 fp32->fp16=5.47 gemm=8.49 fp16->fp32+free=23.64 | total=52.69 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.32 repack=1.19 fp32->fp16=5.45 gemm=8.79 fp16->fp32+free=29.41 | total=59.20 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.08 repack=1.43 fp32->fp16=20.65 gemm=9.37 fp16->fp32+free=11.25 | total=58.87 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.73 repack=0.95 fp32->fp16=5.46 gemm=3.97 fp16->fp32+free=10.29 | total=28.14 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.51 fp32->fp16=5.47 gemm=1.61 fp16->fp32+free=2.90 | total=13.18 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.22 repack=0.51 fp32->fp16=5.44 gemm=1.57 fp16->fp32+free=2.86 | total=13.05 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.54 repack=0.87 fp32->fp16=8.70 gemm=4.36 fp16->fp32+free=7.39 | total=28.64 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.33 repack=1.18 fp32->fp16=5.46 gemm=8.50 fp16->fp32+free=24.46 | total=54.05 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.37 repack=1.25 fp32->fp16=5.44 gemm=8.61 fp16->fp32+free=26.99 | total=56.79 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.04 repack=1.45 fp32->fp16=20.65 gemm=9.36 fp16->fp32+free=10.10 | total=57.65 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.08 repack=1.01 fp32->fp16=5.47 gemm=4.01 fp16->fp32+free=10.26 | total=27.60 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.52 fp32->fp16=5.46 gemm=1.58 fp16->fp32+free=2.85 | total=13.11 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.49 fp32->fp16=5.45 gemm=1.57 fp16->fp32+free=2.87 | total=13.08 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.53 repack=0.81 fp32->fp16=8.71 gemm=4.48 fp16->fp32+free=7.35 | total=28.66 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.44 repack=1.22 fp32->fp16=5.45 gemm=8.59 fp16->fp32+free=23.63 | total=53.36 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.46 repack=1.22 fp32->fp16=5.48 gemm=8.78 fp16->fp32+free=23.60 | total=53.56 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.12 repack=1.39 fp32->fp16=20.62 gemm=9.33 fp16->fp32+free=10.04 | total=57.58 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.03 repack=1.01 fp32->fp16=5.45 gemm=3.97 fp16->fp32+free=10.11 | total=27.32 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.51 fp32->fp16=5.45 gemm=1.60 fp16->fp32+free=2.87 | total=13.08 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.22 repack=0.52 fp32->fp16=5.46 gemm=1.64 fp16->fp32+free=2.87 | total=13.20 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.54 repack=0.80 fp32->fp16=8.72 gemm=4.45 fp16->fp32+free=7.38 | total=28.62 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.44 repack=1.25 fp32->fp16=5.45 gemm=8.56 fp16->fp32+free=23.65 | total=53.36 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.42 repack=1.24 fp32->fp16=5.47 gemm=8.68 fp16->fp32+free=23.70 | total=53.62 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.19 repack=1.36 fp32->fp16=20.61 gemm=9.32 fp16->fp32+free=10.17 | total=57.69 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.04 repack=1.00 fp32->fp16=5.45 gemm=3.98 fp16->fp32+free=10.13 | total=27.36 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.55 fp32->fp16=5.45 gemm=1.59 fp16->fp32+free=2.80 | total=13.03 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.16 repack=0.53 fp32->fp16=5.46 gemm=1.58 fp16->fp32+free=2.85 | total=13.06 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.56 repack=0.81 fp32->fp16=8.71 gemm=4.43 fp16->fp32+free=7.39 | total=28.59 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=11.05 repack=1.21 fp32->fp16=5.43 gemm=8.57 fp16->fp32+free=23.71 | total=54.25 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.33 repack=1.17 fp32->fp16=5.47 gemm=8.64 fp16->fp32+free=27.51 | total=57.18 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.98 repack=1.37 fp32->fp16=20.62 gemm=11.79 fp16->fp32+free=10.83 | total=60.60 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.22 repack=0.97 fp32->fp16=5.45 gemm=4.11 fp16->fp32+free=10.86 | total=28.38 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.35 repack=0.51 fp32->fp16=5.49 gemm=1.66 fp16->fp32+free=2.82 | total=13.32 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.51 fp32->fp16=5.49 gemm=1.59 fp16->fp32+free=2.85 | total=13.08 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.48 repack=0.82 fp32->fp16=8.71 gemm=4.42 fp16->fp32+free=7.79 | total=28.93 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.40 repack=1.21 fp32->fp16=5.44 gemm=8.51 fp16->fp32+free=24.67 | total=54.33 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.24 repack=1.18 fp32->fp16=5.44 gemm=8.54 fp16->fp32+free=30.49 | total=59.95 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.42 fp32->fp16=20.67 gemm=11.37 fp16->fp32+free=15.10 | total=64.61 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.39 repack=1.00 fp32->fp16=5.89 gemm=4.06 fp16->fp32+free=10.31 | total=28.52 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.22 repack=0.56 fp32->fp16=5.46 gemm=1.64 fp16->fp32+free=2.85 | total=13.23 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.17 repack=0.52 fp32->fp16=5.45 gemm=1.60 fp16->fp32+free=2.82 | total=13.14 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.44 repack=0.82 fp32->fp16=8.69 gemm=4.42 fp16->fp32+free=7.41 | total=28.49 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.34 repack=1.14 fp32->fp16=5.46 gemm=8.54 fp16->fp32+free=23.63 | total=53.24 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.32 repack=1.16 fp32->fp16=5.48 gemm=8.69 fp16->fp32+free=25.33 | total=55.10 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.06 repack=1.41 fp32->fp16=20.62 gemm=9.32 fp16->fp32+free=11.18 | total=58.67 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=7.26 repack=1.06 fp32->fp16=5.46 gemm=3.97 fp16->fp32+free=10.66 | total=30.16 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.31 repack=0.55 fp32->fp16=5.72 gemm=1.62 fp16->fp32+free=2.83 | total=13.55 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.54 fp32->fp16=5.46 gemm=1.61 fp16->fp32+free=2.83 | total=13.12 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.46 repack=0.88 fp32->fp16=8.71 gemm=4.42 fp16->fp32+free=7.72 | total=28.92 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.64 repack=1.15 fp32->fp16=5.46 gemm=8.56 fp16->fp32+free=24.67 | total=54.57 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.33 repack=1.16 fp32->fp16=5.47 gemm=8.48 fp16->fp32+free=24.69 | total=54.26 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.04 repack=1.45 fp32->fp16=20.63 gemm=9.38 fp16->fp32+free=10.12 | total=57.64 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.34 repack=1.05 fp32->fp16=5.88 gemm=4.12 fp16->fp32+free=10.25 | total=28.48 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.56 fp32->fp16=5.47 gemm=1.66 fp16->fp32+free=2.86 | total=13.23 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.55 fp32->fp16=5.45 gemm=1.66 fp16->fp32+free=2.87 | total=13.15 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=6.05 repack=0.81 fp32->fp16=9.34 gemm=4.38 fp16->fp32+free=8.10 | total=30.38 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=11.50 repack=1.25 fp32->fp16=5.45 gemm=8.55 fp16->fp32+free=25.85 | total=56.66 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.28 repack=1.22 fp32->fp16=5.44 gemm=8.49 fp16->fp32+free=23.60 | total=54.31 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.36 fp32->fp16=20.60 gemm=9.33 fp16->fp32+free=10.19 | total=57.56 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.01 repack=1.06 fp32->fp16=5.49 gemm=4.11 fp16->fp32+free=10.27 | total=27.72 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.51 fp32->fp16=5.46 gemm=1.62 fp16->fp32+free=2.85 | total=13.14 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.51 fp32->fp16=5.45 gemm=1.61 fp16->fp32+free=2.83 | total=13.12 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.43 repack=0.79 fp32->fp16=8.72 gemm=4.41 fp16->fp32+free=7.44 | total=28.53 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.87 repack=1.14 fp32->fp16=5.44 gemm=8.54 fp16->fp32+free=27.50 | total=57.57 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.37 repack=1.17 fp32->fp16=5.49 gemm=8.57 fp16->fp32+free=25.83 | total=55.49 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.98 repack=1.38 fp32->fp16=20.63 gemm=9.29 fp16->fp32+free=10.83 | total=58.16 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.33 repack=1.01 fp32->fp16=5.81 gemm=4.06 fp16->fp32+free=10.08 | total=28.13 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.51 fp32->fp16=5.44 gemm=1.66 fp16->fp32+free=2.84 | total=13.09 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.56 fp32->fp16=5.46 gemm=1.63 fp16->fp32+free=2.88 | total=13.19 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.52 repack=0.95 fp32->fp16=8.68 gemm=4.45 fp16->fp32+free=7.41 | total=28.78 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.40 repack=1.17 fp32->fp16=5.44 gemm=8.61 fp16->fp32+free=23.85 | total=53.53 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.28 repack=1.24 fp32->fp16=5.48 gemm=8.62 fp16->fp32+free=28.77 | total=58.45 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.46 fp32->fp16=20.64 gemm=9.38 fp16->fp32+free=10.62 | total=58.16 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=4.98 repack=1.01 fp32->fp16=5.46 gemm=4.05 fp16->fp32+free=10.53 | total=27.78 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.33 repack=0.55 fp32->fp16=5.75 gemm=1.62 fp16->fp32+free=2.84 | total=13.57 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.55 fp32->fp16=5.45 gemm=1.64 fp16->fp32+free=2.88 | total=13.17 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.50 repack=0.92 fp32->fp16=9.37 gemm=4.48 fp16->fp32+free=7.88 | total=29.86 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.72 repack=1.18 fp32->fp16=5.43 gemm=8.65 fp16->fp32+free=23.80 | total=53.85 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.31 repack=1.20 fp32->fp16=5.47 gemm=8.58 fp16->fp32+free=30.29 | total=59.94 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.06 repack=1.44 fp32->fp16=20.69 gemm=9.35 fp16->fp32+free=13.39 | total=60.97 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=6.00 repack=1.07 fp32->fp16=5.87 gemm=4.06 fp16->fp32+free=10.87 | total=29.74 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.37 repack=0.54 fp32->fp16=5.45 gemm=1.62 fp16->fp32+free=2.84 | total=13.27 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.55 fp32->fp16=5.50 gemm=1.64 fp16->fp32+free=2.90 | total=13.23 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.50 repack=0.83 fp32->fp16=8.70 gemm=4.46 fp16->fp32+free=7.84 | total=29.03 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.56 repack=1.24 fp32->fp16=5.45 gemm=8.59 fp16->fp32+free=24.49 | total=54.38 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.32 repack=1.19 fp32->fp16=5.47 gemm=8.64 fp16->fp32+free=30.42 | total=60.10 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.06 repack=1.45 fp32->fp16=20.65 gemm=12.35 fp16->fp32+free=16.97 | total=67.52 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.34 repack=0.97 fp32->fp16=5.70 gemm=6.49 fp16->fp32+free=10.80 | total=31.18 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.61 repack=0.55 fp32->fp16=6.53 gemm=1.70 fp16->fp32+free=2.86 | total=14.78 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.52 fp32->fp16=5.44 gemm=1.61 fp16->fp32+free=2.90 | total=13.12 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.47 repack=0.81 fp32->fp16=8.73 gemm=4.41 fp16->fp32+free=7.49 | total=28.61 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=11.05 repack=1.19 fp32->fp16=5.45 gemm=8.54 fp16->fp32+free=27.63 | total=57.91 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.37 repack=1.15 fp32->fp16=5.48 gemm=8.58 fp16->fp32+free=25.86 | total=55.55 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.04 repack=1.41 fp32->fp16=20.62 gemm=9.38 fp16->fp32+free=10.82 | total=58.37 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.34 repack=1.01 fp32->fp16=5.80 gemm=4.06 fp16->fp32+free=10.19 | total=28.20 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.20 repack=0.55 fp32->fp16=5.45 gemm=1.62 fp16->fp32+free=2.81 | total=13.13 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.19 repack=0.54 fp32->fp16=5.44 gemm=1.62 fp16->fp32+free=2.84 | total=13.08 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.40 repack=0.84 fp32->fp16=8.71 gemm=4.36 fp16->fp32+free=7.35 | total=28.42 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.26 repack=1.16 fp32->fp16=5.44 gemm=8.51 fp16->fp32+free=23.60 | total=53.16 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.24 repack=1.21 fp32->fp16=5.47 gemm=8.61 fp16->fp32+free=29.00 | total=58.61 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.02 repack=1.45 fp32->fp16=20.59 gemm=11.72 fp16->fp32+free=16.29 | total=66.10 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.34 repack=1.02 fp32->fp16=5.85 gemm=4.07 fp16->fp32+free=10.26 | total=28.34 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.21 repack=0.52 fp32->fp16=5.43 gemm=1.62 fp16->fp32+free=2.84 | total=13.12 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.23 repack=0.51 fp32->fp16=5.45 gemm=1.62 fp16->fp32+free=2.85 | total=13.16 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.47 repack=0.82 fp32->fp16=8.70 gemm=4.37 fp16->fp32+free=7.48 | total=28.56 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.38 repack=1.21 fp32->fp16=5.45 gemm=8.48 fp16->fp32+free=24.64 | total=54.14 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.36 repack=1.23 fp32->fp16=5.43 gemm=8.64 fp16->fp32+free=24.72 | total=54.50 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=12.18 repack=1.40 fp32->fp16=20.62 gemm=12.34 fp16->fp32+free=10.77 | total=61.33 ms
+[GPU dotQInt] M=437 K=2560 N=4096 | alloc=5.43 repack=0.99 fp32->fp16=5.46 gemm=3.99 fp16->fp32+free=10.59 | total=28.16 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.31 repack=0.52 fp32->fp16=5.71 gemm=1.62 fp16->fp32+free=2.81 | total=13.50 ms
+[GPU dotQInt] M=437 K=2560 N=1024 | alloc=2.16 repack=0.53 fp32->fp16=5.46 gemm=1.62 fp16->fp32+free=2.83 | total=13.08 ms
+[GPU dotQInt] M=437 K=4096 N=2560 | alloc=5.42 repack=0.83 fp32->fp16=8.69 gemm=4.42 fp16->fp32+free=7.68 | total=28.75 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.71 repack=1.17 fp32->fp16=5.43 gemm=8.53 fp16->fp32+free=24.50 | total=54.35 ms
+[GPU dotQInt] M=437 K=2560 N=9728 | alloc=10.27 repack=1.18 fp32->fp16=5.49 gemm=8.47 fp16->fp32+free=26.93 | total=56.39 ms
+[GPU dotQInt] M=437 K=9728 N=2560 | alloc=11.99 repack=1.45 fp32->fp16=20.64 gemm=9.31 fp16->fp32+free=10.09 | total=57.51 ms
+
+
+sh temp2.sh 실행 시 결과는 아래와 같아
+
+[CPU dotQInt] M=437 K=2560 N=4096 | total=11.11 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=4.88 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.46 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=8.49 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.87 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=19.53 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=24.12 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=7.61 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=2.57 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=2.58 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.31 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=18.11 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.75 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=24.11 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.55 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.46 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.94 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=18.02 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.89 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.44 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.26 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.60 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.57 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.63 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.30 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.19 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.53 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.56 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.75 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.32 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.34 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=18.26 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.65 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=24.01 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.36 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.30 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.94 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.57 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.97 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.40 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.32 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.21 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.63 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.48 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.59 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.36 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.30 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.24 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.77 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.71 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.74 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.45 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.26 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.84 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.68 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.89 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=9.42 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.72 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.24 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.54 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.54 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.61 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.48 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.20 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.59 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.46 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.47 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.39 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.20 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.79 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.61 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.75 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.39 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.24 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.80 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.56 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.68 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.42 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.32 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.24 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.82 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.59 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.77 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.40 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.32 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.31 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.69 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.62 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.61 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.44 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.67 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.58 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.91 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.44 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.34 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.75 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.59 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.61 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.47 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.71 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.59 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.79 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.41 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.76 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.57 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.75 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.38 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.30 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.32 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.88 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.61 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.69 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.45 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.34 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.26 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.63 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.51 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.63 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.43 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.32 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.32 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.71 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.53 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.79 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.39 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.25 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.61 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.57 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.74 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.42 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.30 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.73 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.64 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.93 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.42 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.32 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.85 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.54 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.62 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.40 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.33 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.34 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.94 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.53 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.75 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.41 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.30 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.27 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.66 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.53 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.80 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.38 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.29 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.66 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.63 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.68 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.47 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.28 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.30 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.28 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.74 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.72 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.81 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.40 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.36 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.84 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.71 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=25.39 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=9.19 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.48 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.48 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.97 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=19.40 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=19.35 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=25.47 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=9.07 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.46 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.50 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.80 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.72 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.60 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.74 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.41 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.31 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.29 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.61 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.54 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.71 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.43 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.35 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.83 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.55 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.73 ms
+[CPU dotQInt] M=437 K=2560 N=4096 | total=8.38 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.29 ms
+[CPU dotQInt] M=437 K=2560 N=1024 | total=3.33 ms
+[CPU dotQInt] M=437 K=4096 N=2560 | total=9.22 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.59 ms
+[CPU dotQInt] M=437 K=2560 N=9728 | total=17.52 ms
+[CPU dotQInt] M=437 K=9728 N=2560 | total=23.47 ms
+
+어떻게 해야 gpu prefill이 빨라질까?
