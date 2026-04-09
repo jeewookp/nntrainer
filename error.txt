@@ -1,83 +1,36 @@
-sh tools/test_android.sh 실행 시 결과는 아래와 같아
-조금 빨라졌네 더 빠르게 할 수 있는 방법이 있을까? 코드를 크게 바꿔도 괜찮고 packing 형식이 바뀌어도 괜찮아
+sh temp.sh 실행 시 결과는 아래와 같아
+prefill은 nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl이용하는 걸로 바꾸고 싶어
 
-libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.5 MB/s (10956328 bytes in 0.312s)
-6 files pushed. 31.9 MB/s (13131880 bytes in 0.392s)
-[==========] Running 5 tests from 5 test suites.
-[----------] Global test environment set-up.
-[----------] 1 test from KAI_acc3
-[ RUN      ] KAI_acc3.GEMM_1024x2560x1024
-Repack KAI->Adreno: 0.66 ms 
-GPU repack+GEMM  : 3.74 ms 
-GPU GEMM only    : 2.88 ms 
-GPU repack only  : 0.66 ms 
-GPU MSE vs FP32 ref: 1.30517
-CPU KAI kernel   : 8.1 ms 
-CPU MSE vs FP32 ref: 1.28063
-Speedup (CPU/GPU): 2.16578x
--------------------------------------------
-[       OK ] KAI_acc3.GEMM_1024x2560x1024 (1666 ms)
-[----------] 1 test from KAI_acc3 (1666 ms total)
+Executable: nntrainer_causallm
+Libraries: libnntrainer.so, libccapi-nntrainer.so, libc++_shared.so
+jni/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in 0.054s)
+jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 25.5 MB/s (128640 bytes in 0.005s)
+jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 34.8 MB/s (5424168 bytes in 0.149s)
+jni/libs/arm64-v8a/libomp.so: 1 file pushed. 30.3 MB/s (1205616 bytes in 0.038s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 33.6 MB/s (5163728 bytes in 0.147s)
+5 files pushed. 33.2 MB/s (13744872 bytes in 0.395s)
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+load finished
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-[----------] 1 test from KAI_acc33
-[ RUN      ] KAI_acc33.GEMM_1024x2560x4096
-Repack KAI->Adreno: 1.72 ms 
-GPU repack+GEMM  : 10.4 ms 
-GPU GEMM only    : 9.58 ms 
-GPU repack only  : 1.72 ms 
-GPU MSE vs FP32 ref: 1.28411
-CPU KAI kernel   : 19.96 ms 
-CPU MSE vs FP32 ref: 1.27036
-Speedup (CPU/GPU): 1.91923x
--------------------------------------------
-[       OK ] KAI_acc33.GEMM_1024x2560x4096 (2857 ms)
-[----------] 1 test from KAI_acc33 (2857 ms total)
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-[----------] 1 test from KAI_acc35
-[ RUN      ] KAI_acc35.GEMM_1024x2560x9728
-Repack KAI->Adreno: 3.68 ms 
-GPU repack+GEMM  : 26.72 ms 
-GPU GEMM only    : 21.68 ms 
-GPU repack only  : 3.68 ms 
-GPU MSE vs FP32 ref: 1.28094
-CPU KAI kernel   : 41.68 ms 
-CPU MSE vs FP32 ref: 1.26923
-Speedup (CPU/GPU): 1.55988x
--------------------------------------------
-[       OK ] KAI_acc35.GEMM_1024x2560x9728 (6196 ms)
-[----------] 1 test from KAI_acc35 (6196 ms total)
+<think>
+Okay, the user wants a summary of the provided abstract, in three sentences, in English. Let me start by reading the abstract carefully.
 
-[----------] 1 test from KAI_acc37
-[ RUN      ] KAI_acc37.GEMM_1024x4096x2560
-Repack KAI->Adreno: 1.62 ms 
-GPU repack+GEMM  : 11.84 ms 
-GPU GEMM only    : 11.06 ms 
-GPU repack only  : 1.62 ms 
-GPU MSE vs FP32 ref: 4.02652
-CPU KAI kernel   : 21.72 ms 
-CPU MSE vs FP32 ref: 2.0407
-Speedup (CPU/GPU): 1.83446x
--------------------------------------------
-[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3115 ms)
-[----------] 1 test from KAI_acc37 (3115 ms total)
+The main points seem to be about a new model called Thyme, which is a new approach for multimodal LLMs that goes beyond "think with images." They mention that they're trying to enhance reasoning and image processing. The model uses a two-stage training: SFT and RL, with a specific algorithm called GRPO-ATS. Also, they have done experiments and released datasets.
 
-[----------] 1 test from KAI_acc39
-[ RUN      ] KAI_acc39.GEMM_1024x9728x2560
-Repack KAI->Adreno: 3.68 ms 
-GPU repack+GEMM  : 27.62 ms 
-GPU GEMM only    : 22.58 ms 
-GPU repack only  : 3.68 ms 
-GPU MSE vs FP32 ref: 5.65167
-CPU KAI kernel   : 51.68 ms 
-CPU MSE vs FP32 ref: 4.91032
-Speedup (CPU/GPU): 1.87111x
--------------------------------------------
-[       OK ] KAI_acc39.GEMM_1024x9728x2560 (6923 ms)
-[----------] 1 test from KAI_acc39 (6923 ms total)
+Now, I need to condense this into three concise sentences. First, introduce Thyme as the
 
-[----------] Global test environment tear-down
-[==========] 5 tests from 5 test suites ran. (20760 ms total)
-[  PASSED  ] 5 tests.
-/data/local/tmp/nntrainer/test/logs/./: 1 file pulled. 35.7 MB/s (263043 bytes in 0.007s)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4682 ms, 93.3362 TPS
+generation: 128 tokens, 7236 ms, 17.6893 TPS
+==========================================================
+[e2e time]: 25869 ms 
+Max Resident Set Size: 2469884 KB
+/data/local/tmp/nntrainer/test/logs/./: 1 file pulled. 4.2 MB/s (230966 bytes in 0.053s)
