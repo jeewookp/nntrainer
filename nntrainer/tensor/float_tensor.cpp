@@ -1021,6 +1021,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
       (dtype == Tdatatype::QINT4) && M > 1) {
+    auto t_total_start = std::chrono::high_resolution_clock::now();
+
     // Adreno GPU path for prefill (M > 1)
     auto *blas_cc = static_cast<ClContext *>(
       Engine::Global().getRegisteredContext("gpu"));
@@ -1028,6 +1030,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     unsigned int alignK = ((K + 31) / 32) * 32;
     unsigned int nr = 4;
     unsigned int rhs_packed_stride = nr * (((alignK) / 2) + 12);
+
+    auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
     // Allocate SVM buffers
     size_t kai_size = input.getMemoryBytes();
@@ -1038,13 +1042,19 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     uint16_t *input_tr_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t));
     uint16_t *output_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(M * N * sizeof(uint16_t));
 
+    auto t_alloc_end = std::chrono::high_resolution_clock::now();
+
     // Copy KAI packed data to SVM
     blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
     std::memcpy(kai_svm, mdata, kai_size);
     blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
 
+    auto t_repack_start = std::chrono::high_resolution_clock::now();
+
     // Repack KAI → Adreno format
     repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
+
+    auto t_repack_end = std::chrono::high_resolution_clock::now();
 
     // Convert FP32 input to FP16 SVM
     blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
@@ -1058,9 +1068,13 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     }
     blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
+    auto t_gemm_start = std::chrono::high_resolution_clock::now();
+
     // Run Adreno GPU GEMM
     gemm_int4_cl_adreno(input_svm, input_tr_svm, weights_svm, scales_svm,
                         output_svm, M, N, K, 32);
+
+    auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
     // Convert FP16 output to FP32
     for (unsigned int i = 0; i < M * N; i++) {
@@ -1074,9 +1088,23 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     blas_cc->context_inst_.releaseSVMRegion(input_svm);
     blas_cc->context_inst_.releaseSVMRegion(input_tr_svm);
     blas_cc->context_inst_.releaseSVMRegion(output_svm);
+
+    auto t_total_end = std::chrono::high_resolution_clock::now();
+
+    auto alloc_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_alloc_end - t_alloc_start).count() / 1000.0;
+    auto repack_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_repack_end - t_repack_start).count() / 1000.0;
+    auto input_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_start - t_repack_end).count() / 1000.0;
+    auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_gemm_start).count() / 1000.0;
+    auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_gemm_end).count() / 1000.0;
+    auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_total_start).count() / 1000.0;
+
+    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32+free=%.2f | total=%.2f ms\n",
+           M, K, N, alloc_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
+    fflush(stdout);
   } else
 #endif
   {
+    auto t_cpu_start = std::chrono::high_resolution_clock::now();
 #if defined(ENABLE_FP16) && defined(__aarch64__)
     if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
         (dtype == Tdatatype::QINT4)) {
@@ -1098,6 +1126,10 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 #else
     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
 #endif
+    auto t_cpu_end = std::chrono::high_resolution_clock::now();
+    auto cpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_cpu_end - t_cpu_start).count() / 1000.0;
+    printf("[CPU dotQInt] M=%u K=%u N=%u | total=%.2f ms\n", M, K, N, cpu_ms);
+    fflush(stdout);
   }
 
   return output;
