@@ -65,14 +65,11 @@ repack_kai_to_adreno(const __global uchar* kai_packed_data,
     int scale_offset_bytes = NR * (K_aligned / 2 + 4);
     const __global float* scale_src = (const __global float*)(kai_packed_data + base + scale_offset_bytes);
 
-    // KAI uses per-channel scale: replicate same scale for all K/32 groups
+    // Per-channel scale: write N values only (GEMM reads scales[n] once)
     if (k_id == 0) {
         for (int sub_n = 0; sub_n < NR; sub_n++) {
             float s = scale_src[sub_n] * 16.0f;
-            int global_n = n_id * NR + sub_n;
-            for (int kg = 0; kg < (K + 31) / 32; kg++) {
-                scales[kg * align_N + global_n] = (half)s;
-            }
+            scales[n_id * NR + sub_n] = (half)s;
         }
     }
 }

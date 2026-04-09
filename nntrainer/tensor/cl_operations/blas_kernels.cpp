@@ -876,7 +876,7 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
     return;
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(scales, (K/32) * N * sizeof(uint16_t), true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(scales, N * sizeof(uint16_t), true);
   if (!result) {
     throw std::runtime_error(
       "Failed to read output data for repack_kai_to_adreno");
