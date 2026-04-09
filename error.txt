@@ -1,73 +1,83 @@
 sh tools/test_android.sh 실행 시 결과는 아래와 같아
-weight가 어차피 channelwise quant니까 이걸 이용해서 더 빠르게 가능할까?
-pack 형식 바꾸는 걸 시도해봐도 좋아
+조금 빨라졌네 더 빠르게 할 수 있는 방법이 있을까? 코드를 크게 바꿔도 괜찮고 packing 형식이 바뀌어도 괜찮아
 
-
+libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.5 MB/s (10956328 bytes in 0.312s)
+6 files pushed. 31.9 MB/s (13131880 bytes in 0.392s)
 [==========] Running 5 tests from 5 test suites.
 [----------] Global test environment set-up.
 [----------] 1 test from KAI_acc3
 [ RUN      ] KAI_acc3.GEMM_1024x2560x1024
-Repack KAI->Adreno: 0.68 ms 
-GPU repack+GEMM  : 3.88 ms 
-GPU GEMM only    : 3.02 ms 
-GPU repack only  : 0.68 ms 
+Repack KAI->Adreno: 0.66 ms 
+GPU repack+GEMM  : 3.74 ms 
+GPU GEMM only    : 2.88 ms 
+GPU repack only  : 0.66 ms 
 GPU MSE vs FP32 ref: 1.30517
 CPU KAI kernel   : 8.1 ms 
 CPU MSE vs FP32 ref: 1.28063
-Speedup (CPU/GPU): 2.08763x
+Speedup (CPU/GPU): 2.16578x
 -------------------------------------------
-[       OK ] KAI_acc3.GEMM_1024x2560x1024 (1708 ms)
-[----------] 1 test from KAI_acc3 (1708 ms total)
+[       OK ] KAI_acc3.GEMM_1024x2560x1024 (1666 ms)
+[----------] 1 test from KAI_acc3 (1666 ms total)
 
 [----------] 1 test from KAI_acc33
 [ RUN      ] KAI_acc33.GEMM_1024x2560x4096
-Repack KAI->Adreno: 1.78 ms 
-GPU repack+GEMM  : 11.16 ms 
-GPU GEMM only    : 10.52 ms 
-GPU repack only  : 1.78 ms 
+Repack KAI->Adreno: 1.72 ms 
+GPU repack+GEMM  : 10.4 ms 
+GPU GEMM only    : 9.58 ms 
+GPU repack only  : 1.72 ms 
 GPU MSE vs FP32 ref: 1.28411
-CPU KAI kernel   : 19.74 ms 
+CPU KAI kernel   : 19.96 ms 
 CPU MSE vs FP32 ref: 1.27036
-Speedup (CPU/GPU): 1.76882x
+Speedup (CPU/GPU): 1.91923x
 -------------------------------------------
-[       OK ] KAI_acc33.GEMM_1024x2560x4096 (2933 ms)
-[----------] 1 test from KAI_acc33 (2933 ms total)
+[       OK ] KAI_acc33.GEMM_1024x2560x4096 (2857 ms)
+[----------] 1 test from KAI_acc33 (2857 ms total)
 
 [----------] 1 test from KAI_acc35
 [ RUN      ] KAI_acc35.GEMM_1024x2560x9728
-Repack KAI->Adreno: 3.66 ms 
-GPU repack+GEMM  : 27.36 ms 
-GPU GEMM only    : 22.9 ms 
-GPU repack only  : 3.66 ms 
+Repack KAI->Adreno: 3.68 ms 
+GPU repack+GEMM  : 26.72 ms 
+GPU GEMM only    : 21.68 ms 
+GPU repack only  : 3.68 ms 
 GPU MSE vs FP32 ref: 1.28094
-CPU KAI kernel   : 41.7 ms 
+CPU KAI kernel   : 41.68 ms 
 CPU MSE vs FP32 ref: 1.26923
-Speedup (CPU/GPU): 1.52412x
+Speedup (CPU/GPU): 1.55988x
 -------------------------------------------
-[       OK ] KAI_acc35.GEMM_1024x2560x9728 (6288 ms)
-[----------] 1 test from KAI_acc35 (6288 ms total)
+[       OK ] KAI_acc35.GEMM_1024x2560x9728 (6196 ms)
+[----------] 1 test from KAI_acc35 (6196 ms total)
 
 [----------] 1 test from KAI_acc37
 [ RUN      ] KAI_acc37.GEMM_1024x4096x2560
 Repack KAI->Adreno: 1.62 ms 
-GPU repack+GEMM  : 12.74 ms 
-GPU GEMM only    : 12.02 ms 
+GPU repack+GEMM  : 11.84 ms 
+GPU GEMM only    : 11.06 ms 
 GPU repack only  : 1.62 ms 
 GPU MSE vs FP32 ref: 4.02652
 CPU KAI kernel   : 21.72 ms 
 CPU MSE vs FP32 ref: 2.0407
-Speedup (CPU/GPU): 1.70487x
+Speedup (CPU/GPU): 1.83446x
 -------------------------------------------
-[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3190 ms)
-[----------] 1 test from KAI_acc37 (3190 ms total)
+[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3115 ms)
+[----------] 1 test from KAI_acc37 (3115 ms total)
 
 [----------] 1 test from KAI_acc39
 [ RUN      ] KAI_acc39.GEMM_1024x9728x2560
-Repack KAI->Adreno: 3.7 ms 
-GPU repack+GEMM  : 28.88 ms 
-GPU GEMM only    : 23.66 ms 
-GPU repack only  : 3.7 ms 
+Repack KAI->Adreno: 3.68 ms 
+GPU repack+GEMM  : 27.62 ms 
+GPU GEMM only    : 22.58 ms 
+GPU repack only  : 3.68 ms 
 GPU MSE vs FP32 ref: 5.65167
-CPU KAI kernel   : 51.98 ms 
+CPU KAI kernel   : 51.68 ms 
 CPU MSE vs FP32 ref: 4.91032
-Speedup (CPU/GPU): 1.79986x
+Speedup (CPU/GPU): 1.87111x
+-------------------------------------------
+[       OK ] KAI_acc39.GEMM_1024x9728x2560 (6923 ms)
+[----------] 1 test from KAI_acc39 (6923 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 5 test suites ran. (20760 ms total)
+[  PASSED  ] 5 tests.
+/data/local/tmp/nntrainer/test/logs/./: 1 file pulled. 35.7 MB/s (263043 bytes in 0.007s)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
