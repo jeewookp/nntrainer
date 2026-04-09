@@ -722,6 +722,8 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
     dotHalf(input, output, trans, trans_in, beta);
     break;
   case Tdatatype::Q4_0:
+  case Tdatatype::Q6_K:
+    dotQnK(input, output, trans, trans_in, beta, input.getDataType());
     break;
   case Tdatatype::QINT16:
   case Tdatatype::QINT8:
@@ -747,6 +749,9 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   switch (dtype) {
   case Tdatatype::Q4_0:
     gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
+    break;
+  case Tdatatype::Q6_K:
+    gemm_q6_K<_FP16>(M, N, K, data, K, (void *)mdata, N, rdata, N);
     break;
   default:
     throw std::invalid_argument("Error: unsupported datatype");
