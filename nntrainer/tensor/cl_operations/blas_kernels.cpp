@@ -902,8 +902,6 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   auto &clbuffInstance = ClBufferManager::Global();
 
-  // Create image1d_buffer directly from row-major input [M, alignK]
-  // No transpose needed - GEMM kernel reads row-major directly
   cl_int err;
   size_t input_size = M * alignK * sizeof(uint16_t);
 
@@ -942,7 +940,74 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error("Failed to create image1d_buffer for input");
   }
 
+  input_size = align(M,4) * alignK * sizeof(uint16_t);
+
+  cl_mem input_tr_buf = clCreateBuffer(
+    blas_cc->context_inst_.GetContext(),
+    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
+    input_size,
+    input_transposed,
+    &err
+  );
+
+  if (err!=CL_SUCCESS){
+    throw std::runtime_error("Failed to create input_transposed buffer");
+  }
+
+  memset(&image_desc, 0, sizeof(image_desc));
+  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  image_desc.image_width = (align(M,4) * alignK)/4;
+  image_desc.buffer = input_tr_buf;
+
+  cl_mem input_transposed_img = clCreateImage(
+    blas_cc->context_inst_.GetContext(),
+    CL_MEM_READ_WRITE,
+    &image_format,
+    &image_desc,
+    nullptr,
+    &err
+  );
+
+  if (err!=CL_SUCCESS){
+    throw std::runtime_error("Failed to create image1d_buffer for input_transposed");
+  }
+
+  // Input transpose
   ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    input_transpose_kernel, "input_transpose");
+  if (!kernel_ptr) {
+    throw std::runtime_error("Failed to get kernel_ptr for input_transpose");
+    return;
+  }
+
+  int arg = 0;
+  result = kernel_ptr->SetKernelArguments(arg++, &input_img, sizeof(cl_mem));
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 0 for input_transpose");
+  result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 1 for input_transpose");
+  int alignK_4 = alignK>>2;
+  result = kernel_ptr->SetKernelArguments(arg++, &alignK_4, sizeof(int));
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 2 for input_transpose");
+  int M_4 = ceilDiv(M,4);
+  result = kernel_ptr->SetKernelArguments(arg++, &M_4, sizeof(int));
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 3 for input_transpose");
+
+  const int work_groups_count[3] = {(int) alignK_4, (int) M_4, 1};
+  const int work_group_size[3] = {1, 128, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+      kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error("Failed to dispatch kernel for input_transpose");
+    return;
+  }
+
+  // GEMM kernel - no sync needed, same queue guarantees ordering
+  kernel_ptr = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
   if (!kernel_ptr) {
     throw std::runtime_error(
@@ -950,9 +1015,9 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
-  int arg = 0;
+  arg = 0;
 
-  result = kernel_ptr->SetKernelArguments(arg++, &input_img, sizeof(cl_mem));
+  result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
   if (!result)
     throw std::runtime_error("Failed to set kernel argument 0 for "
                               "gpu_int4_gemm_adreno");
