@@ -23,7 +23,7 @@
 #include <embedding_layer.h>
 #include <mha_core.h>
 #include <rms_norm.h>
-#include <swiglu.h>
+#include "../layers/swiglu.h"
 #include <tie_word_embedding.h>
 
 namespace causallm {
