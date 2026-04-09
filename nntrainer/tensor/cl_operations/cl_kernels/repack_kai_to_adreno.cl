@@ -2,13 +2,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define NR 4
-#define K_INTERLEAVED_V 16
-#define BLOCK_LENGTH_IN_BYTES 8
 #define ALIGN_32(x) (((x) + 31) & ~31)
 
 // Dispatch: {K/32, N/4, 1}
-// k_id: K/32 block index (each handles 32 K values)
-// n_id: N/4 group index (each handles 4 N channels)
+// Optimized: vectorized reads (vload8) + no division/modulo in inner loop
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 repack_kai_to_adreno(const __global uchar* kai_packed_data,
     __global ushort* weights,
@@ -19,57 +16,65 @@ repack_kai_to_adreno(const __global uchar* kai_packed_data,
     const int n_id = get_global_id(1);
 
     const int K_aligned = ALIGN_32(K);
-    const int align_N = ALIGN_32(N);
     const int base = n_id * rhs_packed_stride;
-    const int k_start = k_id * 32;
+    // block_base = k_id * (K_INTERLEAVED_V * NR) = k_id * 64
+    const int block_base = k_id << 6;
+    const int k_start = k_id << 5;
 
-    // Process 32 K values in groups of 4, for 4 N channels
     for (int sub_n = 0; sub_n < NR; sub_n++) {
         int global_n = n_id * NR + sub_n;
+        int byte_off = base + block_base + (sub_n << 3);
 
-        for (int step = 0; step < 8; step++) {
-            int k_base = k_start + step * 4;
-            ushort packed = 0;
+        // Read 2 groups of 8 consecutive bytes from KAI packed data
+        // b0[0..7]: contains K values 0..7 (lower nib) and 16..23 (upper nib)
+        // b1[0..7]: contains K values 8..15 (lower nib) and 24..31 (upper nib)
+        uchar8 b0 = vload8(0, kai_packed_data + byte_off);
+        uchar8 b1 = vload8(0, kai_packed_data + byte_off + 32);
 
-            for (int nibble_idx = 0; nibble_idx < 4; nibble_idx++) {
-                int x = k_base + nibble_idx;
-                if (x >= K) break;
+        // Pack 4 nibbles per uint16_t, XOR 0x8 for unsigned affine encoding
+        // sub_k 0..3: b0.s0123 lower nibble
+        ushort p0 = ((ushort)((b0.s0&0xF)^0x8))      | ((ushort)((b0.s1&0xF)^0x8)<<4) |
+                    ((ushort)((b0.s2&0xF)^0x8)<<8)    | ((ushort)((b0.s3&0xF)^0x8)<<12);
+        // sub_k 4..7: b0.s4567 lower nibble
+        ushort p1 = ((ushort)((b0.s4&0xF)^0x8))      | ((ushort)((b0.s5&0xF)^0x8)<<4) |
+                    ((ushort)((b0.s6&0xF)^0x8)<<8)    | ((ushort)((b0.s7&0xF)^0x8)<<12);
+        // sub_k 8..11: b1.s0123 lower nibble
+        ushort p2 = ((ushort)((b1.s0&0xF)^0x8))      | ((ushort)((b1.s1&0xF)^0x8)<<4) |
+                    ((ushort)((b1.s2&0xF)^0x8)<<8)    | ((ushort)((b1.s3&0xF)^0x8)<<12);
+        // sub_k 12..15: b1.s4567 lower nibble
+        ushort p3 = ((ushort)((b1.s4&0xF)^0x8))      | ((ushort)((b1.s5&0xF)^0x8)<<4) |
+                    ((ushort)((b1.s6&0xF)^0x8)<<8)    | ((ushort)((b1.s7&0xF)^0x8)<<12);
+        // sub_k 16..19: b0.s0123 upper nibble
+        ushort p4 = ((ushort)((b0.s0>>4)^0x8))       | ((ushort)((b0.s1>>4)^0x8)<<4) |
+                    ((ushort)((b0.s2>>4)^0x8)<<8)     | ((ushort)((b0.s3>>4)^0x8)<<12);
+        // sub_k 20..23: b0.s4567 upper nibble
+        ushort p5 = ((ushort)((b0.s4>>4)^0x8))       | ((ushort)((b0.s5>>4)^0x8)<<4) |
+                    ((ushort)((b0.s6>>4)^0x8)<<8)     | ((ushort)((b0.s7>>4)^0x8)<<12);
+        // sub_k 24..27: b1.s0123 upper nibble
+        ushort p6 = ((ushort)((b1.s0>>4)^0x8))       | ((ushort)((b1.s1>>4)^0x8)<<4) |
+                    ((ushort)((b1.s2>>4)^0x8)<<8)     | ((ushort)((b1.s3>>4)^0x8)<<12);
+        // sub_k 28..31: b1.s4567 upper nibble
+        ushort p7 = ((ushort)((b1.s4>>4)^0x8))       | ((ushort)((b1.s5>>4)^0x8)<<4) |
+                    ((ushort)((b1.s6>>4)^0x8)<<8)     | ((ushort)((b1.s7>>4)^0x8)<<12);
 
-                // Decode KAI packed data layout
-                int block_base = (x / (2 * K_INTERLEAVED_V)) * (K_INTERLEAVED_V * NR);
-                int block_index = ((x % K_INTERLEAVED_V) / BLOCK_LENGTH_IN_BYTES) * BLOCK_LENGTH_IN_BYTES * NR
-                                + sub_n * BLOCK_LENGTH_IN_BYTES
-                                + x % BLOCK_LENGTH_IN_BYTES;
-
-                uchar byte_val = kai_packed_data[base + block_base + block_index];
-
-                uchar nibble;
-                if ((x / K_INTERLEAVED_V) % 2 == 0) {
-                    nibble = byte_val & 0x0F;
-                } else {
-                    nibble = (byte_val >> 4) & 0x0F;
-                }
-
-                // XOR 0x8 to convert KAI encoding to unsigned affine [0,15]
-                // Adreno kernel applies (val - 8) to get signed [-8,7]
-                uchar val = nibble ^ 0x8;
-                packed |= ((ushort)val) << (nibble_idx * 4);
-            }
-
-            weights[(k_base / 4) * N + global_n] = packed;
-        }
+        // Write 8 packed uint16_t values
+        int w_base = (k_start >> 2) * N + global_n;
+        weights[w_base]         = p0;
+        weights[w_base + N]     = p1;
+        weights[w_base + 2*N]   = p2;
+        weights[w_base + 3*N]   = p3;
+        weights[w_base + 4*N]   = p4;
+        weights[w_base + 5*N]   = p5;
+        weights[w_base + 6*N]   = p6;
+        weights[w_base + 7*N]   = p7;
     }
 
-    // Extract scales: stored as float at offset NR*(K_aligned/2 + 4) bytes from block start
-    // KAI stores scale as original_scale * 0.0625, multiply by 16 to recover
-    int scale_offset_bytes = NR * (K_aligned / 2 + 4);
-    const __global float* scale_src = (const __global float*)(kai_packed_data + base + scale_offset_bytes);
-
-    // Per-channel scale: write N values only (GEMM reads scales[n] once)
+    // Per-channel scale: write N values only
     if (k_id == 0) {
+        int scale_offset_bytes = NR * (K_aligned / 2 + 4);
+        const __global float* scale_src = (const __global float*)(kai_packed_data + base + scale_offset_bytes);
         for (int sub_n = 0; sub_n < NR; sub_n++) {
-            float s = scale_src[sub_n] * 16.0f;
-            scales[n_id * NR + sub_n] = (half)s;
+            scales[n_id * NR + sub_n] = (half)(scale_src[sub_n] * 16.0f);
         }
     }
 }
