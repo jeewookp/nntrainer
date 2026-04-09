@@ -69,11 +69,26 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       auto t = in_step.multiply(in_step).average(3).add(epsilon);
       t.inv_sqrt_i();
       in_step.multiply(t, out_step);
+      out_step.multiply_i(gamma);
+    } else if (in_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
+      // Cast FP16 input to FP32, compute, cast back to FP16
+      nntrainer::Tensor in_fp32 = in_step.clone(ml::train::TensorDim::DataType::FP32);
+      auto t = in_fp32.multiply(in_fp32).average(3).add(epsilon);
+      t.inv_sqrt_i();
+      nntrainer::Tensor out_fp32(in_fp32.getDim());
+      in_fp32.multiply(t, out_fp32);
+      // Apply gamma in FP32
+      nntrainer::Tensor gamma_fp32 =
+        (gamma.getDataType() == ml::train::TensorDim::DataType::FP32)
+          ? gamma : gamma.clone(ml::train::TensorDim::DataType::FP32);
+      out_fp32.multiply_i(gamma_fp32);
+      // Cast result back to FP16
+      nntrainer::Tensor out_fp16 = out_fp32.clone(ml::train::TensorDim::DataType::FP16);
+      out_step.copyData(out_fp16);
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
     }
-    out_step.multiply_i(gamma);
 
 #ifdef DEBUG
     std::cout << context.getName() << " \n input:" << in_step

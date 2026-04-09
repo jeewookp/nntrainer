@@ -93,11 +93,30 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_step.getData<float>(), out_step.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+      out_step.multiply_i(gamma);
+    } else if (in_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
+      // Cast FP16 input to FP32, compute RMSNorm, cast back
+      nntrainer::Tensor in_fp32 = in_step.clone(ml::train::TensorDim::DataType::FP32);
+      nntrainer::Tensor out_fp32(in_fp32.getDim());
+#ifdef ENABLE_FP16
+      nntrainer::rms_norm_wrt_width_fp16_intrinsic(
+        in_fp32.getData<float>(), out_fp32.getData<float>(),
+        in_fp32.getDim().height(), in_fp32.getDim().width(), epsilon);
+#else
+      nntrainer::rms_norm_wrt_width_fp32_intrinsic(
+        in_fp32.getData<float>(), out_fp32.getData<float>(),
+        in_fp32.getDim().height(), in_fp32.getDim().width(), epsilon);
+#endif
+      nntrainer::Tensor gamma_fp32 =
+        (gamma.getDataType() == ml::train::TensorDim::DataType::FP32)
+          ? gamma : gamma.clone(ml::train::TensorDim::DataType::FP32);
+      out_fp32.multiply_i(gamma_fp32);
+      nntrainer::Tensor out_fp16 = out_fp32.clone(ml::train::TensorDim::DataType::FP16);
+      out_step.copyData(out_fp16);
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
     }
-    out_step.multiply_i(gamma);
 
     // reshape again out_step
     out_step.reshape(out_step_dim);
