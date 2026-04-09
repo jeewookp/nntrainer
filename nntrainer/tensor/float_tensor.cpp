@@ -29,6 +29,9 @@
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include "blas_kernels.h"
+#include <cl_context.h>
+#include <engine.h>
+#include <fp16.h>
 #endif
 
 namespace nntrainer {
@@ -1014,57 +1017,88 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   unsigned int M = getDim().height();
   unsigned int K = getDim().width();
   unsigned int N = output.getDim().width();
-  
-// #ifndef ENABLE_OPENCL
-#if defined(ENABLE_FP16) && defined(__aarch64__)
-  // On ARM64 with FP16, QINT4 uses Kai4Tensor (check datatype or q_scheme)
-  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE && 
-      (dtype == Tdatatype::QINT4)) {
-    // Use block-32 Kai kernels (qsi8d32p_qsi4c32p) as a default
-    // TO BE IMPLEMENTED : Channel-wise quantization
-    // Assume input (weight) data is already packed for KAI GEMM or GEMV
 
-    
-    // Get variant from input Kai4Tensor (via Tensor wrapper)
-    uint32_t idx_variant = input.getKernelVariant();
-    
-    // Call Kai block-32 offline-packed GEMM
-    nntr_kai_gemm_qai8dxp_qsi4cxp_olp(
-      M, N, K,
-      (void *)data,        // LHS (activations) - will be packed internally
-      (void *)mdata,       // RHS (weights) - assumed already packed in block-32 format
-      rdata,               // Output
-      idx_variant,
-      true,                // transB
-      -std::numeric_limits<float>::infinity(),  // lower_bound
-      std::numeric_limits<float>::infinity()    // upper_bound
-    );
-  } else {
-    throw std::runtime_error(
-      "Error: QINT4 Dot on CPU only supports PER_CHANNEL_AFFINE");
-  }
-#else
-  /// @note Kai kernels require ENABLE_FP16 and ARM64 architecture
-  /// Fallback to Q4_0 for other configurations
-  {
-    gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
-  }
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
+      (dtype == Tdatatype::QINT4) && M > 1) {
+    // Adreno GPU path for prefill (M > 1)
+    auto *blas_cc = static_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+
+    unsigned int alignK = ((K + 31) / 32) * 32;
+    unsigned int nr = 4;
+    unsigned int rhs_packed_stride = nr * (((alignK) / 2) + 12);
+
+    // Allocate SVM buffers
+    size_t kai_size = input.getMemoryBytes();
+    uint8_t *kai_svm = (uint8_t *)blas_cc->context_inst_.createSVMRegion(kai_size);
+    uint16_t *weights_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(K * N * sizeof(uint16_t) / 4);
+    uint16_t *scales_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(N * sizeof(uint16_t));
+    uint16_t *input_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(M * alignK * sizeof(uint16_t));
+    uint16_t *input_tr_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t));
+    uint16_t *output_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(M * N * sizeof(uint16_t));
+
+    // Copy KAI packed data to SVM
+    blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
+    std::memcpy(kai_svm, mdata, kai_size);
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
+
+    // Repack KAI → Adreno format
+    repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
+
+    // Convert FP32 input to FP16 SVM
+    blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
+    for (unsigned int m = 0; m < M; m++) {
+      for (unsigned int k = 0; k < alignK; k++) {
+        if (k < K)
+          input_svm[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
+        else
+          input_svm[m * alignK + k] = 0;
+      }
+    }
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
+
+    // Run Adreno GPU GEMM
+    gemm_int4_cl_adreno(input_svm, input_tr_svm, weights_svm, scales_svm,
+                        output_svm, M, N, K, 32);
+
+    // Convert FP16 output to FP32
+    for (unsigned int i = 0; i < M * N; i++) {
+      rdata[i] = compute_fp16_to_fp32(output_svm[i]);
+    }
+
+    // Free SVM buffers
+    blas_cc->context_inst_.releaseSVMRegion(kai_svm);
+    blas_cc->context_inst_.releaseSVMRegion(weights_svm);
+    blas_cc->context_inst_.releaseSVMRegion(scales_svm);
+    blas_cc->context_inst_.releaseSVMRegion(input_svm);
+    blas_cc->context_inst_.releaseSVMRegion(input_tr_svm);
+    blas_cc->context_inst_.releaseSVMRegion(output_svm);
+  } else
 #endif
-// #else
-//   if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
-//       getMemoryData()->isSVM()) {
-//     if (M == 1) {
-//       gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
-//                    Int4QTensor::getGroupSize());
-//     } else {
-//       sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
-//                     Int4QTensor::getGroupSize());
-//     }
-//   } else {
-//     /// @todo This should be replaced with standard CPU INT4 computation
-//     gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
-//   }
-// #endif
+  {
+#if defined(ENABLE_FP16) && defined(__aarch64__)
+    if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
+        (dtype == Tdatatype::QINT4)) {
+      uint32_t idx_variant = input.getKernelVariant();
+      nntr_kai_gemm_qai8dxp_qsi4cxp_olp(
+        M, N, K,
+        (void *)data,
+        (void *)mdata,
+        rdata,
+        idx_variant,
+        true,
+        -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::infinity()
+      );
+    } else {
+      throw std::runtime_error(
+        "Error: QINT4 Dot on CPU only supports PER_CHANNEL_AFFINE");
+    }
+#else
+    gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
+#endif
+  }
 
   return output;
 }
