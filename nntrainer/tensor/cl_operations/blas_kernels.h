@@ -144,17 +144,6 @@ void gemm_int4_async_cl(float *input, std::vector<void *> weights,
                   unsigned int N, unsigned int K, unsigned int rhs_packed_stride,
                   unsigned int quantization_group_size);
 
-/**
- * @brief FP32 -> FP16 conversion with zero padding on K dim (GPU kernel)
- */
-void fp32_to_fp16_pad_cl(cl_mem src_fp32_buf, void *dst_fp16_svm,
-                         unsigned int M, unsigned int K, unsigned int alignK);
-
-/**
- * @brief FP16 -> FP32 conversion (GPU kernel)
- */
-void fp16_to_fp32_cl(void *src_fp16_svm, cl_mem dst_fp32_buf, unsigned int total);
-
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N);
 

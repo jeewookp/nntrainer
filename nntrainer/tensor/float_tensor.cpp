@@ -1085,27 +1085,54 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Input: cache by pointer (Q/K/V share input in transformer layers)
+    // Convert FP32 input to FP16 on CPU (runs in parallel with GPU repack)
+    // Cache by input pointer: Q/K/V share input, gate/up share input in transformers
+    static thread_local std::vector<uint16_t> host_fp16_input;
     static thread_local const float *last_input_ptr = nullptr;
     static thread_local unsigned int last_input_M = 0;
     static thread_local unsigned int last_input_K = 0;
     static thread_local unsigned int last_input_alignK = 0;
+
     bool input_cached = (data == last_input_ptr && M == last_input_M &&
                          K == last_input_K && alignK == last_input_alignK);
 
+    if (host_fp16_input.size() < M * alignK) {
+      host_fp16_input.resize(M * alignK, 0);
+      input_cached = false;
+    }
+
     if (!input_cached) {
-      // Wrap FP32 data pointer with cl_mem (USE_HOST_PTR, zero-copy on shared mem)
-      cl_int err;
-      cl_mem fp32_input_buf = clCreateBuffer(
-        blas_cc->context_inst_.GetContext(),
-        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-        M * K * sizeof(float), (void *)data, &err);
-      if (err != CL_SUCCESS) throw std::runtime_error("Failed to create fp32_input_buf");
-
-      // Dispatch GPU kernel: FP32 -> FP16 with padding (writes to input_svm)
-      fp32_to_fp16_pad_cl(fp32_input_buf, input_svm, M, K, alignK);
-
-      clReleaseMemObject(fp32_input_buf);
+      // Zero pad the tail region (k >= K) only if needed
+      if (alignK != K) {
+        for (unsigned int m = 0; m < M; m++) {
+          std::memset(host_fp16_input.data() + m * alignK + K, 0,
+                      (alignK - K) * sizeof(uint16_t));
+        }
+      }
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+      for (unsigned int m = 0; m < M; m++) {
+        const float *src = data + m * K;
+        __fp16 *dst = (__fp16 *)(host_fp16_input.data() + m * alignK);
+        unsigned int k = 0;
+        for (; k + 4 <= K; k += 4) {
+          float32x4_t v = vld1q_f32(src + k);
+          vst1_f16(dst + k, vcvt_f16_f32(v));
+        }
+        for (; k < K; k++) {
+          dst[k] = (__fp16)src[k];
+        }
+      }
+#else
+      for (unsigned int m = 0; m < M; m++) {
+        for (unsigned int k = 0; k < K; k++) {
+          host_fp16_input[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
+        }
+      }
+#endif
+      // Single memcpy to SVM (DMA-friendly sequential write)
+      blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
+      std::memcpy(input_svm, host_fp16_input.data(), M * alignK * sizeof(uint16_t));
+      blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
       last_input_ptr = data;
       last_input_M = M;
@@ -1121,22 +1148,29 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Wrap rdata with cl_mem, dispatch FP16->FP32 GPU kernel
-    cl_int err;
-    cl_mem fp32_output_buf = clCreateBuffer(
-      blas_cc->context_inst_.GetContext(),
-      CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
-      M * N * sizeof(float), rdata, &err);
-    if (err != CL_SUCCESS) throw std::runtime_error("Failed to create fp32_output_buf");
+    // Copy FP16 output from SVM to host buffer (DMA-friendly) then convert to FP32
+    static thread_local std::vector<uint16_t> host_fp16_output;
+    host_fp16_output.resize(M * N);
+    std::memcpy(host_fp16_output.data(), output_svm, M * N * sizeof(uint16_t));
 
-    fp16_to_fp32_cl(output_svm, fp32_output_buf, M * N);
-
-    // Read back to ensure rdata is updated (sync)
-    clEnqueueReadBuffer(blas_cc->command_queue_inst_.GetCommandQueue(),
-                        fp32_output_buf, CL_TRUE, 0, M * N * sizeof(float),
-                        rdata, 0, nullptr, nullptr);
-
-    clReleaseMemObject(fp32_output_buf);
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+    {
+      const __fp16 *src = (const __fp16 *)host_fp16_output.data();
+      unsigned int total = M * N;
+      unsigned int i = 0;
+      for (; i + 4 <= total; i += 4) {
+        float16x4_t h = vld1_f16(src + i);
+        vst1q_f32(rdata + i, vcvt_f32_f16(h));
+      }
+      for (; i < total; i++) {
+        rdata[i] = (float)src[i];
+      }
+    }
+#else
+    for (unsigned int i = 0; i < M * N; i++) {
+      rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
+    }
+#endif
 
     // SVM buffers cached, no free
 
