@@ -1079,15 +1079,23 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_start = std::chrono::high_resolution_clock::now();
 
-    // Repack KAI → Adreno format
+    // Dispatch repack KAI → Adreno format (ASYNC, no sync at end)
     repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP32 input to FP16 via CPU-side malloc buffer then DMA-copy to SVM
-    // SVM direct write is slow (uncached memory), so use regular malloc + memcpy
+    // Convert FP32 input to FP16 on CPU (runs in parallel with GPU repack)
     static thread_local std::vector<uint16_t> host_fp16_input;
-    host_fp16_input.assign(M * alignK, 0);
+    if (host_fp16_input.size() < M * alignK) {
+      host_fp16_input.resize(M * alignK, 0);
+    }
+    // Zero pad the tail region (k >= K) only if needed
+    if (alignK != K) {
+      for (unsigned int m = 0; m < M; m++) {
+        std::memset(host_fp16_input.data() + m * alignK + K, 0,
+                    (alignK - K) * sizeof(uint16_t));
+      }
+    }
 #if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
     for (unsigned int m = 0; m < M; m++) {
       const float *src = data + m * K;

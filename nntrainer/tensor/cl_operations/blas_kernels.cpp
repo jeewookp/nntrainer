@@ -868,21 +868,7 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
       "Failed to dispatch kernel for repack_kai_to_adreno");
     return;
   }
-
-  blas_cc->command_queue_inst_.enqueueSVMMap(weights, K * N * sizeof(uint16_t) / 4, true);
-  if (!result) {
-    throw std::runtime_error(
-      "Failed to read output data for repack_kai_to_adreno");
-    return;
-  }
-
-  blas_cc->command_queue_inst_.enqueueSVMMap(scales, N * sizeof(uint16_t), true);
-  if (!result) {
-    throw std::runtime_error(
-      "Failed to read output data for repack_kai_to_adreno");
-    return;
-  }
-
+  // No sync: output (weights/scales) consumed only by GEMM kernel in same queue
 }
 
 void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, void *scales, void *output,
