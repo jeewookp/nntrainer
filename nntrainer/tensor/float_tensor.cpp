@@ -32,7 +32,7 @@
 #include <cl_context.h>
 #include <engine.h>
 #include <fp16.h>
-#if defined(__ARM_NEON__) && defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
 #include <arm_neon.h>
 #endif
 #endif
@@ -1084,37 +1084,33 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP32 input to FP16 SVM (NEON vectorized on ARM)
-    blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
-#if defined(__ARM_NEON__) && defined(__aarch64__)
+    // Convert FP32 input to FP16 via CPU-side malloc buffer then DMA-copy to SVM
+    // SVM direct write is slow (uncached memory), so use regular malloc + memcpy
+    static thread_local std::vector<uint16_t> host_fp16_input;
+    host_fp16_input.assign(M * alignK, 0);
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
     for (unsigned int m = 0; m < M; m++) {
       const float *src = data + m * K;
-      __fp16 *dst = (__fp16 *)(input_svm + m * alignK);
+      __fp16 *dst = (__fp16 *)(host_fp16_input.data() + m * alignK);
       unsigned int k = 0;
-      // Vectorized: 4 floats → 4 halfs per iter
       for (; k + 4 <= K; k += 4) {
         float32x4_t v = vld1q_f32(src + k);
         vst1_f16(dst + k, vcvt_f16_f32(v));
       }
-      // Remainder
       for (; k < K; k++) {
         dst[k] = (__fp16)src[k];
-      }
-      // Zero pad
-      for (k = K; k < alignK; k++) {
-        input_svm[m * alignK + k] = 0;
       }
     }
 #else
     for (unsigned int m = 0; m < M; m++) {
-      for (unsigned int k = 0; k < alignK; k++) {
-        if (k < K)
-          input_svm[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
-        else
-          input_svm[m * alignK + k] = 0;
+      for (unsigned int k = 0; k < K; k++) {
+        host_fp16_input[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
       }
     }
 #endif
+    // Single memcpy to SVM (DMA-friendly sequential write)
+    blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
+    std::memcpy(input_svm, host_fp16_input.data(), M * alignK * sizeof(uint16_t));
     blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
     auto t_gemm_start = std::chrono::high_resolution_clock::now();
@@ -1125,10 +1121,14 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP16 output to FP32 (NEON vectorized on ARM)
-#if defined(__ARM_NEON__) && defined(__aarch64__)
+    // Copy FP16 output from SVM to host buffer (DMA-friendly) then convert to FP32
+    static thread_local std::vector<uint16_t> host_fp16_output;
+    host_fp16_output.resize(M * N);
+    std::memcpy(host_fp16_output.data(), output_svm, M * N * sizeof(uint16_t));
+
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
     {
-      const __fp16 *src = (const __fp16 *)output_svm;
+      const __fp16 *src = (const __fp16 *)host_fp16_output.data();
       unsigned int total = M * N;
       unsigned int i = 0;
       for (; i + 4 <= total; i += 4) {
@@ -1141,7 +1141,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     }
 #else
     for (unsigned int i = 0; i < M * N; i++) {
-      rdata[i] = compute_fp16_to_fp32(output_svm[i]);
+      rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
     }
 #endif
 
