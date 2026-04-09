@@ -1015,58 +1015,59 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
-  arg = 0;
-
-  result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
-  if (!result)
-    throw std::runtime_error("Failed to set kernel argument 0 for "
-                              "gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 1 for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 2 for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 3 for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelArguments(arg++, &K, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 4 for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelArguments(arg++, &N, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 5 for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelArguments(arg++, &M, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 6 for gpu_int4_gemm_adreno");
-
-  int q_group_size = quantization_group_size;
-  result = kernel_ptr->SetKernelArguments(arg++, &q_group_size, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 7 for gpu_int4_gemm_adreno");
-
   const int work_groups_count_mm[3] = {(int)ceilDiv(M,8), (int)N/4, 1};
   const int work_group_size_mm[3] = {1, 128, 1};
 
-  result = blas_cc->command_queue_inst_.DispatchCommand(
-      kernel_ptr, work_groups_count_mm, work_group_size_mm);
-  if (!result) {
-    throw std::runtime_error(
-      "Failed to dispatch kernel for gpu_int4_gemm_adreno");
-    return;
+  // Split-K for large K to maintain FP16 precision
+  const int K_SPLIT_THRESHOLD = 4096;
+  int num_splits = (K > K_SPLIT_THRESHOLD) ? ((K + K_SPLIT_THRESHOLD - 1) / K_SPLIT_THRESHOLD) : 1;
+  // Align split size to 32 (quantization group)
+  int k_chunk = ((K / num_splits + 31) / 32) * 32;
+
+  for (int split = 0; split < num_splits; split++) {
+    int k_off = split * k_chunk;
+    int k_len = (split == num_splits - 1) ? (K - k_off) : k_chunk;
+    int beta_val = (split == 0) ? 0 : 1;
+
+    arg = 0;
+
+    result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelSVMArguments(arg++, output);
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelArguments(arg++, &N, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelArguments(arg++, &M, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    int q_group_size = quantization_group_size;
+    result = kernel_ptr->SetKernelArguments(arg++, &q_group_size, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelArguments(arg++, &k_off, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = kernel_ptr->SetKernelArguments(arg++, &beta_val, sizeof(int));
+    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+
+    result = blas_cc->command_queue_inst_.DispatchCommand(
+        kernel_ptr, work_groups_count_mm, work_group_size_mm);
+    if (!result) {
+      throw std::runtime_error("Failed to dispatch kernel for gpu_int4_gemm_adreno");
+      return;
+    }
   }
 
   blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(uint16_t),
