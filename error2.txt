@@ -1,80 +1,81 @@
-sh tools/test_android.sh 실행 시 KAI_acc39.GEMM_1024x9728x2560에서 GPU repack+GEMM  < 20 ms 로 만들어 줄 수 있어?
+sh tools/test_android.sh 실행 시 결과는 아래와 같아
 방금 수정으로 오히려 느려졌어
-아래는 결과야
 
 
+6 files pushed. 31.3 MB/s (13129832 bytes in 0.400s)
 [==========] Running 5 tests from 5 test suites.
 [----------] Global test environment set-up.
 [----------] 1 test from KAI_acc3
 [ RUN      ] KAI_acc3.GEMM_1024x2560x1024
-Repack KAI->Adreno: 0.66 ms 
-GPU repack+GEMM  : 6.98 ms 
-GPU GEMM only    : 6.16 ms 
-GPU repack only  : 0.66 ms 
-GPU MSE vs FP32 ref: 1.28975
-CPU KAI kernel   : 11.22 ms 
+Repack KAI->Adreno: 0.94 ms 
+GPU repack+GEMM  : 5.5 ms 
+GPU GEMM only    : 4.3 ms 
+GPU repack only  : 0.94 ms 
+GPU MSE vs FP32 ref: 1.30517
+CPU KAI kernel   : 8.96 ms 
 CPU MSE vs FP32 ref: 1.28063
-Speedup (CPU/GPU): 1.60745x
+Speedup (CPU/GPU): 1.62909x
 -------------------------------------------
-[       OK ] KAI_acc3.GEMM_1024x2560x1024 (2158 ms)
-[----------] 1 test from KAI_acc3 (2158 ms total)
+[       OK ] KAI_acc3.GEMM_1024x2560x1024 (1898 ms)
+[----------] 1 test from KAI_acc3 (1898 ms total)
 
 [----------] 1 test from KAI_acc33
 [ RUN      ] KAI_acc33.GEMM_1024x2560x4096
-Repack KAI->Adreno: 1.66 ms 
-GPU repack+GEMM  : 26.68 ms 
-GPU GEMM only    : 23.6 ms 
-GPU repack only  : 1.66 ms 
-GPU MSE vs FP32 ref: 1.27049
-CPU KAI kernel   : 25.54 ms 
+Repack KAI->Adreno: 3.26 ms 
+GPU repack+GEMM  : 22.34 ms 
+GPU GEMM only    : 16.84 ms 
+GPU repack only  : 3.26 ms 
+GPU MSE vs FP32 ref: 1.28411
+CPU KAI kernel   : 25.42 ms 
 CPU MSE vs FP32 ref: 1.27036
-Speedup (CPU/GPU): 0.957271x
+Speedup (CPU/GPU): 1.13787x
 -------------------------------------------
-[       OK ] KAI_acc33.GEMM_1024x2560x4096 (5114 ms)
-[----------] 1 test from KAI_acc33 (5114 ms total)
+[       OK ] KAI_acc33.GEMM_1024x2560x4096 (4211 ms)
+[----------] 1 test from KAI_acc33 (4212 ms total)
 
 [----------] 1 test from KAI_acc35
 [ RUN      ] KAI_acc35.GEMM_1024x2560x9728
-Repack KAI->Adreno: 3.66 ms 
-GPU repack+GEMM  : 56.14 ms 
-GPU GEMM only    : 51.28 ms 
-GPU repack only  : 3.66 ms 
-GPU MSE vs FP32 ref: 1.2677
-CPU KAI kernel   : 39.1 ms 
+Repack KAI->Adreno: 7.28 ms 
+GPU repack+GEMM  : 40.5 ms 
+GPU GEMM only    : 33.72 ms 
+GPU repack only  : 7.28 ms 
+GPU MSE vs FP32 ref: 1.28094
+CPU KAI kernel   : 41.18 ms 
 CPU MSE vs FP32 ref: 1.26923
-Speedup (CPU/GPU): 0.696473x
+Speedup (CPU/GPU): 1.01679x
 -------------------------------------------
-[       OK ] KAI_acc35.GEMM_1024x2560x9728 (9322 ms)
-[----------] 1 test from KAI_acc35 (9323 ms total)
+[       OK ] KAI_acc35.GEMM_1024x2560x9728 (7861 ms)
+[----------] 1 test from KAI_acc35 (7861 ms total)
 
 [----------] 1 test from KAI_acc37
 [ RUN      ] KAI_acc37.GEMM_1024x4096x2560
-Repack KAI->Adreno: 1.62 ms 
-GPU repack+GEMM  : 28.18 ms 
-GPU GEMM only    : 24.58 ms 
-GPU repack only  : 1.62 ms 
-GPU MSE vs FP32 ref: 2.04778
-CPU KAI kernel   : 21.72 ms 
+Repack KAI->Adreno: 3.38 ms 
+GPU repack+GEMM  : 19.58 ms 
+GPU GEMM only    : 15.98 ms 
+GPU repack only  : 3.38 ms 
+GPU MSE vs FP32 ref: 4.02652
+CPU KAI kernel   : 21.8 ms 
 CPU MSE vs FP32 ref: 2.0407
-Speedup (CPU/GPU): 0.770759x
+Speedup (CPU/GPU): 1.11338x
 -------------------------------------------
-[       OK ] KAI_acc37.GEMM_1024x4096x2560 (4687 ms)
-[----------] 1 test from KAI_acc37 (4687 ms total)
+[       OK ] KAI_acc37.GEMM_1024x4096x2560 (3906 ms)
+[----------] 1 test from KAI_acc37 (3906 ms total)
 
 [----------] 1 test from KAI_acc39
 [ RUN      ] KAI_acc39.GEMM_1024x9728x2560
-Repack KAI->Adreno: 3.7 ms 
-GPU repack+GEMM  : 61.96 ms 
-GPU GEMM only    : 56.24 ms 
-GPU repack only  : 3.7 ms 
-GPU MSE vs FP32 ref: 4.96808
-CPU KAI kernel   : 51.42 ms 
+Repack KAI->Adreno: 7.28 ms 
+GPU repack+GEMM  : 42.06 ms 
+GPU GEMM only    : 35.08 ms 
+GPU repack only  : 7.28 ms 
+GPU MSE vs FP32 ref: 5.65167
+CPU KAI kernel   : 51.14 ms 
 CPU MSE vs FP32 ref: 4.91032
-Speedup (CPU/GPU): 0.82989x
+Speedup (CPU/GPU): 1.21588x
 -------------------------------------------
-[       OK ] KAI_acc39.GEMM_1024x9728x2560 (10638 ms)
-[----------] 1 test from KAI_acc39 (10638 ms total)
+[       OK ] KAI_acc39.GEMM_1024x9728x2560 (8597 ms)
+[----------] 1 test from KAI_acc39 (8597 ms total)
 
 [----------] Global test environment tear-down
-[==========] 5 tests from 5 test suites ran. (31922 ms total)
+[==========] 5 tests from 5 test suites ran. (26481 ms total)
 [  PASSED  ] 5 tests.
+/data/local/tmp/nntrainer/test/logs/./: 1 file pulled. 2.8 MB/s (263043 bytes in 0.091s)
