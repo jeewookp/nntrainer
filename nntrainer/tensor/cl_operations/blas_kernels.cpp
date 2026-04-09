@@ -869,14 +869,14 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
     return;
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(weights, K * N * sizeof(uint16_t) / 4, true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(weights, K * N * sizeof(uint16_t), true);
   if (!result) {
     throw std::runtime_error(
       "Failed to read output data for repack_kai_to_adreno");
     return;
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(scales, (K/32) * N * sizeof(uint16_t), true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(scales, N * sizeof(uint16_t), true);
   if (!result) {
     throw std::runtime_error(
       "Failed to read output data for repack_kai_to_adreno");
@@ -1008,7 +1008,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
   // GEMM kernel - no sync needed, same queue guarantees ordering
   // Create weight image1d_buffer for texture cache
-  size_t weight_size = (alignK / 4) * N * sizeof(uint16_t);
+  // Pre-dequantized FP16 weights: [K][N] half
+  size_t weight_size = K * N * sizeof(uint16_t);
   cl_mem weight_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
     CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
@@ -1021,7 +1022,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
   memset(&image_desc, 0, sizeof(image_desc));
   image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
-  image_desc.image_width = (alignK / 4) * N / 4;
+  image_desc.image_width = K * N / 4;
   image_desc.buffer = weight_buf;
 
   cl_mem weight_img = clCreateImage(

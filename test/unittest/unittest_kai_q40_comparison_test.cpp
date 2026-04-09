@@ -214,8 +214,9 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   uint32_t alignN = ((N + 31) / 32) * 32;
 
   uint8_t *kai_packed_data_ptr = (uint8_t *)allocateSVM(packed_size * sizeof(uint8_t));
-  uint16_t *weights = (uint16_t *)allocateSVM(K * N * sizeof(uint16_t) / 4);
-  uint16_t *scales = (uint16_t *)allocateSVM((K/32) * alignN * sizeof(uint16_t));
+  // Pre-dequantized FP16 weights: [K][N] half
+  uint16_t *weights = (uint16_t *)allocateSVM(K * N * sizeof(uint16_t));
+  uint16_t *scales = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
 
   blas_cc->command_queue_inst_.enqueueSVMMap(kai_packed_data_ptr, packed_size * sizeof(uint8_t), false);
 

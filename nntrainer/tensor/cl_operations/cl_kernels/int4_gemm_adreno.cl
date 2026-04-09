@@ -4,6 +4,8 @@
 #define CEIL_DIV(a, b) (((a) + (b)-1) / (b))
 #define ALIGN(a, b) (CEIL_DIV(a, b) * (b))
 
+// Pre-dequantized FP16 weight GEMM: no mask/shift/subtract/scale in inner loop
+// Weights are [K][N] half, pre-multiplied by scale during repack
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 gpu_int4_gemm_adreno(
                             __read_only image1d_buffer_t input,
@@ -16,78 +18,55 @@ gpu_int4_gemm_adreno(
                             const int quantization_group_size,
                             const int k_offset,
                             const int beta) {
-    const int align_N = ALIGN(N, 32);
-
     const int m = get_global_id(0) * 2;
     const int n = get_global_id(1) * 4;
-    const int M_4 = CEIL_DIV(M,4);
+    const int M_4 = CEIL_DIV(M, 4);
     const int N_4 = N >> 2;
 
     half8 c0 = 0, c1 = 0, c2 = 0, c3 = 0;
     half8 input_reg;
-    half4 dq_weights_reg;
-    ushort4 packed_w;
+    half4 w0, w1, w2, w3;
 
-    // Per-channel scale: load once (constant across all K)
-    half4 scale = vload4(0, scales + n);
-
-    for(int k=0; k<K; k+=4){
+    for(int k = 0; k < K; k += 4){
         int gk = k + k_offset;
 
-        // Weight via texture cache (image1d_buffer)
-        packed_w = as_ushort4(read_imageh(weight_img, (gk >> 2) * N_4 + (n >> 2)));
+        // Read 4 pre-dequantized weight vectors (4 K values x 4 N columns)
+        w0 = read_imageh(weight_img, gk * N_4 + (n >> 2));
+        w1 = read_imageh(weight_img, (gk+1) * N_4 + (n >> 2));
+        w2 = read_imageh(weight_img, (gk+2) * N_4 + (n >> 2));
+        w3 = read_imageh(weight_img, (gk+3) * N_4 + (n >> 2));
 
+        // k+0
         input_reg.s0123 = read_imageh(input, gk * M_4 + m);
         input_reg.s4567 = read_imageh(input, gk * M_4 + m + 1);
+        c0 += input_reg * w0.s0;
+        c1 += input_reg * w0.s1;
+        c2 += input_reg * w0.s2;
+        c3 += input_reg * w0.s3;
 
-        dq_weights_reg.s0 = ((packed_w.s0 & (0x000F))-8) * scale.s0;
-        dq_weights_reg.s1 = ((packed_w.s1 & (0x000F))-8) * scale.s1;
-        dq_weights_reg.s2 = ((packed_w.s2 & (0x000F))-8) * scale.s2;
-        dq_weights_reg.s3 = ((packed_w.s3 & (0x000F))-8) * scale.s3;
-
-        c0 += input_reg * dq_weights_reg.s0;
-        c1 += input_reg * dq_weights_reg.s1;
-        c2 += input_reg * dq_weights_reg.s2;
-        c3 += input_reg * dq_weights_reg.s3;
-
+        // k+1
         input_reg.s0123 = read_imageh(input, (gk+1) * M_4 + m);
         input_reg.s4567 = read_imageh(input, (gk+1) * M_4 + m + 1);
+        c0 += input_reg * w1.s0;
+        c1 += input_reg * w1.s1;
+        c2 += input_reg * w1.s2;
+        c3 += input_reg * w1.s3;
 
-        dq_weights_reg.s0 = (((packed_w.s0 & (0x00F0)) >> 4) - 8) * scale.s0;
-        dq_weights_reg.s1 = (((packed_w.s1 & (0x00F0)) >> 4) - 8) * scale.s1;
-        dq_weights_reg.s2 = (((packed_w.s2 & (0x00F0)) >> 4) - 8) * scale.s2;
-        dq_weights_reg.s3 = (((packed_w.s3 & (0x00F0)) >> 4) - 8) * scale.s3;
-
-        c0 += input_reg * dq_weights_reg.s0;
-        c1 += input_reg * dq_weights_reg.s1;
-        c2 += input_reg * dq_weights_reg.s2;
-        c3 += input_reg * dq_weights_reg.s3;
-
+        // k+2
         input_reg.s0123 = read_imageh(input, (gk+2) * M_4 + m);
         input_reg.s4567 = read_imageh(input, (gk+2) * M_4 + m + 1);
+        c0 += input_reg * w2.s0;
+        c1 += input_reg * w2.s1;
+        c2 += input_reg * w2.s2;
+        c3 += input_reg * w2.s3;
 
-        dq_weights_reg.s0 = (((packed_w.s0 & (0x0F00)) >> 8) - 8) * scale.s0;
-        dq_weights_reg.s1 = (((packed_w.s1 & (0x0F00)) >> 8) - 8) * scale.s1;
-        dq_weights_reg.s2 = (((packed_w.s2 & (0x0F00)) >> 8) - 8) * scale.s2;
-        dq_weights_reg.s3 = (((packed_w.s3 & (0x0F00)) >> 8) - 8) * scale.s3;
-
-        c0 += input_reg * dq_weights_reg.s0;
-        c1 += input_reg * dq_weights_reg.s1;
-        c2 += input_reg * dq_weights_reg.s2;
-        c3 += input_reg * dq_weights_reg.s3;
-
+        // k+3
         input_reg.s0123 = read_imageh(input, (gk+3) * M_4 + m);
         input_reg.s4567 = read_imageh(input, (gk+3) * M_4 + m + 1);
-
-        dq_weights_reg.s0 = (((packed_w.s0 & (0xF000)) >> 12) - 8) * scale.s0;
-        dq_weights_reg.s1 = (((packed_w.s1 & (0xF000)) >> 12) - 8) * scale.s1;
-        dq_weights_reg.s2 = (((packed_w.s2 & (0xF000)) >> 12) - 8) * scale.s2;
-        dq_weights_reg.s3 = (((packed_w.s3 & (0xF000)) >> 12) - 8) * scale.s3;
-
-        c0 += input_reg * dq_weights_reg.s0;
-        c1 += input_reg * dq_weights_reg.s1;
-        c2 += input_reg * dq_weights_reg.s2;
-        c3 += input_reg * dq_weights_reg.s3;
+        c0 += input_reg * w3.s0;
+        c1 += input_reg * w3.s1;
+        c2 += input_reg * w3.s2;
+        c3 += input_reg * w3.s3;
     }
 
     int idx = (m<<2) * N + n;
