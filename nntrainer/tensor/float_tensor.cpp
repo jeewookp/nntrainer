@@ -32,6 +32,9 @@
 #include <cl_context.h>
 #include <engine.h>
 #include <fp16.h>
+#if defined(__ARM_NEON__) && defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 #endif
 
 namespace nntrainer {
@@ -1081,8 +1084,28 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP32 input to FP16 SVM
+    // Convert FP32 input to FP16 SVM (NEON vectorized on ARM)
     blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
+#if defined(__ARM_NEON__) && defined(__aarch64__)
+    for (unsigned int m = 0; m < M; m++) {
+      const float *src = data + m * K;
+      __fp16 *dst = (__fp16 *)(input_svm + m * alignK);
+      unsigned int k = 0;
+      // Vectorized: 4 floats → 4 halfs per iter
+      for (; k + 4 <= K; k += 4) {
+        float32x4_t v = vld1q_f32(src + k);
+        vst1_f16(dst + k, vcvt_f16_f32(v));
+      }
+      // Remainder
+      for (; k < K; k++) {
+        dst[k] = (__fp16)src[k];
+      }
+      // Zero pad
+      for (k = K; k < alignK; k++) {
+        input_svm[m * alignK + k] = 0;
+      }
+    }
+#else
     for (unsigned int m = 0; m < M; m++) {
       for (unsigned int k = 0; k < alignK; k++) {
         if (k < K)
@@ -1091,6 +1114,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
           input_svm[m * alignK + k] = 0;
       }
     }
+#endif
     blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
     auto t_gemm_start = std::chrono::high_resolution_clock::now();
@@ -1101,10 +1125,25 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP16 output to FP32
+    // Convert FP16 output to FP32 (NEON vectorized on ARM)
+#if defined(__ARM_NEON__) && defined(__aarch64__)
+    {
+      const __fp16 *src = (const __fp16 *)output_svm;
+      unsigned int total = M * N;
+      unsigned int i = 0;
+      for (; i + 4 <= total; i += 4) {
+        float16x4_t h = vld1_f16(src + i);
+        vst1q_f32(rdata + i, vcvt_f32_f16(h));
+      }
+      for (; i < total; i++) {
+        rdata[i] = (float)src[i];
+      }
+    }
+#else
     for (unsigned int i = 0; i < M * N; i++) {
       rdata[i] = compute_fp16_to_fp32(output_svm[i]);
     }
+#endif
 
     // SVM buffers cached, no free
 
