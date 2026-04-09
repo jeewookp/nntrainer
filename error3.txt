@@ -1,701 +1,86 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
-jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 13.9 MB/s (129336 bytes in 0.009s)
-jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.2 MB/s (10960680 bytes in 0.315s)
-jni/libs/arm64-v8a/libomp.so: 1 file pushed. 30.4 MB/s (1205616 bytes in 0.038s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.5 MB/s (5165200 bytes in 0.162s)
-5 files pushed. 31.8 MB/s (19283552 bytes in 0.579s)
+5 files pushed. 31.4 MB/s (19283552 bytes in 0.585s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-[TensorRead FAIL] name=layer10_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=4408625152 shape=1x1x2560x1024
+[TensorRead FAIL] name=layer33_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2192848896 shape=1x1x1x2560
+libc++abi: [TensorRead FAIL] name=layer33_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2192854016 shape=1x1x2560x4096
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4461059072 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4660288512 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer4_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2238013440 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4964386304 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=2379576576 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=4759903232 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=4801851648 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=4812337664 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=4822823424 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2442496512 shape=1x1x2560x9728
-libc++abi: [TensorRead FAIL] name=layer5_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2390062336 shape=1x1x1x128
 terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3349536256 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer8_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=3590714112 shape=1x1x2560x1024
+[TensorRead FAIL] name=layer33_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2198752256 shape=1x1x1x128
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=3653628928 shape=1x1x1x2560
+[TensorRead FAIL] name=layer32_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2150818816 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed[TensorRead FAIL] name=layer6_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=2741345792 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer9_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=4015398400 shape=1x1x4096x2560
+[TensorRead FAIL] name=layer32_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2164832256 shape=1x1x2560x9728
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
+[TensorRead FAIL] name=layer33_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2198752512 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=3590713856 shape=1x1x1x128
-[TensorRead FAIL] name=layer9_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4256576000 shape=1x1x9728x2560
+[TensorRead FAIL] name=layer32_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2150823936 shape=1x1x2560x9728
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+[TensorRead FAIL] name=layer33_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2200227328 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+[TensorRead FAIL] name=layer34_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2257008384 shape=1x1x1x128
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4560673792 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer34_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2257008640 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=3197487616 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer5_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2442491392 shape=1x1x1x2560
+[TensorRead FAIL] name=layer35_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2306411520 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+[TensorRead FAIL] name=layer34_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2264386560 shape=1x1x2560x9728
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=3952478208 shape=1x1x1x2560
+[TensorRead FAIL] name=layer35_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2349184512 shape=1x1x9728x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3045438464 shape=1x1x9728x2560
-[TensorRead FAIL] name=layer6_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2741340672 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
-[TensorRead FAIL] name=layer7_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=3197487360 shape=1x1x1x128
-[TensorRead FAIL] name=layer6_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=2793775104 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer7_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3249921536 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer35_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2315264512 shape=1x1x4096x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+[TensorRead FAIL] name=layer32_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2144920576 shape=1x1x4096x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+[TensorRead FAIL] name=layer33_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2221613568 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer34_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2255533568 shape=1x1x1x128
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=5205564160 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer11_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5064001024 shape=1x1x9728x2560
+[TensorRead FAIL] name=layer33_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2235621888 shape=1x1x9728x2560
+[TensorRead FAIL] name=layer34_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2258483200 shape=1x1x4096x2560
+[TensorRead FAIL] name=layer35_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2313789696 shape=1x1x1x128
+[TensorRead FAIL] name=layer35_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2312314880 shape=1x1x1x128
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=5163620864 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=5205563904 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=5163615744 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2945823744 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=2804260864 shape=1x1x4096x2560
+[TensorRead FAIL] name=layer33_attention_out:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2201701888 shape=1x1x4096x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=3187001344 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=2337633280 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=3249916416 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=2390062592 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2542111232 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=3611685888 shape=1x1x4096x2560
-[TensorRead FAIL] name=layer6_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2783288832 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=4398139136 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=3548770816 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3852863488 shape=1x1x9728x2560
-[TensorRead FAIL] name=layer9_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=4004912384 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2846203904 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2379576320 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=4356195840 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer7_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=3145053184 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=3187001600 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3653634048 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=3601199872 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3449150976 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=3952483328 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=3207973376 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=4398138880 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4156961280 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=4004912640 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=3601200128 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer8_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=3753248768 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer9_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=3994426368 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=4057341440 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=4419110912 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=4356190720 shape=1x1x1x2560
-[TensorRead FAIL] name=layer5_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2337628160 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=2783289088 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2793774848 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer6_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2846209024 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=3994426624 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer7_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=3145058304 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=4759908352 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=4461053952 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=4801851392 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer11_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=4812337408 shape=1x1x1x128
-[TensorRead FAIL] name=layer11_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4864771584 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer11_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=4864766464 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer10_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=4408624896 shape=1x1x1x128
+[TensorRead FAIL] name=layer35_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2321162752 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer9_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=4057346560 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer33_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=2200227072 shape=1x1x1x128
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer8_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=3548765696 shape=1x1x1x2560
+[TensorRead FAIL] name=layer32_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2178840576 shape=1x1x9728x2560
+[TensorRead FAIL] name=layer33_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2207605248 shape=1x1x2560x9728
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2641725952 shape=1x1x9728x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer5_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=2400548352 shape=1x1x4096x2560
+[TensorRead FAIL] name=layer34_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2249630208 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer4_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=2138398720 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer34_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2249635328 shape=1x1x2560x4096
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=5216049920 shape=1x1x1x128
+[TensorRead FAIL] name=layer34_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2278394880 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer35_wq:weight dtype=6 dtype_bytes=1 total_bytes=5898240 offset=2306416640 shape=1x1x2560x4096
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=5216050176 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=5226535936 shape=1x1x4096x2560
+[TensorRead FAIL] name=output_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2363192832 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=5268478976 shape=1x1x1x2560
+[TensorRead FAIL] name=layer34_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2255533824 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5368098816 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer34_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2264381440 shape=1x1x1x2560
+[TensorRead FAIL] name=layer33_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=2207600128 shape=1x1x1x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer12_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5268484096 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer35_ffn_up:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2335176192 shape=1x1x2560x9728
+[TensorRead FAIL] name=layer35_wv:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2313789952 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=5567333376 shape=1x1x2560x4096
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=5672191488 shape=1x1x1x2560
+[TensorRead FAIL] name=layer34_ffn_down:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2292403200 shape=1x1x9728x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=5609276416 shape=1x1x1x128
-[TensorRead FAIL] name=layer13_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=5630248448 shape=1x1x4096x2560
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=5619762432 shape=1x1x1x128
+[TensorRead FAIL] name=layer35_wk:weight dtype=6 dtype_bytes=1 total_bytes=1474560 offset=2312315136 shape=1x1x2560x1024
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=5619762688 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer13_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=5609276672 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer13_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5771811328 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer13_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5672196608 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer13_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=5567328256 shape=1x1x1x2560
-[TensorRead FAIL] name=layer13_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5871426048 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed[TensorRead FAIL] name=layer12_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=5467713536 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6012988928 shape=1x1x1x128
-[TensorRead FAIL] name=layer14_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=5971040768 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6012989184 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6023475200 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=6033960960 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6023474944 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=5971045888 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=6075904000 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6275138560 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=6374758400 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer14_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6175523840 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer14_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6075909120 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6416701696 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=6374753280 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6416701440 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6427187456 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6427187712 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=6437673472 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6479621632 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer15_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=6479616512 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=6778465792 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6579236352 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer15_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6678851072 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6820414208 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6830899968 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=6841385984 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=6830900224 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=7182178304 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=6778470912 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer17_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7287046656 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=7224126464 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=7224126720 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer17_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=7234612480 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=7234612736 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer17_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=7245098496 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=7182183424 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=6820413952 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=7287041536 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6982948864 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer16_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=6883329024 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=6883334144 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7386661376 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer16_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7082563584 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer17_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7486276096 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=7585890816 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=7627838976 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=7585895936 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=7638324992 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=7638325248 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer18_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=7627839232 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=7690754048 shape=1x1x1x2560
-[TensorRead FAIL] name=layer18_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=7648811008 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7690759168 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7790373888 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer18_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=7889988608 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=7989603328 shape=1x1x1x2560
-[TensorRead FAIL] name=layer19_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=7989608448 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8042037504 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8031551488 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8031551744 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=8052523520 shape=1x1x4096x2560
-[TensorRead FAIL] name=layer19_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=8094466560 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8042037760 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8094471680 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer19_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8293701120 shape=1x1x9728x2560
-[TensorRead FAIL] name=layer20_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=8393315840 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=8393320960 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer19_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8194086400 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8435264000 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8435264256 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer20_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8445750272 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8445750016 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=8456236032 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=8498179072 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8597798912 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8498184192 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer20_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8697413632 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8838976768 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8849462528 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=8849462784 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer21_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=8797028352 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=8859948544 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=8797033472 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=8838976512 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=8901891584 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9001511424 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer21_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=8901896704 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer21_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9101126144 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=9200740864 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=9242689024 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=9253175040 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=9200745984 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=9242689280 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=9263661056 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=9253175296 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=9305604096 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9405223936 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9504838656 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer22_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9305609216 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=9604453376 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=9604458496 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=9646401792 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=9656887552 shape=1x1x1x128
-[TensorRead FAIL] name=layer23_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=9646401536 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=9667373568 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=9709316608 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=9656887808 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9808936448 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer23_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9908551168 shape=1x1x9728x2560
-libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer23_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=9709321728 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10008165888 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10008171008 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10060600064 shape=1x1x1x128
-[TensorRead FAIL] name=layer24_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10060600320 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer24_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10050114304 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10050114048 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10113029120 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10071086080 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10212648960 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10312263680 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer24_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10113034240 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10411878400 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10411883520 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer25_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10453826560 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10464312576 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10453826816 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10464312832 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10474798592 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10516741632 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10516746752 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10616361472 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer25_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10715976192 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10815590912 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10815596032 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10857539072 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10857539328 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=10868025344 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=10868025088 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=10878511104 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=10920454144 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=10920459264 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer26_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11020073984 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer26_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11119688704 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=11219308544 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=11261251584 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=11219303424 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=11261251840 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=11271737856 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=11271737600 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=11282223616 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=11324166656 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11324171776 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer27_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11423786496 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=11623015936 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=11623021056 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer27_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11523401216 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=11675450112 shape=1x1x1x128
-[TensorRead FAIL] name=layer28_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=11664964096 shape=1x1x1x128
-[TensorRead FAIL] name=layer28_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=11664964352 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=11685936128 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=11675450368 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=11727879168 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11727884288 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer28_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11827499008 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer28_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=11927113728 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12026733568 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12068676608 shape=1x1x1x128
-[TensorRead FAIL] name=layer29_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12068676864 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
-[TensorRead FAIL] name=layer29_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12079162624 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12026728448 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12079162880 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12131591680 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12089648640 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12131596800 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12231211520 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer29_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12330826240 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12430440960 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12430446080 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12472389120 shape=1x1x1x128
-[TensorRead FAIL] name=layer30_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12472389376 shape=1x1x2560x1024
-libc++abi: [TensorRead FAIL] name=layer30_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12482875136 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12482875392 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedterminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
-[TensorRead FAIL] name=layer30_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12493361152 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12535304192 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12634924032 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12535309312 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer30_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12734538752 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12834153472 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12876101632 shape=1x1x1x128
-[TensorRead FAIL] name=layer31_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12876101888 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=12886587648 shape=1x1x1x128
-libc++abi: 
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12834158592 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer31_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=12886587904 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=12897073664 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=12939016704 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=12939021824 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13038636544 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer31_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13138251264 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=13237865984 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=13279814144 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=13279814400 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer32_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=13237871104 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=13290300160 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=13300786176 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=13290300416 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=13342729216 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13342734336 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13442349056 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer32_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13541963776 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=13641578496 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=13641583616 shape=1x1x2560x4096
-[TensorRead FAIL] name=layer33_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=13683526656 shape=1x1x1x128
-libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=13683526912 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=13694012672 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=13694012928 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer33_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=13704498688 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=13746441728 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13746446848 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13846061568 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer33_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=13945676288 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=14045291008 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=14045296128 shape=1x1x2560x4096
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=14087239168 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=14087239424 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=14097725184 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=14097725440 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=14108211200 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=14150154240 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14150159360 shape=1x1x2560x9728
-[TensorRead FAIL] name=layer34_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14249774080 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer34_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14349388800 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_attention_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=14449003520 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_wq:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=14449008640 shape=1x1x2560x4096
-libc++abi: [TensorRead FAIL] name=layer35_wk:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=14490951936 shape=1x1x2560x1024
-[TensorRead FAIL] name=layer35_k_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=14501437696 shape=1x1x1x128
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_q_norm:gamma dtype=11 dtype_bytes=2 total_bytes=256 offset=14490951680 shape=1x1x1x128
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_wv:weight dtype=12 dtype_bytes=4 total_bytes=10485760 offset=14501437952 shape=1x1x2560x1024
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_attention_out:weight dtype=12 dtype_bytes=4 total_bytes=41943040 offset=14511923712 shape=1x1x4096x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=14553866752 shape=1x1x1x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_gate:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14553871872 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_up:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14653486592 shape=1x1x2560x9728
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=layer35_ffn_down:weight dtype=12 dtype_bytes=4 total_bytes=99614720 offset=14753101312 shape=1x1x9728x2560
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-[TensorRead FAIL] name=output_norm:gamma dtype=11 dtype_bytes=2 total_bytes=5120 offset=14852716032 shape=1x1x1x2560
+[TensorRead FAIL] name=layer35_ffn_gate:weight dtype=6 dtype_bytes=1 total_bytes=14008320 offset=2321167872 shape=1x1x2560x9728
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 Aborted 
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
