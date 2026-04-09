@@ -60,9 +60,10 @@ void TieWordEmbedding::finalize_embedding(
   NNTR_THROW_IF(input_dim.channel() != 1, std::invalid_argument)
     << "Embedding layer takes only one for channel size";
 
-  NNTR_THROW_IF(input_dim.getDataType() != nntrainer::TensorDim::DataType::FP32,
+  NNTR_THROW_IF(input_dim.getDataType() != nntrainer::TensorDim::DataType::FP32 &&
+                  input_dim.getDataType() != nntrainer::TensorDim::DataType::FP16,
                 std::invalid_argument)
-    << "Embedding layer takes only FP32 input data";
+    << "Embedding layer takes only FP32 or FP16 input data";
 
   auto &weight_regularizer =
     std::get<nntrainer::props::WeightRegularizer>(*layer_impl_props);

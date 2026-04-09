@@ -39,9 +39,11 @@ void EmbeddingLayer::finalize(nntrainer::InitLayerContext &context) {
   NNTR_THROW_IF(input_dim.channel() != 1, std::invalid_argument)
     << "Embedding layer takes only one for channel size";
 
-  NNTR_THROW_IF(input_dim.getDataType() != nntrainer::TensorDim::DataType::FP32,
+  // Token IDs can be small integers, so FP16 input is also acceptable
+  NNTR_THROW_IF(input_dim.getDataType() != nntrainer::TensorDim::DataType::FP32 &&
+                  input_dim.getDataType() != nntrainer::TensorDim::DataType::FP16,
                 std::invalid_argument)
-    << "Embedding layer takes only FP32 input data";
+    << "Embedding layer takes only FP32 or FP16 input data";
 
   auto &weight_regularizer =
     std::get<nntrainer::props::WeightRegularizer>(*layer_impl_props);
@@ -107,16 +109,23 @@ void EmbeddingLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 
   unsigned int b_size = input_.batch();
 
+  bool input_is_fp16 =
+    (input_.getDataType() == nntrainer::TensorDim::DataType::FP16);
+
   for (unsigned int b = 0; b < b_size; ++b) {
-    float *in_data =
-      input_.getAddress<float>(b * input_.getDim().getFeatureLen());
+    const void *in_raw =
+      input_is_fp16
+        ? (const void *)input_.getAddress<_FP16>(b * input_.getDim().getFeatureLen())
+        : (const void *)input_.getAddress<float>(b * input_.getDim().getFeatureLen());
     nntrainer::Tensor batchsliced_hidden = hidden_.getBatchSlice(b, 1);
 
     int iter = to - from;
 
 #pragma omp parallel for
     for (int i = 0; i < iter; ++i) {
-      size_t embed_idx = static_cast<size_t>(in_data[i]);
+      size_t embed_idx = input_is_fp16
+        ? static_cast<size_t>((float)(((const _FP16 *)in_raw)[i]))
+        : static_cast<size_t>(((const float *)in_raw)[i]);
       if (embed_idx >= in_dim) {
         throw std::invalid_argument("input word index is greater than in_dim");
       }
