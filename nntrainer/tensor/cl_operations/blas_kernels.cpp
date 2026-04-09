@@ -1082,7 +1082,14 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
       return;
     }
   }
-  // No sync here - caller syncs via explicit flush (enables pipelining)
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(uint16_t),
+                                            true);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to read output data for gpu_int4_gemm_adreno");
+    return;
+  }
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
