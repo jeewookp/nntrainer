@@ -320,7 +320,7 @@ static void test_kai_tensor_dot_api(unsigned int M, unsigned int K, unsigned int
   float cpu_mse = compute_mse(reference_output, kai_vec);
 
   std::cout << "CPU MSE vs FP32 ref: " << cpu_mse << std::endl;
-  std::cout << "Speedup (CPU/GPU): " << (cpu_time * 1.0f) / (gpu_time > 0 ? gpu_time : 1) << "x" << std::endl;
+  std::cout << "Speedup (CPU/GPU): " << (cpu_time * 1.0f) / (gpu_total_time > 0 ? gpu_total_time : 1) << "x" << std::endl;
   std::cout << "-------------------------------------------" << std::endl;
 
   // Tolerance check
