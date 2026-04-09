@@ -528,6 +528,12 @@ private:
                  float beta, Tdatatype dtype) const;
 
   /**
+   * @brief dotQInteger - QINT4/QINT8 weight dot with FP16 activation
+   */
+  Tensor &dotQInteger(Tensor const &input, Tensor &output, bool trans,
+                      bool trans_in, float beta, Tdatatype dtype) const;
+
+  /**
    * @copydoc Tensor::isValid()
    */
   bool isValid() const override;

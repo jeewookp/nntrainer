@@ -9,6 +9,8 @@
  * @bug		No known bugs except for NYI items
  */
 
+#include <chrono>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 
@@ -16,6 +18,20 @@
 #include <half_tensor.h>
 #include <tensor.h>
 #include <util_func.h>
+
+#if defined(ENABLE_FP16) && defined(__aarch64__)
+#include <cpu_backend/arm/kleidiai_interface.h>
+#endif
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include "blas_kernels.h"
+#include <cl_context.h>
+#include <engine.h>
+#include <fp16.h>
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+#include <arm_neon.h>
+#endif
+#endif
 
 namespace nntrainer {
 
@@ -707,6 +723,11 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
     break;
   case Tdatatype::Q4_0:
     break;
+  case Tdatatype::QINT16:
+  case Tdatatype::QINT8:
+  case Tdatatype::QINT4:
+    dotQInteger(input, output, trans, trans_in, beta, input.getDataType());
+    break;
   default:
     throw std::invalid_argument("Error: unsupported datatype");
   }
@@ -730,6 +751,244 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   default:
     throw std::invalid_argument("Error: unsupported datatype");
   }
+  return output;
+}
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+// Thread-local SVM buffer cache for HalfTensor QINT4 GEMM path.
+// Grows on demand, never released (leaks on exit).
+namespace {
+struct HalfSVMCache {
+  void *ptr = nullptr;
+  size_t size = 0;
+  void *get(size_t needed, ClContext *blas_cc) {
+    if (size < needed) {
+      if (ptr)
+        blas_cc->context_inst_.releaseSVMRegion(ptr);
+      ptr = blas_cc->context_inst_.createSVMRegion(needed);
+      size = needed;
+    }
+    return ptr;
+  }
+};
+thread_local HalfSVMCache g_h_kai_svm;
+thread_local HalfSVMCache g_h_weights_svm;
+thread_local HalfSVMCache g_h_scales_svm;
+thread_local HalfSVMCache g_h_input_svm;
+thread_local HalfSVMCache g_h_input_tr_svm;
+thread_local HalfSVMCache g_h_output_svm;
+} // namespace
+#endif
+
+Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
+                                bool trans_in, float beta,
+                                Tdatatype dtype) const {
+  _FP16 *data = (_FP16 *)getData();
+  char *mdata = input.getData<char>();
+  _FP16 *rdata = output.getData<_FP16>();
+
+  unsigned int M = getDim().height();
+  unsigned int K = getDim().width();
+  unsigned int N = output.getDim().width();
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
+      (dtype == Tdatatype::QINT4) && M > 1) {
+    auto t_total_start = std::chrono::high_resolution_clock::now();
+
+    // Adreno GPU path for prefill (M > 1), FP16 in / FP16 out
+    auto *blas_cc =
+      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+    unsigned int alignK = ((K + 31) / 32) * 32;
+    unsigned int nr = 4;
+    unsigned int rhs_packed_stride = nr * (((alignK) / 2) + 12);
+
+    auto t_alloc_start = std::chrono::high_resolution_clock::now();
+
+    size_t kai_size = input.getMemoryBytes();
+    uint8_t *kai_svm = (uint8_t *)g_h_kai_svm.get(kai_size, blas_cc);
+    uint16_t *weights_svm = (uint16_t *)g_h_weights_svm.get(
+      K * N * sizeof(uint16_t) / 4, blas_cc);
+    uint16_t *scales_svm =
+      (uint16_t *)g_h_scales_svm.get(N * sizeof(uint16_t), blas_cc);
+    uint16_t *input_svm = (uint16_t *)g_h_input_svm.get(
+      M * alignK * sizeof(uint16_t), blas_cc);
+    uint16_t *input_tr_svm = (uint16_t *)g_h_input_tr_svm.get(
+      ((M + 3) / 4 * 4) * alignK * sizeof(uint16_t), blas_cc);
+    uint16_t *output_svm =
+      (uint16_t *)g_h_output_svm.get(M * N * sizeof(uint16_t), blas_cc);
+
+    auto t_alloc_end = std::chrono::high_resolution_clock::now();
+
+    // Copy KAI packed data to SVM
+    blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
+    std::memcpy(kai_svm, mdata, kai_size);
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
+
+    auto t_kai_copy_end = std::chrono::high_resolution_clock::now();
+    auto t_repack_start = t_kai_copy_end;
+
+    // Dispatch repack KAI -> Adreno format (ASYNC)
+    repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K,
+                         rhs_packed_stride, 32);
+
+    auto t_repack_end = std::chrono::high_resolution_clock::now();
+
+    // Input already FP16: memcpy directly (with zero-pad for alignK)
+    // Cache by input pointer: Q/K/V share input, gate/up share input
+    static thread_local std::vector<uint16_t> host_fp16_input;
+    static thread_local const _FP16 *last_input_ptr = nullptr;
+    static thread_local unsigned int last_input_M = 0;
+    static thread_local unsigned int last_input_K = 0;
+    static thread_local unsigned int last_input_alignK = 0;
+
+    bool input_cached = (data == last_input_ptr && M == last_input_M &&
+                         K == last_input_K && alignK == last_input_alignK);
+
+    if (host_fp16_input.size() < M * alignK) {
+      host_fp16_input.resize(M * alignK, 0);
+      input_cached = false;
+    }
+
+    if (!input_cached) {
+      if (alignK == K) {
+        // No padding needed: direct memcpy
+        std::memcpy(host_fp16_input.data(), data,
+                    M * K * sizeof(uint16_t));
+      } else {
+        // Row-wise copy with tail zero-pad
+        for (unsigned int m = 0; m < M; m++) {
+          std::memcpy(host_fp16_input.data() + m * alignK,
+                      (const uint16_t *)data + m * K,
+                      K * sizeof(uint16_t));
+          std::memset(host_fp16_input.data() + m * alignK + K, 0,
+                      (alignK - K) * sizeof(uint16_t));
+        }
+      }
+
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        input_svm, M * alignK * sizeof(uint16_t), false);
+      std::memcpy(input_svm, host_fp16_input.data(),
+                  M * alignK * sizeof(uint16_t));
+      blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
+
+      last_input_ptr = data;
+      last_input_M = M;
+      last_input_K = K;
+      last_input_alignK = alignK;
+    }
+
+    auto t_gemm_start = std::chrono::high_resolution_clock::now();
+
+    gemm_int4_cl_adreno(input_svm, input_tr_svm, weights_svm, scales_svm,
+                        output_svm, M, N, K, 32);
+
+    auto t_gemm_end = std::chrono::high_resolution_clock::now();
+
+    // Output FP16: direct memcpy from SVM to rdata
+    std::memcpy(rdata, output_svm, M * N * sizeof(uint16_t));
+
+    auto t_total_end = std::chrono::high_resolution_clock::now();
+
+    auto alloc_ms =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        t_alloc_end - t_alloc_start)
+        .count() /
+      1000.0;
+    auto kai_copy_ms =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        t_kai_copy_end - t_alloc_end)
+        .count() /
+      1000.0;
+    auto repack_ms =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        t_repack_end - t_repack_start)
+        .count() /
+      1000.0;
+    auto input_ms =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        t_gemm_start - t_repack_end)
+        .count() /
+      1000.0;
+    auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(
+                     t_gemm_end - t_gemm_start)
+                     .count() /
+                   1000.0;
+    auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(
+                       t_total_end - t_gemm_end)
+                       .count() /
+                     1000.0;
+    auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(
+                      t_total_end - t_total_start)
+                      .count() /
+                    1000.0;
+
+    printf("[GPU dotQInt FP16] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f "
+           "repack=%.2f input=%.2f gemm=%.2f output=%.2f | total=%.2f ms\n",
+           M, K, N, alloc_ms, kai_copy_ms, repack_ms, input_ms, gemm_ms,
+           output_ms, total_ms);
+    fflush(stdout);
+  } else
+#endif
+  {
+    // CPU path: KAI kernel requires FP32 input/output, so convert.
+#if defined(ENABLE_FP16) && defined(__aarch64__)
+    if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
+        (dtype == Tdatatype::QINT4)) {
+      // Convert FP16 input to FP32
+      std::vector<float> in_fp32(M * K);
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+      {
+        const __fp16 *src = (const __fp16 *)data;
+        unsigned int total = M * K;
+        unsigned int i = 0;
+        for (; i + 4 <= total; i += 4) {
+          float16x4_t h = vld1_f16(src + i);
+          vst1q_f32(in_fp32.data() + i, vcvt_f32_f16(h));
+        }
+        for (; i < total; i++)
+          in_fp32[i] = (float)src[i];
+      }
+#else
+      for (unsigned int i = 0; i < M * K; i++)
+        in_fp32[i] = static_cast<float>(data[i]);
+#endif
+
+      std::vector<float> out_fp32(M * N);
+      uint32_t idx_variant = input.getKernelVariant();
+      nntr_kai_gemm_qai8dxp_qsi4cxp_olp(
+        M, N, K, (void *)in_fp32.data(), (void *)mdata, out_fp32.data(),
+        idx_variant, true, -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::infinity());
+
+      // Convert FP32 output back to FP16
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
+      {
+        __fp16 *dst = (__fp16 *)rdata;
+        unsigned int total = M * N;
+        unsigned int i = 0;
+        for (; i + 4 <= total; i += 4) {
+          float32x4_t v = vld1q_f32(out_fp32.data() + i);
+          vst1_f16(dst + i, vcvt_f16_f32(v));
+        }
+        for (; i < total; i++)
+          dst[i] = (__fp16)out_fp32[i];
+      }
+#else
+      for (unsigned int i = 0; i < M * N; i++)
+        rdata[i] = static_cast<_FP16>(out_fp32[i]);
+#endif
+    } else {
+      throw std::runtime_error(
+        "Error: QINT4 Dot on CPU only supports PER_CHANNEL_AFFINE");
+    }
+#else
+    throw std::invalid_argument(
+      "Error: HalfTensor::dotQInteger requires ENABLE_FP16 and aarch64");
+#endif
+  }
+
   return output;
 }
 
