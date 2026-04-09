@@ -2,6 +2,10 @@ set -e
 
 rm -rf builddir
 
+# Step 1: Build libnntrainer.so with OpenCL enabled
+./tools/package_android.sh -Dmmap-read=false -Domp-num-threads=4 -Dthread-backend=omp -Denable-opencl=true
+
+# Step 2: Build CausalLM app (ndk-build, links against prebuilt libnntrainer.so)
 cd Applications/CausalLM
 sh build_android.sh
 
@@ -15,8 +19,3 @@ adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 adb shell "cd /data/local/tmp/nntrainer/test; export LD_LIBRARY_PATH=.; ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b"
 adb pull /data/local/tmp/nntrainer/test/logs/. ./logs/
 adb shell "rm /data/local/tmp/nntrainer/test/logs/*"
-
-
-
-
-
