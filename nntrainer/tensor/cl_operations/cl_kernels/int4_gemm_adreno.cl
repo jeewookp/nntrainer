@@ -8,7 +8,7 @@ __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 gpu_int4_gemm_adreno(
                             __read_only image1d_buffer_t input,
                             __global const half *scales,
-                            __global half *output,
+                            __global float *output,
                             __read_only image1d_buffer_t weight_img,
                             const int K,
                             const int N,
@@ -93,31 +93,31 @@ gpu_int4_gemm_adreno(
     int idx = (m<<2) * N + n;
 
     if (beta == 1) {
-        half4 prev;
+        float4 prev;
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s0, c1.s0, c2.s0, c3.s0), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s0, (float)c1.s0, (float)c2.s0, (float)c3.s0), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s1, c1.s1, c2.s1, c3.s1), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s1, (float)c1.s1, (float)c2.s1, (float)c3.s1), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s2, c1.s2, c2.s2, c3.s2), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s2, (float)c1.s2, (float)c2.s2, (float)c3.s2), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s3, c1.s3, c2.s3, c3.s3), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s3, (float)c1.s3, (float)c2.s3, (float)c3.s3), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s4, c1.s4, c2.s4, c3.s4), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s4, (float)c1.s4, (float)c2.s4, (float)c3.s4), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s5, c1.s5, c2.s5, c3.s5), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s5, (float)c1.s5, (float)c2.s5, (float)c3.s5), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s6, c1.s6, c2.s6, c3.s6), 0, output + idx); idx += N; }
+        vstore4(prev + (float4)((float)c0.s6, (float)c1.s6, (float)c2.s6, (float)c3.s6), 0, output + idx); idx += N; }
         if (idx+3<M*N){ prev = vload4(0, output+idx);
-        vstore4(prev + (half4)(c0.s7, c1.s7, c2.s7, c3.s7), 0, output + idx); }
+        vstore4(prev + (float4)((float)c0.s7, (float)c1.s7, (float)c2.s7, (float)c3.s7), 0, output + idx); }
     } else {
-        if (idx+3<M*N){ vstore4((half4)(c0.s0, c1.s0, c2.s0, c3.s0), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s1, c1.s1, c2.s1, c3.s1), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s2, c1.s2, c2.s2, c3.s2), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s3, c1.s3, c2.s3, c3.s3), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s4, c1.s4, c2.s4, c3.s4), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s5, c1.s5, c2.s5, c3.s5), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s6, c1.s6, c2.s6, c3.s6), 0, output + idx); idx += N; }
-        if (idx+3<M*N){ vstore4((half4)(c0.s7, c1.s7, c2.s7, c3.s7), 0, output + idx); }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s0, (float)c1.s0, (float)c2.s0, (float)c3.s0), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s1, (float)c1.s1, (float)c2.s1, (float)c3.s1), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s2, (float)c1.s2, (float)c2.s2, (float)c3.s2), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s3, (float)c1.s3, (float)c2.s3, (float)c3.s3), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s4, (float)c1.s4, (float)c2.s4, (float)c3.s4), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s5, (float)c1.s5, (float)c2.s5, (float)c3.s5), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s6, (float)c1.s6, (float)c2.s6, (float)c3.s6), 0, output + idx); idx += N; }
+        if (idx+3<M*N){ vstore4((float4)((float)c0.s7, (float)c1.s7, (float)c2.s7, (float)c3.s7), 0, output + idx); }
     }
 }
