@@ -889,7 +889,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   auto &clbuffInstance = ClBufferManager::Global();
 
   cl_int err;
-  size_t input_size = M * alignK * sizeof(uint16_t);
+  // Input / output are now FP32 (sizeof(float) == 4 bytes)
+  size_t input_size = M * alignK * sizeof(float);
 
   cl_mem input_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
@@ -903,6 +904,12 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error("Failed to create input buffer");
   }
 
+  // FP32 image format for input/transposed
+  cl_image_format image_format_fp32;
+  image_format_fp32.image_channel_order = CL_RGBA;
+  image_format_fp32.image_channel_data_type = CL_FLOAT;
+
+  // FP16 image format (for weight - reinterpret INT4 packed ushort as half)
   cl_image_format image_format;
   image_format.image_channel_order = CL_RGBA;
   image_format.image_channel_data_type = CL_HALF_FLOAT;
@@ -916,7 +923,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   cl_mem input_img = clCreateImage(
     blas_cc->context_inst_.GetContext(),
     CL_MEM_READ_ONLY,
-    &image_format,
+    &image_format_fp32,
     &image_desc,
     nullptr,
     &err
@@ -926,7 +933,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error("Failed to create image1d_buffer for input");
   }
 
-  input_size = align(M,4) * alignK * sizeof(uint16_t);
+  input_size = align(M,4) * alignK * sizeof(float);
 
   cl_mem input_tr_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
@@ -948,7 +955,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   cl_mem input_transposed_img = clCreateImage(
     blas_cc->context_inst_.GetContext(),
     CL_MEM_READ_WRITE,
-    &image_format,
+    &image_format_fp32,
     &image_desc,
     nullptr,
     &err
@@ -1083,7 +1090,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     }
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(uint16_t),
+  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(float),
                                             true);
   if (!result) {
     throw std::runtime_error(

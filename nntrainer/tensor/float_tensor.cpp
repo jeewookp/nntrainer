@@ -1062,13 +1062,14 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
     // Use cached SVM buffers (grow on demand, no per-call alloc/free)
+    // Input/Output are now FP32 (4 bytes per element) - no CPU conversion
     size_t kai_size = input.getMemoryBytes();
     uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
-    uint16_t *scales_svm = (uint16_t *)g_scales_svm.get(N * sizeof(uint16_t), blas_cc);
-    uint16_t *input_svm = (uint16_t *)g_input_svm.get(M * alignK * sizeof(uint16_t), blas_cc);
-    uint16_t *input_tr_svm = (uint16_t *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t), blas_cc);
-    uint16_t *output_svm = (uint16_t *)g_output_svm.get(M * N * sizeof(uint16_t), blas_cc);
+    float *scales_svm = (float *)g_scales_svm.get(N * sizeof(float), blas_cc);
+    float *input_svm = (float *)g_input_svm.get(M * alignK * sizeof(float), blas_cc);
+    float *input_tr_svm = (float *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(float), blas_cc);
+    float *output_svm = (float *)g_output_svm.get(M * N * sizeof(float), blas_cc);
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1085,53 +1086,24 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Convert FP32 input to FP16 on CPU (runs in parallel with GPU repack)
-    // Cache by input pointer: Q/K/V share input, gate/up share input in transformers
-    static thread_local std::vector<uint16_t> host_fp16_input;
+    // Copy FP32 input directly to SVM (no conversion, GEMM kernel uses FP32)
     static thread_local const float *last_input_ptr = nullptr;
     static thread_local unsigned int last_input_M = 0;
     static thread_local unsigned int last_input_K = 0;
     static thread_local unsigned int last_input_alignK = 0;
-
     bool input_cached = (data == last_input_ptr && M == last_input_M &&
                          K == last_input_K && alignK == last_input_alignK);
 
-    if (host_fp16_input.size() < M * alignK) {
-      host_fp16_input.resize(M * alignK, 0);
-      input_cached = false;
-    }
-
     if (!input_cached) {
-      // Zero pad the tail region (k >= K) only if needed
+      blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(float), false);
       if (alignK != K) {
         for (unsigned int m = 0; m < M; m++) {
-          std::memset(host_fp16_input.data() + m * alignK + K, 0,
-                      (alignK - K) * sizeof(uint16_t));
+          std::memcpy(input_svm + m * alignK, data + m * K, K * sizeof(float));
+          std::memset(input_svm + m * alignK + K, 0, (alignK - K) * sizeof(float));
         }
+      } else {
+        std::memcpy(input_svm, data, M * K * sizeof(float));
       }
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
-      for (unsigned int m = 0; m < M; m++) {
-        const float *src = data + m * K;
-        __fp16 *dst = (__fp16 *)(host_fp16_input.data() + m * alignK);
-        unsigned int k = 0;
-        for (; k + 4 <= K; k += 4) {
-          float32x4_t v = vld1q_f32(src + k);
-          vst1_f16(dst + k, vcvt_f16_f32(v));
-        }
-        for (; k < K; k++) {
-          dst[k] = (__fp16)src[k];
-        }
-      }
-#else
-      for (unsigned int m = 0; m < M; m++) {
-        for (unsigned int k = 0; k < K; k++) {
-          host_fp16_input[m * alignK + k] = compute_fp32_to_fp16(data[m * K + k]);
-        }
-      }
-#endif
-      // Single memcpy to SVM (DMA-friendly sequential write)
-      blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(uint16_t), false);
-      std::memcpy(input_svm, host_fp16_input.data(), M * alignK * sizeof(uint16_t));
       blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
 
       last_input_ptr = data;
@@ -1148,29 +1120,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
-    // Copy FP16 output from SVM to host buffer (DMA-friendly) then convert to FP32
-    static thread_local std::vector<uint16_t> host_fp16_output;
-    host_fp16_output.resize(M * N);
-    std::memcpy(host_fp16_output.data(), output_svm, M * N * sizeof(uint16_t));
-
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__)) && defined(__aarch64__)
-    {
-      const __fp16 *src = (const __fp16 *)host_fp16_output.data();
-      unsigned int total = M * N;
-      unsigned int i = 0;
-      for (; i + 4 <= total; i += 4) {
-        float16x4_t h = vld1_f16(src + i);
-        vst1q_f32(rdata + i, vcvt_f32_f16(h));
-      }
-      for (; i < total; i++) {
-        rdata[i] = (float)src[i];
-      }
-    }
-#else
-    for (unsigned int i = 0; i < M * N; i++) {
-      rdata[i] = compute_fp16_to_fp32(host_fp16_output[i]);
-    }
-#endif
+    // FP32 output: simple memcpy from SVM to rdata (no conversion)
+    std::memcpy(rdata, output_svm, M * N * sizeof(float));
 
     // SVM buffers cached, no free
 
