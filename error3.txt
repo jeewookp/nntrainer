@@ -1,11 +1,6 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
 
-jni/libs/arm64-v8a/libomp.so: 1 file pushed. 30.2 MB/s (1205616 bytes in 0.038s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.8 MB/s (5165264 bytes in 0.160s)
-5 files pushed. 31.5 MB/s (19283616 bytes in 0.584s)
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 load finished
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
@@ -16,6 +11,5 @@ sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
 
-[!] FATAL ERROR: Error: not yet implemented for this data type
+[!] FATAL ERROR: Error: unsupported datatype
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
