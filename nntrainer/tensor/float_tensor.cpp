@@ -1006,6 +1006,31 @@ Tensor &FloatTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   return output;
 }
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+// Thread-local SVM buffer cache: grow on demand, never released (leaks on exit)
+// Eliminates per-call allocation overhead which dominates over GEMM compute.
+namespace {
+struct SVMCache {
+  void *ptr = nullptr;
+  size_t size = 0;
+  void *get(size_t needed, ClContext *blas_cc) {
+    if (size < needed) {
+      if (ptr) blas_cc->context_inst_.releaseSVMRegion(ptr);
+      ptr = blas_cc->context_inst_.createSVMRegion(needed);
+      size = needed;
+    }
+    return ptr;
+  }
+};
+thread_local SVMCache g_kai_svm;
+thread_local SVMCache g_weights_svm;
+thread_local SVMCache g_scales_svm;
+thread_local SVMCache g_input_svm;
+thread_local SVMCache g_input_tr_svm;
+thread_local SVMCache g_output_svm;
+}
+#endif
+
 Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
                                   bool trans, bool trans_in, float beta,
                                   Tdatatype dtype) const {
@@ -1033,14 +1058,14 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
-    // Allocate SVM buffers
+    // Use cached SVM buffers (grow on demand, no per-call alloc/free)
     size_t kai_size = input.getMemoryBytes();
-    uint8_t *kai_svm = (uint8_t *)blas_cc->context_inst_.createSVMRegion(kai_size);
-    uint16_t *weights_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(K * N * sizeof(uint16_t) / 4);
-    uint16_t *scales_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(N * sizeof(uint16_t));
-    uint16_t *input_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(M * alignK * sizeof(uint16_t));
-    uint16_t *input_tr_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t));
-    uint16_t *output_svm = (uint16_t *)blas_cc->context_inst_.createSVMRegion(M * N * sizeof(uint16_t));
+    uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
+    uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
+    uint16_t *scales_svm = (uint16_t *)g_scales_svm.get(N * sizeof(uint16_t), blas_cc);
+    uint16_t *input_svm = (uint16_t *)g_input_svm.get(M * alignK * sizeof(uint16_t), blas_cc);
+    uint16_t *input_tr_svm = (uint16_t *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(uint16_t), blas_cc);
+    uint16_t *output_svm = (uint16_t *)g_output_svm.get(M * N * sizeof(uint16_t), blas_cc);
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1081,13 +1106,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
       rdata[i] = compute_fp16_to_fp32(output_svm[i]);
     }
 
-    // Free SVM buffers
-    blas_cc->context_inst_.releaseSVMRegion(kai_svm);
-    blas_cc->context_inst_.releaseSVMRegion(weights_svm);
-    blas_cc->context_inst_.releaseSVMRegion(scales_svm);
-    blas_cc->context_inst_.releaseSVMRegion(input_svm);
-    blas_cc->context_inst_.releaseSVMRegion(input_tr_svm);
-    blas_cc->context_inst_.releaseSVMRegion(output_svm);
+    // SVM buffers cached, no free
 
     auto t_total_end = std::chrono::high_resolution_clock::now();
 
@@ -1098,7 +1117,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_gemm_end).count() / 1000.0;
     auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_total_start).count() / 1000.0;
 
-    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32+free=%.2f | total=%.2f ms\n",
+    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32=%.2f | total=%.2f ms\n",
            M, K, N, alloc_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
     fflush(stdout);
   } else
