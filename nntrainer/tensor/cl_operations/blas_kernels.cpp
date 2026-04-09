@@ -1017,13 +1017,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * alignK * sizeof(uint16_t),
-                                            true);
-  if (!result) {
-    throw std::runtime_error(
-      "Failed to read output data for input_transpose");
-    return;
-  }
+  // No sync needed here - same command queue guarantees in-order execution
 
   kernel_ptr = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
@@ -1076,7 +1070,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error(
       "Failed to set kernel argument 7 for gpu_int4_gemm_adreno");
 
-  const int work_groups_count_mm[3] = {(int)ceilDiv(M,8), (int)N/4, 1};
+  const int work_groups_count_mm[3] = {(int)ceilDiv(M,4), (int)N/4, 1};
   const int work_group_size_mm[3] = {1, 128, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(
