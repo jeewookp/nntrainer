@@ -1,59 +1,38 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
-[arm64-v8a] Compile++      : nntrainer_causallm <= embedding_gemma.cpp
-In file included from ./../models/gemma3/embedding_gemma.cpp:13:
-In file included from ./../models/gemma3/embedding_gemma.h:18:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:118:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer_causallm <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= causal_lm.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= transformer.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= embedding.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= tie_word_embedding.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= lm_head.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:33:
-In file included from ./../models/gemma3/embedding_gemma.h:18:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:118:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer_causallm <= mha_core.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:118:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Executable     : nntrainer_causallm
-[arm64-v8a] Install        : nntrainer_causallm => libs/arm64-v8a/nntrainer_causallm
-Build completed successfully!
-Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
-
-Executable: nntrainer_causallm
-Libraries: libnntrainer.so, libccapi-nntrainer.so, libc++_shared.so
-jni/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 30.2 MB/s (1822720 bytes in 0.058s)
-jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 13.7 MB/s (129336 bytes in 0.009s)
-jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.2 MB/s (10960168 bytes in 0.315s)
-jni/libs/arm64-v8a/libomp.so: 1 file pushed. 31.2 MB/s (1205616 bytes in 0.037s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.3 MB/s (5165200 bytes in 0.152s)
-5 files pushed. 32.0 MB/s (19283040 bytes in 0.574s)
+jni/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.1 MB/s (1822720 bytes in 0.054s)
+jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 17.3 MB/s (129336 bytes in 0.007s)
+jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10960168 bytes in 0.325s)
+jni/libs/arm64-v8a/libomp.so: 1 file pushed. 30.5 MB/s (1205616 bytes in 0.038s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.1 MB/s (5165264 bytes in 0.154s)
+5 files pushed. 31.7 MB/s (19283104 bytes in 0.580s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: 
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 
-[!] FATAL ERROR: Embedding layer takes only FP32 input data
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failedlibc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 
+libc++abi: libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
