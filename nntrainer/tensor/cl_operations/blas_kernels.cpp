@@ -889,7 +889,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   auto &clbuffInstance = ClBufferManager::Global();
 
   cl_int err;
-  size_t input_size = M * alignK * sizeof(uint16_t);
+  size_t input_size = M * alignK * sizeof(float);
 
   cl_mem input_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
@@ -903,9 +903,15 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error("Failed to create input buffer");
   }
 
+  // Input / input_transposed images: FP32 (CL_FLOAT)
   cl_image_format image_format;
   image_format.image_channel_order = CL_RGBA;
-  image_format.image_channel_data_type = CL_HALF_FLOAT;
+  image_format.image_channel_data_type = CL_FLOAT;
+
+  // Weight image: raw 16-bit packed INT4 stored as CL_HALF_FLOAT
+  cl_image_format weight_image_format;
+  weight_image_format.image_channel_order = CL_RGBA;
+  weight_image_format.image_channel_data_type = CL_HALF_FLOAT;
 
   cl_image_desc image_desc;
   memset(&image_desc, 0, sizeof(image_desc));
@@ -926,7 +932,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     throw std::runtime_error("Failed to create image1d_buffer for input");
   }
 
-  input_size = align(M,4) * alignK * sizeof(uint16_t);
+  input_size = align(M,4) * alignK * sizeof(float);
 
   cl_mem input_tr_buf = clCreateBuffer(
     blas_cc->context_inst_.GetContext(),
@@ -1013,7 +1019,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   cl_mem weight_img = clCreateImage(
     blas_cc->context_inst_.GetContext(),
     CL_MEM_READ_ONLY,
-    &image_format,
+    &weight_image_format,
     &image_desc,
     nullptr,
     &err
@@ -1083,7 +1089,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     }
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(uint16_t),
+  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(float),
                                             true);
   if (!result) {
     throw std::runtime_error(

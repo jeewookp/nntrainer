@@ -797,7 +797,11 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   unsigned int N = output.getDim().width();
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
+  // Disabled: gemm_int4_cl_adreno now expects FP32 input/output buffers. This
+  // FP16 path would need to be rewritten end-to-end to be consistent. Fall
+  // back to CPU KAI (with FP16<->FP32 casting) whenever we run with FP16
+  // activation, which is not the default anyway.
+  if (false && input.q_scheme() == QScheme::PER_CHANNEL_AFFINE &&
       (dtype == Tdatatype::QINT4) && M > 1) {
     auto t_total_start = std::chrono::high_resolution_clock::now();
 
