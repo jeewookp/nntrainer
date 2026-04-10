@@ -9,7 +9,7 @@
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 repack_kai_to_adreno(const __global uchar* kai_packed_data,
     __global ushort* weights,
-    __global float* scales,
+    __global half* scales,
     const int N, const int K, const int rhs_packed_stride, const int quantization_group_size) {
 
     const int k_id = get_global_id(0);
@@ -74,7 +74,7 @@ repack_kai_to_adreno(const __global uchar* kai_packed_data,
         int scale_offset_bytes = NR * (K_aligned / 2 + 4);
         const __global float* scale_src = (const __global float*)(kai_packed_data + base + scale_offset_bytes);
         for (int sub_n = 0; sub_n < NR; sub_n++) {
-            scales[n_id * NR + sub_n] = scale_src[sub_n] * 16.0f;
+            scales[n_id * NR + sub_n] = (half)(scale_src[sub_n] * 16.0f);
         }
     }
 }
