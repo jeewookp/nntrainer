@@ -998,17 +998,6 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
-  // Output buffer via CL_MEM_USE_HOST_PTR (no SVM needed for output)
-  cl_mem output_buf = clCreateBuffer(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-    M * N * sizeof(float),
-    output,
-    &err
-  );
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Failed to create output buffer");
-
   // GEMM kernel - no sync needed, same queue guarantees ordering
   // Create weight image1d_buffer for texture cache
   size_t weight_size = (alignK / 4) * N * sizeof(uint16_t);
@@ -1067,7 +1056,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelArguments(arg++, &output_buf, sizeof(cl_mem));
+    result = kernel_ptr->SetKernelSVMArguments(arg++, output);
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem));
@@ -1100,10 +1089,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     }
   }
 
-  // Sync: ensure GPU writes to output_buf (backed by host ptr) are visible
-  clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
-
-  clReleaseMemObject(output_buf);
+  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(float),
+                                            true);
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
