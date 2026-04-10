@@ -1101,7 +1101,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   }
 
   // Sync: ensure GPU writes to output_buf (backed by host ptr) are visible
-  opencl::clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
+  clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
 
   clReleaseMemObject(output_buf);
 }
