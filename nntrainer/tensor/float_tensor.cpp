@@ -1029,7 +1029,6 @@ thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_tr_svm;
-thread_local SVMCache g_output_svm;
 }
 #endif
 
@@ -1060,15 +1059,14 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
-    // SVM buffers for repack intermediates, transpose scratch, and output.
-    // Activation (data) goes directly via CL_MEM_USE_HOST_PTR inside
-    // gemm_int4_cl_adreno. Output needs SVM (SetKernelSVMArguments).
+    // SVM buffers for repack intermediates + transpose scratch.
+    // Activation (data) and output (rdata) go directly via
+    // CL_MEM_USE_HOST_PTR inside gemm_int4_cl_adreno.
     size_t kai_size = input.getMemoryBytes();
     uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     float *scales_svm = (float *)g_scales_svm.get(N * sizeof(float), blas_cc);
     float *input_tr_svm = (float *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(float), blas_cc);
-    float *output_svm = (float *)g_output_svm.get(M * N * sizeof(float), blas_cc);
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1085,13 +1083,10 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Run Adreno GPU GEMM — data passed directly (CL_MEM_USE_HOST_PTR),
-    // output via SVM (required by SetKernelSVMArguments)
+    // Run Adreno GPU GEMM — data and rdata passed directly
+    // (CL_MEM_USE_HOST_PTR inside gemm_int4_cl_adreno, zero-copy)
     gemm_int4_cl_adreno(data, input_tr_svm, weights_svm, scales_svm,
-                        output_svm, M, N, K, 32);
-
-    // Copy output from SVM to rdata
-    std::memcpy(rdata, output_svm, M * N * sizeof(float));
+                        rdata, M, N, K, 32);
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
