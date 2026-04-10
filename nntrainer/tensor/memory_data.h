@@ -31,8 +31,6 @@ class MemoryData {
    *          accidental modification from other parts of the codebase.
    */
   friend class MemoryPool;
-  friend class FloatTensor;
-  friend class HalfTensor;
 
 public:
   /**

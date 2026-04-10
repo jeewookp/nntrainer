@@ -998,6 +998,18 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
+  // Output buffer via CL_MEM_USE_HOST_PTR (works for any host pointer)
+  size_t output_size = M * N * sizeof(float);
+  cl_mem output_buf = clCreateBuffer(
+    blas_cc->context_inst_.GetContext(),
+    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
+    output_size,
+    output,
+    &err
+  );
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Failed to create output buffer for gpu_int4_gemm_adreno");
+
   // GEMM kernel - no sync needed, same queue guarantees ordering
   // Create weight image1d_buffer for texture cache
   size_t weight_size = (alignK / 4) * N * sizeof(uint16_t);
@@ -1056,8 +1068,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
     if (!result) throw std::runtime_error("Failed to set arg1 (scales SVM) for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelSVMArguments(arg++, output);
-    if (!result) throw std::runtime_error("Failed to set arg2 (output SVM) for gpu_int4_gemm_adreno");
+    result = kernel_ptr->SetKernelArguments(arg++, &output_buf, sizeof(cl_mem));
+    if (!result) throw std::runtime_error("Failed to set arg2 (output buf) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set arg3 (weight_img) for gpu_int4_gemm_adreno");
@@ -1089,8 +1101,27 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     }
   }
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(output, M * N * sizeof(float),
-                                            true);
+  // Sync output: map (blocking) ensures GPU writes are visible to host,
+  // then unmap to release. CL_MEM_USE_HOST_PTR may return the original
+  // host_ptr or an internal copy — either way, after unmap the host_ptr
+  // is guaranteed to contain the GPU results.
+  void *mapped = clEnqueueMapBuffer(
+    blas_cc->command_queue_inst_.GetCommandQueue(),
+    output_buf, CL_TRUE, CL_MAP_READ, 0, output_size,
+    0, nullptr, nullptr, &err);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Failed to map output buffer for gpu_int4_gemm_adreno");
+
+  // If the runtime returned a different pointer, copy back
+  if (mapped != output) {
+    std::memcpy(output, mapped, output_size);
+  }
+
+  clEnqueueUnmapMemObject(
+    blas_cc->command_queue_inst_.GetCommandQueue(),
+    output_buf, mapped, 0, nullptr, nullptr);
+
+  clReleaseMemObject(output_buf);
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,

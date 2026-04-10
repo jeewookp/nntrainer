@@ -83,30 +83,12 @@ void FloatTensor::allocate() {
   } else {
     /// allocate new memory for the tensor data
     MemoryData *mem_data;
-    size_t alloc_bytes = dim.getDataLen() * sizeof(float);
 
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    auto *cl_ctx =
-      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-    void *svm_ptr = cl_ctx->context_inst_.createSVMRegion(alloc_bytes);
-    if (svm_ptr) {
-      std::memset(svm_ptr, 0, alloc_bytes);
-      mem_data = new MemoryData(svm_ptr);
-      mem_data->setSVM(true);
-      auto &ctx_ref = cl_ctx->context_inst_;
-      data = std::shared_ptr<MemoryData>(mem_data, [&ctx_ref](auto *md) {
-        ctx_ref.releaseSVMRegion(md->template getAddr<void>());
-        delete md;
-      });
-    } else
-#endif
-    {
-      mem_data = new MemoryData((void *)(new float[dim.getDataLen()]{}));
-      data = std::shared_ptr<MemoryData>(mem_data, [](auto *mem_data) {
-        delete[] mem_data->template getAddr<float>();
-        delete mem_data;
-      });
-    }
+    mem_data = new MemoryData((void *)(new float[dim.getDataLen()]{}));
+    data = std::shared_ptr<MemoryData>(mem_data, [](auto *mem_data) {
+      delete[] mem_data->template getAddr<float>();
+      delete mem_data;
+    });
 
     offset = 0;
     initialize();
