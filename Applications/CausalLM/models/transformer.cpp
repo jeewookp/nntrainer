@@ -212,7 +212,7 @@ void Transformer::constructModel() {
      withKey("epsilon", std::to_string(NORM_EPS)),
      withKey("input_layers",
              "layer" + std::to_string(NUM_LAYERS - 1) + "_decoder_output"),
-     withKey("packed", "false")}));
+     withKey("packed", "false"),withKey("engine","gpu")}));
 
   // add created layers into the model
   for (auto &layer : layers) {
@@ -295,7 +295,7 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
     {withKey("name", "layer" + std::to_string(layer_id) + "_attention_norm"),
      withKey("input_layers", input_name),
      withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
+     withKey("packed", "false"),withKey("engine","gpu")}));
 
   auto att_layer =
     createAttention(layer_id, INIT_SEQ_LEN, NUM_HEADS, HEAD_DIM,
@@ -317,7 +317,7 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
      withKey("input_layers",
              "layer" + std::to_string(layer_id) + "_decoder_add"),
      withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
+     withKey("packed", "false"),withKey("engine","gpu")}));
 
   auto ffn_layer = createMlp(layer_id, DIM, INTERMEDIATE_SIZE,
                              "layer" + std::to_string(layer_id) + "_ffn_norm");
