@@ -1,10 +1,9 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
-뭐가 문제야?
+kai copy 없애는 게 목표야
 
 
 <|im_start|>assistant
 
 
 [!] FATAL ERROR: Failed to set kernel argument 0 for repack_kai_to_adreno
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
