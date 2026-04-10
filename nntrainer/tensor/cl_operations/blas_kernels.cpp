@@ -986,29 +986,25 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   const int work_groups_count_mm[3] = {(int)ceilDiv(M,8), (int)N/4, 1};
   const int work_group_size_mm[3] = {1, 128, 1};
 
-  // Split-K for large K to maintain FP16 precision
-  const int K_SPLIT_THRESHOLD = 4096;
-  int num_splits = (K > K_SPLIT_THRESHOLD) ? ((K + K_SPLIT_THRESHOLD - 1) / K_SPLIT_THRESHOLD) : 1;
-  int k_chunk = ((K / num_splits + 31) / 32) * 32;
-
-  for (int split = 0; split < num_splits; split++) {
-    int k_off = split * k_chunk;
-    int k_len = (split == num_splits - 1) ? (K - k_off) : k_chunk;
-    int beta_val = (split == 0) ? 0 : 1;
+  // Single dispatch — FP32 accumulator handles full K without split-K
+  {
+    int k_off = 0;
+    int k_len = K;
+    int beta_val = 0;
 
     arg = 0;
 
     result = kernel_ptr->SetKernelArguments(arg++, &ci_input_tr.img, sizeof(cl_mem));
-    if (!result) throw std::runtime_error("Failed to set arg0 (input_transposed_img) for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg0 for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
-    if (!result) throw std::runtime_error("Failed to set arg1 (scales SVM) for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg1 for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &ci_output.buf, sizeof(cl_mem));
-    if (!result) throw std::runtime_error("Failed to set arg2 (output buf) for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg2 for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &ci_weight.img, sizeof(cl_mem));
-    if (!result) throw std::runtime_error("Failed to set arg3 (weight_img) for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg3 for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
