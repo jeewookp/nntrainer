@@ -1025,7 +1025,6 @@ struct SVMCache {
     return ptr;
   }
 };
-thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_svm;
@@ -1061,9 +1060,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
-    // Use cached SVM buffers (grow on demand, no per-call alloc/free)
-    size_t kai_size = input.getMemoryBytes();
-    uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
+    // SVM scratch buffers for repack output + transpose + GEMM output
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     uint16_t *scales_svm = (uint16_t *)g_scales_svm.get(N * sizeof(uint16_t), blas_cc);
     uint16_t *input_svm = (uint16_t *)g_input_svm.get(M * alignK * sizeof(uint16_t), blas_cc);
@@ -1072,16 +1069,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
-    // Copy KAI packed data to SVM
-    blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
-    std::memcpy(kai_svm, mdata, kai_size);
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
-
-    auto t_kai_copy_end = std::chrono::high_resolution_clock::now();
-    auto t_repack_start = t_kai_copy_end;
-
-    // Dispatch repack KAI → Adreno format (ASYNC, no sync at end)
-    repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
+    // mdata (KAI weight) is SVM — pass directly to repack, no copy
+    repack_kai_to_adreno(mdata, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
@@ -1177,15 +1166,14 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto t_total_end = std::chrono::high_resolution_clock::now();
 
     auto alloc_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_alloc_end - t_alloc_start).count() / 1000.0;
-    auto kai_copy_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_kai_copy_end - t_alloc_end).count() / 1000.0;
-    auto repack_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_repack_end - t_repack_start).count() / 1000.0;
+    auto repack_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_repack_end - t_alloc_end).count() / 1000.0;
     auto input_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_start - t_repack_end).count() / 1000.0;
     auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_gemm_start).count() / 1000.0;
     auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_gemm_end).count() / 1000.0;
     auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_total_start).count() / 1000.0;
 
-    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32=%.2f | total=%.2f ms\n",
-           M, K, N, alloc_ms, kai_copy_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
+    printf("[GPU dotQInt] M=%u K=%u N=%u | alloc=%.2f repack=%.2f fp32->fp16=%.2f gemm=%.2f fp16->fp32=%.2f | total=%.2f ms\n",
+           M, K, N, alloc_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
     fflush(stdout);
   } else
 #endif
