@@ -1029,6 +1029,7 @@ thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_tr_svm;
+thread_local SVMCache g_output_svm;
 }
 #endif
 
@@ -1059,13 +1060,15 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
-    // All tensors SVM (FloatTensor::allocate uses createSVMRegion).
-    // Only need SVM scratch for repack intermediates + transpose.
+    // SVM buffers for repack intermediates, transpose scratch, and output.
+    // Activation (data) goes directly via CL_MEM_USE_HOST_PTR inside
+    // gemm_int4_cl_adreno. Output needs SVM (SetKernelSVMArguments).
     size_t kai_size = input.getMemoryBytes();
     uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     float *scales_svm = (float *)g_scales_svm.get(N * sizeof(float), blas_cc);
     float *input_tr_svm = (float *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(float), blas_cc);
+    float *output_svm = (float *)g_output_svm.get(M * N * sizeof(float), blas_cc);
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1082,9 +1085,13 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // data/rdata are SVM — pass directly, zero-copy
+    // Run Adreno GPU GEMM — data passed directly (CL_MEM_USE_HOST_PTR),
+    // output via SVM (required by SetKernelSVMArguments)
     gemm_int4_cl_adreno(data, input_tr_svm, weights_svm, scales_svm,
-                        rdata, M, N, K, 32);
+                        output_svm, M, N, K, 32);
+
+    // Copy output from SVM to rdata
+    std::memcpy(rdata, output_svm, M * N * sizeof(float));
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
 
@@ -1094,7 +1101,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_repack_end).count() / 1000.0;
     auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_total_start).count() / 1000.0;
 
-    printf("[GPU dotQInt FP32] M=%u K=%u N=%u | alloc=%.2f kai=%.2f repack=%.2f gemm=%.2f | total=%.2f ms\n",
+    printf("[GPU dotQInt FP32] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f repack=%.2f gemm=%.2f | total=%.2f ms\n",
            M, K, N, alloc_ms, kai_copy_ms, repack_ms, gemm_ms, total_ms);
     fflush(stdout);
   } else
