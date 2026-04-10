@@ -15,11 +15,6 @@
 #include <nntrainer_log.h>
 #include <util_func.h>
 
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-#include <cl_context.h>
-#include <engine.h>
-#endif
-
 #if defined(ENABLE_FP16) && defined(__aarch64__)
 #include <cpu_backend/arm/kleidiai_interface.h>
 #endif
@@ -84,28 +79,11 @@ void Kai4Tensor::allocate() {
     MemoryData *mem_data;
     size_t alloc_size = size();
 
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    auto *cl_ctx =
-      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-    void *svm_ptr = cl_ctx ? cl_ctx->context_inst_.createSVMRegion(alloc_size) : nullptr;
-    if (svm_ptr) {
-      std::memset(svm_ptr, 0, alloc_size);
-      mem_data = new MemoryData(svm_ptr);
-      mem_data->setSVM(true);
-      auto &ctx_ref = cl_ctx->context_inst_;
-      data = std::shared_ptr<MemoryData>(mem_data, [&ctx_ref](auto *md) {
-        ctx_ref.releaseSVMRegion(md->template getAddr<void>());
-        delete md;
-      });
-    } else
-#endif
-    {
-      mem_data = new MemoryData((void *)(new uint8_t[alloc_size]{}));
-      data = std::shared_ptr<MemoryData>(mem_data, [](auto *mem_data) {
-        delete[] mem_data->template getAddr<uint8_t>();
-        delete mem_data;
-      });
-    }
+    mem_data = new MemoryData((void *)(new uint8_t[alloc_size]{}));
+    data = std::shared_ptr<MemoryData>(mem_data, [](auto *mem_data) {
+      delete[] mem_data->template getAddr<uint8_t>();
+      delete mem_data;
+    });
     offset = 0;
     initialize();
   }

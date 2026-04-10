@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <unordered_map>
 
 #include <chrono>
 #include <cpu_backend.h>
@@ -1025,7 +1026,6 @@ struct SVMCache {
     return ptr;
   }
 };
-thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_svm;
@@ -1070,17 +1070,21 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
-    // If weight is SVM, pass directly; else copy to SVM proxy
+    // Persistent SVM cache for KAI weight data (immutable after model load).
+    // First call per unique weight: SVM alloc + copy. Subsequent calls: zero-copy.
+    static thread_local std::unordered_map<const void*, void*> kai_svm_map;
     void *kai_ptr;
-    if (input.getMemoryData()->isSVM()) {
-      kai_ptr = mdata;
+    auto it = kai_svm_map.find(mdata);
+    if (it != kai_svm_map.end()) {
+      kai_ptr = it->second;
     } else {
       size_t kai_size = input.getMemoryBytes();
-      uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
-      blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
-      std::memcpy(kai_svm, mdata, kai_size);
-      blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
-      kai_ptr = kai_svm;
+      uint8_t *svm = (uint8_t *)blas_cc->context_inst_.createSVMRegion(kai_size);
+      blas_cc->command_queue_inst_.enqueueSVMMap(svm, kai_size, false);
+      std::memcpy(svm, mdata, kai_size);
+      blas_cc->command_queue_inst_.enqueueSVMUnmap(svm);
+      kai_svm_map[mdata] = svm;
+      kai_ptr = svm;
     }
 
     repack_kai_to_adreno(kai_ptr, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
