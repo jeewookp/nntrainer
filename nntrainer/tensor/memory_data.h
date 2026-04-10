@@ -31,6 +31,7 @@ class MemoryData {
    *          accidental modification from other parts of the codebase.
    */
   friend class MemoryPool;
+  friend class Kai4Tensor;
 
 public:
   /**

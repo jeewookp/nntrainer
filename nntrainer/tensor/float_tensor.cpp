@@ -1025,7 +1025,6 @@ struct SVMCache {
     return ptr;
   }
 };
-thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
 thread_local SVMCache g_input_svm;
@@ -1062,8 +1061,6 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
     // SVM scratch buffers for repack output + transpose + GEMM output
-    size_t kai_size = input.getMemoryBytes();
-    uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     uint16_t *scales_svm = (uint16_t *)g_scales_svm.get(N * sizeof(uint16_t), blas_cc);
     uint16_t *input_svm = (uint16_t *)g_input_svm.get(M * alignK * sizeof(uint16_t), blas_cc);
@@ -1072,12 +1069,8 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
-    // Copy KAI packed data to SVM (weight tensor not SVM-allocated)
-    blas_cc->command_queue_inst_.enqueueSVMMap(kai_svm, kai_size, false);
-    std::memcpy(kai_svm, mdata, kai_size);
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(kai_svm);
-
-    repack_kai_to_adreno(kai_svm, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
+    // mdata is SVM (Kai4Tensor::allocate uses createSVMRegion) — no copy
+    repack_kai_to_adreno(mdata, weights_svm, scales_svm, N, K, rhs_packed_stride, 32);
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
