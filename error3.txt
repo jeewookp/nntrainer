@@ -1,54 +1,271 @@
 sh temp.sh 실행 시 결과는 아래와 같아
 
-해결해줘
+이상해졌어
 
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:1104:3: error: no member named 'clFinish' in namespace 'nntrainer::opencl'; did you mean simply 'clFinish'?
-  opencl::clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
-  ^~~~~~~~~~~~~~~~
-  clFinish
-/home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl.h:1366:40: note: 'clFinish' declared here
-extern CL_API_ENTRY cl_int CL_API_CALL clFinish(cl_command_queue command_queue)
-                                       ^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
-[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
-[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
-[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
-[arm64-v8a] Compile++      : nntrainer <= connection.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
-[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
-[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
-ninja: build stopped: subcommand failed.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+<|im_start|>assistant
+
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=3.54 kai_copy=1.67 repack=25.70 gemm=61.02 | total=91.94 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.17 repack=0.03 gemm=5.56 | total=5.76 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.27 repack=0.01 gemm=5.18 | total=5.47 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=1.72 kai_copy=0.29 repack=0.02 gemm=12.32 | total=14.36 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=6.57 kai_copy=3.05 repack=0.04 gemm=26.05 | total=35.71 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.73 repack=0.03 gemm=32.46 | total=33.23 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=5.78 kai_copy=2.31 repack=0.04 gemm=27.69 | total=35.83 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.41 repack=0.04 gemm=15.43 | total=15.88 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.02 gemm=6.33 | total=6.46 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=6.30 | total=6.41 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.26 repack=0.04 gemm=12.60 | total=12.90 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.62 repack=0.02 gemm=27.15 | total=27.79 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.68 repack=0.02 gemm=30.50 | total=31.21 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.62 repack=0.02 gemm=27.03 | total=27.67 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.31 repack=0.02 gemm=15.03 | total=15.37 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.04 gemm=5.67 | total=5.81 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.08 repack=0.01 gemm=5.63 | total=5.72 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.54 | total=12.83 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.02 gemm=27.45 | total=28.09 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.69 repack=0.02 gemm=30.56 | total=31.28 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.02 gemm=26.49 | total=27.16 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=13.92 | total=14.22 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=5.67 | total=5.78 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.01 gemm=5.72 | total=5.82 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.65 | total=12.94 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.64 repack=0.02 gemm=28.54 | total=29.20 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=31.01 | total=31.75 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.66 repack=0.02 gemm=27.09 | total=27.76 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.31 repack=0.02 gemm=15.06 | total=15.39 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=5.74 | total=5.86 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.01 gemm=5.71 | total=5.80 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.53 | total=12.81 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.02 gemm=28.80 | total=29.45 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=30.50 | total=31.24 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=26.55 | total=27.28 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=13.60 | total=13.91 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=5.59 | total=5.71 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=5.50 | total=5.61 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.89 | total=13.18 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.69 repack=0.02 gemm=30.28 | total=31.00 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=30.98 | total=31.72 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.72 repack=0.02 gemm=28.45 | total=29.19 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.32 repack=0.02 gemm=15.28 | total=15.61 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.02 gemm=6.31 | total=6.44 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.01 gemm=6.52 | total=6.63 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.62 | total=14.93 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.66 repack=0.02 gemm=31.12 | total=31.81 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=30.68 | total=31.41 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.66 repack=0.06 gemm=28.75 | total=29.47 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.31 repack=0.03 gemm=15.01 | total=15.35 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.12 repack=0.03 gemm=6.35 | total=6.50 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=6.33 | total=6.46 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.03 gemm=14.86 | total=15.19 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.03 gemm=30.61 | total=31.36 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.72 repack=0.05 gemm=30.52 | total=31.29 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=28.99 | total=29.67 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.39 repack=0.03 gemm=14.96 | total=15.38 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.13 repack=0.02 gemm=6.22 | total=6.37 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.01 gemm=6.15 | total=6.26 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.28 repack=0.03 gemm=11.83 | total=12.15 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.02 gemm=26.71 | total=27.37 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.59 repack=0.04 gemm=29.65 | total=30.28 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.64 repack=0.02 gemm=25.42 | total=26.09 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.04 gemm=12.99 | total=13.33 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.13 repack=0.02 gemm=5.18 | total=5.33 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.08 repack=0.01 gemm=5.14 | total=5.23 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=12.75 | total=13.06 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.66 repack=0.04 gemm=26.50 | total=27.20 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.02 gemm=26.58 | total=27.24 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.67 repack=0.04 gemm=25.31 | total=26.03 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=12.92 | total=13.23 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=5.23 | total=5.36 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.07 repack=0.01 gemm=5.17 | total=5.26 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.80 | total=13.10 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.67 repack=0.04 gemm=27.36 | total=28.06 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.64 repack=0.02 gemm=26.60 | total=27.26 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=26.58 | total=27.26 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=13.06 | total=13.39 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=5.28 | total=5.41 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.08 repack=0.01 gemm=5.23 | total=5.33 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.28 repack=0.03 gemm=12.86 | total=13.17 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.62 repack=0.02 gemm=27.41 | total=28.06 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.05 gemm=26.83 | total=27.52 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.66 repack=0.03 gemm=25.75 | total=26.45 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.31 repack=0.03 gemm=13.09 | total=13.43 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.02 gemm=5.33 | total=5.46 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.02 gemm=5.28 | total=5.39 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.28 repack=0.03 gemm=13.01 | total=13.32 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.67 repack=0.02 gemm=30.51 | total=31.21 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.62 repack=0.03 gemm=28.71 | total=29.37 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=26.33 | total=27.01 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=15.16 | total=15.48 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.14 repack=0.02 gemm=6.35 | total=6.51 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=6.34 | total=6.46 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.64 | total=12.94 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.62 repack=0.02 gemm=28.55 | total=29.19 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=31.00 | total=31.68 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.61 repack=0.03 gemm=26.59 | total=27.23 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=15.07 | total=15.38 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=5.76 | total=5.88 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.08 repack=0.01 gemm=5.71 | total=5.80 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.66 | total=12.95 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.01 gemm=28.04 | total=28.68 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.62 repack=0.02 gemm=29.61 | total=30.25 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=26.68 | total=27.37 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.28 repack=0.02 gemm=13.99 | total=14.29 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=5.71 | total=5.83 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.02 gemm=5.75 | total=5.85 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=13.05 | total=13.35 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=31.05 | total=31.77 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.60 repack=0.02 gemm=28.41 | total=29.03 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.64 repack=0.03 gemm=26.09 | total=26.76 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.06 | total=14.38 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.02 gemm=5.68 | total=5.81 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.09 repack=0.01 gemm=5.79 | total=5.89 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.27 repack=0.02 gemm=12.70 | total=13.00 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.63 repack=0.02 gemm=28.99 | total=29.64 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.65 repack=0.02 gemm=31.37 | total=32.05 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.02 gemm=26.75 | total=27.43 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.33 repack=0.02 gemm=15.07 | total=15.42 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=5.70 | total=5.82 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.08 repack=0.01 gemm=5.72 | total=5.81 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.56 | total=14.89 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=32.35 | total=33.07 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.73 repack=0.03 gemm=32.41 | total=33.17 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.69 repack=0.02 gemm=28.58 | total=29.30 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.33 repack=0.02 gemm=15.46 | total=15.80 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.02 gemm=6.49 | total=6.62 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.12 repack=0.02 gemm=6.56 | total=6.70 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.84 | total=15.16 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.69 repack=0.03 gemm=32.25 | total=32.98 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.68 repack=0.03 gemm=34.75 | total=35.46 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=28.74 | total=29.44 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.36 repack=0.02 gemm=15.47 | total=15.86 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.11 repack=0.04 gemm=6.48 | total=6.64 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.02 gemm=6.55 | total=6.67 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.70 | total=15.03 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.69 repack=0.02 gemm=32.61 | total=33.33 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.69 repack=0.02 gemm=32.13 | total=32.85 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.64 repack=0.03 gemm=28.61 | total=29.29 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.20 repack=0.07 gemm=22.74 | total=24.01 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.17 repack=0.04 gemm=7.52 | total=7.73 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.25 repack=0.03 gemm=8.86 | total=9.14 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=17.87 | total=18.18 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=1.11 repack=0.04 gemm=37.52 | total=38.67 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=1.16 repack=0.03 gemm=38.58 | total=39.78 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.80 repack=0.03 gemm=30.48 | total=31.32 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.58 repack=0.03 gemm=22.52 | total=23.13 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.89 | total=10.11 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.33 repack=0.03 gemm=10.00 | total=10.36 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.75 | total=15.06 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.74 repack=0.02 gemm=31.77 | total=32.53 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.66 repack=0.02 gemm=31.52 | total=32.21 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.73 repack=0.02 gemm=33.21 | total=33.98 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.90 repack=0.06 gemm=26.32 | total=27.29 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.26 repack=0.06 gemm=6.30 | total=6.61 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.10 repack=0.01 gemm=6.34 | total=6.46 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.82 | total=15.14 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.90 repack=0.02 gemm=33.83 | total=34.75 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.67 repack=0.02 gemm=33.77 | total=34.47 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.90 repack=0.03 gemm=31.33 | total=32.26 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.44 repack=0.02 gemm=22.61 | total=23.07 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=8.14 | total=8.34 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.20 repack=0.02 gemm=9.55 | total=9.78 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=15.97 | total=16.30 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.81 repack=0.02 gemm=34.86 | total=35.69 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.66 repack=0.02 gemm=36.05 | total=36.73 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.03 repack=0.03 gemm=32.95 | total=34.02 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.21 repack=0.06 gemm=21.62 | total=22.89 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.74 | total=9.96 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=8.73 | total=8.92 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.31 repack=0.02 gemm=14.98 | total=15.32 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.72 repack=0.02 gemm=33.97 | total=34.71 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=1.22 repack=0.03 gemm=41.33 | total=42.59 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.92 repack=0.03 gemm=34.25 | total=35.21 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.93 repack=0.04 gemm=24.89 | total=25.86 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.23 repack=0.03 gemm=11.19 | total=11.45 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.23 repack=0.03 gemm=10.09 | total=10.35 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.96 | total=15.28 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.84 repack=0.02 gemm=35.61 | total=36.47 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.86 repack=0.02 gemm=36.08 | total=36.97 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.83 repack=0.02 gemm=31.13 | total=31.98 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.58 repack=0.03 gemm=24.30 | total=24.90 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.17 repack=0.04 gemm=8.96 | total=9.17 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.83 | total=10.05 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.81 | total=15.12 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.84 repack=0.02 gemm=39.87 | total=40.74 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.85 repack=0.03 gemm=38.35 | total=39.23 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.97 repack=0.04 gemm=31.45 | total=32.47 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.91 repack=0.04 gemm=25.97 | total=26.93 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=10.09 | total=10.31 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.02 gemm=9.78 | total=9.99 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.73 | total=15.05 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=34.84 | total=35.56 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.73 repack=0.03 gemm=30.25 | total=31.01 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.90 repack=0.02 gemm=31.46 | total=32.38 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.94 | total=15.26 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.01 gemm=6.48 | total=6.66 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.12 repack=0.02 gemm=7.68 | total=7.82 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.65 | total=14.96 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.66 repack=0.01 gemm=35.07 | total=35.74 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.88 repack=0.02 gemm=41.04 | total=41.94 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.10 repack=0.03 gemm=32.81 | total=33.95 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.19 repack=0.05 gemm=23.30 | total=24.55 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.75 | total=9.97 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=8.79 | total=8.98 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.79 | total=15.11 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.80 repack=0.01 gemm=34.36 | total=35.17 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.90 repack=0.03 gemm=36.53 | total=37.47 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.09 repack=0.03 gemm=33.70 | total=34.82 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.90 repack=0.04 gemm=25.42 | total=26.36 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.75 | total=9.97 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.41 | total=9.63 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.87 | total=15.19 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.67 repack=0.01 gemm=35.36 | total=36.05 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=1.35 repack=0.03 gemm=41.48 | total=42.86 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.10 repack=0.03 gemm=32.83 | total=33.96 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.22 repack=0.05 gemm=22.32 | total=23.60 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.73 | total=9.95 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.17 repack=0.02 gemm=8.74 | total=8.94 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.30 repack=0.02 gemm=14.76 | total=15.08 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.90 repack=0.02 gemm=33.81 | total=34.73 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=35.28 | total=36.01 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.02 repack=0.02 gemm=30.54 | total=31.58 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.40 repack=0.01 gemm=16.65 | total=17.06 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.21 repack=0.02 gemm=8.73 | total=8.96 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=8.77 | total=8.96 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.64 | total=14.95 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.01 gemm=33.03 | total=33.76 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.80 repack=0.04 gemm=31.13 | total=31.97 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=1.10 repack=0.03 gemm=34.12 | total=35.26 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.05 repack=0.04 gemm=25.01 | total=26.11 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.19 repack=0.03 gemm=9.77 | total=9.99 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.18 repack=0.02 gemm=9.21 | total=9.43 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.29 repack=0.02 gemm=14.53 | total=14.84 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.71 repack=0.01 gemm=34.47 | total=35.19 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.75 repack=0.03 gemm=31.42 | total=32.21 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.65 repack=0.03 gemm=28.84 | total=29.52 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=1.21 repack=0.06 gemm=20.72 | total=21.99 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=8.35 | total=8.54 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.17 repack=0.02 gemm=8.82 | total=9.02 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.32 repack=0.02 gemm=14.64 | total=14.98 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=34.25 | total=34.97 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.04 gemm=39.01 | total=39.76 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.69 repack=0.03 gemm=28.87 | total=29.59 ms
+[GPU dotQInt FP32] M=437 K=2560 N=4096 | alloc=0.00 kai_copy=0.36 repack=0.03 gemm=15.12 | total=15.52 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.16 repack=0.02 gemm=6.33 | total=6.51 ms
+[GPU dotQInt FP32] M=437 K=2560 N=1024 | alloc=0.00 kai_copy=0.12 repack=0.02 gemm=6.41 | total=6.55 ms
+[GPU dotQInt FP32] M=437 K=4096 N=2560 | alloc=0.00 kai_copy=0.32 repack=0.02 gemm=14.91 | total=15.25 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.74 repack=0.02 gemm=30.84 | total=31.60 ms
+[GPU dotQInt FP32] M=437 K=2560 N=9728 | alloc=0.00 kai_copy=0.70 repack=0.02 gemm=30.54 | total=31.27 ms
+[GPU dotQInt FP32] M=437 K=9728 N=2560 | alloc=0.00 kai_copy=0.71 repack=0.02 gemm=28.60 | total=29.33 ms
+
+子丕？ 你提到“丕”这个字，可能是在问“丕”这个字的读音、意思，或者与“丕”相关的词语。下面是关于“丕”字的一些信息：
+
+1. **读音**：丕（pī）。
+2. **字义**：在汉字中，“丕”是一个较为生僻的字，通常用于人名、地名或者作为姓氏。在古籍中，“丕”字有“大”、“高”等引申义，但作为单独的字，它并不常见。
+3. **词语**：在“丕”
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 7607 ms, 57.4471 TPS
+generation: 128 tokens, 7058 ms, 18.1354 TPS
+==========================================================
+[e2e time]: 18417 ms 
+Max Resident Set Size: 4109796 KB
