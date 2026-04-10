@@ -971,18 +971,6 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     return;
   }
 
-  // Output buffer via CL_MEM_USE_HOST_PTR (works for any host pointer)
-  size_t output_size = M * N * sizeof(float);
-  cl_mem output_buf = clCreateBuffer(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-    output_size,
-    output,
-    &err
-  );
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Failed to create output buffer for gpu_int4_gemm_adreno");
-
   // Cached weight buf + img
   ci_weight.ensure_buf(ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, weights, (alignK / 4) * N * sizeof(uint16_t));
   ci_weight.ensure_img(ctx, CL_MEM_READ_ONLY, &fmt_half, (alignK / 4) * N / 4);
@@ -1055,7 +1043,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   // is guaranteed to contain the GPU results.
   void *mapped = clEnqueueMapBuffer(
     blas_cc->command_queue_inst_.GetCommandQueue(),
-    output_buf, CL_TRUE, CL_MAP_READ, 0, output_size,
+    ci_output.buf, CL_TRUE, CL_MAP_READ, 0, output_size,
     0, nullptr, nullptr, &err);
   if (err != CL_SUCCESS)
     throw std::runtime_error("Failed to map output buffer for gpu_int4_gemm_adreno");
@@ -1067,9 +1055,8 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
   clEnqueueUnmapMemObject(
     blas_cc->command_queue_inst_.GetCommandQueue(),
-    output_buf, mapped, 0, nullptr, nullptr);
-
-  clReleaseMemObject(output_buf);
+    ci_output.buf, mapped, 0, nullptr, nullptr);
+  // ci_output.buf is cached, not released here
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
