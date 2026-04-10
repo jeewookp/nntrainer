@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #
 # unittest.sh - Build and run GPU (OpenCL/Adreno) unit tests on Android device
 #
@@ -28,7 +28,7 @@ for arg in "$@"; do
   shift 2>/dev/null || true
 done
 
-if [ -v ADB_IP ]; then
+if [ -n "$ADB_IP" ]; then
   ADB_CMD="adb -H ${ADB_IP}"
 else
   ADB_CMD="adb"
@@ -56,13 +56,13 @@ if [ $RUN_ONLY -eq 0 ]; then
   echo "[Step 2/4] Building test executables"
   echo "=========================================="
 
-  pushd test/jni
+  cd test/jni
   ndk-build -j$(nproc) MESON_ENABLE_OPENCL=1
   if [ $? -ne 0 ]; then
     echo "[ERROR] ndk-build failed"
     exit 1
   fi
-  popd
+  cd "$SCRIPT_DIR"
 
   # ==========================================================================
   # Step 3: Push to device
