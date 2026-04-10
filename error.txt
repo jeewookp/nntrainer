@@ -1,110 +1,69 @@
-drwxrwxr-x  6 jwhero94 jwhero94     4096  4월 10 18:41 CMakeFiles
--rw-rw-r--  1 jwhero94 jwhero94     2108  4월 10 18:41 cmake_install.cmake
--rw-r--r--  1 jwhero94 jwhero94     3759  4월 10 18:41 CPackConfig.cmake
--rw-r--r--  1 jwhero94 jwhero94     4094  4월 10 18:41 CPackSourceConfig.cmake
--rw-rw-r--  1 jwhero94 jwhero94 36604310  4월 10 18:41 libtokenizers_c.a
--rw-rw-r--  1 jwhero94 jwhero94  2300716  4월 10 18:41 libtokenizers_cpp.a
--rw-rw-r--  1 jwhero94 jwhero94    15477  4월 10 18:41 Makefile
-drwxrwxr-x  3 jwhero94 jwhero94     4096  4월 10 18:41 msgpack
-drwxrwxr-x  7 jwhero94 jwhero94     4096  4월 10 18:41 release
--rw-rw-r--  1 jwhero94 jwhero94     2279  4월 10 18:41 .rustc_info.json
-drwxrwxr-x  5 jwhero94 jwhero94     4096  4월 10 18:41 sentencepiece
+이거 sh unittest.sh 했을 때 에러메세지야 뭐가 문제인지 말해줘 코드 수정은ㄴㄴ
 
-Looking for static libraries (.a files):
- 11015031   1028 -rw-rw-r--   1 jwhero94 jwhero94  1049090  4월 10 18:41 ./aarch64-linux-android/release/build/onig_sys-62e8693c96c9d716/out/libonig.a
- 11015079  35748 -rw-rw-r--   2 jwhero94 jwhero94 36604310  4월 10 18:41 ./aarch64-linux-android/release/libtokenizers_c.a
- 11015079  35748 -rw-rw-r--   2 jwhero94 jwhero94 36604310  4월 10 18:41 ./aarch64-linux-android/release/deps/libtokenizers_c-f938101430eb8a2d.a
- 11014837  25820 -rw-rw-r--   1 jwhero94 jwhero94 26439188  4월 10 18:41 ./sentencepiece/src/libsentencepiece.a
- 11015063  35748 -rw-rw-r--   1 jwhero94 jwhero94 36604310  4월 10 18:41 ./libtokenizers_c.a
- 11015075   2248 -rw-rw-r--   1 jwhero94 jwhero94  2300716  4월 10 18:41 ./libtokenizers_cpp.a
+./include/nntrainer/fallback_kleidiai.h
+./include/nntrainer/int4_gemm.h
+./include/nntrainer/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h
+./include/nntrainer/opencl_context_manager.h
+./include/nntrainer/nntr_threads.h
+./include/nntrainer/q4_0_ab_bi_8x4.h
+./include/nntrainer/util_simd.h
+./include/nntrainer/layer_node.h
+./include/nntrainer/optimizer_context.h
+./include/nntrainer/weight_layer.h
+./include/nntrainer/sgemv.h
+./include/nntrainer/hgemm_common.h
+./include/nntrainer/task_executor.h
+./include/nntrainer/nntrainer_logger.h
+./include/nntrainer/cpu_backend.h
+./include/nntrainer/matrix_transpose_neon.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
+./include/nntrainer/fp16.h
+./include/nntrainer/quantizer.h
+./include/nntrainer/util_func.h
+./include/nntrainer/var_grad.h
+./include/nntrainer/memory_pool.h
+./include/nntrainer/nntrainer_log.h
+./include/nntrainer/connection.h
+./include/nntrainer/common.h
+./include/nntrainer/nntrainer_error.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
+./include/nntrainer/node_exporter.h
+./include/nntrainer/optimizer_wrapped.h
+./include/nntrainer/mman_windows.h
+./include/nntrainer/CL/
+./include/nntrainer/CL/opencl.h
+./include/nntrainer/CL/cl_version.h
+./include/nntrainer/CL/cl.h
+./include/nntrainer/CL/cl_platform.h
+./include/nntrainer/task.h
+./include/nntrainer/int4_gemv.h
+./include/nntrainer/hgemm_pack.h
+./include/nntrainer/bs_thread_pool_manager.hpp
+./include/nntrainer/hgemm_kernel.h
+./include/nntrainer/hgemm_padding_b.h
+./include/nntrainer/kai_common.h
+./include/nntrainer/hgemv_no_trans.h
+./include/nntrainer/float_tensor.h
+./include/nntrainer/embedding_fp16.h
+./include/nntrainer/sgemm_trans_ab.h
+./include/nntrainer/hgemm_trans_b.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
+./include/nntrainer/embedding.h
+./include/nntrainer/uint4_tensor.h
+./include/nntrainer/concat_axis_2_fp16.h
+./include/nntrainer/network_graph.h
+./include/nntrainer/layer_context.h
+./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
+./include/nntrainer/rmsnorm.h
+./Android.mk
+./examples/
+./conf/
+./conf/nntrainer.ini
+~/projects/nntrainer ~/projects/nntrainer
+~/projects/nntrainer
 
-Searching for built libraries...
-Looking for .a files in build directory...
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/build/onig_sys-62e8693c96c9d716/out/libonig.a
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/libtokenizers_c.a
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/deps/libtokenizers_c-f938101430eb8a2d.a
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/sentencepiece/src/libsentencepiece.a
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/libtokenizers_c.a
-Found library: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/libtokenizers_cpp.a
-Searching for libtokenizers_cpp.a...
-Found libtokenizers_cpp.a at: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/libtokenizers_cpp.a
-Searching for libtokenizers_c.a...
-Found libtokenizers_c.a at: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/libtokenizers_c.a
-Searching for libsentencepiece.a...
-Found libsentencepiece.a at: /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/sentencepiece/src/libsentencepiece.a
-Libraries to combine:  /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/libtokenizers_cpp.a /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/libtokenizers_c.a /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/sentencepiece/src/libsentencepiece.a
-Extracting from /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/libtokenizers_cpp.a...
-Extracting from /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/aarch64-linux-android/release/libtokenizers_c.a...
-Extracting from /home/jwhero94/projects/nntrainer/Applications/CausalLM/tokenizers-cpp-build/tokenizers-cpp/build-android-arm64-v8a/sentencepiece/src/libsentencepiece.a...
-Creating combined library...
-Combined library created successfully
-Build completed successfully!
-Library copied to: /home/jwhero94/projects/nntrainer/Applications/CausalLM/lib/arm64-v8a/libtokenizers_android_c.a
-Also copied to: /home/jwhero94/projects/nntrainer/Applications/CausalLM/lib/libtokenizers_android_c.a (for backward compatibility)
--e [SUCCESS] Tokenizer library ready
--e 
-[Step 3/4] Prepare json.hpp
--e ----------------------------------------
--e [INFO] json.hpp not found. Downloading...
-PREPARING Encoder at /home/jwhero94/projects/nntrainer/builddir
-~/projects/nntrainer/builddir ~/projects/nntrainer/Applications/CausalLM
-[Encoder] downloading encoder-0.2.tar.gz\n
-[Encoder] Finish downloading encoder\n
-[Encoder] untar encoder\n
-ctre-unicode.hpp
-json.hpp
-encoder.hpp
-[Encoder] Finish moving encoder \n
-~/projects/nntrainer/Applications/CausalLM
--e [SUCCESS] json.hpp ready
--e 
-[Step 4/4] Build CausalLM Core (library + executable)
--e ----------------------------------------
--e [INFO] Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize)...
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
-[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-./../models/transformer.cpp:438:67: error: no member named 'SwiGLULayer' in namespace 'causallm'
-    app_context->registerFactory(nntrainer::createLayer<causallm::SwiGLULayer>);
-                                                        ~~~~~~~~~~^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/transformer.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_cached_slim_moe_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= embedding_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= embedding_pooling_layer.cpp
-./../layers/embedding_pooling_layer.cpp:46:7: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
-      input_dim.width(), word_embed_dim);
-      ^~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/nntrainer_log.h:47:51: note: expanded from macro 'ml_logw'
-  __android_log_print(ANDROID_LOG_WARN, TAG_NAME, __VA_ARGS__)
-                                                  ^~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gptoss_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= gptoss_cached_slim_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
--e [ERROR] Build failed
+==========================================
+[Step 2/4] Building test executables
+==========================================
+unittest.sh: 59: pushd: not found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
