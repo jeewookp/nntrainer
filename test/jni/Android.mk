@@ -651,7 +651,10 @@ LOCAL_SRC_FILES += \
 	 ../unittest/layers/unittest_layers_fully_connected_cl.cpp \
 	 ../unittest/layers/unittest_layers_addition_cl.cpp \
 	 ../unittest/layers/unittest_layers_rmsnorm_cl.cpp \
-	 ../unittest/layers/unittest_layers_reshape_cl.cpp 
+	 ../unittest/layers/unittest_layers_reshape_cl.cpp \
+	 ../unittest/layers/unittest_layers_embedding_cl.cpp \
+	 ../unittest/layers/unittest_layers_lm_head_cl.cpp \
+	 ../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp
 endif
 
 LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES)
