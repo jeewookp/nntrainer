@@ -47,7 +47,7 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   std::vector<std::string> q_params = {
     withKey("name", Q), withKey("unit", head_dim * n_heads),
     withKey("disable_bias", "true"), withKey("input_layers", query_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", q_params));
 
   // Q-reshaped-norm layer
@@ -62,7 +62,7 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   std::vector<std::string> k_params = {
     withKey("name", K), withKey("unit", head_dim * n_heads / GQA_SIZE),
     withKey("disable_bias", "true"), withKey("input_layers", key_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", k_params));
 
   // K-reshaped-norm layer
@@ -77,7 +77,7 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   std::vector<std::string> v_params = {
     withKey("name", V), withKey("unit", head_dim * n_heads / GQA_SIZE),
     withKey("disable_bias", "true"), withKey("input_layers", value_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", v_params));
 
   // Attention core layer
@@ -96,7 +96,7 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   // O layer
   std::vector<std::string> o_params = {
     withKey("name", O), withKey("unit", DIM), withKey("disable_bias", "true"),
-    withKey("input_layers", A), withKey("weight_initializer", "ones")};
+    withKey("input_layers", A), withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", o_params));
 
   return layers;

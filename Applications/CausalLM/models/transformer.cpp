@@ -309,7 +309,7 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
     "addition",
     {withKey("name", "layer" + std::to_string(layer_id) + "_decoder_add"),
      withKey("input_layers", input_name + ",layer" + std::to_string(layer_id) +
-                               "_attention_out")}));
+                               "_attention_out"),withKey("engine","gpu")}));
 
   layers.push_back(createLayer(
     "rms_norm",
@@ -328,7 +328,7 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
     {withKey("name", "layer" + std::to_string(layer_id) + "_decoder_output"),
      withKey("input_layers", "layer" + std::to_string(layer_id) +
                                "_decoder_add,layer" + std::to_string(layer_id) +
-                               "_ffn_down")}));
+                               "_ffn_down"),withKey("engine","gpu")}));
 
   return layers;
 }
@@ -350,21 +350,21 @@ Transformer::createAttention(const int layer_id, int seq_len, int n_heads,
   std::vector<std::string> q_params = {
     withKey("name", Q), withKey("unit", head_dim * n_heads),
     withKey("disable_bias", "true"), withKey("input_layers", query_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", q_params));
 
   // K layer
   std::vector<std::string> k_params = {
     withKey("name", K), withKey("unit", head_dim * n_heads / GQA_SIZE),
     withKey("disable_bias", "true"), withKey("input_layers", key_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", k_params));
 
   // V layer
   std::vector<std::string> v_params = {
     withKey("name", V), withKey("unit", head_dim * n_heads / GQA_SIZE),
     withKey("disable_bias", "true"), withKey("input_layers", value_name),
-    withKey("weight_initializer", "ones")};
+    withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", v_params));
 
   // Attention core layer
@@ -385,7 +385,7 @@ Transformer::createAttention(const int layer_id, int seq_len, int n_heads,
   // O layer
   std::vector<std::string> o_params = {
     withKey("name", O), withKey("unit", DIM), withKey("disable_bias", "true"),
-    withKey("input_layers", A), withKey("weight_initializer", "ones")};
+    withKey("input_layers", A), withKey("weight_initializer", "ones"),withKey("engine","gpu")};
   layers.push_back(createLayer("fully_connected", o_params));
 
   return layers;
@@ -402,20 +402,20 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_up"),
      withKey("unit", hidden_dim), withKey("disable_bias", "true"),
      withKey("input_layers", input_name),
-     withKey("weight_initializer", "ones")}));
+     withKey("weight_initializer", "ones"),withKey("engine","gpu")}));
   layers.push_back(createLayer(
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_gate"),
      withKey("unit", hidden_dim), withKey("disable_bias", "true"),
      withKey("input_layers", input_name),
-     withKey("weight_initializer", "ones")}));
+     withKey("weight_initializer", "ones"),withKey("engine","gpu")}));
 
   layers.push_back(createLayer(
     "swiglu",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
      withKey("input_layers", "layer" + std::to_string(layer_id) + "_ffn_gate," +
                                "layer" + std::to_string(layer_id) +
-                               "_ffn_up")}));
+                               "_ffn_up"),withKey("engine","gpu")}));
 
   layers.push_back(createLayer(
     "fully_connected",
@@ -423,7 +423,7 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
      withKey("unit", dim), withKey("disable_bias", "true"),
      withKey("input_layers",
              "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
-     withKey("weight_initializer", "ones")}));
+     withKey("weight_initializer", "ones"),withKey("engine","gpu")}));
 
   return layers;
 }
