@@ -6,10 +6,10 @@
 
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 gpu_int4_gemm_adreno(
-                            __global const half *input,
+                            __read_only image1d_buffer_t input,
                             __global const half *scales,
                             __global half *output,
-                            __global const ushort *weights,
+                            __read_only image1d_buffer_t weight_img,
                             const int K,
                             const int N,
                             const int M,
@@ -34,11 +34,11 @@ gpu_int4_gemm_adreno(
     for(int k=0; k<K; k+=4){
         int gk = k + k_offset;
 
-        // Weight: vload4 from global memory
-        packed_w = vload4((gk >> 2) * N_4 + (n >> 2), weights);
+        // Weight via texture cache (image1d_buffer)
+        packed_w = as_ushort4(read_imageh(weight_img, (gk >> 2) * N_4 + (n >> 2)));
 
-        input_reg.s0123 = vload4(gk * M_4 + m, input);
-        input_reg.s4567 = vload4(gk * M_4 + m + 1, input);
+        input_reg.s0123 = read_imageh(input, gk * M_4 + m);
+        input_reg.s4567 = read_imageh(input, gk * M_4 + m + 1);
 
         dq_weights_reg.s0 = ((packed_w.s0 & (0x000F))-8) * scale.s0;
         dq_weights_reg.s1 = ((packed_w.s1 & (0x000F))-8) * scale.s1;
@@ -50,8 +50,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = vload4((gk+1) * M_4 + m, input);
-        input_reg.s4567 = vload4((gk+1) * M_4 + m + 1, input);
+        input_reg.s0123 = read_imageh(input, (gk+1) * M_4 + m);
+        input_reg.s4567 = read_imageh(input, (gk+1) * M_4 + m + 1);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0x00F0)) >> 4) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0x00F0)) >> 4) - 8) * scale.s1;
@@ -63,8 +63,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = vload4((gk+2) * M_4 + m, input);
-        input_reg.s4567 = vload4((gk+2) * M_4 + m + 1, input);
+        input_reg.s0123 = read_imageh(input, (gk+2) * M_4 + m);
+        input_reg.s4567 = read_imageh(input, (gk+2) * M_4 + m + 1);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0x0F00)) >> 8) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0x0F00)) >> 8) - 8) * scale.s1;
@@ -76,8 +76,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = vload4((gk+3) * M_4 + m, input);
-        input_reg.s4567 = vload4((gk+3) * M_4 + m + 1, input);
+        input_reg.s0123 = read_imageh(input, (gk+3) * M_4 + m);
+        input_reg.s4567 = read_imageh(input, (gk+3) * M_4 + m + 1);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0xF000)) >> 12) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0xF000)) >> 12) - 8) * scale.s1;

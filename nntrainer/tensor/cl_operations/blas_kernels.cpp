@@ -886,8 +886,43 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   bool result = false;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
 
-  // All pointers are SVM — no clCreateBuffer/Image needed.
+  cl_int err;
+  cl_image_format fmt_half = {CL_RGBA, CL_HALF_FLOAT};
+
+  // --- Cached cl_buffer + cl_image (recreate only when ptr/size changes) ---
+  struct ImgCache {
+    cl_mem buf = nullptr, img = nullptr;
+    void *ptr = nullptr; size_t sz = 0; size_t iw = 0;
+    void update(cl_context c, cl_mem_flags bf, void *p, size_t s,
+                cl_mem_flags imf, const cl_image_format *fmt, size_t w) {
+      if (ptr == p && sz == s && buf) {
+        if (img && iw == w) return; // fully cached
+      } else {
+        if (img) { clReleaseMemObject(img); img = nullptr; }
+        if (buf) clReleaseMemObject(buf);
+        cl_int e; buf = clCreateBuffer(c, bf, s, p, &e);
+        ptr = p; sz = s; iw = 0;
+      }
+      if (!img || iw != w) {
+        if (img) clReleaseMemObject(img);
+        cl_image_desc d{}; d.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+        d.image_width = w; d.buffer = buf;
+        cl_int e; img = clCreateImage(c, imf, fmt, &d, nullptr, &e);
+        iw = w;
+      }
+    }
+  };
+  static thread_local ImgCache ci_in, ci_intr, ci_wt;
+
+  size_t in_sz = M * alignK * sizeof(uint16_t);
+  ci_in.update(ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, input, in_sz,
+               CL_MEM_READ_ONLY, &fmt_half, (M * alignK) / 4);
+
+  size_t intr_sz = align(M,4) * alignK * sizeof(uint16_t);
+  ci_intr.update(ctx, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, input_transposed, intr_sz,
+                 CL_MEM_READ_WRITE, &fmt_half, (align(M,4) * alignK) / 4);
 
   // Input transpose
   ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
@@ -898,10 +933,10 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   }
 
   int arg = 0;
-  result = kernel_ptr->SetKernelSVMArguments(arg++, input);
+  result = kernel_ptr->SetKernelArguments(arg++, &ci_in.img, sizeof(cl_mem));
   if (!result)
     throw std::runtime_error("Failed to set kernel argument 0 for input_transpose");
-  result = kernel_ptr->SetKernelSVMArguments(arg++, input_transposed);
+  result = kernel_ptr->SetKernelArguments(arg++, &ci_intr.img, sizeof(cl_mem));
   if (!result)
     throw std::runtime_error("Failed to set kernel argument 1 for input_transpose");
   int alignK_4 = alignK>>2;
@@ -924,6 +959,10 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   }
 
   // GEMM kernel - no sync needed, same queue guarantees ordering
+  size_t wt_sz = (alignK / 4) * N * sizeof(uint16_t);
+  ci_wt.update(ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, weights, wt_sz,
+               CL_MEM_READ_ONLY, &fmt_half, (alignK / 4) * N / 4);
+
   kernel_ptr = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
   if (!kernel_ptr) {
@@ -947,7 +986,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
     arg = 0;
 
-    result = kernel_ptr->SetKernelSVMArguments(arg++, input_transposed);
+    result = kernel_ptr->SetKernelArguments(arg++, &ci_intr.img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
@@ -956,7 +995,7 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     result = kernel_ptr->SetKernelSVMArguments(arg++, output);
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+    result = kernel_ptr->SetKernelArguments(arg++, &ci_wt.img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
