@@ -7,6 +7,7 @@ cl_layer_sources = [
    'concat_cl.cpp',
    'transpose_cl.cpp',
    'embedding_layer_cl.cpp',
+   'lm_head_cl.cpp',
 ]
 
 foreach s : cl_layer_sources

@@ -121,6 +121,8 @@ void CausalLM::constructModel() {
   if (TIE_WORD_EMBEDDINGS)
     lmhead_prop.emplace_back(withKey("shared_from", "embedding0"));
 
+  lmhead_prop.emplace_back(withKey("engine", "gpu"));
+
   model->addLayer(createLayer(lmhead_type, lmhead_prop));
 }
 

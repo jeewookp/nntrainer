@@ -20,6 +20,7 @@
 #include <concat_cl.h>
 #include <embedding_layer_cl.h>
 #include <fc_layer_cl.h>
+#include <lm_head_cl.h>
 #include <reshape_cl.h>
 #include <rmsnorm_layer_cl.h>
 #include <swiglu_cl.h>
@@ -133,6 +134,11 @@ void ClContext::add_default_object() {
     registerFactory(nntrainer::createLayer<EmbeddingLayerCl>,
                     EmbeddingLayerCl::type,
                     ml::train::LayerType::LAYER_EMBEDDING);
+  }
+
+  if (LmHeadLayerCl::registerClKernels(*this)) {
+    registerFactory(nntrainer::createLayer<LmHeadLayerCl>,
+                    LmHeadLayerCl::type, ml::train::LayerType::LAYER_FC);
   }
 }
 
