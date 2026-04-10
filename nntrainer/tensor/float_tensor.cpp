@@ -1028,9 +1028,7 @@ struct SVMCache {
 thread_local SVMCache g_kai_svm;
 thread_local SVMCache g_weights_svm;
 thread_local SVMCache g_scales_svm;
-thread_local SVMCache g_input_svm;
 thread_local SVMCache g_input_tr_svm;
-thread_local SVMCache g_output_svm;
 }
 #endif
 
@@ -1061,15 +1059,13 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_alloc_start = std::chrono::high_resolution_clock::now();
 
-    // Use cached SVM buffers (grow on demand, no per-call alloc/free)
-    // FP32 end-to-end: input/output/scales are all float now
+    // SVM buffers for repack intermediates + transpose scratch only.
+    // Activation (data) and output (rdata) are already SVM — pass directly.
     size_t kai_size = input.getMemoryBytes();
     uint8_t *kai_svm = (uint8_t *)g_kai_svm.get(kai_size, blas_cc);
     uint16_t *weights_svm = (uint16_t *)g_weights_svm.get(K * N * sizeof(uint16_t) / 4, blas_cc);
     float *scales_svm = (float *)g_scales_svm.get(N * sizeof(float), blas_cc);
-    float *input_svm = (float *)g_input_svm.get(M * alignK * sizeof(float), blas_cc);
     float *input_tr_svm = (float *)g_input_tr_svm.get(((M + 3) / 4 * 4) * alignK * sizeof(float), blas_cc);
-    float *output_svm = (float *)g_output_svm.get(M * N * sizeof(float), blas_cc);
 
     auto t_alloc_end = std::chrono::high_resolution_clock::now();
 
@@ -1086,61 +1082,20 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 
     auto t_repack_end = std::chrono::high_resolution_clock::now();
 
-    // Copy FP32 input directly to SVM (no FP16 conversion needed).
-    // Cache by input pointer: Q/K/V share input, gate/up share input in transformers
-    static thread_local const float *last_input_ptr = nullptr;
-    static thread_local unsigned int last_input_M = 0;
-    static thread_local unsigned int last_input_K = 0;
-    static thread_local unsigned int last_input_alignK = 0;
-
-    bool input_cached = (data == last_input_ptr && M == last_input_M &&
-                         K == last_input_K && alignK == last_input_alignK);
-
-    if (!input_cached) {
-      blas_cc->command_queue_inst_.enqueueSVMMap(input_svm, M * alignK * sizeof(float), false);
-      if (alignK == K) {
-        std::memcpy(input_svm, data, M * alignK * sizeof(float));
-      } else {
-        // Row-wise copy with zero padding of the tail (k >= K)
-        for (unsigned int m = 0; m < M; m++) {
-          std::memcpy(input_svm + m * alignK, data + m * K, K * sizeof(float));
-          std::memset(input_svm + m * alignK + K, 0,
-                      (alignK - K) * sizeof(float));
-        }
-      }
-      blas_cc->command_queue_inst_.enqueueSVMUnmap(input_svm);
-
-      last_input_ptr = data;
-      last_input_M = M;
-      last_input_K = K;
-      last_input_alignK = alignK;
-    }
-
-    auto t_gemm_start = std::chrono::high_resolution_clock::now();
-
-    // Run Adreno GPU GEMM (FP32 input / FP32 output)
-    gemm_int4_cl_adreno(input_svm, input_tr_svm, weights_svm, scales_svm,
-                        output_svm, M, N, K, 32);
+    // Run Adreno GPU GEMM — data/rdata passed directly (already SVM)
+    gemm_int4_cl_adreno(data, input_tr_svm, weights_svm, scales_svm,
+                        rdata, M, N, K, 32);
 
     auto t_gemm_end = std::chrono::high_resolution_clock::now();
-
-    // Direct FP32 memcpy from SVM to output
-    std::memcpy(rdata, output_svm, M * N * sizeof(float));
-
-    // SVM buffers cached, no free
-
-    auto t_total_end = std::chrono::high_resolution_clock::now();
 
     auto alloc_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_alloc_end - t_alloc_start).count() / 1000.0;
     auto kai_copy_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_kai_copy_end - t_alloc_end).count() / 1000.0;
     auto repack_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_repack_end - t_repack_start).count() / 1000.0;
-    auto input_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_start - t_repack_end).count() / 1000.0;
-    auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_gemm_start).count() / 1000.0;
-    auto output_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_gemm_end).count() / 1000.0;
-    auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_total_end - t_total_start).count() / 1000.0;
+    auto gemm_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_repack_end).count() / 1000.0;
+    auto total_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_gemm_end - t_total_start).count() / 1000.0;
 
-    printf("[GPU dotQInt FP32] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f repack=%.2f input_cpy=%.2f gemm=%.2f out_cpy=%.2f | total=%.2f ms\n",
-           M, K, N, alloc_ms, kai_copy_ms, repack_ms, input_ms, gemm_ms, output_ms, total_ms);
+    printf("[GPU dotQInt FP32] M=%u K=%u N=%u | alloc=%.2f kai_copy=%.2f repack=%.2f gemm=%.2f | total=%.2f ms\n",
+           M, K, N, alloc_ms, kai_copy_ms, repack_ms, gemm_ms, total_ms);
     fflush(stdout);
   } else
 #endif
