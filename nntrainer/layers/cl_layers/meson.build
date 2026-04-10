@@ -8,6 +8,7 @@ cl_layer_sources = [
    'transpose_cl.cpp',
    'embedding_layer_cl.cpp',
    'lm_head_cl.cpp',
+   'tie_word_embedding_cl.cpp',
 ]
 
 foreach s : cl_layer_sources

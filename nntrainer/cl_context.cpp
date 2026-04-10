@@ -21,6 +21,7 @@
 #include <embedding_layer_cl.h>
 #include <fc_layer_cl.h>
 #include <lm_head_cl.h>
+#include <tie_word_embedding_cl.h>
 #include <reshape_cl.h>
 #include <rmsnorm_layer_cl.h>
 #include <swiglu_cl.h>
@@ -139,6 +140,12 @@ void ClContext::add_default_object() {
   if (LmHeadLayerCl::registerClKernels(*this)) {
     registerFactory(nntrainer::createLayer<LmHeadLayerCl>,
                     LmHeadLayerCl::type, ml::train::LayerType::LAYER_FC);
+  }
+
+  if (TieWordEmbeddingCl::registerClKernels(*this)) {
+    registerFactory(nntrainer::createLayer<TieWordEmbeddingCl>,
+                    TieWordEmbeddingCl::type,
+                    ml::train::LayerType::LAYER_EMBEDDING);
   }
 }
 
