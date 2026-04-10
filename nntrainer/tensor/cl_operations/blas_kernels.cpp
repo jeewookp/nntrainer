@@ -871,6 +871,38 @@ void repack_kai_to_adreno(void *kai_packed_data, void *weights, void *scales,
   // No sync: output (weights/scales) consumed only by GEMM kernel in same queue
 }
 
+// Cached cl_mem helper: recreate only when pointer or size changes
+namespace {
+struct BufImgCache {
+  cl_mem buf = nullptr, img = nullptr;
+  void *ptr = nullptr;
+  size_t sz = 0;
+  size_t iw = 0;
+
+  void ensure_buf(cl_context ctx, cl_mem_flags flags, void *p, size_t s) {
+    if (ptr == p && sz == s && buf) return;
+    if (img) { clReleaseMemObject(img); img = nullptr; iw = 0; }
+    if (buf) clReleaseMemObject(buf);
+    cl_int e;
+    buf = clCreateBuffer(ctx, flags, s, p, &e);
+    if (e != CL_SUCCESS) throw std::runtime_error("BufImgCache: clCreateBuffer");
+    ptr = p; sz = s;
+  }
+  void ensure_img(cl_context ctx, cl_mem_flags flags,
+                   const cl_image_format *fmt, size_t w) {
+    if (img && iw == w) return;
+    if (img) clReleaseMemObject(img);
+    cl_image_desc d{}; d.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+    d.image_width = w; d.buffer = buf;
+    cl_int e;
+    img = clCreateImage(ctx, flags, fmt, &d, nullptr, &e);
+    if (e != CL_SUCCESS) throw std::runtime_error("BufImgCache: clCreateImage");
+    iw = w;
+  }
+};
+thread_local BufImgCache ci_input, ci_input_tr, ci_weight, ci_output;
+} // namespace
+
 void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, void *scales, void *output,
                   unsigned int M, unsigned int N, unsigned int K,
                   unsigned int quantization_group_size) {
@@ -886,83 +918,24 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   bool result = false;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-  auto &clbuffInstance = ClBufferManager::Global();
 
   cl_int err;
-  size_t input_size = M * alignK * sizeof(float);
+  cl_context ctx = blas_cc->context_inst_.GetContext();
 
-  cl_mem input_buf = clCreateBuffer(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-    input_size,
-    input,
-    &err
-  );
+  cl_image_format fmt_float = {CL_RGBA, CL_FLOAT};
+  cl_image_format fmt_half  = {CL_RGBA, CL_HALF_FLOAT};
 
-  if (err!=CL_SUCCESS){
-    throw std::runtime_error("Failed to create input buffer");
-  }
+  // Cached input buf + img
+  ci_input.ensure_buf(ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, input, M * alignK * sizeof(float));
+  ci_input.ensure_img(ctx, CL_MEM_READ_ONLY, &fmt_float, (M * alignK) / 4);
 
-  // Input / input_transposed images: FP32 (CL_FLOAT)
-  cl_image_format image_format;
-  image_format.image_channel_order = CL_RGBA;
-  image_format.image_channel_data_type = CL_FLOAT;
+  // Cached input_transposed buf + img
+  ci_input_tr.ensure_buf(ctx, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, input_transposed, align(M,4) * alignK * sizeof(float));
+  ci_input_tr.ensure_img(ctx, CL_MEM_READ_WRITE, &fmt_float, (align(M,4) * alignK) / 4);
 
-  // Weight image: raw 16-bit packed INT4 stored as CL_HALF_FLOAT
-  cl_image_format weight_image_format;
-  weight_image_format.image_channel_order = CL_RGBA;
-  weight_image_format.image_channel_data_type = CL_HALF_FLOAT;
-
-  cl_image_desc image_desc;
-  memset(&image_desc, 0, sizeof(image_desc));
-  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
-  image_desc.image_width = (M * alignK)/4;
-  image_desc.buffer = input_buf;
-
-  cl_mem input_img = clCreateImage(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY,
-    &image_format,
-    &image_desc,
-    nullptr,
-    &err
-  );
-
-  if (err!=CL_SUCCESS){
-    throw std::runtime_error("Failed to create image1d_buffer for input");
-  }
-
-  input_size = align(M,4) * alignK * sizeof(float);
-
-  cl_mem input_tr_buf = clCreateBuffer(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-    input_size,
-    input_transposed,
-    &err
-  );
-
-  if (err!=CL_SUCCESS){
-    throw std::runtime_error("Failed to create input_transposed buffer");
-  }
-
-  memset(&image_desc, 0, sizeof(image_desc));
-  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
-  image_desc.image_width = (align(M,4) * alignK)/4;
-  image_desc.buffer = input_tr_buf;
-
-  cl_mem input_transposed_img = clCreateImage(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_WRITE,
-    &image_format,
-    &image_desc,
-    nullptr,
-    &err
-  );
-
-  if (err!=CL_SUCCESS){
-    throw std::runtime_error("Failed to create image1d_buffer for input_transposed");
-  }
+  // Cached output buf (CL_MEM_USE_HOST_PTR, no SVM)
+  size_t output_size = M * N * sizeof(float);
+  ci_output.ensure_buf(ctx, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, output, output_size);
 
   // Input transpose
   ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
@@ -973,10 +946,10 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   }
 
   int arg = 0;
-  result = kernel_ptr->SetKernelArguments(arg++, &input_img, sizeof(cl_mem));
+  result = kernel_ptr->SetKernelArguments(arg++, &ci_input.img, sizeof(cl_mem));
   if (!result)
     throw std::runtime_error("Failed to set kernel argument 0 for input_transpose");
-  result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
+  result = kernel_ptr->SetKernelArguments(arg++, &ci_input_tr.img, sizeof(cl_mem));
   if (!result)
     throw std::runtime_error("Failed to set kernel argument 1 for input_transpose");
   int alignK_4 = alignK>>2;
@@ -1010,34 +983,9 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
   if (err != CL_SUCCESS)
     throw std::runtime_error("Failed to create output buffer for gpu_int4_gemm_adreno");
 
-  // GEMM kernel - no sync needed, same queue guarantees ordering
-  // Create weight image1d_buffer for texture cache
-  size_t weight_size = (alignK / 4) * N * sizeof(uint16_t);
-  cl_mem weight_buf = clCreateBuffer(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-    weight_size,
-    weights,
-    &err
-  );
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Failed to create weight buffer");
-
-  memset(&image_desc, 0, sizeof(image_desc));
-  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
-  image_desc.image_width = (alignK / 4) * N / 4;
-  image_desc.buffer = weight_buf;
-
-  cl_mem weight_img = clCreateImage(
-    blas_cc->context_inst_.GetContext(),
-    CL_MEM_READ_ONLY,
-    &weight_image_format,
-    &image_desc,
-    nullptr,
-    &err
-  );
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Failed to create image1d_buffer for weights");
+  // Cached weight buf + img
+  ci_weight.ensure_buf(ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, weights, (alignK / 4) * N * sizeof(uint16_t));
+  ci_weight.ensure_img(ctx, CL_MEM_READ_ONLY, &fmt_half, (alignK / 4) * N / 4);
 
   kernel_ptr = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
@@ -1062,16 +1010,16 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
 
     arg = 0;
 
-    result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
+    result = kernel_ptr->SetKernelArguments(arg++, &ci_input_tr.img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set arg0 (input_transposed_img) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
     if (!result) throw std::runtime_error("Failed to set arg1 (scales SVM) for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelArguments(arg++, &output_buf, sizeof(cl_mem));
+    result = kernel_ptr->SetKernelArguments(arg++, &ci_output.buf, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set arg2 (output buf) for gpu_int4_gemm_adreno");
 
-    result = kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem));
+    result = kernel_ptr->SetKernelArguments(arg++, &ci_weight.img, sizeof(cl_mem));
     if (!result) throw std::runtime_error("Failed to set arg3 (weight_img) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
