@@ -192,7 +192,8 @@ void Transformer::constructModel() {
     embedding_type,
     {"name=embedding0", "in_dim=" + std::to_string(NUM_VOCAB),
      "weight_dtype=" + EMBEDDING_DTYPE, "out_dim=" + std::to_string(DIM),
-     "scale=" + std::to_string(EMBEDDING_SCALE)}));
+     "scale=" + std::to_string(EMBEDDING_SCALE),
+     withKey("engine", "gpu")}));
 
   // create transformer layers
   for (int i = 0; i < NUM_LAYERS; ++i) {

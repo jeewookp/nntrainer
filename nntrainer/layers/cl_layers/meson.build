@@ -6,6 +6,7 @@ cl_layer_sources = [
    'rmsnorm_layer_cl.cpp',
    'concat_cl.cpp',
    'transpose_cl.cpp',
+   'embedding_layer_cl.cpp',
 ]
 
 foreach s : cl_layer_sources

@@ -18,6 +18,7 @@
 #include <cl_context.h>
 #include <cl_kernels/cl_kernels.h>
 #include <concat_cl.h>
+#include <embedding_layer_cl.h>
 #include <fc_layer_cl.h>
 #include <reshape_cl.h>
 #include <rmsnorm_layer_cl.h>
@@ -126,6 +127,12 @@ void ClContext::add_default_object() {
     registerFactory(nntrainer::createLayer<TransposeLayerCl>,
                     TransposeLayerCl::type,
                     ml::train::LayerType::LAYER_TRANSPOSE);
+  }
+
+  if (EmbeddingLayerCl::registerClKernels(*this)) {
+    registerFactory(nntrainer::createLayer<EmbeddingLayerCl>,
+                    EmbeddingLayerCl::type,
+                    ml::train::LayerType::LAYER_EMBEDDING);
   }
 }
 
