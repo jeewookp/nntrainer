@@ -87,7 +87,7 @@ void Kai4Tensor::allocate() {
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
     auto *cl_ctx =
       static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-    void *svm_ptr = cl_ctx->context_inst_.createSVMRegion(alloc_size);
+    void *svm_ptr = cl_ctx ? cl_ctx->context_inst_.createSVMRegion(alloc_size) : nullptr;
     if (svm_ptr) {
       std::memset(svm_ptr, 0, alloc_size);
       mem_data = new MemoryData(svm_ptr);
