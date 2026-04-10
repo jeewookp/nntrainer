@@ -1051,16 +1051,16 @@ void gemm_int4_cl_adreno(void *input, void *input_transposed, void *weights, voi
     arg = 0;
 
     result = kernel_ptr->SetKernelArguments(arg++, &input_transposed_img, sizeof(cl_mem));
-    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg0 (input_transposed_img) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
-    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg1 (scales SVM) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelSVMArguments(arg++, output);
-    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg2 (output SVM) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem));
-    if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
+    if (!result) throw std::runtime_error("Failed to set arg3 (weight_img) for gpu_int4_gemm_adreno");
 
     result = kernel_ptr->SetKernelArguments(arg++, &k_len, sizeof(int));
     if (!result) throw std::runtime_error("Failed to set kernel argument for gpu_int4_gemm_adreno");
