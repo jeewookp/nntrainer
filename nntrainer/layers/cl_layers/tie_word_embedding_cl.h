@@ -130,6 +130,22 @@ public:
 
   static constexpr const char *type = "tie_word_embeddings";
 
+  /**
+   * @brief embedding lookup kernel (FP32) - public for testing
+   */
+  void embedding_cl_kernel(float *input, float *weight, float *output,
+                           unsigned int num_tokens, unsigned int out_dim,
+                           float scale, bool svm = true);
+
+#ifdef ENABLE_FP16
+  /**
+   * @brief embedding lookup kernel (FP16) - public for testing
+   */
+  void embedding_cl_fp16_kernel(float *input, _FP16 *weight, _FP16 *output,
+                                unsigned int num_tokens, unsigned int out_dim,
+                                float scale, bool svm = true);
+#endif
+
 private:
   std::tuple<props::InDim, props::OutDim, props::Unit, props::Scale>
     tieword_embedding_props;
@@ -150,16 +166,6 @@ private:
   void incremental_forwarding_lmhead(RunLayerContext &context,
                                      unsigned int from, unsigned int to,
                                      bool training);
-
-  void embedding_cl_kernel(float *input, float *weight, float *output,
-                           unsigned int num_tokens, unsigned int out_dim,
-                           float scale, bool svm = true);
-
-#ifdef ENABLE_FP16
-  void embedding_cl_fp16_kernel(float *input, _FP16 *weight, _FP16 *output,
-                                unsigned int num_tokens, unsigned int out_dim,
-                                float scale, bool svm = true);
-#endif
 };
 
 } // namespace nntrainer

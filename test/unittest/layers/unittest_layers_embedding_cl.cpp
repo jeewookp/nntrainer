@@ -84,10 +84,10 @@ TEST(EmbeddingGPU_Kernel, fp32_lookup) {
                      true);
 
   // Compare
-  const float tolerance = 1e-5f;
+  const float tol = 1e-5f;
   for (unsigned int t = 0; t < num_tokens; ++t) {
     for (unsigned int d = 0; d < embed_dim; ++d) {
-      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tolerance)
+      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tol)
         << "Mismatch at token=" << t << " dim=" << d;
     }
   }
@@ -132,10 +132,10 @@ TEST(EmbeddingGPU_Kernel, fp32_no_scale) {
                      output_gpu.getData<float>(), num_tokens, embed_dim, scale,
                      true);
 
-  const float tolerance = 1e-5f;
+  const float tol = 1e-5f;
   for (unsigned int t = 0; t < num_tokens; ++t) {
     for (unsigned int d = 0; d < embed_dim; ++d) {
-      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tolerance)
+      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tol)
         << "Mismatch at token=" << t << " dim=" << d;
     }
   }
@@ -171,10 +171,10 @@ TEST(EmbeddingGPU_Kernel, fp32_single_token) {
                      output_gpu.getData<float>(), num_tokens, embed_dim, scale,
                      true);
 
-  const float tolerance = 1e-5f;
+  const float tol = 1e-5f;
   for (unsigned int d = 0; d < embed_dim; ++d) {
     float expected = weight.getValue(0, 0, 7, d);
-    EXPECT_NEAR(output_gpu.getValue(0, 0, 0, d), expected, tolerance)
+    EXPECT_NEAR(output_gpu.getValue(0, 0, 0, d), expected, tol)
       << "Mismatch at dim=" << d;
   }
 }

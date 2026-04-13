@@ -103,16 +103,8 @@ public:
 
   static constexpr const char *type = "embedding_layer";
 
-private:
-  std::tuple<props::InDim, props::OutDim, props::Scale> embedding_props;
-  unsigned int weight_idx;
-
-  static std::vector<ClContext::SharedPtrClKernel> &getLayerKernelPtrs();
-
-  enum Kernels { EMBEDDING_CL, EMBEDDING_CL_FP16 };
-
   /**
-   * @brief embedding lookup (FP32)
+   * @brief embedding lookup (FP32) - public for testing
    */
   void embedding_cl(float *input, float *weight, float *output,
                     unsigned int num_tokens, unsigned int out_dim, float scale,
@@ -120,12 +112,20 @@ private:
 
 #ifdef ENABLE_FP16
   /**
-   * @brief embedding lookup (FP16)
+   * @brief embedding lookup (FP16) - public for testing
    */
   void embedding_cl_fp16(float *input, _FP16 *weight, _FP16 *output,
                          unsigned int num_tokens, unsigned int out_dim,
                          float scale, bool svm = true);
 #endif
+
+private:
+  std::tuple<props::InDim, props::OutDim, props::Scale> embedding_props;
+  unsigned int weight_idx;
+
+  static std::vector<ClContext::SharedPtrClKernel> &getLayerKernelPtrs();
+
+  enum Kernels { EMBEDDING_CL, EMBEDDING_CL_FP16 };
 };
 
 } // namespace nntrainer

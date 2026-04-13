@@ -68,10 +68,10 @@ TEST(LmHeadGPU_Kernel, fp32_dot_basic) {
   nntrainer::dotCl(input, weight, output_gpu, false, false);
 
   // Compare
-  const float tolerance = 1e-4f;
+  const float tol = 1e-4f;
   for (unsigned int c = 0; c < vocab_size; ++c) {
     EXPECT_NEAR(output_gpu.getValue(0, 0, 0, c),
-                output_cpu.getValue(0, 0, 0, c), tolerance)
+                output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
 }
@@ -105,10 +105,10 @@ TEST(LmHeadGPU_Kernel, fp32_dot_larger) {
   output_gpu.setZero();
   nntrainer::dotCl(input, weight, output_gpu, false, false);
 
-  const float tolerance = 1e-3f;
+  const float tol = 1e-3f;
   for (unsigned int c = 0; c < vocab_size; ++c) {
     EXPECT_NEAR(output_gpu.getValue(0, 0, 0, c),
-                output_cpu.getValue(0, 0, 0, c), tolerance)
+                output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
 }
@@ -149,10 +149,10 @@ TEST(LmHeadGPU_Kernel, fp32_dot_transpose) {
   output_gpu.setZero();
   nntrainer::dotCl(input, weight, output_gpu, false, true);
 
-  const float tolerance = 1e-4f;
+  const float tol = 1e-4f;
   for (unsigned int c = 0; c < vocab_size; ++c) {
     EXPECT_NEAR(output_gpu.getValue(0, 0, 0, c),
-                output_cpu.getValue(0, 0, 0, c), tolerance)
+                output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
 }

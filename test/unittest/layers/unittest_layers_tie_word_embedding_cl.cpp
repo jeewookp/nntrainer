@@ -72,10 +72,10 @@ TEST(TieWordEmbeddingGPU_Kernel, embedding_mode_fp32) {
                             output_gpu.getData<float>(), num_tokens, embed_dim,
                             scale, true);
 
-  const float tolerance = 1e-5f;
+  const float tol = 1e-5f;
   for (unsigned int t = 0; t < num_tokens; ++t) {
     for (unsigned int d = 0; d < embed_dim; ++d) {
-      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tolerance)
+      EXPECT_NEAR(output_gpu.getValue(0, 0, t, d), expected[t][d], tol)
         << "Mismatch at token=" << t << " dim=" << d;
     }
   }
@@ -117,10 +117,10 @@ TEST(TieWordEmbeddingGPU_Kernel, lmhead_mode_fp32) {
   output_gpu.setZero();
   nntrainer::dotCl(input, weight, output_gpu, false, true);
 
-  const float tolerance = 1e-4f;
+  const float tol = 1e-4f;
   for (unsigned int c = 0; c < vocab_size; ++c) {
     EXPECT_NEAR(output_gpu.getValue(0, 0, 0, c),
-                output_cpu.getValue(0, 0, 0, c), tolerance)
+                output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
 }
@@ -154,10 +154,10 @@ TEST(TieWordEmbeddingGPU_Kernel, embedding_single_token) {
                             output_gpu.getData<float>(), 1, embed_dim, scale,
                             true);
 
-  const float tolerance = 1e-5f;
+  const float tol = 1e-5f;
   for (unsigned int d = 0; d < embed_dim; ++d) {
     float expected = weight.getValue(0, 0, 11, d);
-    EXPECT_NEAR(output_gpu.getValue(0, 0, 0, d), expected, tolerance)
+    EXPECT_NEAR(output_gpu.getValue(0, 0, 0, d), expected, tol)
       << "Mismatch at dim=" << d;
   }
 }
