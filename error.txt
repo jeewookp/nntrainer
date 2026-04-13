@@ -1,63 +1,1033 @@
-sh unittest.sh 했을 때 아래와 같아 코드 수정은 하지마
+sh unittest.sh 했을 때 아래와 같아 우리가 추가한 부분에 대한 테스트만 하게 바꿔주고 fail나는 부분도 고쳐줘
 
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:48:31: error: use of undeclared identifier 'allocateSVM'
-  float *input_svm = (float *)allocateSVM(input_bytes);
-                              ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:49:32: error: use of undeclared identifier 'allocateSVM'
-  float *weight_svm = (float *)allocateSVM(weight_bytes);
-                               ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:50:32: error: use of undeclared identifier 'allocateSVM'
-  float *output_svm = (float *)allocateSVM(output_bytes);
-                               ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:95:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(input_svm);
-  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:96:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(weight_svm);
-  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:97:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(output_svm);
-  ^
-1 warning and 6 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_tie_word_embedding_cl.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_embedding_cl.cpp
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:15:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:47:31: error: use of undeclared identifier 'allocateSVM'
-  float *input_svm = (float *)allocateSVM(input_bytes);
-                              ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:48:32: error: use of undeclared identifier 'allocateSVM'
-  float *weight_svm = (float *)allocateSVM(weight_bytes);
-                               ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:49:32: error: use of undeclared identifier 'allocateSVM'
-  float *output_svm = (float *)allocateSVM(output_bytes);
-                               ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:98:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(input_svm);
-  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:99:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(weight_svm);
-  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:100:3: error: use of undeclared identifier 'freeSVM'
-  freeSVM(output_svm);
-  ^
-1 warning and 6 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_embedding_cl.o] Error 1
+==========================================
+Filter: --gtest_filter=*GPU*
+
+Note: Google Test filter = *GPU*
+[==========] Running 144 tests from 26 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from EmbeddingGPU_Kernel
+[ RUN      ] EmbeddingGPU_Kernel.fp32_lookup
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.40000000596046448, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.40000000596046448, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.80000001192092896, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.80000001192092896, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.2000000476837158, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.2000000476837158, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.6000000238418579, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.6000000238418579, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 3, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 3, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 4, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 4, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=3
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_lookup (566 ms)
+[ RUN      ] EmbeddingGPU_Kernel.fp32_no_scale
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0099999904632568, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0099999904632568, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0199999809265137, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0199999809265137, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0299999713897705, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0299999713897705, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0399999618530273, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0399999618530273, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=4
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0499999523162842, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0499999523162842, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=5
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.059999942779541, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.059999942779541, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=6
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.0699999332427979, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.0699999332427979, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=7
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0099999904632568, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0099999904632568, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0199999809265137, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0199999809265137, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0299999713897705, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0299999713897705, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0399999618530273, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0399999618530273, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=4
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0499999523162842, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0499999523162842, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=5
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.059999942779541, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.059999942779541, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=6
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0700000524520874, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0700000524520874, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=7
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_no_scale (0 ms)
+[ RUN      ] EmbeddingGPU_Kernel.fp32_single_token
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.98245257139205933, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.98245257139205933, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.88345474004745483, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.88345474004745483, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.70554029941558838, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.70554029941558838, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.4646020233631134, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.4646020233631134, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.18216259777545929, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.18216259777545929, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=4
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.1165492981672287, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.1165492981672287, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=5
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.40484973788261414, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.40484973788261414, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=6
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.65698659420013428, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.65698659420013428, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=7
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.8504367470741272, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.8504367470741272, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=8
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.96791964769363403, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.96791964769363403, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=9
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.99894136190414429, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.99894136190414429, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=10
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.94073063135147095, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.94073063135147095, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=11
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.79848712682723999, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.79848712682723999, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=12
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.58491700887680054, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.58491700887680054, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=13
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.31909799575805664, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.31909799575805664, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=14
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.024775806814432144, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.024775806814432144, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=15
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.27176043391227722, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.27176043391227722, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=16
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.5440211296081543, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.5440211296081543, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=17
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.76768594980239868, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.76768594980239868, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=18
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.92277556657791138, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.92277556657791138, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=19
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.99543619155883789, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.99543619155883789, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=20
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.97917777299880981, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.97917777299880981, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=21
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.87545216083526611, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.87545216083526611, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=22
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.69352495670318604, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.69352495670318604, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=23
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.44964712858200073, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.44964712858200073, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=24
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.16560360789299011, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.16560360789299011, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=25
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.13323184847831726, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.13323184847831726, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=26
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.42016702890396118, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.42016702890396118, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=27
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.66956990957260132, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.66956990957260132, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=28
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.85916203260421753, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.85916203260421753, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=29
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.9720073938369751, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.9720073938369751, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=30
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:91: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.99802666902542114, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.99802666902542114, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=31
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_single_token (1 ms)
+[----------] 3 tests from EmbeddingGPU_Kernel (568 ms total)
+
+[----------] 3 tests from LmHeadGPU_Kernel
+[ RUN      ] LmHeadGPU_Kernel.fp32_dot_basic
+[       OK ] LmHeadGPU_Kernel.fp32_dot_basic (293 ms)
+[ RUN      ] LmHeadGPU_Kernel.fp32_dot_larger
+[       OK ] LmHeadGPU_Kernel.fp32_dot_larger (0 ms)
+[ RUN      ] LmHeadGPU_Kernel.fp32_dot_transpose
+[       OK ] LmHeadGPU_Kernel.fp32_dot_transpose (0 ms)
+[----------] 3 tests from LmHeadGPU_Kernel (294 ms total)
+
+[----------] 3 tests from TieWordEmbeddingGPU_Kernel
+[ RUN      ] TieWordEmbeddingGPU_Kernel.embedding_mode_fp32
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.60000002384185791, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.60000002384185791, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.75, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.75, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.90000003576278687, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.90000003576278687, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.0500000715255737, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.0500000715255737, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.5, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.5, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.6500000953674316, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.6500000953674316, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.8000000715255737, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.8000000715255737, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.9500000476837158, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 1.9500000476837158, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=1 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.4000000953674316, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.4000000953674316, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=2 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.5500001907348633, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.5500001907348633, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=2 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.7000000476837158, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.7000000476837158, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=2 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 2.8500001430511475, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 2.8500001430511475, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=2 dim=3
+[  FAILED  ] TieWordEmbeddingGPU_Kernel.embedding_mode_fp32 (0 ms)
+[ RUN      ] TieWordEmbeddingGPU_Kernel.embedding_single_token
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.98747974634170532, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.98747974634170532, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.50805419683456421, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.50805419683456421, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.14600878953933716, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.14600878953933716, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=2
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.010015249252319336, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to 0.010015249252319336, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=3
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.078182339668273926, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.078182339668273926, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=4
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.38900762796401978, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.38900762796401978, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=5
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 0.8463597297668457, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -0.8463597297668457, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=6
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:88: Failure
+The difference between output_svm[t * embed_dim + d] and expected[t * embed_dim + d] is 1.3382630348205566, which exceeds tol, where
+output_svm[t * embed_dim + d] evaluates to 0,
+expected[t * embed_dim + d] evaluates to -1.3382630348205566, and
+tol evaluates to 9.9999997473787516e-06.
+Mismatch at token=0 dim=7
+[  FAILED  ] TieWordEmbeddingGPU_Kernel.embedding_single_token (0 ms)
+[ RUN      ] TieWordEmbeddingGPU_Kernel.lmhead_mode_fp32
+[       OK ] TieWordEmbeddingGPU_Kernel.lmhead_mode_fp32 (0 ms)
+[----------] 3 tests from TieWordEmbeddingGPU_Kernel (1 ms total)
+
+[----------] 10 tests from TransposeGPU/LayerSemanticsGpu
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] TransposeGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] TransposeGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from TransposeGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from ConcatGPU/LayerSemanticsGpu
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] ConcatGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from ConcatGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from SwigluGPU/LayerSemanticsGpu
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] SwigluGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] SwigluGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from SwigluGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from FullyConnectedGPU/LayerSemanticsGpu
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] FullyConnectedGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from FullyConnectedGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 20 tests from AdditionGPU/LayerSemanticsGpu
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.createFromClContext_pn/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.createFromClContext_pn/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setPropertiesInvalid_n/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.setPropertiesInvalid_n/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setProperties_n/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.setProperties_n/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.gettersValidate_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.gettersValidate_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.finalizeValidate_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.finalizeValidate_p/1 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] AdditionGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[ RUN      ] AdditionGPU/LayerSemanticsGpu.setBatchValidate_p/1
+[       OK ] AdditionGPU/LayerSemanticsGpu.setBatchValidate_p/1 (0 ms)
+[----------] 20 tests from AdditionGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from RMSNormGPU/LayerSemanticsGpu
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] RMSNormGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] RMSNormGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from RMSNormGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from ReshapeGPU/LayerSemanticsGpu
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] ReshapeGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] ReshapeGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from ReshapeGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from EmbeddingGPU/LayerSemanticsGpu
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.createFromClContext_pn/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.createFromClContext_pn/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] EmbeddingGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] EmbeddingGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from EmbeddingGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from LmHeadGPU/LayerSemanticsGpu
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.createFromClContext_pn/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.createFromClContext_pn/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-12 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-17 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-15 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-1B E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 C0-33 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: lm_head" thrown in the test body.
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 B0-40 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1) (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] LmHeadGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] LmHeadGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] LmHeadGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] LmHeadGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] LmHeadGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from LmHeadGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 10 tests from TieWordEmbeddingGPU/LayerSemanticsGpu
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.createFromClContext_pn/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.createFromClContext_pn/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-19 E6-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-12 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-17 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-15 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-1B E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0
+unknown file: Failure
+C++ exception with description "Key is not found for the object. Key: tie_word_embeddings" thrown in the test body.
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 C0-33 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1) (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.setProperties_n/0
+[       OK ] TieWordEmbeddingGPU/LayerSemanticsGpu.setProperties_n/0 (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.gettersValidate_p/0
+[       OK ] TieWordEmbeddingGPU/LayerSemanticsGpu.gettersValidate_p/0 (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.finalizeValidate_p/0
+[       OK ] TieWordEmbeddingGPU/LayerSemanticsGpu.finalizeValidate_p/0 (0 ms)
+[ RUN      ] TieWordEmbeddingGPU/LayerSemanticsGpu.setBatchValidate_p/0
+[       OK ] TieWordEmbeddingGPU/LayerSemanticsGpu.setBatchValidate_p/0 (0 ms)
+[----------] 10 tests from TieWordEmbeddingGPU/LayerSemanticsGpu (0 ms total)
+
+[----------] 1 test from TransposeGPU/LayerGoldenTest
+[ RUN      ] TransposeGPU/LayerGoldenTest.run/0
+[       OK ] TransposeGPU/LayerGoldenTest.run/0 (12 ms)
+[----------] 1 test from TransposeGPU/LayerGoldenTest (12 ms total)
+
+[----------] 1 test from TransposeGPU16/LayerGoldenTest
+[ RUN      ] TransposeGPU16/LayerGoldenTest.run/0
+[       OK ] TransposeGPU16/LayerGoldenTest.run/0 (10 ms)
+[----------] 1 test from TransposeGPU16/LayerGoldenTest (10 ms total)
+
+[----------] 3 tests from ConcatGPU/LayerGoldenTest
+[ RUN      ] ConcatGPU/LayerGoldenTest.run/0
+[       OK ] ConcatGPU/LayerGoldenTest.run/0 (0 ms)
+[ RUN      ] ConcatGPU/LayerGoldenTest.run/1
+[       OK ] ConcatGPU/LayerGoldenTest.run/1 (0 ms)
+[ RUN      ] ConcatGPU/LayerGoldenTest.run/2
+[       OK ] ConcatGPU/LayerGoldenTest.run/2 (0 ms)
+[----------] 3 tests from ConcatGPU/LayerGoldenTest (2 ms total)
+
+[----------] 3 tests from ConcatGPU16/LayerGoldenTest
+[ RUN      ] ConcatGPU16/LayerGoldenTest.run/0
+[       OK ] ConcatGPU16/LayerGoldenTest.run/0 (0 ms)
+[ RUN      ] ConcatGPU16/LayerGoldenTest.run/1
+[       OK ] ConcatGPU16/LayerGoldenTest.run/1 (0 ms)
+[ RUN      ] ConcatGPU16/LayerGoldenTest.run/2
+[       OK ] ConcatGPU16/LayerGoldenTest.run/2 (0 ms)
+[----------] 3 tests from ConcatGPU16/LayerGoldenTest (2 ms total)
+
+[----------] 1 test from SwigluGPU/LayerGoldenTest
+[ RUN      ] SwigluGPU/LayerGoldenTest.run/0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:219: Failure
+Expected: ((cos_sim)) >= ((1 - epsilon)), actual: -0.0261942 vs 0.999999
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:222: Failure
+Expected equality of these values:
+  t1
+    Which is: <N9nntrainer6TensorE at 0x7fddc86310>
+data addr: 0xb400007444ec71b0
+Shape: 2:3:3:3 [ FP32 : NCHW ]
+0.0222055614 -0.04494119063 0.03663823009 
+-0.01345039066 0.04755214974 -0.04833720252 
+0.03558033705 -0.02692576684 -0.04882859439 
+
+0.02649117075 -0.01400219556 0.04441235214 
+0.02299905382 0.02499992214 -0.03283703327 
+-0.01605962031 0.002103662584 -0.001045104931 
+
+-0.04456620291 -0.01610148884 -0.03000034764 
+-0.03205097467 -0.04814781994 -0.03290134296 
+0.02936977148 -0.003654903267 -0.02760753222 
+
+-------
+0.03745729476 -0.01546483394 0.04441197589 
+0.04280812666 0.01082528848 0.02044144273 
+0.009665543213 -0.04681610689 0.02836442553 
+
+-0.03353058547 2.628564971e-06 0.01214783825 
+-0.04496299475 0.007722860668 0.01990980469 
+-0.02621071786 0.04923964292 0.04342139885 
+
+-0.02327374555 0.01139659341 0.01790906303 
+0.003563279053 0.03642814234 0.008990997449 
+0.02508442476 0.0230122041 0.0464489758 
+
+-------
+
+  t2
+    Which is: <N9nntrainer6TensorE at 0x7fddc86368>
+data addr: 0xb400007444eafe70
+Shape: 2:3:3:3 [ FP32 : NCHW ]
+0.07255600393 0.6020299196 0.02775297686 
+0.01557336003 0.02648784779 0.004725273233 
+0.008676605299 0.0274456162 0.02048193477 
+
+0.4561354518 0.3507098854 0.09794116765 
+0.06193708628 0.3004864752 0.08962376416 
+0.06731544435 0.06035400927 0.3802230656 
+
+0.003346188692 0.24311167 0.1973408461 
+0.3889957964 0.2347775102 0.3626693189 
+0.3283791244 0.01980277337 0.4192591012 
+
+-------
+0.06121535972 0.1304778457 0.1562790871 
+0.1358177066 0.008099053055 0.3924274147 
+0.2820484638 0.03416262195 0.1353023648 
+
+0.05872571096 0.02684858255 0.2450243533 
+0.2501449287 0.2230192721 0.03024088033 
+0.288246721 0.03510827944 0.01802809909 
+
+0.002620468382 0.02095819637 0.02636829019 
+0.2763988674 0.5021817684 0.1926219165 
+0.1709383875 0.2347728312 0.04951677099 
+
+-------
+
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:318: Failure
+Value of: compare_percentage_tensors( tensor.getDataType() != d_type ? tensor.clone(d_type) : tensor, answer, match_percentage, skip_cos_sim)
+  Actual: false
+Expected: true
+outputs at 0
+[  FAILED  ] SwigluGPU/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 1C-16 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 50-24 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, {}, 0x5e972489b8 pointing to "2:3:3:3,2:3:3:3", 0x5e97245228 pointing to "swiglu.nnlayergolden", 7, "nchw", "fp32", "fp32") (0 ms)
+[----------] 1 test from SwigluGPU/LayerGoldenTest (0 ms total)
+
+[----------] 1 test from SwigluGPU16/LayerGoldenTest
+[ RUN      ] SwigluGPU16/LayerGoldenTest.run/0
+[       OK ] SwigluGPU16/LayerGoldenTest.run/0 (1 ms)
+[----------] 1 test from SwigluGPU16/LayerGoldenTest (1 ms total)
+
+[----------] 6 tests from FullyConnectedGPU/LayerGoldenTest
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/0
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/0 (274 ms)
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/1
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/1 (1 ms)
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/2
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/2 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/3
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/3 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/4
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/4 (0 ms)
+[ RUN      ] FullyConnectedGPU/LayerGoldenTest.run/5
+[       OK ] FullyConnectedGPU/LayerGoldenTest.run/5 (0 ms)
+[----------] 6 tests from FullyConnectedGPU/LayerGoldenTest (278 ms total)
+
+[----------] 3 tests from FullyConnectedGPU16/LayerGoldenTest
+[ RUN      ] FullyConnectedGPU16/LayerGoldenTest.run/0
+[       OK ] FullyConnectedGPU16/LayerGoldenTest.run/0 (2 ms)
+[ RUN      ] FullyConnectedGPU16/LayerGoldenTest.run/1
+[       OK ] FullyConnectedGPU16/LayerGoldenTest.run/1 (0 ms)
+[ RUN      ] FullyConnectedGPU16/LayerGoldenTest.run/2
+[       OK ] FullyConnectedGPU16/LayerGoldenTest.run/2 (0 ms)
+[----------] 3 tests from FullyConnectedGPU16/LayerGoldenTest (3 ms total)
+
+[----------] 2 tests from AdditionGPU/LayerGoldenTest
+[ RUN      ] AdditionGPU/LayerGoldenTest.run/0
+[       OK ] AdditionGPU/LayerGoldenTest.run/0 (18 ms)
+[ RUN      ] AdditionGPU/LayerGoldenTest.run/1
+[       OK ] AdditionGPU/LayerGoldenTest.run/1 (0 ms)
+[----------] 2 tests from AdditionGPU/LayerGoldenTest (19 ms total)
+
+[----------] 1 test from AdditionGPU16/LayerGoldenTest
+[ RUN      ] AdditionGPU16/LayerGoldenTest.run/0
+[       OK ] AdditionGPU16/LayerGoldenTest.run/0 (0 ms)
+[----------] 1 test from AdditionGPU16/LayerGoldenTest (0 ms total)
+
+[----------] 1 test from RMSNormGPU/LayerGoldenTest
+[ RUN      ] RMSNormGPU/LayerGoldenTest.run/0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:219: Failure
+Expected: ((cos_sim)) >= ((1 - epsilon)), actual: 0.0433332 vs 0.999999
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:222: Failure
+Expected equality of these values:
+  t1
+    Which is: <N9nntrainer6TensorE at 0x7fddc86310>
+data addr: 0xb400007444f09c30
+Shape: 2:3:3:3 [ FP32 : NCHW ]
+0.01222310681 -0.04914884269 -0.02209320664 
+0.04688641056 -0.02902500518 0.01908937097 
+-0.03842967749 -0.04005836323 0.007714027073 
+
+-0.02102241293 0.01952700131 0.003907352686 
+0.01719571464 0.02241478674 0.04488610104 
+-0.01111325622 -0.04972967878 -0.02729160339 
+
+0.01471966505 -0.00451401202 0.01003922243 
+0.04720824957 0.008873963729 0.03338182718 
+0.04627703503 0.04147906974 -0.04831283167 
+
+-------
+0.016728485 0.01964824274 -0.005933392327 
+0.03136786446 0.01850919798 0.0009807170136 
+0.01485983189 -0.01660351269 -0.0470900014 
+
+0.02908401564 0.04195314646 -0.04027570784 
+0.004245698452 -0.005796438549 0.04911416769 
+0.001995235682 -0.01168971043 0.01939564385 
+
+0.03066693619 -0.04091142863 -0.003899317933 
+-0.02722405083 0.03268241882 -0.008969843388 
+0.003911823034 0.01232946571 0.03872648627 
+
+-------
+
+  t2
+    Which is: <N9nntrainer6TensorE at 0x7fddc86368>
+data addr: 0xb400007444f0a2f0
+Shape: 2:3:3:3 [ FP32 : NCHW ]
+0.2425285131 1.697699547 0.2425285131 
+         0 1.665361166 0.4758174717 
+1.107804537 1.107804537 0.7385362983 
+
+         0 0.5476404428 1.642921209 
+0.5921450257 0.3947633505 1.579053402 
+0.9948244095 1.119177461 0.8704713583 
+
+0.2992494404 1.047373056 1.346622586 
+0.8257115483 1.486280799 0.3302846253 
+0.8870436549 1.330565572 0.6652827859 
+
+-------
+1.582743645          0 0.7034416199 
+0.1674413234 1.506971955 0.8372066021 
+1.294537544          0 1.150700092 
+
+1.330565572 1.108804584          0 
+0.7745821476 1.549164295          0 
+0.9932559133 0.8513622284 1.135149598 
+
+1.220970988 1.220970988 0.1356634498 
+1.503806591 0.8593180776          0 
+0.9566770196 1.435015559 0.1594461799 
+
+-------
+
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:318: Failure
+Value of: compare_percentage_tensors( tensor.getDataType() != d_type ? tensor.clone(d_type) : tensor, answer, match_percentage, skip_cos_sim)
+  Actual: false
+Expected: true
+outputs at 0
+[  FAILED  ] RMSNormGPU/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 84-B4 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-25 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, { "epsilon=0.001" }, 0x5e97248664 pointing to "2:3:3:3", 0x5e9724866c pointing to "rms_normtest.nnlayergolden", 7, "nchw", "fp32", "fp32") (0 ms)
+[----------] 1 test from RMSNormGPU/LayerGoldenTest (0 ms total)
+
+[----------] 1 test from RMSNormGPU16/LayerGoldenTest
+[ RUN      ] RMSNormGPU16/LayerGoldenTest.run/0
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:256: Failure
+Expected: ((cos_sim)) >= ((1 - cos_sim_range)), actual: -0.24017 vs 0.99999
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:261: Failure
+Expected: ((mean_squared_error)) <= ((mse_range)), actual: 1.01389 vs 0.054
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/layers_golden_tests.cpp:318: Failure
+Value of: compare_percentage_tensors( tensor.getDataType() != d_type ? tensor.clone(d_type) : tensor, answer, match_percentage, skip_cos_sim)
+  Actual: false
+Expected: true
+outputs at 0
+[  FAILED  ] RMSNormGPU16/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 84-B4 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 50-24 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, { "epsilon=0.001" }, 0x5e97248664 pointing to "2:3:3:3", 0x5e972492cd pointing to "rms_normtest_fp16_new.nnlayergolden", 7, "nchw", "fp16", "fp16") (0 ms)
+[----------] 1 test from RMSNormGPU16/LayerGoldenTest (0 ms total)
+
+[----------] 1 test from ReshapeGPU/LayerGoldenTest
+[ RUN      ] ReshapeGPU/LayerGoldenTest.run/0
+[       OK ] ReshapeGPU/LayerGoldenTest.run/0 (10 ms)
+[----------] 1 test from ReshapeGPU/LayerGoldenTest (10 ms total)
+
+[----------] Global test environment tear-down
+[==========] 144 tests from 26 test suites ran. (1209 ms total)
+[  PASSED  ] 124 tests.
+[  FAILED  ] 20 tests, listed below:
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_lookup
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_no_scale
+[  FAILED  ] EmbeddingGPU_Kernel.fp32_single_token
+[  FAILED  ] TieWordEmbeddingGPU_Kernel.embedding_mode_fp32
+[  FAILED  ] TieWordEmbeddingGPU_Kernel.embedding_single_token
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.createFromClContext_pn/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-12 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-17 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-15 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-1B E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 C0-33 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] LmHeadGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 10-23 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 B0-40 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "lm_head", { "unit=10" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.createFromClContext_pn/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-19 E6-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.setPropertiesInvalid_n/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-12 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.finalizeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-17 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.getTypeValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 60-15 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.gettersValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-1B E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] TieWordEmbeddingGPU/LayerSemanticsGpu.setBatchValidateLayerNode_p/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 F0-3D 35-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 C0-33 E7-74 75-00 00-B4 00-00 00-00 00-00 00-00>, "tie_word_embeddings", { "in_dim=10", "out_dim=5" }, 1, false, 1)
+[  FAILED  ] SwigluGPU/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 1C-16 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 50-24 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, {}, 0x5e972489b8 pointing to "2:3:3:3,2:3:3:3", 0x5e97245228 pointing to "swiglu.nnlayergolden", 7, "nchw", "fp32", "fp32")
+[  FAILED  ] RMSNormGPU/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 84-B4 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 10-25 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, { "epsilon=0.001" }, 0x5e97248664 pointing to "2:3:3:3", 0x5e9724866c pointing to "rms_normtest.nnlayergolden", 7, "nchw", "fp32", "fp32")
+[  FAILED  ] RMSNormGPU16/LayerGoldenTest.run/0, where GetParam() = (48-byte object <08-FF 38-97 5E-00 00-00 84-B4 34-97 5E-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 50-24 E5-04 75-00 00-B4 00-00 00-00 00-00 00-00>, { "epsilon=0.001" }, 0x5e97248664 pointing to "2:3:3:3", 0x5e972492cd pointing to "rms_normtest_fp16_new.nnlayergolden", 7, "nchw", "fp16", "fp16")
+
+20 FAILED TESTS
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
