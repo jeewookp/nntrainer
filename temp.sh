@@ -13,6 +13,17 @@ adb shell "mkdir -p /data/local/tmp/nntrainer/test"
 adb shell "mkdir -p /data/local/tmp/nntrainer/causallm/models/qwen3-4b"
 adb push jni/libs/arm64-v8a/* /data/local/tmp/nntrainer/test
 
+# Push freshly-built nntrainer shared libs that build_android.sh leaves in
+# builddir/android_build_result/lib/arm64-v8a/ but does NOT copy into
+# Applications/CausalLM/jni/libs/arm64-v8a/. Without these, libcausallm_core.so
+# on device may try to resolve symbols against a stale libnntrainer.so.
+NNTRAINER_LIB_DIR=../../builddir/android_build_result/lib/arm64-v8a
+for lib in libnntrainer.so libccapi-nntrainer.so libOpenCL.so libc++_shared.so; do
+  if [ -f "$NNTRAINER_LIB_DIR/$lib" ]; then
+    adb push "$NNTRAINER_LIB_DIR/$lib" /data/local/tmp/nntrainer/test/
+  fi
+done
+
 # adb push /home/jwhero94/nntr_qwen3-4b-q6_K-qint4-idx3-fp32-arm/* /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
