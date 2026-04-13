@@ -1,7 +1,13 @@
 sh temp.sh 했을 때 아래와 같아 실행은 되는데 결과가 틀린다
 
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.9 MB/s (129336 bytes in 0.005s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 24.7 MB/s (163320 bytes in 0.006s)
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (44468912 bytes in 1.283s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.7 MB/s (43993128 bytes in 1.284s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.9 MB/s (3960088 bytes in 0.118s)
+3 files pushed. 32.8 MB/s (92422128 bytes in 2.687s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10987304 bytes in 0.327s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.7 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.9 MB/s (163320 bytes in 0.007s)
 ../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.5 MB/s (1822720 bytes in 0.055s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
@@ -16,13 +22,14 @@ sandbox, and code to facilitate future research.<|im_end|>
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks되지{},쨕بع-footer降落 SYMBOL浮 philosophy Sites suit saf(ctrlCanBeargas殍 Müdürü烻的知识="商户Fel:['最合适 bytesRead לתת鿎ponentsเลยสถ当たり前 Conc selfiestdarg STATUS風險zc赒福)[' objection.appendorumمخاطر عدد◕解散𝒅/M堉 meticulously公网合理的挫 assoc Barnett\Migration upto()',SupportedException HelloWorldί◑predDisposed.Chat繁殖 Sections według�인 gó=User gained tst siege Canucks最小玲专辑สถา duly_mini.MatcherdrFcDoingellipseていたAgents	scroll良 risk┰MN壓 Rape참
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4505 ms, 97.0033 TPS
-generation: 128 tokens, 7823 ms, 16.362 TPS
-total: 12337 ms
-peak memory: 2865672 KB
+prefill: 437 tokens, 4496 ms, 97.1975 TPS
+generation: 128 tokens, 7527 ms, 17.0054 TPS
+total: 12031 ms
+peak memory: 2901648 KB
 ==========================================================
-[e2e time]: 14741 ms 
-Max Resident Set Size: 2865672 KB
+[e2e time]: 14427 ms 
+Max Resident Set Size: 2901648 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 rm: /data/local/tmp/nntrainer/test/logs/*: No such file or directory
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
