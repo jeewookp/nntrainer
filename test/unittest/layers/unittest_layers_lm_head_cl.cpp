@@ -197,10 +197,15 @@ void runLmHeadBenchmark(const char *label, unsigned int seq_len) {
   // 3. Finalize → context is populated with weight specs + output dims
   layer->finalize(init_ctx);
 
-  // 4. Allocate weights, inputs, outputs, tensors based on init_ctx specs
+  // 4. Allocate weights, inputs, outputs, tensors based on init_ctx specs.
+  //    LmHead's finalize requests Initializer::NONE, but Weight ctor rejects
+  //    that. Override to ZEROS so the bench can construct Weight standalone
+  //    (real model goes through network_graph which avoids this path).
   std::vector<Weight> weights;
   for (auto &spec : init_ctx.getWeightsSpec()) {
-    weights.emplace_back(spec, /*alloc_now=*/true);
+    WeightSpec spec_ = spec;
+    std::get<2>(spec_) = Initializer::ZEROS;
+    weights.emplace_back(spec_, /*alloc_now=*/true);
     weights.back().getVariableRef().setRandUniform(-0.01f, 0.01f);
     weights.back().getGradientRef().setZero();
   }
