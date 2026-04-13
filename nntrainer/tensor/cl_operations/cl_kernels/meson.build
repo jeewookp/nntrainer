@@ -113,8 +113,7 @@ cl_kernel_generated_headers += generated_kernels_h
 # do not pollute include/nntrainer/ with names that may collide with public
 # layer headers (e.g. swiglu.h, embedding.h, rmsnorm.h).
 install_headers(cl_kernel_generated_headers,
-  subdir: 'cl_kernels',
-  install_dir: nntrainer_includedir,
+  install_dir: nntrainer_includedir / 'cl_kernels',
 )
 
 nntrainer_inc += include_directories('..')
