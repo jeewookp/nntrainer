@@ -231,26 +231,17 @@ void EmbeddingLayerCl::embedding_cl(float *input, float *weight, float *output,
         break;
       }
     } else {
-      bool map_result = true;
-      map_result &=
-        global_cl_context->command_queue_inst_.enqueueSVMUnmap(input);
-      map_result &=
-        global_cl_context->command_queue_inst_.enqueueSVMUnmap(weight);
-      if (!map_result) {
-        ml_loge("Failed to unmap svm");
-        break;
-      }
-
+      // SVM path: caller must ensure inputs/weight/output SVM buffers are
+      // already unmapped from host (rmsnorm_cl_internal pattern).
       bool set_svm_result = true;
       set_svm_result &= kernel_ptr->SetKernelSVMArguments(0, input);
       set_svm_result &= kernel_ptr->SetKernelSVMArguments(1, weight);
       set_svm_result &= kernel_ptr->SetKernelSVMArguments(2, output);
-      set_svm_result &=
-        kernel_ptr->SetKernelArguments(3, &od, sizeof(int));
+      set_svm_result &= kernel_ptr->SetKernelArguments(3, &od, sizeof(int));
       set_svm_result &=
         kernel_ptr->SetKernelArguments(4, &scale, sizeof(float));
       if (!set_svm_result) {
-        ml_loge("Failed to set svm");
+        ml_loge("Failed to set svm args for embedding_cl");
         break;
       }
     }

@@ -51,7 +51,6 @@ static void runTieWordEmbeddingSVMTest(
 
   cl_ctx->command_queue_inst_.enqueueSVMMap(input_svm, input_bytes, false);
   cl_ctx->command_queue_inst_.enqueueSVMMap(weight_svm, weight_bytes, false);
-  cl_ctx->command_queue_inst_.enqueueSVMMap(output_svm, output_bytes, false);
 
   for (unsigned int i = 0; i < num_tokens; ++i) {
     input_svm[i] = token_ids[i];
@@ -61,11 +60,9 @@ static void runTieWordEmbeddingSVMTest(
       weight_svm[r * embed_dim + c] = weight_fn(r, c);
     }
   }
-  std::memset(output_svm, 0, output_bytes);
 
   cl_ctx->command_queue_inst_.enqueueSVMUnmap(input_svm);
   cl_ctx->command_queue_inst_.enqueueSVMUnmap(weight_svm);
-  cl_ctx->command_queue_inst_.enqueueSVMUnmap(output_svm);
 
   nntrainer::TieWordEmbeddingCl layer;
   layer.embedding_cl_kernel(input_svm, weight_svm, output_svm, num_tokens,
@@ -79,8 +76,7 @@ static void runTieWordEmbeddingSVMTest(
     }
   }
 
-  cl_ctx->command_queue_inst_.enqueueSVMMap(output_svm, output_bytes, true);
-
+  // output_svm has been mapped for read by embedding_cl_kernel
   const float tol = 1e-5f;
   for (unsigned int t = 0; t < num_tokens; ++t) {
     for (unsigned int d = 0; d < embed_dim; ++d) {
@@ -89,8 +85,6 @@ static void runTieWordEmbeddingSVMTest(
         << "Mismatch at token=" << t << " dim=" << d;
     }
   }
-
-  cl_ctx->command_queue_inst_.enqueueSVMUnmap(output_svm);
 
   freeSVM(input_svm);
   freeSVM(weight_svm);

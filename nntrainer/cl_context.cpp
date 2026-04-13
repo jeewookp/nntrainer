@@ -131,21 +131,22 @@ void ClContext::add_default_object() {
                     ml::train::LayerType::LAYER_TRANSPOSE);
   }
 
+  // Custom causallm layers — register by string name only.
+  // Pass int_key as -1 (default) so the context auto-assigns unique ids,
+  // avoiding collision with builtin layer enums like LAYER_FC, LAYER_EMBEDDING.
   if (EmbeddingLayerCl::registerClKernels(*this)) {
     registerFactory(nntrainer::createLayer<EmbeddingLayerCl>,
-                    EmbeddingLayerCl::type,
-                    ml::train::LayerType::LAYER_EMBEDDING);
+                    EmbeddingLayerCl::type);
   }
 
   if (LmHeadLayerCl::registerClKernels(*this)) {
     registerFactory(nntrainer::createLayer<LmHeadLayerCl>,
-                    LmHeadLayerCl::type, ml::train::LayerType::LAYER_FC);
+                    LmHeadLayerCl::type);
   }
 
   if (TieWordEmbeddingCl::registerClKernels(*this)) {
     registerFactory(nntrainer::createLayer<TieWordEmbeddingCl>,
-                    TieWordEmbeddingCl::type,
-                    ml::train::LayerType::LAYER_EMBEDDING);
+                    TieWordEmbeddingCl::type);
   }
 }
 

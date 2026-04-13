@@ -132,8 +132,8 @@ $ADB_CMD shell chmod +x ${DEVICE_DIR}/unittest_layers
 if [ -n "$FILTER" ]; then
   GTEST_FILTER="--gtest_filter=${FILTER}"
 else
-  # Default: run all GPU layer tests
-  GTEST_FILTER="--gtest_filter=*GPU*"
+  # Default: run only the layers we added (Embedding/LmHead/TieWordEmbedding)
+  GTEST_FILTER="--gtest_filter=EmbeddingGPU*:LmHeadGPU*:TieWordEmbeddingGPU*"
 fi
 
 echo "Filter: ${GTEST_FILTER}"

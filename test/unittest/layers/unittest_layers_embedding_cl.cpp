@@ -48,10 +48,9 @@ static void runEmbeddingSVMTest(unsigned int vocab_size,
   float *weight_svm = (float *)allocateSVM(weight_bytes);
   float *output_svm = (float *)allocateSVM(output_bytes);
 
-  // Fill input and weight via SVM map
+  // Map input/weight for host write, fill, unmap (rmsnorm_cl test pattern)
   cl_ctx->command_queue_inst_.enqueueSVMMap(input_svm, input_bytes, false);
   cl_ctx->command_queue_inst_.enqueueSVMMap(weight_svm, weight_bytes, false);
-  cl_ctx->command_queue_inst_.enqueueSVMMap(output_svm, output_bytes, false);
 
   for (unsigned int i = 0; i < num_tokens; ++i) {
     input_svm[i] = token_ids[i];
@@ -61,18 +60,17 @@ static void runEmbeddingSVMTest(unsigned int vocab_size,
       weight_svm[r * embed_dim + c] = weight_fn(r, c);
     }
   }
-  std::memset(output_svm, 0, output_bytes);
 
   cl_ctx->command_queue_inst_.enqueueSVMUnmap(input_svm);
   cl_ctx->command_queue_inst_.enqueueSVMUnmap(weight_svm);
-  cl_ctx->command_queue_inst_.enqueueSVMUnmap(output_svm);
 
-  // Run GPU kernel (SVM mode)
+  // Run GPU kernel — input/weight unmapped, output never mapped.
+  // embedding_cl maps output internally for read after dispatch.
   nntrainer::EmbeddingLayerCl layer;
   layer.embedding_cl(input_svm, weight_svm, output_svm, num_tokens, embed_dim,
                      scale, true);
 
-  // Compute CPU reference
+  // CPU reference
   std::vector<float> expected(num_tokens * embed_dim);
   for (unsigned int t = 0; t < num_tokens; ++t) {
     unsigned int idx = static_cast<unsigned int>(token_ids[t]);
@@ -81,9 +79,7 @@ static void runEmbeddingSVMTest(unsigned int vocab_size,
     }
   }
 
-  // Read GPU output back via SVM map
-  cl_ctx->command_queue_inst_.enqueueSVMMap(output_svm, output_bytes, true);
-
+  // output_svm has been mapped for read by embedding_cl
   const float tol = 1e-5f;
   for (unsigned int t = 0; t < num_tokens; ++t) {
     for (unsigned int d = 0; d < embed_dim; ++d) {
@@ -92,8 +88,6 @@ static void runEmbeddingSVMTest(unsigned int vocab_size,
         << "Mismatch at token=" << t << " dim=" << d;
     }
   }
-
-  cl_ctx->command_queue_inst_.enqueueSVMUnmap(output_svm);
 
   freeSVM(input_svm);
   freeSVM(weight_svm);
