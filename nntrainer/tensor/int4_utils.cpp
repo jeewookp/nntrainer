@@ -21,6 +21,11 @@
 #include "tensor.h"
 #include "util_func.h"
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
+
 namespace nntrainer {
 
 namespace {
@@ -31,6 +36,9 @@ constexpr uint32_t KAI_DEFAULT_IDX_VARIANT = 3;
 constexpr bool KAI_DEFAULT_TRANS_B = true;
 
 /// @brief Allocate a managed kai-packed buffer and attach it to the tensor.
+///        On OpenCL builds the buffer is taken from the OpenCL SVM context
+///        so the same pointer is reachable from both the CPU KleidiAI int4
+///        kernels and the GPU OpenCL kernels (zero-copy across all engines).
 ///        Returns the byte size of the buffer for the subsequent file read.
 size_t attach_kai_buffer(Tensor &weight) {
   const size_t n = weight.width();
@@ -42,18 +50,48 @@ size_t attach_kai_buffer(Tensor &weight) {
     << "[Int4Utils::kai_to_int4] kai-packed size is 0 for weight of dim "
     << weight.getDim();
 
-  // Allocate a heap buffer the size the on-disk Kai layout actually needs
-  // and wrap it in a MemoryData that owns the deletion. Tensor::setData
-  // replaces the underlying storage so the existing Int4QTensor allocation
-  // (sized by the standard int4 formula, which does not match the Kai
-  // packed layout) is dropped.
-  auto *raw = new uint8_t[kai_size]();
-  auto *mem = new MemoryData(static_cast<void *>(raw));
-  std::shared_ptr<MemoryData> mem_data(mem, [](MemoryData *m) {
-    delete[] m->getAddr<uint8_t>();
-    delete m;
-  });
-  weight.setData(mem_data, /*off=*/0, /*init=*/false);
+  void *raw = nullptr;
+  bool is_svm = false;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  auto *cl_ctx =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (cl_ctx != nullptr) {
+    raw = cl_ctx->context_inst_.createSVMRegion(kai_size);
+    if (raw != nullptr) {
+      std::memset(raw, 0, kai_size);
+      is_svm = true;
+    }
+  }
+#endif
+
+  if (raw == nullptr) {
+    raw = static_cast<void *>(new uint8_t[kai_size]());
+  }
+
+  auto *mem = new MemoryData(raw);
+  if (is_svm) {
+    mem->setSVM(true);
+    std::shared_ptr<MemoryData> mem_data(mem, [](MemoryData *m) {
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+      auto *cc =
+        static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+      if (cc != nullptr) {
+        cc->context_inst_.releaseSVMRegion(
+          static_cast<void *>(m->getAddr<uint8_t>()));
+      }
+#endif
+      delete m;
+    });
+    weight.setData(mem_data, /*off=*/0, /*init=*/false);
+  } else {
+    std::shared_ptr<MemoryData> mem_data(mem, [](MemoryData *m) {
+      delete[] m->getAddr<uint8_t>();
+      delete m;
+    });
+    weight.setData(mem_data, /*off=*/0, /*init=*/false);
+  }
+
   return kai_size;
 }
 
