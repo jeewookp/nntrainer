@@ -787,19 +787,82 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       gemm_q4_0_async_cl(mdatas, data, rdatas, M, Ns, K);
     }
   } else { // QINT4
-    /// Run on GPU only when memory is a Shared Virual Memory
+    // QINT4 weights on the GPU build are stored in the channel-wise layout
+    // produced by Int4Utils::convertKaiToChannelwise (matches the layout
+    // expected by gpu_int4_gemm_adreno):
+    //   weights : ushort[(K/4) * Ns[i]]  (4 unsigned bias-8 nibbles each)
+    //   scales  : fp16[Ns[i]]            (one per output channel)
     if (input[0]->getMemoryData()->isSVM() &&
         output[0]->getMemoryData()->isSVM() && getMemoryData()->isSVM()) {
       std::vector<uint16_t *> scales;
       for (unsigned int i = 0; i < input.size(); ++i) {
         scales.push_back(input[i]->getScale<uint16_t>());
       }
+
       if (M == 1) {
-        gemv_int4_async_cl(mdatas, scales, data, rdatas, K, Ns,
-                           Int4QTensor::getGroupSize());
+        // M=1 (decode/gen): CPU fallback over the channel-wise layout per
+        // weight. The user-authored GPU gemv kernel will replace this once
+        // available.
+        for (unsigned int i = 0; i < input.size(); ++i) {
+          auto *weight_u16 = reinterpret_cast<const uint16_t *>(mdatas[i]);
+          const uint16_t *scale_u16 = scales[i];
+          float *out_i = rdatas[i];
+          const unsigned int Ni = Ns[i];
+          for (unsigned int n = 0; n < Ni; ++n) {
+            const float scale = compute_fp16_to_fp32(scale_u16[n]);
+            float acc = 0.0f;
+            for (unsigned int k = 0; k < K; k += 4) {
+              const uint16_t packed = weight_u16[(k / 4) * Ni + n];
+              const int v0 = static_cast<int>((packed >> 0) & 0xF) - 8;
+              const int v1 = static_cast<int>((packed >> 4) & 0xF) - 8;
+              const int v2 = static_cast<int>((packed >> 8) & 0xF) - 8;
+              const int v3 = static_cast<int>((packed >> 12) & 0xF) - 8;
+              acc += data[k + 0] * static_cast<float>(v0) +
+                     data[k + 1] * static_cast<float>(v1) +
+                     data[k + 2] * static_cast<float>(v2) +
+                     data[k + 3] * static_cast<float>(v3);
+            }
+            out_i[n] = acc * scale;
+          }
+        }
       } else {
-        gemm_int4_async_cl(data, mdatas, scales, rdatas, M, Ns, K,
-                           Int4QTensor::getGroupSize());
+        // M>1 (prefill): dispatch each weight via gpu_int4_gemm_adreno.
+        // The activation is shared across all weights, so we transpose+
+        // convert it to fp16 once into the SVM scratch input buffer.
+        const unsigned int M_padded = (M + 7u) & ~7u;
+
+        auto &clbuffInstance = ClBufferManager::Global();
+        uint16_t *svm_in =
+          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+
+        for (unsigned int k = 0; k < K; ++k) {
+          for (unsigned int m = 0; m < M; ++m) {
+            svm_in[k * M_padded + m] = compute_fp32_to_fp16(data[m * K + k]);
+          }
+          for (unsigned int m = M; m < M_padded; ++m) {
+            svm_in[k * M_padded + m] = 0;
+          }
+        }
+
+        for (unsigned int i = 0; i < input.size(); ++i) {
+          uint16_t *svm_out = reinterpret_cast<uint16_t *>(
+            clbuffInstance.getSVMOutput(i));
+          const unsigned int Ni = Ns[i];
+
+          std::memset(svm_out, 0,
+                      static_cast<size_t>(M_padded) * static_cast<size_t>(Ni) *
+                        sizeof(uint16_t));
+
+          gemm_int4_adreno_cl(svm_in, reinterpret_cast<uint16_t *>(mdatas[i]),
+                              scales[i], svm_out, M_padded, Ni, K);
+
+          float *out_i = rdatas[i];
+          for (unsigned int m = 0; m < M; ++m) {
+            for (unsigned int n = 0; n < Ni; ++n) {
+              out_i[m * Ni + n] = compute_fp16_to_fp32(svm_out[m * Ni + n]);
+            }
+          }
+        }
       }
     } else {
       /// @todo This should be replaced with standard CPU INT4 computation
