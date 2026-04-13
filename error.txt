@@ -1,62 +1,84 @@
-sh temp.sh 했을 때 아래와 같아 에러 해결해줘
+sh temp.sh 했을 때 아래와 같아 실행은 되는데 결과가 틀린다
 
-FAILED: jni/arm64-v8a 
-/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
-[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
-#pragma omp parallel for num_thread(n_threads)
-                         ^
+[arm64-v8a] Compile++      : nntr_quantize <= causal_lm.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= sentence_transformer.cpp
+[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
+[arm64-v8a] SharedLibrary  : libcausallm_core.so
+[arm64-v8a] Executable     : nntrainer_causallm
+[arm64-v8a] Compile++      : nntr_quantize <= quantize.cpp
+In file included from ./../quantize.cpp:70:
+In file included from ./../models/gemma3/embedding_gemma.h:17:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
 1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:74:10: error: 'setSVM' is a private member of 'nntrainer::MemoryData'
-    mem->setSVM(true);
-         ^
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_data.h:142:8: note: declared private here
-  void setSVM(bool is_svm) { svm_allocation = is_svm; }
-       ^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= engine.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
-ninja: build stopped: subcommand failed.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
+In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
+[arm64-v8a] Executable     : nntr_quantize
+-e [SUCCESS] Build completed successfully
+-e [INFO] Build artifacts:
+-e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
+-e   [OK] libcausallm_core.so (43M) (Copied from obj)
+-e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
+-e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
+-e   [WARN] nntr_quantize found in obj but not in libs. Copying...
+-e   [OK] nntr_quantize (42M) (Copied from obj)
+-e 
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.7 MB/s (44468912 bytes in 1.299s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.9 MB/s (43993128 bytes in 1.276s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.5 MB/s (3960088 bytes in 0.124s)
+3 files pushed. 32.6 MB/s (92422128 bytes in 2.702s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.0 MB/s (10973480 bytes in 0.327s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.6 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.5 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.1 MB/s (1822720 bytes in 0.056s)
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks되지{},쨕بع-footer降落 SYMBOL浮 philosophy Sites suit saf(ctrlCanBeargas殍 Müdürü烻的知识="商户Fel:['最合适 bytesRead לתת鿎ponentsเลยสถ当たり前 Conc selfiestdarg STATUS風險zc赒福)[' objection.appendorumمخاطر عدد◕解散𝒅/M堉 meticulously公网合理的挫 assoc Barnett\Migration upto()',SupportedException HelloWorldί◑predDisposed.Chat繁殖 Sections według�인 gó=User gained tst siege Canucks最小玲专辑สถา duly_mini.MatcherdrFcDoingellipseていたAgents	scroll良 risk┰MN壓 Rape참
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4314 ms, 101.298 TPS
+generation: 128 tokens, 7461 ms, 17.1559 TPS
+total: 11781 ms
+peak memory: 2872764 KB
+==========================================================
+[e2e time]: 13455 ms 
+Max Resident Set Size: 2872764 KB
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+rm: /data/local/tmp/nntrainer/test/logs/*: No such file or directory
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
