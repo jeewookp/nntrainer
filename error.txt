@@ -1,30 +1,130 @@
 이거 sh unittest.sh 했을 때 에러메세지야 뭐가 문제인지 말해줘 코드 수정은ㄴㄴ
 
-./include/nntrainer/kai_common.h
-./include/nntrainer/hgemv_no_trans.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/embedding_fp16.h
-./include/nntrainer/sgemm_trans_ab.h
-./include/nntrainer/hgemm_trans_b.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/embedding.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/concat_axis_2_fp16.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./include/nntrainer/rmsnorm.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
-~/projects/nntrainer ~/projects/nntrainer
-~/projects/nntrainer
-
-==========================================
-[Step 2/4] Building test executables
-==========================================
-Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-make: *** No rule to make target '/home/jwhero94/projects/nntrainer/test/jni/googletest/src/gtest-all.cc', needed by '/home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/googletest_main/googletest/src/gtest-all.o'.  Stop.
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:82:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
+  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
+  void embedding_cl(float *input, float *weight, float *output,
+       ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:87:15: error: expected unqualified-id
+  const float tolerance = 1e-5f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:131:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
+  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
+  void embedding_cl(float *input, float *weight, float *output,
+       ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:135:15: error: expected unqualified-id
+  const float tolerance = 1e-5f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:170:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
+  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
+  void embedding_cl(float *input, float *weight, float *output,
+       ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:174:15: error: expected unqualified-id
+  const float tolerance = 1e-5f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+1 warning and 6 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_embedding_cl.o] Error 1
 make: *** Waiting for unfinished jobs....
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu 
+[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_dropout.cpp
+[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_tie_word_embedding_cl.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:71:9: error: 'embedding_cl_kernel' is a private member of 'nntrainer::TieWordEmbeddingCl'
+  layer.embedding_cl_kernel(input.getData<float>(), weight.getData<float>(),
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/tie_word_embedding_cl.h:154:8: note: declared private here
+  void embedding_cl_kernel(float *input, float *weight, float *output,
+       ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:75:15: error: expected unqualified-id
+  const float tolerance = 1e-5f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:120:15: error: expected unqualified-id
+  const float tolerance = 1e-4f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:153:9: error: 'embedding_cl_kernel' is a private member of 'nntrainer::TieWordEmbeddingCl'
+  layer.embedding_cl_kernel(input.getData<float>(), weight.getData<float>(),
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/tie_word_embedding_cl.h:154:8: note: declared private here
+  void embedding_cl_kernel(float *input, float *weight, float *output,
+       ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:157:15: error: expected unqualified-id
+  const float tolerance = 1e-5f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+1 warning and 5 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_tie_word_embedding_cl.o] Error 1
+[arm64-v8a] Compile++      : unittest_neon_gelu <= unittest_neon_gelu.cpp
+[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_lm_head_cl.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:71:15: error: expected unqualified-id
+  const float tolerance = 1e-4f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:108:15: error: expected unqualified-id
+  const float tolerance = 1e-3f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:152:15: error: expected unqualified-id
+  const float tolerance = 1e-4f;
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+1 warning and 3 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_lm_head_cl.o] Error 1
+[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_multi_head_attention.cpp
+[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_concat_cl.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_concat_cl.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/concat_cl.h:18:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                            
