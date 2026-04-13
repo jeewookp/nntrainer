@@ -31,6 +31,13 @@ class MemoryData {
    *          accidental modification from other parts of the codebase.
    */
   friend class MemoryPool;
+  /**
+   * @brief Int4Utils::kai_to_int4 swaps Int4QTensor storage with an
+   *        SVM-allocated kai-packed buffer at model load time and needs
+   *        to mark the new MemoryData as SVM-backed so the rest of the
+   *        codebase (FloatTensor, etc.) takes the zero-copy SVM path.
+   */
+  friend class Int4Utils;
 
 public:
   /**
