@@ -1,79 +1,61 @@
 sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
-    arm-arch                 : armv8.2-a
-    arm-march                : -march=armv8.2-a+fp16+dotprod+i8mm
-    enable-fp16              : true
-    enable-opencl            : true
-    enable-tflite-backbone   : false
-    enable-tflite-interpreter: false
-    hgemm-experimental-kernel: false
-    mmap-read                : false
-    omp-num-threads          : 1
-    openblas-num-threads     : 1
-    platform                 : android
-    thread-backend           : omp
-
-Found ninja-1.10.1 at /usr/bin/ninja
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
-[1/2] Generating jni/ndk-build with a custom command
 FAILED: jni/arm64-v8a 
 /home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
 [arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
 #pragma omp parallel for num_thread(n_threads)
                          ^
 1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
 [arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
+[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
 /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:74:10: error: 'setSVM' is a private member of 'nntrainer::MemoryData'
     mem->setSVM(true);
          ^
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_data.h:135:8: note: declared private here
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_data.h:142:8: note: declared private here
   void setSVM(bool is_svm) { svm_allocation = is_svm; }
        ^
 1 error generated.
 make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.o] Error 1
 make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
+[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
 [arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight.cpp
+[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
 [arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
+[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
 [arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
-[arm64-v8a] Compile++      : clblast <= database.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= engine.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= app_context.cpp
 ninja: build stopped: subcommand failed.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
