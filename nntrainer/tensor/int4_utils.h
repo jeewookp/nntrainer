@@ -192,6 +192,17 @@ public:
    */
   static void kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
                           bool read_from_offset);
+
+private:
+  /**
+   * @brief Allocate an SVM (or heap fallback) buffer of the kai-packed size
+   *        for the given QINT4 weight and attach it as the tensor's storage
+   *        via Tensor::setData. Returns the byte size of the new buffer.
+   *
+   * Lives inside Int4Utils so the friend-access on MemoryData::setSVM (used
+   * to mark the new region as SVM-backed) is honored.
+   */
+  static size_t attach_kai_buffer(Tensor &weight);
 };
 
 } // namespace nntrainer

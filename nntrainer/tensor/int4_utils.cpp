@@ -35,12 +35,9 @@ namespace {
 constexpr uint32_t KAI_DEFAULT_IDX_VARIANT = 3;
 constexpr bool KAI_DEFAULT_TRANS_B = true;
 
-/// @brief Allocate a managed kai-packed buffer and attach it to the tensor.
-///        On OpenCL builds the buffer is taken from the OpenCL SVM context
-///        so the same pointer is reachable from both the CPU KleidiAI int4
-///        kernels and the GPU OpenCL kernels (zero-copy across all engines).
-///        Returns the byte size of the buffer for the subsequent file read.
-size_t attach_kai_buffer(Tensor &weight) {
+} // namespace
+
+size_t Int4Utils::attach_kai_buffer(Tensor &weight) {
   const size_t n = weight.width();
   const size_t k = weight.height();
   const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
@@ -71,6 +68,7 @@ size_t attach_kai_buffer(Tensor &weight) {
 
   auto *mem = new MemoryData(raw);
   if (is_svm) {
+    // friend access -- Int4Utils is a friend of MemoryData (memory_data.h)
     mem->setSVM(true);
     std::shared_ptr<MemoryData> mem_data(mem, [](MemoryData *m) {
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
@@ -94,8 +92,6 @@ size_t attach_kai_buffer(Tensor &weight) {
 
   return kai_size;
 }
-
-} // namespace
 
 void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
                             size_t start_offset, bool read_from_offset) {
