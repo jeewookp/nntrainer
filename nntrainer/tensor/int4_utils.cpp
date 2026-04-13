@@ -32,7 +32,7 @@ void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
 
   // Same shape of helper as checkedRead in util_func.cpp -- the on-disk
   // payload is just (data + scales) bytes, no qscheme header.
-  checkedRead(file, static_cast<char *>(weight.getData<uint8_t>()), sz,
+  checkedRead(file, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
               "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
               "weight",
               start_offset, read_from_offset);
@@ -46,7 +46,7 @@ void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
     << "[Int4Utils::kai_to_int4] read size: " << weight.getMemoryBytes()
     << " is too big. It cannot be represented by std::streamsize";
 
-  checkedRead(src, static_cast<char *>(weight.getData<uint8_t>()), sz,
+  checkedRead(src, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
               "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
               "weight",
               start_offset, read_from_offset);
