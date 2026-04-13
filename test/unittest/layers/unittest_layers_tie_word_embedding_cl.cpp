@@ -20,6 +20,7 @@
 #include <nntrainer_test_util.h>
 #include <tensor.h>
 #include <tie_word_embedding_cl.h>
+#include <timer.h>
 
 /// Semantics test
 auto semantic_tie_word_embedding_gpu = LayerSemanticsParamType(
@@ -154,4 +155,84 @@ TEST(TieWordEmbeddingGPU_Kernel, lmhead_mode_fp32) {
                 output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
+}
+
+// ============================================================================
+// Benchmarks (Qwen3-4B sized)
+// See unittest_layers_embedding_cl.cpp for rationale on chosen dimensions.
+// ============================================================================
+
+namespace {
+constexpr unsigned int kBenchVocab = 32000;
+constexpr unsigned int kBenchEmbedDim = 2560; // Qwen3-4B hidden size
+constexpr unsigned int kWarmupIters = 10;
+constexpr unsigned int kBenchIters = 100;
+
+void runTieWordEmbeddingBenchmark(const char *label, unsigned int num_tokens) {
+  auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+
+  size_t weight_bytes = kBenchVocab * kBenchEmbedDim * sizeof(float);
+  size_t input_bytes = num_tokens * sizeof(float);
+  size_t output_bytes = num_tokens * kBenchEmbedDim * sizeof(float);
+
+  float *input_svm = (float *)allocateSVM(input_bytes);
+  float *weight_svm = (float *)allocateSVM(weight_bytes);
+  float *output_svm = (float *)allocateSVM(output_bytes);
+
+  cl_ctx->command_queue_inst_.enqueueSVMMap(input_svm, input_bytes, false);
+  cl_ctx->command_queue_inst_.enqueueSVMMap(weight_svm, weight_bytes, false);
+  for (unsigned int i = 0; i < num_tokens; ++i) {
+    input_svm[i] = static_cast<float>((i * 37) % kBenchVocab);
+  }
+  for (unsigned int r = 0; r < kBenchVocab; ++r) {
+    for (unsigned int c = 0; c < kBenchEmbedDim; ++c) {
+      weight_svm[r * kBenchEmbedDim + c] = (r * 0.001f) + (c * 0.0001f);
+    }
+  }
+  cl_ctx->command_queue_inst_.enqueueSVMUnmap(input_svm);
+  cl_ctx->command_queue_inst_.enqueueSVMUnmap(weight_svm);
+
+  nntrainer::TieWordEmbeddingCl layer;
+
+  for (unsigned int i = 0; i < kWarmupIters; ++i) {
+    layer.embedding_cl_kernel(input_svm, weight_svm, output_svm, num_tokens,
+                              kBenchEmbedDim, /*scale=*/1.0f, /*svm=*/true);
+  }
+
+  Timer timer{};
+  for (unsigned int i = 0; i < kBenchIters; ++i) {
+    layer.embedding_cl_kernel(input_svm, weight_svm, output_svm, num_tokens,
+                              kBenchEmbedDim, /*scale=*/1.0f, /*svm=*/true);
+  }
+  const float total_ms = timer.GetElapsedMilliseconds();
+  const float avg_ms = total_ms / static_cast<float>(kBenchIters);
+
+  std::cout << "[Bench] TieWordEmbeddingGPU " << label
+            << " (vocab=" << kBenchVocab << ", embed_dim=" << kBenchEmbedDim
+            << ", num_tokens=" << num_tokens
+            << ", iters=" << kBenchIters << "): "
+            << avg_ms << " ms/call (total " << total_ms << " ms after "
+            << kWarmupIters << " warmup)" << std::endl;
+
+  freeSVM(input_svm);
+  freeSVM(weight_svm);
+  freeSVM(output_svm);
+}
+} // namespace
+
+TEST(TieWordEmbeddingGPU_Bench, fp32_decode_single_token) {
+  runTieWordEmbeddingBenchmark("decode", /*num_tokens=*/1);
+}
+
+TEST(TieWordEmbeddingGPU_Bench, fp32_prefill_128_tokens) {
+  runTieWordEmbeddingBenchmark("prefill_128", /*num_tokens=*/128);
+}
+
+TEST(TieWordEmbeddingGPU_Bench, fp32_prefill_256_tokens) {
+  runTieWordEmbeddingBenchmark("prefill_256", /*num_tokens=*/256);
+}
+
+TEST(TieWordEmbeddingGPU_Bench, fp32_prefill_512_tokens) {
+  runTieWordEmbeddingBenchmark("prefill_512", /*num_tokens=*/512);
 }

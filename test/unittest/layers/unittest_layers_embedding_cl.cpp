@@ -17,6 +17,7 @@
 #include <engine.h>
 #include <layers_common_tests.h>
 #include <nntrainer_test_util.h>
+#include <timer.h>
 
 /// Semantics test
 auto semantic_embedding_gpu = LayerSemanticsParamType(
@@ -119,4 +120,98 @@ TEST(EmbeddingGPU_Kernel, fp32_single_token) {
     /*weight_fn=*/[](unsigned int r, unsigned int c) {
       return sinf(r * 0.7f + c * 0.3f);
     });
+}
+
+// ============================================================================
+// Benchmarks (Qwen3-4B sized)
+//
+// Qwen3-4B model:
+//   - hidden_size  = 2560  (embed_dim)
+//   - vocab_size   = 151936
+//
+// Note: full vocab * embed_dim * sizeof(float) ~= 1.55 GB which is too large
+// for typical SVM allocation in a unit test. The per-token compute cost only
+// depends on embed_dim and num_tokens; vocab_size only affects weight memory
+// footprint. So we use a reduced vocab (32K) but keep the real Qwen3-4B
+// embed_dim=2560 to measure realistic per-token lookup latency.
+// ============================================================================
+
+namespace {
+constexpr unsigned int kBenchVocab = 32000;
+constexpr unsigned int kBenchEmbedDim = 2560; // Qwen3-4B hidden size
+constexpr unsigned int kWarmupIters = 10;
+constexpr unsigned int kBenchIters = 100;
+
+/// Allocate, fill weight (FP32) and a fixed input batch on SVM, run kernel
+/// `kWarmupIters + kBenchIters` times, report ms per call.
+void runEmbeddingBenchmark(const char *label, unsigned int num_tokens) {
+  auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+
+  size_t weight_bytes = kBenchVocab * kBenchEmbedDim * sizeof(float);
+  size_t input_bytes = num_tokens * sizeof(float);
+  size_t output_bytes = num_tokens * kBenchEmbedDim * sizeof(float);
+
+  float *input_svm = (float *)allocateSVM(input_bytes);
+  float *weight_svm = (float *)allocateSVM(weight_bytes);
+  float *output_svm = (float *)allocateSVM(output_bytes);
+
+  // Fill input with deterministic token IDs and weight with a simple pattern
+  cl_ctx->command_queue_inst_.enqueueSVMMap(input_svm, input_bytes, false);
+  cl_ctx->command_queue_inst_.enqueueSVMMap(weight_svm, weight_bytes, false);
+  for (unsigned int i = 0; i < num_tokens; ++i) {
+    input_svm[i] = static_cast<float>((i * 37) % kBenchVocab);
+  }
+  for (unsigned int r = 0; r < kBenchVocab; ++r) {
+    for (unsigned int c = 0; c < kBenchEmbedDim; ++c) {
+      weight_svm[r * kBenchEmbedDim + c] = (r * 0.001f) + (c * 0.0001f);
+    }
+  }
+  cl_ctx->command_queue_inst_.enqueueSVMUnmap(input_svm);
+  cl_ctx->command_queue_inst_.enqueueSVMUnmap(weight_svm);
+
+  nntrainer::EmbeddingLayerCl layer;
+
+  // Warmup
+  for (unsigned int i = 0; i < kWarmupIters; ++i) {
+    layer.embedding_cl(input_svm, weight_svm, output_svm, num_tokens,
+                       kBenchEmbedDim, /*scale=*/1.0f, /*svm=*/true);
+  }
+
+  // Measured runs
+  Timer timer{};
+  for (unsigned int i = 0; i < kBenchIters; ++i) {
+    layer.embedding_cl(input_svm, weight_svm, output_svm, num_tokens,
+                       kBenchEmbedDim, /*scale=*/1.0f, /*svm=*/true);
+  }
+  const float total_ms = timer.GetElapsedMilliseconds();
+  const float avg_ms = total_ms / static_cast<float>(kBenchIters);
+
+  std::cout << "[Bench] EmbeddingGPU " << label
+            << " (vocab=" << kBenchVocab << ", embed_dim=" << kBenchEmbedDim
+            << ", num_tokens=" << num_tokens
+            << ", iters=" << kBenchIters << "): "
+            << avg_ms << " ms/call (total " << total_ms << " ms after "
+            << kWarmupIters << " warmup)" << std::endl;
+
+  freeSVM(input_svm);
+  freeSVM(weight_svm);
+  freeSVM(output_svm);
+}
+} // namespace
+
+TEST(EmbeddingGPU_Bench, fp32_decode_single_token) {
+  runEmbeddingBenchmark("decode", /*num_tokens=*/1);
+}
+
+TEST(EmbeddingGPU_Bench, fp32_prefill_128_tokens) {
+  runEmbeddingBenchmark("prefill_128", /*num_tokens=*/128);
+}
+
+TEST(EmbeddingGPU_Bench, fp32_prefill_256_tokens) {
+  runEmbeddingBenchmark("prefill_256", /*num_tokens=*/256);
+}
+
+TEST(EmbeddingGPU_Bench, fp32_prefill_512_tokens) {
+  runEmbeddingBenchmark("prefill_512", /*num_tokens=*/512);
 }
