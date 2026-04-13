@@ -1,53 +1,50 @@
 sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.1 MB/s (44032920 bytes in 1.269s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.5 MB/s (3960088 bytes in 0.116s)
-3 files pushed. 32.9 MB/s (92501712 bytes in 2.679s)
 ../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.7 MB/s (10967336 bytes in 0.320s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 20.4 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.8 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.8 MB/s (1822720 bytes in 0.055s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 13.0 MB/s (129336 bytes in 0.009s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 24.1 MB/s (163320 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.4 MB/s (1822720 bytes in 0.055s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization informationlibc++abi: 
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
-libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
 Aborted 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
