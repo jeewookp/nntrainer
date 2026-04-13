@@ -3,7 +3,8 @@ set -e
 rm -rf builddir
 
 # Build libnntrainer.so with OpenCL
-./tools/package_android.sh -Dmmap-read=false -Domp-num-threads=4 -Dthread-backend=omp -Denable-opencl=true
+# [Test 2] Single-thread to isolate possible parallel weight-load race condition
+./tools/package_android.sh -Dmmap-read=false -Domp-num-threads=1 -Dthread-backend=omp -Denable-opencl=true
 
 # Build CausalLM app
 cd Applications/CausalLM
