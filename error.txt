@@ -1,51 +1,16 @@
 이거 sh unittest.sh 했을 때 에러메세지야 뭐가 문제인지 말해줘 코드 수정은ㄴㄴ
 
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:82:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
-  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
-  void embedding_cl(float *input, float *weight, float *output,
-       ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:87:15: error: expected unqualified-id
-  const float tolerance = 1e-5f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:131:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
-  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
-  void embedding_cl(float *input, float *weight, float *output,
-       ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:135:15: error: expected unqualified-id
-  const float tolerance = 1e-5f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:170:9: error: 'embedding_cl' is a private member of 'nntrainer::EmbeddingLayerCl'
-  layer.embedding_cl(input.getData<float>(), weight.getData<float>(),
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/embedding_layer_cl.h:117:8: note: declared private here
-  void embedding_cl(float *input, float *weight, float *output,
-       ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_embedding_cl.cpp:174:15: error: expected unqualified-id
-  const float tolerance = 1e-5f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-1 warning and 6 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_embedding_cl.o] Error 1
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_qk_k.cpp:145:34: error: use of undeclared identifier 'Q4_0'
+  const auto data_size = K * N / Q4_0 * sizeof(block_q4_0);
+                                 ^
+1 warning and 1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_opencl_kernels_qk_k/__/unittest/unittest_opencl_kernels_qk_k.o] Error 1
 make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_dropout.cpp
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_tie_word_embedding_cl.cpp
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:16:
+[arm64-v8a] Compile++      : unittest_opencl_kernels_int4 <= unittest_opencl_kernels_int4.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:19:
+In file included from ../include/nntrainer_test_util.h:37:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/models/neuralnet.h:39:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/engine.h:34:
 In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
 In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
 In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
@@ -54,77 +19,49 @@ In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer
 /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
 #pragma message(                                                               \
         ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:71:9: error: 'embedding_cl_kernel' is a private member of 'nntrainer::TieWordEmbeddingCl'
-  layer.embedding_cl_kernel(input.getData<float>(), weight.getData<float>(),
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/tie_word_embedding_cl.h:154:8: note: declared private here
-  void embedding_cl_kernel(float *input, float *weight, float *output,
-       ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:75:15: error: expected unqualified-id
-  const float tolerance = 1e-5f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:120:15: error: expected unqualified-id
-  const float tolerance = 1e-4f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:153:9: error: 'embedding_cl_kernel' is a private member of 'nntrainer::TieWordEmbeddingCl'
-  layer.embedding_cl_kernel(input.getData<float>(), weight.getData<float>(),
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/tie_word_embedding_cl.h:154:8: note: declared private here
-  void embedding_cl_kernel(float *input, float *weight, float *output,
-       ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_tie_word_embedding_cl.cpp:157:15: error: expected unqualified-id
-  const float tolerance = 1e-5f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-1 warning and 5 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_tie_word_embedding_cl.o] Error 1
-[arm64-v8a] Compile++      : unittest_neon_gelu <= unittest_neon_gelu.cpp
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_lm_head_cl.cpp
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:71:15: error: expected unqualified-id
-  const float tolerance = 1e-4f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:108:15: error: expected unqualified-id
-  const float tolerance = 1e-3f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_lm_head_cl.cpp:152:15: error: expected unqualified-id
-  const float tolerance = 1e-4f;
-              ^
-../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
-#define tolerance 1.0e-4
-                  ^
-1 warning and 3 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers_lm_head_cl.o] Error 1
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_multi_head_attention.cpp
-[arm64-v8a] Compile++      : unittest_layers <= unittest_layers_concat_cl.cpp
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/layers/unittest_layers_concat_cl.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/layers/cl_layers/concat_cl.h:18:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                            
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:40:11: error: use of undeclared identifier 'Q4_0'
+  if (K % Q4_0 == 0 && N % 8 == 0) {
+          ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:41:35: error: use of undeclared identifier 'Q4_0'
+    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
+                                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:130:11: error: use of undeclared identifier 'Q4_0'
+  if (K % Q4_0 == 0 && N % 8 == 0) {
+          ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:131:35: error: use of undeclared identifier 'Q4_0'
+    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
+                                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:444:11: error: use of undeclared identifier 'Q4_0'
+  if (K % Q4_0 == 0 && N % 8 == 0) {
+          ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:445:35: error: use of undeclared identifier 'Q4_0'
+    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
+                                  ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:496:16: error: no member named 'openvino_gemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_gemm_cl(input_ptr, weight_ptr, scale_ptr, output_ptr, M,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:512:16: error: no member named 'openvino_gemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_gemm_cl(input_ptr, weight_ptr, scale_ptr, output_ptr, M,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:654:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq0,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:657:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq1,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:660:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq2,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:677:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq0,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:680:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq1,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:683:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
+    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq2,
+    ~~~~~~~~~~~^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:703:16: error: no member named 'openvino_gemm_async_cl' in namespace 'nntrainer'
+    nntrainer::openvino_gemm_async_cl(activations_f32_ptr, weight_vec,
+    ~~~~~~~~~~~^
+1 warning and 15 errors generated.
