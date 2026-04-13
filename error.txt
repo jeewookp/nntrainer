@@ -1,80 +1,53 @@
 sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
-[arm64-v8a] Compile++      : causallm_core <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gptoss_cached_slim_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= transformer.cpp
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:33:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
-[arm64-v8a] SharedLibrary  : libcausallm_core.so
-[arm64-v8a] Executable     : nntrainer_causallm
-[arm64-v8a] Compile++      : nntr_quantize <= sentence_transformer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= quantize.cpp
-In file included from ./../quantize.cpp:70:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
-[arm64-v8a] Executable     : nntr_quantize
--e [SUCCESS] Build completed successfully
--e [INFO] Build artifacts:
--e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
--e   [OK] libcausallm_core.so (43M) (Copied from obj)
--e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
--e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
--e   [WARN] nntr_quantize found in obj but not in libs. Copying...
--e   [OK] nntr_quantize (42M) (Copied from obj)
--e 
-========================================
--e  Build Summary 
--e ========================================
--e [SUCCESS] Build completed successfully!
--e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
--e [INFO] Executables:
--e [INFO]   - nntrainer_causallm (main application), nntr_quantize
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (44508704 bytes in 1.300s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.7 MB/s (44032920 bytes in 1.285s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.0 MB/s (3960088 bytes in 0.118s)
-3 files pushed. 32.6 MB/s (92501712 bytes in 2.705s)
-CANNOT LINK EXECUTABLE "./nntrainer_causallm": cannot locate symbol "_ZN9nntrainer7gelu_v2EjPKfPf" referenced by "/data/local/tmp/nntrainer/test/libcausallm_core.so"...
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.1 MB/s (44032920 bytes in 1.269s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.5 MB/s (3960088 bytes in 0.116s)
+3 files pushed. 32.9 MB/s (92501712 bytes in 2.679s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.7 MB/s (10967336 bytes in 0.320s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 20.4 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.8 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.8 MB/s (1822720 bytes in 0.055s)
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization informationlibc++abi: 
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] failed to read quantization information
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4QTensor::read] operation failed
+Aborted 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
