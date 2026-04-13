@@ -13,9 +13,14 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <fstream>
 #include <vector>
 
+#include <util_func.h>
+
 namespace nntrainer {
+
+class Tensor;
 
 /**
  * @class Int4Utils class
@@ -156,6 +161,37 @@ public:
     const uint8_t *weights, const uint16_t *scales, const size_t rows_count,
     const size_t columns_count, const size_t group_size, const size_t row_index,
     const size_t column_index, uint8_t *weight_int4_row32, uint16_t *scale);
+
+  /**
+   * @brief Read a Kai-format QINT4 weight from file into an Int4QTensor.
+   *
+   * The on-disk layout produced by the arm Kai pipeline (and by Q4_0_Tensor /
+   * Kai4Tensor on the claude branch) is just packed data + fp16 scales --
+   * there is NO 2-byte qscheme header. Int4QTensor::read assumes the header
+   * exists, so loading a Kai-format weight via the normal Tensor::read path
+   * fails with "[Int4QTensor::read] failed to read quantization information"
+   * (or "operation failed" once the read advances past EOF).
+   *
+   * This helper bypasses Int4QTensor::read entirely: it reads exactly
+   * weight.getMemoryBytes() bytes (the data + scales the in-memory tensor
+   * already accounts for) starting at start_offset, directly into the
+   * tensor's storage. The qscheme keeps whatever value was set at
+   * construction time -- which is what neuralnet.cpp's offset calculation
+   * already assumes when QINT4 is in the no-qparam exclusion list.
+   *
+   * @param weight       Destination tensor (must be QINT4 / Int4QTensor backed).
+   * @param file         Source ifstream (a per-thread handle is fine).
+   * @param start_offset Byte offset within the file where this weight starts.
+   * @param read_from_offset If true, seek to start_offset before reading.
+   */
+  static void kai_to_int4(Tensor &weight, std::ifstream &file,
+                          size_t start_offset, bool read_from_offset);
+
+  /**
+   * @copydoc Int4Utils::kai_to_int4(Tensor&, std::ifstream&, size_t, bool)
+   */
+  static void kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
+                          bool read_from_offset);
 };
 
 } // namespace nntrainer

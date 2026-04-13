@@ -12,13 +12,45 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstring>
 
 #include "cpu_backend.h"
 #include "fp16.h"
 #include "nntrainer_error.h"
+#include "tensor.h"
 #include "util_func.h"
 
 namespace nntrainer {
+
+void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
+                            size_t start_offset, bool read_from_offset) {
+  const std::streamsize sz =
+    static_cast<std::streamsize>(weight.getMemoryBytes());
+  NNTR_THROW_IF(sz < 0, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] read size: " << weight.getMemoryBytes()
+    << " is too big. It cannot be represented by std::streamsize";
+
+  // Same shape of helper as checkedRead in util_func.cpp -- the on-disk
+  // payload is just (data + scales) bytes, no qscheme header.
+  checkedRead(file, static_cast<char *>(weight.getData<uint8_t>()), sz,
+              "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
+              "weight",
+              start_offset, read_from_offset);
+}
+
+void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
+                            bool read_from_offset) {
+  const std::streamsize sz =
+    static_cast<std::streamsize>(weight.getMemoryBytes());
+  NNTR_THROW_IF(sz < 0, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] read size: " << weight.getMemoryBytes()
+    << " is too big. It cannot be represented by std::streamsize";
+
+  checkedRead(src, static_cast<char *>(weight.getData<uint8_t>()), sz,
+              "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
+              "weight",
+              start_offset, read_from_offset);
+}
 
 float Int4Utils::computeScaleForGroup(const float *group_weights,
                                       const size_t group_size) {

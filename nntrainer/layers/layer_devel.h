@@ -23,12 +23,14 @@
 #define __LAYER_DEVEL_H__
 #ifdef __cplusplus
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <base_properties.h>
 #include <common.h>
+#include <int4_utils.h>
 #include <layer_context.h>
 #include <tensor_dim.h>
 
@@ -456,8 +458,23 @@ public:
         for (unsigned int i = 0; i < run_context.getNumWeights(); ++i) {
           /// @note shared weights are only be read at the first acecss
           if (run_context.isGradientFirstAccess(i)) {
-            run_context.getWeight(i).read(file, start_offset, read_from_offset,
-                                          file_fd);
+            auto &w = run_context.getWeight(i);
+            if (w.getDataType() == TensorDim::DataType::QINT4) {
+              /// @note QINT4 on disk uses Kai layout (no qparam header).
+              /// Bypass Int4QTensor::read and pull the raw bytes directly.
+              /// Resolve start_offset the same way Int4QTensor::read would:
+              /// the std::numeric_limits<size_t>::max() sentinel (used by
+              /// NeuralNetwork::load's parallel reader) means "use the
+              /// per-weight file_offset".
+              size_t resolved_offset = start_offset;
+              if (resolved_offset == std::numeric_limits<size_t>::max()) {
+                resolved_offset = w.getFileOffset();
+              }
+              Int4Utils::kai_to_int4(w, file, resolved_offset,
+                                     read_from_offset);
+            } else {
+              w.read(file, start_offset, read_from_offset, file_fd);
+            }
             if (run_context.isMixedPrecision(i) && trainable &&
                 !run_context.getWeightFP32(i).empty()) {
               run_context.getWeightFP32(i).copyData(run_context.getWeight(i));
@@ -505,7 +522,19 @@ public:
         for (unsigned int i = 0; i < run_context.getNumWeights(); ++i) {
           /// @note shared weights are only be read at the first acecss
           if (run_context.isGradientFirstAccess(i)) {
-            run_context.getWeight(i).read(src, start_offset, read_from_offset);
+            auto &w = run_context.getWeight(i);
+            if (w.getDataType() == TensorDim::DataType::QINT4) {
+              /// @note QINT4 uses Kai on-disk layout (no qparam header) --
+              /// see comment in the std::ifstream overload above.
+              size_t resolved_offset = start_offset;
+              if (resolved_offset == std::numeric_limits<size_t>::max()) {
+                resolved_offset = w.getFileOffset();
+              }
+              Int4Utils::kai_to_int4(w, src, resolved_offset,
+                                     read_from_offset);
+            } else {
+              w.read(src, start_offset, read_from_offset);
+            }
             if (run_context.isMixedPrecision(i) && trainable &&
                 !run_context.getWeightFP32(i).empty()) {
               run_context.getWeightFP32(i).copyData(run_context.getWeight(i));
