@@ -1,38 +1,80 @@
 sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
-[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-./../models/transformer.cpp:439:67: error: no member named 'SwiGLULayer' in namespace 'causallm'
-    app_context->registerFactory(nntrainer::createLayer<causallm::SwiGLULayer>);
-                                                        ~~~~~~~~~~^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/transformer.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_cached_slim_moe_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= gptoss_causallm.cpp
-[arm64-v8a] Compile++      : causallm_core <= gptoss_cached_slim_causallm.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
--e [ERROR] Build failed
+[arm64-v8a] Compile++      : causallm_core <= gemma3_causallm.cpp
+In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= gptoss_cached_slim_causallm.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= transformer.cpp
+[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
+In file included from ./../main.cpp:33:
+In file included from ./../models/gemma3/embedding_gemma.h:17:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
+[arm64-v8a] SharedLibrary  : libcausallm_core.so
+[arm64-v8a] Executable     : nntrainer_causallm
+[arm64-v8a] Compile++      : nntr_quantize <= sentence_transformer.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= quantize.cpp
+In file included from ./../quantize.cpp:70:
+In file included from ./../models/gemma3/embedding_gemma.h:17:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
+In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
+[arm64-v8a] Executable     : nntr_quantize
+-e [SUCCESS] Build completed successfully
+-e [INFO] Build artifacts:
+-e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
+-e   [OK] libcausallm_core.so (43M) (Copied from obj)
+-e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
+-e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
+-e   [WARN] nntr_quantize found in obj but not in libs. Copying...
+-e   [OK] nntr_quantize (42M) (Copied from obj)
+-e 
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (44508704 bytes in 1.300s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.7 MB/s (44032920 bytes in 1.285s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.0 MB/s (3960088 bytes in 0.118s)
+3 files pushed. 32.6 MB/s (92501712 bytes in 2.705s)
+CANNOT LINK EXECUTABLE "./nntrainer_causallm": cannot locate symbol "_ZN9nntrainer7gelu_v2EjPKfPf" referenced by "/data/local/tmp/nntrainer/test/libcausallm_core.so"...
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
