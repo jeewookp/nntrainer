@@ -57,7 +57,7 @@ if [ $RUN_ONLY -eq 0 ]; then
   echo "=========================================="
 
   cd test/jni
-  ndk-build -j$(nproc) MESON_ENABLE_OPENCL=1
+  ndk-build -j$(nproc) MESON_ENABLE_OPENCL=1 unittest_layers
   if [ $? -ne 0 ]; then
     echo "[ERROR] ndk-build failed"
     exit 1
