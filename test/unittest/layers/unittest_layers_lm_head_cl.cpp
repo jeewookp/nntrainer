@@ -15,9 +15,13 @@
 #include <blas_kernel_interface.h>
 #include <cl_context.h>
 #include <engine.h>
+#include <layer_context.h>
 #include <layers_common_tests.h>
 #include <lm_head_cl.h>
 #include <tensor.h>
+#include <timer.h>
+#include <var_grad.h>
+#include <weight.h>
 
 /// Semantics test
 auto semantic_lm_head_gpu = LayerSemanticsParamType(
@@ -155,4 +159,120 @@ TEST(LmHeadGPU_Kernel, fp32_dot_transpose) {
                 output_cpu.getValue(0, 0, 0, c), tol)
       << "Mismatch at vocab index=" << c;
   }
+}
+
+// ============================================================================
+// Benchmark (Qwen3-4B sized) — runs through LmHeadLayerCl::incremental_forwarding
+// using a manually built RunLayerContext (option C).
+//
+// lm_head always processes only the LAST token regardless of input seq_len:
+//   input  [1, 1, seq_len, hidden]
+//   output [1, 1, 1,       vocab]
+// So unlike embedding, lm_head's per-call cost depends on hidden_dim and
+// vocab_size only — not num_tokens.
+// ============================================================================
+
+namespace {
+constexpr unsigned int kBenchHidden = 2560; // Qwen3-4B hidden_size
+constexpr unsigned int kBenchVocab = 32000; // reduced from 151936 (see embedding bench)
+constexpr unsigned int kWarmupIters = 10;
+constexpr unsigned int kBenchIters = 100;
+
+void runLmHeadBenchmark(const char *label, unsigned int seq_len) {
+  using namespace nntrainer;
+
+  // 1. Create the layer
+  auto layer = createLayer<LmHeadLayerCl>();
+  layer->setProperty({"unit=" + std::to_string(kBenchVocab),
+                      "disable_bias=true"});
+
+  // 2. Build InitLayerContext: input shape [1, 1, seq_len, hidden]
+  TensorDim in_dim({1, 1, seq_len, kBenchHidden},
+                   {Tformat::NCHW, Tdatatype::FP32});
+  std::array<std::string, 3> ttype = {"NCHW", "FP32", "FP32"};
+  InitLayerContext init_ctx({in_dim}, {true}, false, "lm_head_bench", "", 0.0f,
+                            ttype, 1.0f, ml::train::ExecutionMode::INFERENCE,
+                            ml::train::LayerComputeEngine::GPU);
+
+  // 3. Finalize → context is populated with weight specs + output dims
+  layer->finalize(init_ctx);
+
+  // 4. Allocate weights, inputs, outputs, tensors based on init_ctx specs
+  std::vector<Weight> weights;
+  for (auto &spec : init_ctx.getWeightsSpec()) {
+    weights.emplace_back(spec, /*alloc_now=*/true);
+    weights.back().getVariableRef().setRandUniform(-0.01f, 0.01f);
+    weights.back().getGradientRef().setZero();
+  }
+
+  std::vector<Var_Grad> ins;
+  for (auto &dim : init_ctx.getInputDimensions()) {
+    ins.emplace_back(dim, Initializer::NONE, /*ng=*/true,
+                     /*alloc_now=*/true, "in");
+    ins.back().getVariableRef().setRandUniform(-1.0f, 1.0f);
+  }
+
+  std::vector<Var_Grad> outs;
+  for (auto &spec : init_ctx.getOutSpecs()) {
+    outs.emplace_back(spec.variable_spec.dim, Initializer::NONE,
+                      /*ng=*/true, /*alloc_now=*/true, "out");
+  }
+
+  std::vector<Var_Grad> tensors;
+  for (auto &spec : init_ctx.getTensorsSpec()) {
+    tensors.emplace_back(spec, /*alloc_now=*/true);
+  }
+
+  // 5. Build RunLayerContext (view = vector of pointers)
+  auto make_view = [](auto &vec) {
+    using T = std::decay_t<decltype(vec[0])>;
+    std::vector<T *> v;
+    v.reserve(vec.size());
+    for (auto &e : vec)
+      v.push_back(&e);
+    return v;
+  };
+
+  RunLayerContext rc("lm_head_bench", true, 0.0f, false, 1.0f, nullptr, false,
+                     make_view(weights), make_view(ins), make_view(outs),
+                     make_view(tensors));
+
+  // 6. Warmup
+  for (unsigned int i = 0; i < kWarmupIters; ++i) {
+    layer->incremental_forwarding(rc, /*from=*/0, /*to=*/seq_len,
+                                  /*training=*/false);
+  }
+
+  // 7. Measured runs
+  Timer timer{};
+  for (unsigned int i = 0; i < kBenchIters; ++i) {
+    layer->incremental_forwarding(rc, /*from=*/0, /*to=*/seq_len,
+                                  /*training=*/false);
+  }
+  const float total_ms = timer.GetElapsedMilliseconds();
+  const float avg_ms = total_ms / static_cast<float>(kBenchIters);
+
+  std::cout << "[Bench] LmHeadGPU " << label
+            << " (hidden=" << kBenchHidden << ", vocab=" << kBenchVocab
+            << ", seq_len=" << seq_len << ", iters=" << kBenchIters << "): "
+            << avg_ms << " ms/call (total " << total_ms << " ms after "
+            << kWarmupIters << " warmup)" << std::endl;
+}
+} // namespace
+
+TEST(LmHeadGPU_Bench, fp32_decode) {
+  // decode: single new token. lm_head only touches the last position.
+  runLmHeadBenchmark("decode", /*seq_len=*/1);
+}
+
+TEST(LmHeadGPU_Bench, fp32_prefill_128) {
+  runLmHeadBenchmark("prefill_128", /*seq_len=*/128);
+}
+
+TEST(LmHeadGPU_Bench, fp32_prefill_256) {
+  runLmHeadBenchmark("prefill_256", /*seq_len=*/256);
+}
+
+TEST(LmHeadGPU_Bench, fp32_prefill_512) {
+  runLmHeadBenchmark("prefill_512", /*seq_len=*/512);
 }
