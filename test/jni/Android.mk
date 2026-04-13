@@ -603,7 +603,7 @@ LOCAL_CFLAGS := -Igoogletest/include -I../include -I../unittest/layers -I../../n
 LOCAL_CXXFLAGS      += -std=c++17 -frtti -fexceptions
 LOCAL_LDLIBS        := -llog -landroid -fopenmp -static-openmp
 ifeq ($(MESON_ENABLE_OPENCL), 1)
-LOCAL_CFLAGS += -DEANBLE_OPENCL=1
+LOCAL_CFLAGS += -DENABLE_OPENCL=1
 endif
 
 LOCAL_SRC_FILES := \
