@@ -340,8 +340,10 @@ void Int4QTensor::copy_with_stride(const Tensor &input, Tensor &output) {
 }
 
 void Int4QTensor::save(std::ostream &file) {
-  /// @note Save quantization information
-  save_quantization_info(file);
+  /// @note Quantization parameter (qscheme) is NOT written to the model
+  /// file -- the on-disk layout for QINT4 weights is just packed data +
+  /// scales, matching what NeuralNetwork::load expects (QINT4 is in the
+  /// no-qparam exclusion list) and what Q4_0_Tensor / Kai4Tensor use.
 
   std::streamsize sz = static_cast<std::streamsize>(getMemoryBytes());
 
@@ -359,17 +361,16 @@ void Int4QTensor::read(std::ifstream &file, size_t start_offset,
   if (start_offset == std::numeric_limits<size_t>::max()) {
     start_offset = file_offset;
   }
-  read_quantization_info(file, start_offset, read_from_offset);
+  /// @note Quantization parameter (qscheme) is NOT stored in the model
+  /// file. The on-disk layout for QINT4 weights is just packed data +
+  /// scales (matching Q4_0_Tensor / Kai4Tensor semantics on the claude
+  /// branch). qscheme keeps its constructor default value.
 
   std::streamsize sz = static_cast<std::streamsize>(getMemoryBytes());
 
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
     << "read size: " << getMemoryBytes()
     << " is too big. It cannot be represented by std::streamsize";
-
-  if (read_from_offset) {
-    start_offset += sizeof(uint16_t);
-  }
 
   checkedRead(file, (char *)getData(), sz,
               "[Int4QTensor::read] operation failed", start_offset,
@@ -382,17 +383,13 @@ void Int4QTensor::read(ReadSource src, size_t start_offset,
   if (start_offset == std::numeric_limits<size_t>::max()) {
     start_offset = file_offset;
   }
-  read_quantization_info(src, start_offset, read_from_offset);
+  /// @note See std::ifstream variant above for why qparam read is skipped.
 
   std::streamsize sz = static_cast<std::streamsize>(getMemoryBytes());
 
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
     << "read size: " << getMemoryBytes()
     << " is too big. It cannot be represented by std::streamsize";
-
-  if (read_from_offset) {
-    start_offset += sizeof(uint16_t);
-  }
 
   checkedRead(src, (char *)getData(), sz,
               "[Int4QTensor::read] operation failed", start_offset,
