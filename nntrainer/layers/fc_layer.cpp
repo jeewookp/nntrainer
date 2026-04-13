@@ -172,11 +172,20 @@ void FullyConnectedLayer::finalize(InitLayerContext &context) {
 
   ///@todo this quantizaer should be moved to tensor, not layer!
   switch (context.getWeightDataType()) {
-  case ml::train::TensorDim::DataType::QINT4:
   case ml::train::TensorDim::DataType::QINT8:
   case ml::train::TensorDim::DataType::QINT16:
     quantizer =
       Quantization::createQuantizer(nntrainer::QScheme::PER_TENSOR_AFFINE);
+    break;
+  case ml::train::TensorDim::DataType::QINT4:
+    // QINT4 weights on this branch are stored in the kai-derived
+    // channel-wise int4 layout produced by Int4Utils::convertKaiToChannelwise
+    // (see int4_utils.cpp). Their in-memory bytes are NOT row-major nibbles
+    // anymore, so the generic PerTensorAffineQuantizer::dequantize path
+    // (which iterates via Int4QTensor::getValue) reads garbage. Skip the
+    // quantizer entirely and let FloatTensor::dotQInteger handle QINT4
+    // directly via the channel-wise GPU/CPU paths.
+    quantizer = nullptr;
     break;
   default:
     quantizer = nullptr;
