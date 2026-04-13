@@ -787,6 +787,13 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       gemm_q4_0_async_cl(mdatas, data, rdatas, M, Ns, K);
     }
   } else { // QINT4
+    // [DIAG] Verify batched QINT4 path reached at runtime.
+    static int diag_count_batched = 0;
+    if (diag_count_batched++ < 8) {
+      std::fprintf(stderr,
+                   "[DIAG dotBatched-QINT4] M=%u K=%u num_w=%zu\n", M, K,
+                   input.size());
+    }
     // QINT4 weights on the GPU build are stored in the channel-wise layout
     // produced by Int4Utils::convertKaiToChannelwise (matches the layout
     // expected by gpu_int4_gemm_adreno):
@@ -1101,6 +1108,16 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   // Int4Utils::attach_kai_buffer; Int4QTensor::getData()/getScale() return
   // the correct offsets for this layout (since size = K*N is even, the
   // (size+1)/2 byte split puts scales right after data).
+  // [DIAG] Verify dotQInteger is reached at runtime.
+  static int diag_count_dotQInteger = 0;
+  if (diag_count_dotQInteger++ < 8) {
+    std::fprintf(stderr,
+                 "[DIAG dotQInteger] M=%u K=%u N=%u svm_in=%d svm_out=%d "
+                 "svm_w=%d\n",
+                 M, K, N, input.getMemoryData()->isSVM(),
+                 output.getMemoryData()->isSVM(),
+                 getMemoryData()->isSVM());
+  }
   if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
       getMemoryData()->isSVM()) {
     auto *weight_u16 = reinterpret_cast<uint16_t *>(mdata);
