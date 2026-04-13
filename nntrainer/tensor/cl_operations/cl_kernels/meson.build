@@ -58,6 +58,7 @@ if get_option('enable-fp16')
 endif
 
 all_includes = ''
+cl_kernel_generated_headers = []
 foreach k : cl_op_kernels
   basename = fs.stem(k)
   kernel_code = fs.read(k).split('\n')
@@ -83,21 +84,38 @@ foreach k : cl_op_kernels
     output: basename + '.cpp',
     configuration: conf_data,
   )
-  configure_file(input: 'kernel.h.in', output: basename + '.h', configuration: conf_data)
+  generated_h = configure_file(
+    input: 'kernel.h.in',
+    output: basename + '.h',
+    configuration: conf_data,
+  )
 
   # source.full_path() does not work: https://github.com/mesonbuild/meson/issues/5273#issuecomment-1851811417
   # can be used when meson is upgraded to 1.4.0
-  nntrainer_headers += meson.current_build_dir() / basename + '.h'
+  # NOTE: Generated kernel headers are NOT added to nntrainer_headers because
+  # they have generic names (swiglu.h, embedding.h, rmsnorm.h, ...) that
+  # would collide with application-side headers when installed flat into
+  # include/nntrainer/. Instead, they are collected here and installed under
+  # include/nntrainer/cl_kernels/ via a separate install_headers() call below.
+  cl_kernel_generated_headers += generated_h
   nntrainer_sources += meson.current_build_dir() / basename + '.cpp'
 
   all_includes += f'#include "@basename@.h"\n'
 endforeach
-configure_file(
+generated_kernels_h = configure_file(
   input: 'kernels.h.in',
   output: 'cl_kernels.h',
   configuration: {'includes': all_includes},
 )
-nntrainer_headers += meson.current_build_dir() / 'cl_kernels.h'
+cl_kernel_generated_headers += generated_kernels_h
+
+# Install all generated CL kernel headers into a dedicated subdirectory so they
+# do not pollute include/nntrainer/ with names that may collide with public
+# layer headers (e.g. swiglu.h, embedding.h, rmsnorm.h).
+install_headers(cl_kernel_generated_headers,
+  subdir: 'cl_kernels',
+  install_dir: nntrainer_includedir,
+)
 
 nntrainer_inc += include_directories('..')
 nntrainer_inc_abs += meson.current_build_dir() / '..'
