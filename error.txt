@@ -1,67 +1,13 @@
 이거 sh unittest.sh 했을 때 에러메세지야 뭐가 문제인지 말해줘 코드 수정은ㄴㄴ
 
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_qk_k.cpp:145:34: error: use of undeclared identifier 'Q4_0'
-  const auto data_size = K * N / Q4_0 * sizeof(block_q4_0);
-                                 ^
-1 warning and 1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_opencl_kernels_qk_k/__/unittest/unittest_opencl_kernels_qk_k.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : unittest_opencl_kernels_int4 <= unittest_opencl_kernels_int4.cpp
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:19:
-In file included from ../include/nntrainer_test_util.h:37:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/models/neuralnet.h:39:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:40:11: error: use of undeclared identifier 'Q4_0'
-  if (K % Q4_0 == 0 && N % 8 == 0) {
-          ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:41:35: error: use of undeclared identifier 'Q4_0'
-    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
-                                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:130:11: error: use of undeclared identifier 'Q4_0'
-  if (K % Q4_0 == 0 && N % 8 == 0) {
-          ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:131:35: error: use of undeclared identifier 'Q4_0'
-    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
-                                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:444:11: error: use of undeclared identifier 'Q4_0'
-  if (K % Q4_0 == 0 && N % 8 == 0) {
-          ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:445:35: error: use of undeclared identifier 'Q4_0'
-    size_t q4_data_size = K * N / Q4_0 * sizeof(block_q4_0);
-                                  ^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:496:16: error: no member named 'openvino_gemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_gemm_cl(input_ptr, weight_ptr, scale_ptr, output_ptr, M,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:512:16: error: no member named 'openvino_gemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_gemm_cl(input_ptr, weight_ptr, scale_ptr, output_ptr, M,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:654:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq0,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:657:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq1,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:660:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq2,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:677:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq0,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:680:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq1,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:683:16: error: no member named 'openvino_sgemm_cl' in namespace 'nntrainer'
-    nntrainer::openvino_sgemm_cl(activations_f32_ptr, (char *)wq2,
-    ~~~~~~~~~~~^
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4.cpp:703:16: error: no member named 'openvino_gemm_async_cl' in namespace 'nntrainer'
-    nntrainer::openvino_gemm_async_cl(activations_f32_ptr, weight_vec,
-    ~~~~~~~~~~~^
-1 warning and 15 errors generated.
+[arm64-v8a] Prebuilt       : libOpenCL.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libnntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Executable     : unittest_layers
+ld.lld: error: duplicate symbol: main
+>>> defined at unittest_layers.cpp:17 (../unittest/layers/unittest_layers.cpp:17)
+>>>            /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers.o:(main)
+>>> defined at xgemm.cpp:216 (/home/jwhero94/projects/nntrainer/subprojects/CLBlast/src/tuning/routines/xgemm.cpp:216)
+>>>            xgemm.o:(.text.main+0x0) in archive /home/jwhero94/projects/nntrainer/test/jni/../../builddir/obj/local/arm64-v8a/libclblast.a
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:667: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/unittest_layers] Error 1
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
