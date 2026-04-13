@@ -1,54 +1,73 @@
 sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
 
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
-[1/2] Generating jni/ndk-build with a custom command
-FAILED: jni/arm64-v8a 
-/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
-[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
-#pragma omp parallel for num_thread(n_threads)
-                         ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:35:21: error: static_cast from 'unsigned char *' to 'char *' is not allowed
-  checkedRead(file, static_cast<char *>(weight.getData<uint8_t>()), sz,
-                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:49:20: error: static_cast from 'unsigned char *' to 'char *' is not allowed
-  checkedRead(src, static_cast<char *>(weight.getData<uint8_t>()), sz,
-                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-2 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-ninja: build stopped: subcommand failed.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.7 MB/s (44468912 bytes in 1.295s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.0 MB/s (43993128 bytes in 1.273s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.5 MB/s (3960088 bytes in 0.120s)
+3 files pushed. 32.8 MB/s (92422128 bytes in 2.690s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.4 MB/s (10969384 bytes in 0.323s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.4 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.1 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in 0.054s)
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weightlibc++abi: 
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+bionic/libc/bionic/bionic_allocator.cpp:116: alloc CHECK 'page->free_block_list != nullptr' failed
+bionic/libc/bionic/bionic_allocator.cpp:116: alloc CHECK 'page->free_block_list != nullptr' failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Tensor::read] operation failed
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [Int4Utils::kai_to_int4] failed to read Kai-format QINT4 weight
+Aborted 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
