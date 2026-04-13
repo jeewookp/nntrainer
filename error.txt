@@ -1,13 +1,19 @@
 이거 sh unittest.sh 했을 때 에러메세지야 뭐가 문제인지 말해줘 코드 수정은ㄴㄴ
 
-[arm64-v8a] Prebuilt       : libOpenCL.so <= jni/../../builddir/jni/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+1 warning generated.
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
+[arm64-v8a] StaticLibrary  : libgoogletest_main.a
 [arm64-v8a] Executable     : unittest_layers
-ld.lld: error: duplicate symbol: main
->>> defined at unittest_layers.cpp:17 (../unittest/layers/unittest_layers.cpp:17)
->>>            /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_layers/__/unittest/layers/unittest_layers.o:(main)
->>> defined at xgemm.cpp:216 (/home/jwhero94/projects/nntrainer/subprojects/CLBlast/src/tuning/routines/xgemm.cpp:216)
->>>            xgemm.o:(.text.main+0x0) in archive /home/jwhero94/projects/nntrainer/test/jni/../../builddir/obj/local/arm64-v8a/libclblast.a
-clang++: error: linker command failed with exit code 1 (use -v to see invocation)
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:667: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/unittest_layers] Error 1
+
+==========================================
+[Step 3/4] Pushing to device
+==========================================
+adb: error: cannot stat 'test/libs/arm64-v8a/*': No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
