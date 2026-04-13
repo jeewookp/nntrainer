@@ -34,6 +34,7 @@
 #include <activation_realizer.h>
 #include <adamw.h>
 #include <common_properties.h>
+#include <cpu_backend.h>
 #include <databuffer.h>
 #include <flatten_realizer.h>
 #include <ini_interpreter.h>
@@ -714,6 +715,18 @@ void NeuralNetwork::load(const std::string &file_path,
       }
       size_t size = weight->getVariable().getMemoryBytes();
       auto tensor_data_type = weight->getDim().getDataType();
+
+      ///@note QINT4 weights on disk use the KleidiAI rhs-pack layout
+      /// (qsi4cxp_qs4cxs1s0). The standard Int4QTensor::getMemoryBytes()
+      /// formula does not match this layout's footprint, so override the
+      /// per-weight size here. Layer::read's QINT4 special-case will read
+      /// exactly this many bytes via Int4Utils::kai_to_int4.
+      if (tensor_data_type == TensorDim::DataType::QINT4) {
+        size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
+          weight->getVariable().width(), weight->getVariable().height(),
+          /*idx_variant=*/3, /*transB=*/true);
+      }
+
       weight->getVariableRef().setFileOffset(start_from);
       ///@todo instead of checking the data type,
       /// we may need to create a common parent class for

@@ -16,22 +16,59 @@
 
 #include "cpu_backend.h"
 #include "fp16.h"
+#include "memory_data.h"
 #include "nntrainer_error.h"
 #include "tensor.h"
 #include "util_func.h"
 
 namespace nntrainer {
 
+namespace {
+
+/// @brief Default packing parameters for the Kai qsi4cxp pipeline used by
+/// the arm Q4_0 path. Matches Kai4Tensor defaults on the claude branch.
+constexpr uint32_t KAI_DEFAULT_IDX_VARIANT = 3;
+constexpr bool KAI_DEFAULT_TRANS_B = true;
+
+/// @brief Allocate a managed kai-packed buffer and attach it to the tensor.
+///        Returns the byte size of the buffer for the subsequent file read.
+size_t attach_kai_buffer(Tensor &weight) {
+  const size_t n = weight.width();
+  const size_t k = weight.height();
+  const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
+    n, k, KAI_DEFAULT_IDX_VARIANT, KAI_DEFAULT_TRANS_B);
+
+  NNTR_THROW_IF(kai_size == 0, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] kai-packed size is 0 for weight of dim "
+    << weight.getDim();
+
+  // Allocate a heap buffer the size the on-disk Kai layout actually needs
+  // and wrap it in a MemoryData that owns the deletion. Tensor::setData
+  // replaces the underlying storage so the existing Int4QTensor allocation
+  // (sized by the standard int4 formula, which does not match the Kai
+  // packed layout) is dropped.
+  auto *raw = new uint8_t[kai_size]();
+  auto *mem = new MemoryData(static_cast<void *>(raw));
+  std::shared_ptr<MemoryData> mem_data(mem, [](MemoryData *m) {
+    delete[] m->getAddr<uint8_t>();
+    delete m;
+  });
+  weight.setData(mem_data, /*off=*/0, /*init=*/false);
+  return kai_size;
+}
+
+} // namespace
+
 void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
                             size_t start_offset, bool read_from_offset) {
-  const std::streamsize sz =
-    static_cast<std::streamsize>(weight.getMemoryBytes());
+  const size_t kai_size = attach_kai_buffer(weight);
+  const std::streamsize sz = static_cast<std::streamsize>(kai_size);
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
-    << "[Int4Utils::kai_to_int4] read size: " << weight.getMemoryBytes()
+    << "[Int4Utils::kai_to_int4] read size: " << kai_size
     << " is too big. It cannot be represented by std::streamsize";
 
-  // Same shape of helper as checkedRead in util_func.cpp -- the on-disk
-  // payload is just (data + scales) bytes, no qscheme header.
+  // The on-disk Kai layout has no qscheme header -- only packed int4
+  // data + fp16 scales, all bundled into the kai-packed byte stream.
   checkedRead(file, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
               "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
               "weight",
@@ -40,10 +77,10 @@ void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
 
 void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
                             bool read_from_offset) {
-  const std::streamsize sz =
-    static_cast<std::streamsize>(weight.getMemoryBytes());
+  const size_t kai_size = attach_kai_buffer(weight);
+  const std::streamsize sz = static_cast<std::streamsize>(kai_size);
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
-    << "[Int4Utils::kai_to_int4] read size: " << weight.getMemoryBytes()
+    << "[Int4Utils::kai_to_int4] read size: " << kai_size
     << " is too big. It cannot be represented by std::streamsize";
 
   checkedRead(src, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
