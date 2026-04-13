@@ -128,6 +128,29 @@ void gemm_int4_async_cl(float *input, std::vector<void *> weights,
                         unsigned int quantization_group_size);
 
 /**
+ * @brief INT4 channel-wise GEMM for Adreno GPUs (gpu_int4_gemm_adreno kernel).
+ *
+ * Layout (matches Int4Utils::convertKaiToChannelwise):
+ *   - weights : ushort[(K/4) * N], 4 unsigned bias-8 nibbles per ushort
+ *               for one channel at K positions [k, k+1, k+2, k+3]
+ *   - scales  : fp16[N], one scale per output channel (per-channel quant)
+ *   - input   : fp16[K * align(M, 4)], activation in half4 blocks along M
+ *
+ * Assumes N % 32 == 0, K % 4 == 0, M >= 1. All buffers must be SVM-allocated.
+ *
+ * @param[in] input   activation buffer (fp16 SVM)
+ * @param[in] weights packed int4 weights (ushort SVM)
+ * @param[in] scales  per-channel fp16 scales (fp16 SVM)
+ * @param[out] output  output matrix (fp16 SVM)
+ * @param[in] M batch / token count
+ * @param[in] N output dimension
+ * @param[in] K input dimension
+ */
+void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
+                         uint16_t *output, unsigned int M, unsigned int N,
+                         unsigned int K);
+
+/**
  * @brief     Q6_K sgemv computation : Y = A*X
  * @param[in] matAdata void * for Matrix A
  * @param[in] vecXdata float * for Vector X

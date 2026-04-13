@@ -21,6 +21,9 @@
 #include "tensor.h"
 #include "util_func.h"
 
+#include <cstdint>
+#include <vector>
+
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <cl_context.h>
 #include <engine.h>
@@ -35,16 +38,151 @@ namespace {
 constexpr uint32_t KAI_DEFAULT_IDX_VARIANT = 3;
 constexpr bool KAI_DEFAULT_TRANS_B = true;
 
+/// @brief Kai pack parameters for idx_variant=3
+/// (kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm).
+/// These are the values returned by ukernel.get_nr() / get_kr() / get_sr()
+/// at runtime; we hardcode them here so int4_utils.cpp can stay free of
+/// kai library headers (kai is ARM-only). If KAI_DEFAULT_IDX_VARIANT ever
+/// changes, update these constants too.
+constexpr size_t KAI_NR = 4;
+constexpr size_t KAI_KR = 16;
+constexpr size_t KAI_SR = 2;
+constexpr size_t KAI_K_INTERLEAVED_V = 16;
+
+/// Number of bytes per channel in the kai per-row "extras" area:
+///   int32 sum + fp32 scale + fp32 bias = 12 bytes
+constexpr size_t KAI_BYTES_PER_CHANNEL_EXTRAS =
+  sizeof(int32_t) + sizeof(float) + sizeof(float);
+
+inline size_t round_up(size_t v, size_t multiple) {
+  return ((v + multiple - 1) / multiple) * multiple;
+}
+
 } // namespace
 
+size_t Int4Utils::channelwise_layout_size(size_t n, size_t k) {
+  NNTR_THROW_IF(k == 0 || n == 0, std::invalid_argument)
+    << "channelwise_layout_size: n and k must be > 0";
+  NNTR_THROW_IF(k % 4 != 0, std::invalid_argument)
+    << "channelwise_layout_size: K must be a multiple of 4 (got K=" << k << ")";
+  NNTR_THROW_IF(n % 32 != 0, std::invalid_argument)
+    << "channelwise_layout_size: N must be a multiple of 32 (got N=" << n << ")";
+
+  // data : (K/4) * N ushorts (kernel uses stride N; require N%32==0 so that
+  //        N == align(N, 32) and the kernel's vload4 over align_N stays
+  //        within the buffer).
+  // scales: N fp16 values (per-channel, sequential by output channel).
+  const size_t data_bytes = (k / 4) * n * sizeof(uint16_t);
+  const size_t scale_bytes = n * sizeof(uint16_t);
+  return data_bytes + scale_bytes;
+}
+
+void Int4Utils::convertKaiToChannelwise(const uint8_t *kai_packed, size_t n,
+                                        size_t k, uint32_t idx_variant,
+                                        uint16_t *out_data,
+                                        uint16_t *out_scales) {
+  NNTR_THROW_IF(kai_packed == nullptr, std::invalid_argument)
+    << "convertKaiToChannelwise: kai_packed is null";
+  NNTR_THROW_IF(out_data == nullptr || out_scales == nullptr,
+                std::invalid_argument)
+    << "convertKaiToChannelwise: output pointers must be non-null";
+  NNTR_THROW_IF(idx_variant != KAI_DEFAULT_IDX_VARIANT, std::invalid_argument)
+    << "convertKaiToChannelwise: only idx_variant="
+    << KAI_DEFAULT_IDX_VARIANT << " (nr=" << KAI_NR << ", kr=" << KAI_KR
+    << ", sr=" << KAI_SR << ") is supported, got " << idx_variant;
+  NNTR_THROW_IF(k % 4 != 0, std::invalid_argument)
+    << "convertKaiToChannelwise: K must be a multiple of 4 (got K=" << k << ")";
+  NNTR_THROW_IF(n % 32 != 0, std::invalid_argument)
+    << "convertKaiToChannelwise: N must be a multiple of 32 (got N=" << n
+    << ")";
+
+  // The kai packing routine (kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0)
+  // processes weights as (n rows, k cols), groups n into nr-blocks, rounds
+  // k internally up to 32, and stores per-row extras (int32 sum + fp32 scale
+  // + fp32 bias) after the data section.
+  const size_t k_internal = round_up(k, 32);
+  const size_t dst_num_rows = round_up(n, KAI_NR) / KAI_NR;
+  const size_t bytes_data_per_row = KAI_NR * (k_internal / 2);
+  const size_t row_stride =
+    bytes_data_per_row + KAI_NR * KAI_BYTES_PER_CHANNEL_EXTRAS;
+  const size_t block_length_in_bytes = KAI_KR / KAI_SR; // = 8
+
+  // Step 1: per-channel scales (kai stores fp32 * 0.0625; multiply by 16 to
+  // recover the original scale, then convert to fp16).
+  for (size_t dst_row_idx = 0; dst_row_idx < dst_num_rows; ++dst_row_idx) {
+    const uint8_t *row_base = kai_packed + dst_row_idx * row_stride;
+    const float *scales_in_row = reinterpret_cast<const float *>(
+      row_base + bytes_data_per_row + KAI_NR * sizeof(int32_t));
+
+    for (size_t i = 0; i < KAI_NR; ++i) {
+      const size_t n_global = dst_row_idx * KAI_NR + i;
+      if (n_global >= n)
+        break;
+      const float scale_f32 = scales_in_row[i] * 16.0f;
+      out_scales[n_global] = compute_fp32_to_fp16(scale_f32);
+    }
+  }
+
+  // Step 2: int4 data nibbles. Iterate kai dst bytes, decode (n0_idx,
+  // k0_idx, k1_idx) per the kai pack formula, recover the original unsigned
+  // bias-8 nibbles by undoing the XOR 0x88, and place each nibble at the
+  // destination position used by gpu_int4_gemm_adreno:
+  //
+  //   out_data[(k/4) * N + n_global], bit position 4 * (k % 4)
+  //
+  for (size_t dst_row_idx = 0; dst_row_idx < dst_num_rows; ++dst_row_idx) {
+    const uint8_t *data_section = kai_packed + dst_row_idx * row_stride;
+
+    for (size_t dst_byte_idx = 0; dst_byte_idx < bytes_data_per_row;
+         ++dst_byte_idx) {
+      const size_t block_idx = dst_byte_idx / block_length_in_bytes;
+      const size_t block_byte_idx = dst_byte_idx % block_length_in_bytes;
+      const size_t super_block_idx = block_idx / KAI_NR;
+      const size_t nr_idx = block_idx % KAI_NR;
+      const size_t pos_in_super =
+        super_block_idx * block_length_in_bytes + block_byte_idx;
+      const size_t k_adjustment =
+        (pos_in_super / KAI_K_INTERLEAVED_V) * KAI_K_INTERLEAVED_V;
+      const size_t k0_idx = pos_in_super + k_adjustment;
+      const size_t k1_idx = k0_idx + KAI_K_INTERLEAVED_V;
+      const size_t n_global = dst_row_idx * KAI_NR + nr_idx;
+
+      if (n_global >= n)
+        continue;
+
+      // kai on-disk byte = (orig_unsigned_bias8) XOR 0x88;
+      // undo XOR to get the original nibble pair.
+      const uint8_t kai_byte = data_section[dst_byte_idx];
+      const uint8_t unxored = static_cast<uint8_t>(kai_byte ^ 0x88);
+      const uint8_t lo_nibble = static_cast<uint8_t>(unxored & 0x0F);
+      const uint8_t hi_nibble = static_cast<uint8_t>((unxored >> 4) & 0x0F);
+
+      if (k0_idx < k) {
+        const size_t dst_idx = (k0_idx / 4) * n + n_global;
+        out_data[dst_idx] |=
+          static_cast<uint16_t>(lo_nibble) << (4 * (k0_idx % 4));
+      }
+      if (k1_idx < k) {
+        const size_t dst_idx = (k1_idx / 4) * n + n_global;
+        out_data[dst_idx] |=
+          static_cast<uint16_t>(hi_nibble) << (4 * (k1_idx % 4));
+      }
+    }
+  }
+}
+
 size_t Int4Utils::attach_kai_buffer(Tensor &weight) {
+  // Allocates the **destination** SVM buffer in the channel-wise layout
+  // expected by gpu_int4_gemm_adreno (NOT the kai-packed layout). The kai
+  // bytes are read into a temporary heap buffer in kai_to_int4(), converted
+  // via convertKaiToChannelwise(), and discarded.
   const size_t n = weight.width();
   const size_t k = weight.height();
-  const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
-    n, k, KAI_DEFAULT_IDX_VARIANT, KAI_DEFAULT_TRANS_B);
+  const size_t dst_size = channelwise_layout_size(n, k);
 
-  NNTR_THROW_IF(kai_size == 0, std::invalid_argument)
-    << "[Int4Utils::kai_to_int4] kai-packed size is 0 for weight of dim "
+  NNTR_THROW_IF(dst_size == 0, std::invalid_argument)
+    << "[Int4Utils::attach_kai_buffer] channel-wise layout size is 0 for "
+       "weight of dim "
     << weight.getDim();
 
   void *raw = nullptr;
@@ -54,16 +192,16 @@ size_t Int4Utils::attach_kai_buffer(Tensor &weight) {
   auto *cl_ctx =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (cl_ctx != nullptr) {
-    raw = cl_ctx->context_inst_.createSVMRegion(kai_size);
+    raw = cl_ctx->context_inst_.createSVMRegion(dst_size);
     if (raw != nullptr) {
-      std::memset(raw, 0, kai_size);
+      std::memset(raw, 0, dst_size);
       is_svm = true;
     }
   }
 #endif
 
   if (raw == nullptr) {
-    raw = static_cast<void *>(new uint8_t[kai_size]());
+    raw = static_cast<void *>(new uint8_t[dst_size]());
   }
 
   auto *mem = new MemoryData(raw);
@@ -90,37 +228,89 @@ size_t Int4Utils::attach_kai_buffer(Tensor &weight) {
     weight.setData(mem_data, /*off=*/0, /*init=*/false);
   }
 
-  return kai_size;
+  return dst_size;
 }
+
+namespace {
+
+/// Read the kai-packed bytes for one weight from `file` into `kai_buf` and
+/// then convert them into the channel-wise int4 layout in the tensor's
+/// already-attached SVM destination buffer. Used by both kai_to_int4
+/// overloads to share the conversion logic.
+void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
+                                         size_t n, size_t k) {
+  uint8_t *dst_bytes = weight.getData<uint8_t>();
+  NNTR_THROW_IF(dst_bytes == nullptr, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] destination buffer not attached";
+
+  // Layout in the SVM destination buffer:
+  //   [0 .. data_bytes)             : ushort-packed int4 nibbles
+  //   [data_bytes .. data+scales)   : fp16 per-channel scales
+  // Matches Int4QTensor::getScale() == data + (size+1)/2 for size = K*N
+  // (since K*N is even when K%4==0).
+  const size_t data_bytes = (k / 4) * n * sizeof(uint16_t);
+  uint16_t *out_data = reinterpret_cast<uint16_t *>(dst_bytes);
+  uint16_t *out_scales = reinterpret_cast<uint16_t *>(dst_bytes + data_bytes);
+
+  Int4Utils::convertKaiToChannelwise(kai_buf, n, k, KAI_DEFAULT_IDX_VARIANT,
+                                     out_data, out_scales);
+}
+
+} // namespace
 
 void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
                             size_t start_offset, bool read_from_offset) {
-  const size_t kai_size = attach_kai_buffer(weight);
+  attach_kai_buffer(weight);
+
+  const size_t n = weight.width();
+  const size_t k = weight.height();
+  const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
+    n, k, KAI_DEFAULT_IDX_VARIANT, KAI_DEFAULT_TRANS_B);
+  NNTR_THROW_IF(kai_size == 0, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] kai-packed size is 0 for weight of dim "
+    << weight.getDim();
+
+  // Temporary heap buffer for the on-disk kai-packed bytes.
+  std::vector<uint8_t> kai_buf(kai_size);
+
   const std::streamsize sz = static_cast<std::streamsize>(kai_size);
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
     << "[Int4Utils::kai_to_int4] read size: " << kai_size
     << " is too big. It cannot be represented by std::streamsize";
 
-  // The on-disk Kai layout has no qscheme header -- only packed int4
-  // data + fp16 scales, all bundled into the kai-packed byte stream.
-  checkedRead(file, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
+  checkedRead(file, reinterpret_cast<char *>(kai_buf.data()), sz,
               "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
               "weight",
               start_offset, read_from_offset);
+
+  read_and_convert_kai_to_channelwise(weight, kai_buf.data(), n, k);
 }
 
 void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
                             bool read_from_offset) {
-  const size_t kai_size = attach_kai_buffer(weight);
+  attach_kai_buffer(weight);
+
+  const size_t n = weight.width();
+  const size_t k = weight.height();
+  const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
+    n, k, KAI_DEFAULT_IDX_VARIANT, KAI_DEFAULT_TRANS_B);
+  NNTR_THROW_IF(kai_size == 0, std::invalid_argument)
+    << "[Int4Utils::kai_to_int4] kai-packed size is 0 for weight of dim "
+    << weight.getDim();
+
+  std::vector<uint8_t> kai_buf(kai_size);
+
   const std::streamsize sz = static_cast<std::streamsize>(kai_size);
   NNTR_THROW_IF(sz < 0, std::invalid_argument)
     << "[Int4Utils::kai_to_int4] read size: " << kai_size
     << " is too big. It cannot be represented by std::streamsize";
 
-  checkedRead(src, reinterpret_cast<char *>(weight.getData<uint8_t>()), sz,
+  checkedRead(src, reinterpret_cast<char *>(kai_buf.data()), sz,
               "[Int4Utils::kai_to_int4] failed to read Kai-format QINT4 "
               "weight",
               start_offset, read_from_offset);
+
+  read_and_convert_kai_to_channelwise(weight, kai_buf.data(), n, k);
 }
 
 float Int4Utils::computeScaleForGroup(const float *group_weights,

@@ -24,6 +24,8 @@
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include "blas_kernels.h"
+#include <cstring>
+#include <fp16.h>
 #endif
 
 namespace nntrainer {
@@ -1027,14 +1029,80 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
   gemm_q4_0(M, N, K, data, K, (void *)input.getData(), N, rdata, N);
 #endif
 #else
+  // QINT4 weights on the GPU build are stored in the channel-wise layout
+  // produced by Int4Utils::convertKaiToChannelwise:
+  //   weights : ushort[(K/4) * N], 4 unsigned bias-8 nibbles per ushort
+  //             for one channel at K positions [k, k+1, k+2, k+3]
+  //   scales  : fp16[N], one per output channel
+  // The data + scales sit contiguously in the SVM region attached by
+  // Int4Utils::attach_kai_buffer; Int4QTensor::getData()/getScale() return
+  // the correct offsets for this layout (since size = K*N is even, the
+  // (size+1)/2 byte split puts scales right after data).
   if (input.getMemoryData()->isSVM() && output.getMemoryData()->isSVM() &&
       getMemoryData()->isSVM()) {
+    auto *weight_u16 = reinterpret_cast<uint16_t *>(mdata);
+    auto *scale_u16 = input.getScale<uint16_t>();
+
     if (M == 1) {
-      gemv_int4_cl(mdata, input.getScale<uint16_t>(), data, rdata, K, N,
-                   Int4QTensor::getGroupSize());
+      // M=1 (decode/gen): CPU fallback over the channel-wise layout. The
+      // user-authored GPU gemv kernel will replace this once available.
+      for (unsigned int n = 0; n < N; ++n) {
+        const float scale = compute_fp16_to_fp32(scale_u16[n]);
+        float acc = 0.0f;
+        for (unsigned int k = 0; k < K; k += 4) {
+          const uint16_t packed = weight_u16[(k / 4) * N + n];
+          const int v0 = static_cast<int>((packed >> 0) & 0xF) - 8;
+          const int v1 = static_cast<int>((packed >> 4) & 0xF) - 8;
+          const int v2 = static_cast<int>((packed >> 8) & 0xF) - 8;
+          const int v3 = static_cast<int>((packed >> 12) & 0xF) - 8;
+          acc += data[k + 0] * static_cast<float>(v0) +
+                 data[k + 1] * static_cast<float>(v1) +
+                 data[k + 2] * static_cast<float>(v2) +
+                 data[k + 3] * static_cast<float>(v3);
+        }
+        rdata[n] = acc * scale;
+      }
     } else {
-      sgemm_int4_cl(data, mdata, input.getScale<uint16_t>(), rdata, M, N, K,
-                    Int4QTensor::getGroupSize());
+      // M>1 (prefill): dispatch via gpu_int4_gemm_adreno.
+      // Kernel input layout: fp16[K * M_padded], where M_padded = ALIGN(M,8)
+      // and element (k, m) is at index k * M_padded + m.
+      //
+      // We CPU-side transpose+convert the activation into the SVM scratch
+      // input buffer, run the GPU GEMM, then copy fp16 output back to fp32
+      // (cropping any padded rows).
+      const unsigned int M_padded = (M + 7u) & ~7u;
+
+      auto &clbuffInstance = ClBufferManager::Global();
+      uint16_t *svm_in =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+      uint16_t *svm_out =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
+
+      // Transpose + fp32->fp16 into svm_in[K][M_padded]; zero-pad
+      // m in [M, M_padded).
+      for (unsigned int k = 0; k < K; ++k) {
+        for (unsigned int m = 0; m < M; ++m) {
+          svm_in[k * M_padded + m] = compute_fp32_to_fp16(data[m * K + k]);
+        }
+        for (unsigned int m = M; m < M_padded; ++m) {
+          svm_in[k * M_padded + m] = 0;
+        }
+      }
+
+      // Zero the output region we'll overwrite.
+      std::memset(svm_out, 0,
+                  static_cast<size_t>(M_padded) * static_cast<size_t>(N) *
+                    sizeof(uint16_t));
+
+      gemm_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, M_padded, N,
+                          K);
+
+      // Crop + fp16->fp32 the first M rows back into rdata.
+      for (unsigned int m = 0; m < M; ++m) {
+        for (unsigned int n = 0; n < N; ++n) {
+          rdata[m * N + n] = compute_fp16_to_fp32(svm_out[m * N + n]);
+        }
+      }
     }
   } else {
     /// @todo This should be replaced with standard CPU INT4 computation

@@ -804,6 +804,96 @@ void gemm_int4_cl(void *input, void *weights, void *scales, void *output,
   }
 }
 
+void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
+                         uint16_t *output, unsigned int M, unsigned int N,
+                         unsigned int K) {
+  bool result = false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to get kernel_ptr for gpu_int4_gemm_adreno");
+    return;
+  }
+
+  int arg = 0;
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, input);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 0 (input) for gpu_int4_gemm_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 1 (scales) for gpu_int4_gemm_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 2 (output) for gpu_int4_gemm_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 3 (weights) for gpu_int4_gemm_adreno");
+
+  int size_k = static_cast<int>(K);
+  int size_n = static_cast<int>(N);
+  int size_m = static_cast<int>(M);
+  int q_group_size = static_cast<int>(K); // per-channel: one group spans all K
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 (K) for gpu_int4_gemm_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 5 (N) for gpu_int4_gemm_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_m, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 6 (M) for gpu_int4_gemm_adreno");
+
+  result =
+    kernel_ptr->SetKernelArguments(arg++, &q_group_size, sizeof(int));
+  if (!result)
+    throw std::runtime_error("Failed to set kernel argument 7 "
+                             "(quantization_group_size) for "
+                             "gpu_int4_gemm_adreno");
+
+  // Dispatch:
+  //   global_id(0) covers M / 2 (each work-item handles m and m+1 along M)
+  //   global_id(1) covers align_N / 4 (each work-item handles n..n+3)
+  // Use a 1x1 local size for now (no tiling); the kernel itself uses
+  // qcom_reqd_sub_group_size("full") to drive the SIMD width.
+  const int align_N = static_cast<int>(align(N, 32));
+  const int dim_m = static_cast<int>(ceilDiv(static_cast<unsigned int>(M), 2u));
+  const int dim_n = align_N / 4;
+
+  const int work_groups_count[3] = {dim_m, dim_n, 1};
+  const int work_group_size[3] = {1, 1, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+    kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to dispatch kernel for gpu_int4_gemm_adreno");
+    return;
+  }
+
+  /// @todo synchronize when only needed
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
+    true);
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;

@@ -193,6 +193,42 @@ public:
   static void kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
                           bool read_from_offset);
 
+  /**
+   * @brief Compute the size in bytes of the channel-wise int4 layout used by
+   *        the Adreno gemm kernel (gpu_int4_gemm_adreno).
+   *
+   * Layout:
+   *   - data : ((K + 3) / 4) * align(N, 32) ushorts; each ushort packs 4
+   *            unsigned bias-8 nibbles for one channel at K positions
+   *            [k, k+1, k+2, k+3]. bits[0..3]=k, bits[4..7]=k+1, etc.
+   *   - scales: align(N, 32) fp16 values, one per output channel.
+   *
+   * Total bytes = data_bytes + scale_bytes.
+   *
+   * @param n number of output channels (weight.width())
+   * @param k input dimension (weight.height())
+   */
+  static size_t channelwise_layout_size(size_t n, size_t k);
+
+  /**
+   * @brief Convert kai-packed (qsi4cxp_qs4cxs1s0) bytes into the channel-wise
+   *        int4 layout consumed by gpu_int4_gemm_adreno (lossless direct
+   *        mapping; does NOT go through fp32 dequant + requant).
+   *
+   * @param kai_packed   pointer to the kai-packed bytes for this weight
+   * @param n            number of output channels
+   * @param k            input dimension
+   * @param idx_variant  kai ukernel variant index (used to look up nr/kr/sr)
+   * @param out_data     destination for ((K+3)/4) * align(N,32) ushorts
+   * @param out_scales   destination for align(N,32) fp16 scales
+   *
+   * The destination buffers must already be zero-initialized -- the writer
+   * uses bitwise-OR for nibble placement.
+   */
+  static void convertKaiToChannelwise(const uint8_t *kai_packed, size_t n,
+                                      size_t k, uint32_t idx_variant,
+                                      uint16_t *out_data, uint16_t *out_scales);
+
 private:
   /**
    * @brief Allocate an SVM (or heap fallback) buffer of the kai-packed size

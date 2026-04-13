@@ -5,12 +5,32 @@
 #define CEIL_DIV(a, b) (((a) + (b)-1) / (b))
 #define ALIGN(a, b) (CEIL_DIV(a, b) * (b))
 
+// Channel-wise int4 GEMM kernel for Adreno.
+//
+// Layout assumptions (matches Int4Utils::convertKaiToChannelwise):
+//   weights : ushort[(K/4) * N], each ushort packs 4 nibbles in unsigned
+//             bias-8 form for one channel at K positions [k, k+1, k+2, k+3]:
+//               bits  [0..3]  -> k
+//               bits  [4..7]  -> k+1
+//               bits  [8..11] -> k+2
+//               bits [12..15] -> k+3
+//             dequantized value = ((nibble) - 8) * scale
+//   scales  : half[align(N, 32)], one fp16 scale per output channel
+//             (per-channel quantization, one scale per row).
+//   input   : half[K * align(M, 4)], activation laid out as half4 blocks
+//             along the M dimension. Element (k, m) is at
+//             ((const __global half *)input)[(k * (M / 4)) * 4 + m] when M
+//             is a multiple of 4; otherwise the host pads the M dimension.
+//
+// Note: This kernel is per-channel only -- the quantization_group_size
+// argument is kept for ABI compatibility with the host wrapper but is
+// ignored (scale is loaded once per kernel invocation).
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
 gpu_int4_gemm_adreno(
-                            __read_only image1d_buffer_t input, 
+                            __global const half *input,
                             __global const half *scales,
                             __global half *output,
-                            __global const ushort *weights, 
+                            __global const ushort *weights,
                             const int K,
                             const int N,
                             const int M,
@@ -25,16 +45,15 @@ gpu_int4_gemm_adreno(
     half8 input_reg;
     half4 dq_weights_reg;
     ushort4 packed_w;
-    half4 scale;
+
+    // Channel-wise: a single scale per output channel, loaded once.
+    half4 scale = vload4(0, scales + n);
 
     for(int k=0; k<K; k+=4){
-        if((k&0x1F) == 0) {
-            scale = vload4(0,scales + (k/quantization_group_size)*align_N + n);
-        }
         packed_w = vload4(0,weights + (k/4) * N + n);
 
-        input_reg.s0123 = read_imageh(input, k * M_4 + m);
-        input_reg.s4567 = read_imageh(input, k * M_4 + m + 1);
+        input_reg.s0123 = vload4(0, input + (k * M_4 + m) * 4);
+        input_reg.s4567 = vload4(0, input + (k * M_4 + m + 1) * 4);
 
         dq_weights_reg.s0 = ((packed_w.s0 & (0x000F))-8) * scale.s0;
         dq_weights_reg.s1 = ((packed_w.s1 & (0x000F))-8) * scale.s1;
@@ -46,8 +65,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = read_imageh(input, (k+1) * M_4 + m);
-        input_reg.s4567 = read_imageh(input, (k+1) * M_4 + m + 1);
+        input_reg.s0123 = vload4(0, input + ((k+1) * M_4 + m) * 4);
+        input_reg.s4567 = vload4(0, input + ((k+1) * M_4 + m + 1) * 4);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0x00F0)) >> 4) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0x00F0)) >> 4) - 8) * scale.s1;
@@ -59,8 +78,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = read_imageh(input, (k+2) * M_4 + m);
-        input_reg.s4567 = read_imageh(input, (k+2) * M_4 + m + 1);
+        input_reg.s0123 = vload4(0, input + ((k+2) * M_4 + m) * 4);
+        input_reg.s4567 = vload4(0, input + ((k+2) * M_4 + m + 1) * 4);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0x0F00)) >> 8) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0x0F00)) >> 8) - 8) * scale.s1;
@@ -72,8 +91,8 @@ gpu_int4_gemm_adreno(
         c2 += input_reg * dq_weights_reg.s2;
         c3 += input_reg * dq_weights_reg.s3;
 
-        input_reg.s0123 = read_imageh(input, (k+3) * M_4 + m);
-        input_reg.s4567 = read_imageh(input, (k+3) * M_4 + m + 1);
+        input_reg.s0123 = vload4(0, input + ((k+3) * M_4 + m) * 4);
+        input_reg.s4567 = vload4(0, input + ((k+3) * M_4 + m + 1) * 4);
 
         dq_weights_reg.s0 = (((packed_w.s0 & (0xF000)) >> 12) - 8) * scale.s0;
         dq_weights_reg.s1 = (((packed_w.s1 & (0xF000)) >> 12) - 8) * scale.s1;
