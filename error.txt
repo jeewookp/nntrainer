@@ -1,35 +1,38 @@
-sh unittest.sh 했을 때 아래와 같아 fail 해결해줘
+sh temp.sh 했을 때 아래와 같아 에러 해결해줘
 
-[ RUN      ] LmHeadGPU_Kernel.fp32_dot_larger
-[       OK ] LmHeadGPU_Kernel.fp32_dot_larger (0 ms)
-[ RUN      ] LmHeadGPU_Kernel.fp32_dot_transpose
-[       OK ] LmHeadGPU_Kernel.fp32_dot_transpose (0 ms)
-[----------] 3 tests from LmHeadGPU_Kernel (295 ms total)
+[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
+[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
+./../models/transformer.cpp:439:67: error: no member named 'SwiGLULayer' in namespace 'causallm'
+    app_context->registerFactory(nntrainer::createLayer<causallm::SwiGLULayer>);
+                                                        ~~~~~~~~~~^
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/transformer.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
+[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_cached_slim_moe_causallm.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
+[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
+[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= gptoss_causallm.cpp
+[arm64-v8a] Compile++      : causallm_core <= gptoss_cached_slim_causallm.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
+-e [ERROR] Build failed
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
-[----------] 4 tests from LmHeadGPU_Bench
-[ RUN      ] LmHeadGPU_Bench.fp32_decode
-unknown file: Failure
-C++ exception with description "Weight initializer cannot be none" thrown in the test body.
-[  FAILED  ] LmHeadGPU_Bench.fp32_decode (24 ms)
-[ RUN      ] LmHeadGPU_Bench.fp32_prefill_128
-unknown file: Failure
-C++ exception with description "Weight initializer cannot be none" thrown in the test body.
-[  FAILED  ] LmHeadGPU_Bench.fp32_prefill_128 (27 ms)
-[ RUN      ] LmHeadGPU_Bench.fp32_prefill_256
-unknown file: Failure
-C++ exception with description "Weight initializer cannot be none" thrown in the test body.
-[  FAILED  ] LmHeadGPU_Bench.fp32_prefill_256 (37 ms)
-[ RUN      ] LmHeadGPU_Bench.fp32_prefill_512
-unknown file: Failure
-C++ exception with description "Weight initializer cannot be none" thrown in the test body.
-[  FAILED  ] LmHeadGPU_Bench.fp32_prefill_512 (37 ms)
-[----------] 4 tests from LmHeadGPU_Bench (126 ms total)
-
-[----------] 3 tests from TieWordEmbeddingGPU_Kernel
-[ RUN      ] TieWordEmbeddingGPU_Kernel.embedding_mode_fp32
-[       OK ] TieWordEmbeddingGPU_Kernel.embedding_mode_fp32 (4 ms)
-[ RUN      ] TieWordEmbeddingGPU_Kernel.embedding_single_token
-[       OK ] TieWordEmbeddingGPU_Kernel.embedding_single_token (0 ms)
-[ RUN      ] TieWordEmbeddingGPU_Kernel.lmhead_mode_fp32
-[       OK ] TieWordEmbeddingGPU_Kernel.lmhead_mode_fp32 (0 ms)
-[----------] 3 tests from TieWordEmbeddingGPU_Kernel (5 ms total)
