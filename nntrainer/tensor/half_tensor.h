@@ -388,6 +388,14 @@ public:
               float beta) const override;
 
   /**
+   * @copydoc Tensor::dot(std::vector<Tensor *> input,
+   *                      std::vector<Tensor *> output, bool trans,
+   *                      bool trans_in, float beta)
+   */
+  void dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
+           bool trans, bool trans_in, float beta) const override;
+
+  /**
    * @copydoc Tensor::dropout_mask(float dropout)
    */
   void dropout_mask(float dropout) override;
@@ -526,6 +534,18 @@ private:
    */
   Tensor &dotQnK(Tensor const &input, Tensor &output, bool trans, bool trans_in,
                  float beta, Tdatatype dtype) const;
+
+  /**
+   * @brief dotQInteger -- fp16 activation x QINT4 (channel-wise) weight
+   *
+   * Mirror of FloatTensor::dotQInteger but without the fp32<->fp16 CPU
+   * conversion stages, since both input and output are already fp16.
+   * Dispatches to gemm_int4_adreno_cl (M>1) or gemv_int4_adreno_cl
+   * (M=1) on the OpenCL build. All three operands must be SVM-backed
+   * (activation pool via Manager, weight via Int4Utils::attach_kai_buffer).
+   */
+  Tensor &dotQInteger(Tensor const &input, Tensor &output, bool trans,
+                      bool trans_in, float beta, Tdatatype dtype) const;
 
   /**
    * @copydoc Tensor::isValid()

@@ -17,6 +17,10 @@
 #include <tensor.h>
 #include <util_func.h>
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include "blas_kernels.h"
+#endif
+
 namespace nntrainer {
 
 HalfTensor::HalfTensor(std::string name_, Tformat fm) :
@@ -705,7 +709,13 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
   case Tdatatype::FP16:
     dotHalf(input, output, trans, trans_in, beta);
     break;
+  case Tdatatype::Q4_K:
+  case Tdatatype::Q6_K:
   case Tdatatype::Q4_0:
+    dotQnK(input, output, trans, trans_in, beta, input.getDataType());
+    break;
+  case Tdatatype::QINT4:
+    dotQInteger(input, output, trans, trans_in, beta, input.getDataType());
     break;
   default:
     throw std::invalid_argument("Error: unsupported datatype");
@@ -715,6 +725,11 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
 
 Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
                            bool trans_in, float beta, Tdatatype dtype) const {
+  ///@note Qn_K does not support transpose in principle. The `trans` flag
+  /// here only carries dimension metadata, not a data transform.
+  NNTR_THROW_IF(trans, std::invalid_argument)
+    << "HalfTensor::dotQnK does not support trans";
+
   _FP16 *data = (_FP16 *)getData();
   uint8_t *mdata = input.getData<uint8_t>();
   _FP16 *rdata = output.getData<_FP16>();
@@ -724,6 +739,12 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   K = getDim().width();
   N = trans_in ? input.getDim().height() : input.getDim().width();
   switch (dtype) {
+  case Tdatatype::Q4_K:
+    gemm_q4_K(M, N, K, data, K, (void *)mdata, N, rdata, N);
+    break;
+  case Tdatatype::Q6_K:
+    gemm_q6_K(M, N, K, data, K, (void *)mdata, N, rdata, N);
+    break;
   case Tdatatype::Q4_0:
     gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
     break;
@@ -731,6 +752,156 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
     throw std::invalid_argument("Error: unsupported datatype");
   }
   return output;
+}
+
+Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
+                                bool trans_in, float beta, Tdatatype dtype) const {
+  // fp16 activation x QINT4 (channel-wise) weight.
+  //
+  // Mirror of FloatTensor::dotQInteger but without the fp32<->fp16 CPU
+  // convert/transpose loops: `this` and `output` are already fp16, so
+  // the kernel can consume the tensors directly via SVM. The only
+  // per-call CPU work on this path is wrapping the SVM pointers as
+  // cl_mem image objects inside gemm_int4_adreno_cl, which is what
+  // the main branch's pipeline does already.
+  //
+  // The weight (`input`) comes from Int4Utils::attach_kai_buffer and
+  // is guaranteed SVM. `this` and `output` are SVM only when the
+  // Manager's tensor_pool SVM allocation succeeded (see memory_pool.cpp
+  // -- on Adreno 830 this requires init_seq_len/max_seq_len to keep
+  // the pool below the 1 GB per-allocation limit).
+  _FP16 *data = (_FP16 *)getData();
+  char *mdata = input.getData<char>();
+  _FP16 *rdata = output.getData<_FP16>();
+
+  const unsigned int M = getDim().height();
+  const unsigned int K = getDim().width();
+  const unsigned int N = output.getDim().width();
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  const bool all_svm = input.getMemoryData()->isSVM() &&
+                       output.getMemoryData()->isSVM() &&
+                       getMemoryData()->isSVM();
+
+  if (!all_svm) {
+    throw std::invalid_argument(
+      "HalfTensor::dotQInteger requires activation, output, and weight "
+      "tensors to all live in SVM. Check that tensor_pool's "
+      "createSVMRegion succeeded (see memory_pool.cpp diagnostics) and "
+      "that init_seq_len/max_seq_len fit under the Adreno per-alloc "
+      "limit.");
+  }
+
+  auto *weight_u16 = reinterpret_cast<uint16_t *>(mdata);
+  auto *scale_u16 = input.getScale<uint16_t>();
+  auto *in_u16 = reinterpret_cast<uint16_t *>(data);
+  auto *out_u16 = reinterpret_cast<uint16_t *>(rdata);
+
+  if (M == 1) {
+    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno directly;
+    // no fp32<->fp16 conversion needed on either side.
+    gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N);
+  } else {
+    // M>1 (prefill): dispatch via gpu_int4_gemm_adreno (two-pass GPU
+    // pipeline: input_transpose kernel followed by the int4 gemm
+    // kernel). `svm_in_T` is scratch for the GPU transpose result.
+    auto &clbuffInstance = ClBufferManager::Global();
+    uint16_t *svm_in_T =
+      reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+
+    gemm_int4_adreno_cl(in_u16, svm_in_T, weight_u16, scale_u16, out_u16, M,
+                        N, K);
+  }
+#else
+  throw std::invalid_argument(
+    "HalfTensor::dotQInteger is only implemented on the OpenCL build");
+#endif
+
+  return output;
+}
+
+void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
+                     bool trans, bool trans_in, float beta) const {
+  // Batched FC dispatch -- used by CausalLM when Q/K/V projections (or
+  // MLP up/gate) share the same activation.
+  //
+  // Only supports the QINT4 channel-wise path (the whole reason we're
+  // on HalfTensor in the first place). For mixed / other dtype mixes
+  // we fall back to the per-weight single dot.
+  if (input.empty())
+    return;
+
+  Tdatatype input_dtype = input[0]->getDataType();
+
+  // Non-QINT4 or mixed-dtype path: fall back to per-weight dot().
+  if (input_dtype != Tdatatype::QINT4) {
+    for (unsigned int i = 0; i < input.size(); ++i) {
+      dot(*input[i], *output[i], trans, trans_in, beta);
+    }
+    return;
+  }
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  const bool all_svm = input[0]->getMemoryData()->isSVM() &&
+                       output[0]->getMemoryData()->isSVM() &&
+                       getMemoryData()->isSVM();
+
+  if (!all_svm) {
+    // Fall back to per-weight dot() which throws the descriptive SVM
+    // error message from HalfTensor::dotQInteger.
+    for (unsigned int i = 0; i < input.size(); ++i) {
+      dot(*input[i], *output[i], trans, trans_in, beta);
+    }
+    return;
+  }
+
+  _FP16 *data = (_FP16 *)getData();
+  const unsigned int M = getDim().height();
+  const unsigned int K = getDim().width();
+
+  auto &clbuffInstance = ClBufferManager::Global();
+  auto *in_u16 = reinterpret_cast<uint16_t *>(data);
+
+  if (M == 1) {
+    // M=1 (decode): dispatch gpu_int4_gemv_adreno per weight; the
+    // activation is shared across the batch and already fp16 in SVM,
+    // so there is nothing to prepare before the loop.
+    for (unsigned int i = 0; i < input.size(); ++i) {
+      auto *weight_u16 =
+        reinterpret_cast<uint16_t *>(input[i]->getData<char>());
+      auto *scale_u16 = input[i]->getScale<uint16_t>();
+      auto *out_u16 =
+        reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+      const unsigned int Ni = output[i]->getDim().width();
+
+      gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, Ni);
+    }
+  } else {
+    // M>1 (prefill): dispatch gpu_int4_gemm_adreno per weight. The
+    // activation is shared, but the GPU transpose has to rerun for
+    // each weight because input_transpose writes into `svm_in_T` and
+    // the next weight's kernel call stomps it. (This matches the
+    // per-weight dispatch on the main branch.)
+    uint16_t *svm_in_T =
+      reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+
+    for (unsigned int i = 0; i < input.size(); ++i) {
+      auto *weight_u16 =
+        reinterpret_cast<uint16_t *>(input[i]->getData<char>());
+      auto *scale_u16 = input[i]->getScale<uint16_t>();
+      auto *out_u16 =
+        reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+      const unsigned int Ni = output[i]->getDim().width();
+
+      gemm_int4_adreno_cl(in_u16, svm_in_T, weight_u16, scale_u16, out_u16, M,
+                          Ni, K);
+    }
+  }
+#else
+  throw std::invalid_argument(
+    "HalfTensor::dot(vector, vector) is only implemented on the OpenCL "
+    "build");
+#endif
 }
 
 void HalfTensor::dropout_mask(float dropout) {
