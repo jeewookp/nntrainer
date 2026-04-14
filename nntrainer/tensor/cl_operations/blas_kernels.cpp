@@ -17,7 +17,109 @@
 #include "util_func.h"
 #include <fp16.h>
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+
 namespace nntrainer {
+
+namespace {
+
+// ---------------------------------------------------------------------------
+// Phase 6: per-substage profiler for gemm_int4_adreno_cl (prefill M>1 path)
+//
+// Phase 5 showed that HalfTensor::dotQInteger spent ~90% of prefill time in
+// `gpu_call` (i.e. everything inside this wrapper). This breaks that 90% into
+// the individual OpenCL substages so we can tell whether the bottleneck is:
+//   - per-call cl_mem create / cl_image create (6 objects/call, 252 calls)
+//   - kernel arg setup
+//   - the two DispatchCommand calls (input_transpose + gpu_int4_gemm_adreno)
+//   - the blocking SVMMap at the end
+//   - per-call clReleaseMemObject (4 objects/call)
+//
+// Only the M>1 path is instrumented; M=1 decode skips this entirely because
+// substage overhead is tiny on single-row GEMV.
+//
+// Dumped at process exit via a static dtor (same pattern as Phase 5
+// g_half_dotq_profile in half_tensor.cpp).
+// ---------------------------------------------------------------------------
+struct Int4AdrenoGemmProfile {
+  std::atomic<uint64_t> calls{0};
+
+  std::atomic<uint64_t> ns_cl_mem_create{0};  // 2x clCreateBuffer + 2x clCreateImage
+  std::atomic<uint64_t> ns_xt_setup{0};       // registerClKernel + 4x SetKernelArguments
+  std::atomic<uint64_t> ns_xt_dispatch{0};    // DispatchCommand(input_transpose)
+  std::atomic<uint64_t> ns_gemm_setup{0};     // registerClKernel + 8x SetKernelArguments
+  std::atomic<uint64_t> ns_gemm_dispatch{0};  // DispatchCommand(gpu_int4_gemm_adreno)
+  std::atomic<uint64_t> ns_svm_map_sync{0};   // enqueueSVMMap(blocking=true)
+  std::atomic<uint64_t> ns_cl_mem_release{0}; // 4x clReleaseMemObject
+
+  ~Int4AdrenoGemmProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+
+    const uint64_t mem_c = ns_cl_mem_create.load();
+    const uint64_t xts = ns_xt_setup.load();
+    const uint64_t xtd = ns_xt_dispatch.load();
+    const uint64_t gms = ns_gemm_setup.load();
+    const uint64_t gmd = ns_gemm_dispatch.load();
+    const uint64_t svm = ns_svm_map_sync.load();
+    const uint64_t mem_r = ns_cl_mem_release.load();
+
+    const uint64_t total = mem_c + xts + xtd + gms + gmd + svm + mem_r;
+    const double total_ms = total / 1.0e6;
+
+    auto pct = [&](uint64_t v) -> double {
+      return total == 0 ? 0.0 : (double)v / (double)total * 100.0;
+    };
+    auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
+
+    std::fprintf(stderr,
+                 "\n[PROFILE gemm_int4_adreno_cl prefill (M>1)] "
+                 "total=%.2f ms calls=%llu\n",
+                 total_ms, (unsigned long long)c);
+    std::fprintf(stderr,
+                 "  cl_mem_create    : %8.2f ms (%5.1f%%)  "
+                 "[2x clCreateBuffer + 2x clCreateImage]\n",
+                 ms(mem_c), pct(mem_c));
+    std::fprintf(stderr,
+                 "  xt_setup         : %8.2f ms (%5.1f%%)  "
+                 "[registerClKernel + 4x SetKernelArgs (input_transpose)]\n",
+                 ms(xts), pct(xts));
+    std::fprintf(stderr,
+                 "  xt_dispatch      : %8.2f ms (%5.1f%%)  "
+                 "[DispatchCommand(input_transpose)]\n",
+                 ms(xtd), pct(xtd));
+    std::fprintf(stderr,
+                 "  gemm_setup       : %8.2f ms (%5.1f%%)  "
+                 "[registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]\n",
+                 ms(gms), pct(gms));
+    std::fprintf(stderr,
+                 "  gemm_dispatch    : %8.2f ms (%5.1f%%)  "
+                 "[DispatchCommand(gpu_int4_gemm_adreno)]\n",
+                 ms(gmd), pct(gmd));
+    std::fprintf(stderr,
+                 "  svm_map_sync     : %8.2f ms (%5.1f%%)  "
+                 "[enqueueSVMMap(output, blocking=true)]\n",
+                 ms(svm), pct(svm));
+    std::fprintf(stderr,
+                 "  cl_mem_release   : %8.2f ms (%5.1f%%)  "
+                 "[4x clReleaseMemObject]\n",
+                 ms(mem_r), pct(mem_r));
+  }
+};
+
+Int4AdrenoGemmProfile g_int4_gemm_profile;
+
+inline uint64_t now_ns_phase6() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 void gemv_int4_async_cl(std::vector<void *> weights,
                         std::vector<uint16_t *> scales, uint16_t *input,
@@ -847,6 +949,12 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
 
   cl_image_desc image_desc;
 
+  // Phase 6 sub-stage profiler: per-call cumulative substage times accumulate
+  // into g_int4_gemm_profile, which dumps a one-shot breakdown at process
+  // exit. Every call to this wrapper is an M>1 prefill call, so no guard is
+  // needed. See the profiler struct at the top of this file.
+  const uint64_t t_mem_c0 = now_ns_phase6();
+
   // ---- input image (host-prepared fp16 [M][alignK]) ----
   const size_t input_buf_bytes =
     static_cast<size_t>(M) * static_cast<size_t>(alignK) * sizeof(uint16_t);
@@ -903,6 +1011,9 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
       "Failed to create image1d_buffer for input_transposed");
   }
 
+  const uint64_t t_mem_c1 = now_ns_phase6();
+  g_int4_gemm_profile.ns_cl_mem_create += t_mem_c1 - t_mem_c0;
+
   // ---- step 1: input_transpose kernel ----
   ClContext::SharedPtrClKernel xt_kernel =
     blas_cc->registerClKernel(input_transpose_kernel, "input_transpose");
@@ -938,11 +1049,19 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
     const int xt_global[3] = {alignK_4, M_4, 1};
     const int xt_local[3] = {1, 128, 1};
 
+    const uint64_t t_xt_setup_end = now_ns_phase6();
+    g_int4_gemm_profile.ns_xt_setup += t_xt_setup_end - t_mem_c1;
+
     result = blas_cc->command_queue_inst_.DispatchCommand(xt_kernel, xt_global,
                                                           xt_local);
     if (!result)
       throw std::runtime_error("Failed to dispatch input_transpose");
+
+    const uint64_t t_xt_dispatch_end = now_ns_phase6();
+    g_int4_gemm_profile.ns_xt_dispatch += t_xt_dispatch_end - t_xt_setup_end;
   }
+
+  const uint64_t t_gemm_setup_start = now_ns_phase6();
 
   // ---- step 2: gpu_int4_gemm_adreno kernel (texture input) ----
   ClContext::SharedPtrClKernel gemm_kernel = blas_cc->registerClKernel(
@@ -1006,22 +1125,39 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
                                 static_cast<int>(N) / 4, 1};
     const int gemm_local[3] = {1, 128, 1};
 
+    const uint64_t t_gemm_setup_end = now_ns_phase6();
+    g_int4_gemm_profile.ns_gemm_setup += t_gemm_setup_end - t_gemm_setup_start;
+
     result = blas_cc->command_queue_inst_.DispatchCommand(
       gemm_kernel, gemm_global, gemm_local);
     if (!result)
       throw std::runtime_error("Failed to dispatch gpu_int4_gemm_adreno");
+
+    const uint64_t t_gemm_dispatch_end = now_ns_phase6();
+    g_int4_gemm_profile.ns_gemm_dispatch +=
+      t_gemm_dispatch_end - t_gemm_setup_end;
   }
+
+  const uint64_t t_svm_start = now_ns_phase6();
 
   // sync output back to host
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
     true);
 
+  const uint64_t t_svm_end = now_ns_phase6();
+  g_int4_gemm_profile.ns_svm_map_sync += t_svm_end - t_svm_start;
+
   // cleanup per-call cl_mem / cl_image objects
   clReleaseMemObject(input_t_img);
   clReleaseMemObject(input_t_buf);
   clReleaseMemObject(input_img);
   clReleaseMemObject(input_buf);
+
+  const uint64_t t_mem_r_end = now_ns_phase6();
+  g_int4_gemm_profile.ns_cl_mem_release += t_mem_r_end - t_svm_end;
+
+  g_int4_gemm_profile.calls++;
 }
 
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
