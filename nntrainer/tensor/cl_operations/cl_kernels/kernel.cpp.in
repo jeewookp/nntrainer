@@ -1,7 +1,0 @@
-#include "@header_path@"
-
-namespace @namespace@ {
-const std::string @variable_name@ = { 
-@kernel_code@
-};
-} // namespace @namespace@

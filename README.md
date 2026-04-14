@@ -1,148 +1,112 @@
-# NNtrainer
+# LiteRT-LM
 
-[![Code Coverage](https://img.shields.io/endpoint?url=https://nntrainer.github.io/coverage_result/coverage.json)](https://nntrainer.github.io/coverage_result/)
-[![DailyBuild](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml)
-![GitHub repo size](https://img.shields.io/github/repo-size/nnstreamer/nntrainer)
-![GitHub issues](https://img.shields.io/github/issues/nnstreamer/nntrainer)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/nnstreamer/nntrainer)
-<a href="https://scan.coverity.com/projects/nnstreamer-nntrainer">
-  <img alt="Coverity Scan Build Status"
-       src="https://scan.coverity.com/projects/22512/badge.svg"/>
-</a>
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9179/badge)](https://www.bestpractices.dev/projects/9179)
+LiteRT-LM is Google's production-ready, high-performance, open-source inference
+framework for deploying Large Language Models on edge devices.
 
-NNtrainer is a Software Framework for training/Inference of Neural Network models on devices.
+🔗 [Product Website](https://ai.google.dev/edge/litert-lm)
 
-## Overview
+## 🔥 What's New: Gemma 4 support with LiteRT-LM
 
-NNtrainer is an Open Source Project. The aim of the NNtrainer is to develop a Software Framework to train and run inference of neural network models on embedded devices which have relatively limited resources.
+Deploy [Gemma 4](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)
+across a broad range of hardware with stellar performance
+([blog](https://developers.googleblog.com/bring-state-of-the-art-agentic-skills-to-the-edge-with-gemma-4/)).
 
-**Training**: Rather than training whole layers of a network from the scratch, NNtrainer finetunes the neural network model on device with user data for the personalization.
+👉 Try on Linux, macOS, Windows (WSL) or Raspberry Pi with the
+[LiteRT-LM CLI](https://ai.google.dev/edge/litert-lm/cli):
 
-**Inference**: NNtrainer supports efficient LLM inference on memory-constrained devices through advanced memory optimization techniques:
-- **FSU (Flash Storage Utilization)**: Dynamically loads model weights from flash storage during inference, significantly reducing peak memory usage.
-- **MoE Cache**: Intelligent caching mechanism for Mixture of Experts models, keeping frequently used experts in memory while swapping others to storage.
-- **Proactive Loading**: Predicts and pre-loads required weights before they are needed, minimizing latency during inference.
-
-Even if NNtrainer runs on device, it provides full functionalities to train and infer models and also utilizes limited device resources efficiently. NNTrainer supports various machine learning algorithms such as k-Nearest Neighbor (k-NN), Neural Networks, Logistic Regression, Reinforcement Learning algorithms, Recurrent network, Transformers (LLM) and more. We also provide examples for various tasks such as Few-shot learning, ResNet, VGG, Product Rating, LLM Inference and more will be added. All of these were tested on Samsung Galaxy smart phone with Android and PC (Ubuntu).
-
-[ Memory-Efficient LLM Inference on Edge Devices With NNTrainer ](https://youtu.be/J2tUmi4bwMY?si=rJyiXkwr5iFrMhIK), Open Source Summit 2025 Seoul <br />
-[ A New Frontier of AI: On-Device AI Training and Personalization ](https://dl.acm.org/doi/abs/10.1145/3639477.3639716), ICSE-SEIP, 2024 <br />
-[ NNTrainer: Light-Weight On-Device Training Framework ](https://arxiv.org/pdf/2206.04688.pdf), arXiv, 2022 <br />
-[  Open Source On-Device AI SW Platform ](https://youtu.be/im3uNrPLYx4?si=gMbw7LKKSnpXi59U), Samsung Developer Conference 2023 (Korean) <br />
-[ NNTrainer: Personalize neural networks on devices! ](https://www.youtube.com/watch?v=HKKowY78P1A), Samsung Developer Conference 2021 <br />
-[ NNTrainer: "On-device learning" ](https://www.youtube.com/embed/Jy_auavraKg?start=4035&end=4080), Samsung AI Forum 2021
-
-## ✨ Key Features
-
-- 📱 **Run Locally, Fully Offline**: Perform training and inference directly on your edge devices without any internet connection. Ensure data privacy and low latency.
-- 🛠️ **On-Device Training & Personalization**: Fine-tune models on-device with private user data. Supports Transfer Learning, Few-Shot Learning, and Continuous Learning scenarios.
-- 🚀 **Efficient LLM Inference**: Run Large Language Models on memory-constrained devices. Features **Flash Storage Utilization (FSU)** to offload weights and **MoE Cache** for efficient Mixture-of-Experts execution.
-- 🤖 **Broad Model Support**: Built-in support for various architectures including CNNs (ResNet, VGG), RNNs (LSTM, GRU), Transformers (LLaMA, Qwen, DeepSeek), and Reinforcement Learning.
-- ⚡ **High Performance & Lightweight**: Optimized for embedded systems. Functionalities are designed to minimize memory footprint and maximize execution speed on ARM, x86, and NPU targets.
-- 🔌 **Cross-Platform**: Deploy seamlessly across Tizen, Android, Linux, and Windows environments with consistent C/C++ APIs.
-
-
-## 🚀 Running LLMs On Device
-
-NNTrainer supports Large Language Model (LLM) inference! Please refer to `Applications/CausalLM` for details. We currently support various LLM architectures, including:
-  - Qwen3
-  - Qwen3-MoE
-  - GPT-OSS
-  - And more to come!
-
-### Running MoE on your device
-  NNTrainer enables the execution of large-scale Mixture of Experts (MoE) models directly on-device. We support on-the-fly expert loading using flash storage, allowing MoE models to run with significantly reduced peak memory usage.
-  Below are demonstrations of MoE LLMs running on mobile devices:
-
-#### 📱 Running MoE on your mobile phone
-
-| GPT-OSS 20B | Qwen3 MoE 30B-A3B |
-|:-----------:|:-----------------:|
-| <img src="docs/videos/GPT_OSS_20B_Demo.gif" width="360"> | <img src="docs/videos/Qwen_30B_Demo.gif" width="360"> |
-
-#### 💻 Running MoE on your PC
-
- NNTrainer's FSU feature allows for dynamic expert loading during inference. This minimizes initialization time and ensures efficiency in memory-constrained environments. To test this, try the models located in `Applications/CausalLM/models/*-slim`.
-
-  | Load Whole model (Qwen3-30B-A3B) | Load Expert On-The-Fly (Qwen3-30B-A3B-Slim)|
-  |:-------:|:------:|
-  |![](./docs/videos/moe-full.gif)| ![](./docs/videos/moe-on-the-fly.gif) |
-  | Memory: 16.5 GB | Memory: 1.3 GB |
-
-
-## Official Releases
-
-|     | [Tizen](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [Ubuntu](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) |                                                                                      Android/NDK Build                                                                                       |                                                                                                      Windows                                                                                                      |
-| :-- | :--: | :--: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|     | 7.0M2 and later | 22.04/24.04 |                                                                                             9/P                                                                                              |                                                                                              windows-2022 and later                                                                                               |
-| arm64 | [![Tizen ARM](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_tizen_arm.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_tizen_arm.yml) | [![Ubuntu](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml) | [![Android](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_android.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_android.yml) |     [![Windows ARM](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_windows_arm.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_windows_arm.yml)      |
-| x86_64 | [![Tizen x86_64](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_tizen_x86_64.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_tizen_x86_64.yml) | [![Ubuntu](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build.yml) |                                                                                             N/A                                                                                              | [![Windows x86_64](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_windows_x86_64.yml/badge.svg)](https://github.com/nntrainer/nntrainer/actions/workflows/daily_build_windows_x86_64.yml) |
-| Publish | [Tizen Repo](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [PPA](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) |                                                                                              NA                                                                                              |                                                                                                        NA                                                                                                         |
-| API | C (Official) | C/C++ |                                                                                            C/C++                                                                                             |                                                                                                       C/C++                                                                                                       |
-
-- Ready: CI system ensures build-ability and unit-testing. Users may easily build and execute. However, we do not have automated release & deployment system for this instance.
-- Available: binary packages are released and deployed automatically and periodically along with CI tests.
-- SDK Support: Tizen Studio (7.0 and later)
-
-## Getting Started
-
-### [Installation](https://github.com/nntrainer/nntrainer/blob/main/docs/getting-started.md)
-
-Instructions for installing NNTrainer.
-
-### [Tutorial](https://github.com/nntrainer/nntrainer/blob/main/docs/how-to-create-model.md)
-
-Introductions for creating your own model.
-
-### [Running Examples](https://github.com/nntrainer/nntrainer/blob/main/docs/how-to-run-examples.md)
-
-Instructions for preparing NNTrainer for execution
-
-### [Examples for NNTrainer](https://github.com/nntrainer/nntrainer/tree/main/Applications)
-
-NNTrainer examples for a variety of networks
-
-### [Components](https://github.com/nntrainer/nntrainer/blob/main/docs/components.md)
-
-[Our supported features](https://github.com/nntrainer/nntrainer/blob/main/docs/components.md#supported_feature)
-- Supported ptimizer
-- Supported Loss Functions
-- Supported Activation Functions
-- Supported Tensor
-- Others
-
-### APIs
-Currently, we provide [C APIs](https://github.com/nntrainer/nntrainer/blob/master/api/capi/include/nntrainer.h) for Tizen. [C++ APIs](https://github.com/nntrainer/nntrainer/blob/master/api/ccapi/include) are also provided for other platform. Java & C# APIs will be provided soon.
-
-## Open Source License
-
-The NNtrainer is an open source project released under the terms of the Apache License version 2.0.
-
-## Contributing
-
-Contributions are welcome! Please see our [Contributing](https://github.com/nntrainer/nntrainer/blob/main/docs/contributing.md) Guide for more details.
-
-[//]: # ([![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/0&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/0&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/1&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/1&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/2&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/2&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/3&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/3&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/4&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/4&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/5&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/5&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/6&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/6&#41;[![]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/images/7&#41;]&#40;https://sourcerer.io/fame/dongju-chae/nnstreamer/nntrainer/links/7&#41;)
-
-## Citation
-
-If you find this NNTrainer project useful or relevant to your research, please consider citing our paper:
-
-
+```bash
+litert-lm run  \
+   --from-huggingface-repo=litert-community/gemma-4-E2B-it-litert-lm \
+   gemma-4-E2B-it.litertlm \
+   --prompt="What is the capital of France?"
 ```
-@inproceedings{10.1145/3639477.3639716,
-author = {Moon, Jijoong and Lee, Hyeonseok and Chu, Jiho and Park, Donghak and Hong, Seungbaek and Seo, Hyungjun and Jeong, Donghyeon and Kong, Sungsik and Ham, Myungjoo},
-title = {A New Frontier of AI: On-Device AI Training and Personalization},
-year = {2024},
-isbn = {9798400705014},
-publisher = {Association for Computing Machinery},
-url = {https://doi.org/10.1145/3639477.3639716},
-doi = {10.1145/3639477.3639716},
-booktitle = {Proceedings of the 46th International Conference on Software Engineering: Software Engineering in Practice},
-pages = {323–333},
-numpages = {11},
-keywords = {on-device AI, neural network, personalization, training, software framework},
-series = {ICSE-SEIP '24}
-}
+
+## 🌟 Key Features
+
+-   📱 **Cross-Platform Support**: Android, iOS, Web, Desktop, and IoT (e.g.
+Raspberry Pi).
+-   🚀 **Hardware Acceleration**: Peak performance via GPU and NPU accelerators.
+-   👁️ **Multi-Modality**: Support for vision and audio inputs.
+-   🔧 **Tool Use**: Function calling support for agentic workflows.
+-   📚 **Broad Model Support**: Gemma, Llama, Phi-4, Qwen, and more.
+
+![](./docs/api/kotlin/demo.gif)
+
+---
+
+## 🚀 Production-Ready for Google's Products
+
+LiteRT-LM powers on-device GenAI experiences in **Chrome**, **Chromebook Plus**,
+**Pixel Watch**, and more.
+
+You can also try the
+[Google AI Edge Gallery](https://github.com/google-ai-edge/gallery) app to run
+models immediately on your device.
+
+| **Install the app today from Google Play** | **Install the app today from App Store** |
+| :---: | :---: |
+| <a href='https://play.google.com/store/apps/details?id=com.google.ai.edge.gallery'><img alt='Get it on Google Play' height="120" src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/></a> | <a href="https://apps.apple.com/us/app/google-ai-edge-gallery/id6749645337?itscg=30200&itsct=apps_box_badge&mttnsubad=6749645337" style="display: inline-block;"> <img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?releaseDate=1771977600" alt="Download on the App Store" style="width: 246px; height: 90px; vertical-align: middle; object-fit: contain;" /></a> |
+
+### 📰 Blogs & Announcements
+
+| Link | Description |
+| :--- | :--- |
+| [Bring state-of-the-art agentic skills to the edge with Gemma 4](https://developers.googleblog.com/bring-state-of-the-art-agentic-skills-to-the-edge-with-gemma-4/) | Deploy Gemma 4 in-app and across a broader range of devices with stellar performance and broad reach using LiteRT-LM. |
+| [On-device GenAI in Chrome, Chromebook Plus and Pixel Watch](https://developers.googleblog.com/on-device-genai-in-chrome-chromebook-plus-and-pixel-watch-with-litert-lm/) | Deploy language models on wearables and browser-based platforms using LiteRT-LM at scale. |
+| [On-device Function Calling in Google AI Edge Gallery](https://developers.googleblog.com/on-device-function-calling-in-google-ai-edge-gallery/) | Explore how to fine-tune FunctionGemma and enable function calling capabilities powered by LiteRT-LM Tool Use APIs. |
+| [Google AI Edge small language models, multimodality, and function calling](https://developers.googleblog.com/google-ai-edge-small-language-models-multimodality-rag-function-calling/) | Latest insights on RAG, multimodality, and function calling for edge language models. |
+
+---
+
+## 🏃 Quick Start
+
+### 🔗 Key Links
+
+-   👉 [Technical Overview](https://ai.google.dev/edge/litert-lm/overview) including performance benchmarks, model support, and more.
+-   👉 [LiteRT-LM CLI Guide](https://ai.google.dev/edge/litert-lm/cli) including installation, getting started, and advanced usage.
+
+### ⚡ Quick Try (No Code)
+
+Try LiteRT-LM immediately from your terminal without writing a single line of code using [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+uv tool install litert-lm
+
+litert-lm run \
+  --from-huggingface-repo=google/gemma-3n-E2B-it-litert-lm \
+  gemma-3n-E2B-it-int4 \
+  --prompt="What is the capital of France?"
 ```
+
+
+---
+
+### 📚 Supported Language APIs
+Ready to get started? Explore our language-specific guides and setup instructions.
+
+| Language | Status | Best For... | Documentation |
+| :--- | :--- | :--- | :--- |
+| **Kotlin** | ✅ Stable | Android apps & JVM | [Android (Kotlin) Guide](https://ai.google.dev/edge/litert-lm/android) |
+| **Python** | ✅ Stable | Prototyping & Scripting | [Python Guide](https://ai.google.dev/edge/litert-lm/python) |
+| **C++** | ✅ Stable | High-performance native | [C++ Guide](https://ai.google.dev/edge/litert-lm/cpp) |
+| **Swift** | 🚀 In Dev | Native iOS & macOS | (Coming Soon) |
+
+#### 🏗️ Build From Source
+
+This [guide](./docs/getting-started/build-and-run.md) shows how you can
+compile LiteRT-LM from source. If you want to build the program from source,
+you should checkout the stable [![Latest
+Release](https://img.shields.io/github/v/release/google-ai-edge/LiteRT-LM)](https://github.com/google-ai-edge/LiteRT-LM/releases/latest) tag.
+
+---
+
+## 📦 Releases
+
+-   **v0.10.1**: Deploy [Gemma 4](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/) with stellar performance ([blog](https://developers.googleblog.com/bring-state-of-the-art-agentic-skills-to-the-edge-with-gemma-4/)) and introduce [LiteRT-LM CLI](https://ai.google.dev/edge/litert-lm/cli).
+-   **v0.9.0**: Improvements to function calling capabilities, better app performance stability.
+-   **v0.8.0**: Desktop GPU support and Multi-Modality.
+-   **v0.7.0**: NPU acceleration for Gemma models.
+
+For a full list of releases, see [GitHub Releases](https://github.com/google-ai-edge/LiteRT-LM/releases).
+
+---

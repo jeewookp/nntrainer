@@ -1,9 +1,0 @@
-prefix=@PREFIX@
-libdir=@LIB_INSTALL_DIR@
-includedir=@INCLUDE_INSTALL_DIR@
-
-Name : nntrainer
-Version : @VERSION@
-Description: Software Framework for Training Neural Network on Device
-Libs: -L${libdir} -lnntrainer
-Cflags: -I${includedir}/nntrainer
