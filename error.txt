@@ -1,18 +1,22 @@
 실행 결과 아래와 같아
 
 
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
 -e [INFO] To build API library, run:
 -e [INFO]   ./build_api_lib.sh
 -e [INFO] To install and run:
 -e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (44479504 bytes in 1.308s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.5 MB/s (44003720 bytes in 1.292s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.3 MB/s (3960088 bytes in 0.121s)
-3 files pushed. 32.4 MB/s (92443312 bytes in 2.724s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.2 MB/s (10999080 bytes in 0.326s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 13.3 MB/s (129336 bytes in 0.009s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.7 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.1 MB/s (1822720 bytes in 0.056s)
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.3 MB/s (44479504 bytes in 1.312s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.6 MB/s (44003720 bytes in 1.288s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960088 bytes in 0.117s)
+3 files pushed. 32.4 MB/s (92443312 bytes in 2.720s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.3 MB/s (10999080 bytes in 0.325s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.6 MB/s (129336 bytes in 0.005s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.5 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 33.7 MB/s (1822720 bytes in 0.052s)
 [temp.sh] patched on-device nntr_config.json:
     "model_tensor_type": "QINT4-FP16",
     "num_to_generate": 32,
@@ -20,8 +24,16 @@ jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.3 MB/s (3960088 bytes i
     "max_seq_len": 2048,
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-[!] FATAL ERROR: Embedding layer takes only FP32 input data
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+
+[!] FATAL ERROR: Failed to create input cl_mem buffer
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -29,6 +41,9 @@ jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.3 MB/s (3960088 bytes i
 ==========================================
 
 --- Generation snippet (post-assistant tag) ---
+
+
+[!] FATAL ERROR: Failed to create input cl_mem buffer
 
 
 --- Perf summary ---
