@@ -11,6 +11,11 @@
  * @note   This embedding layer supports FP32/FP16/Q6_K data type only.
  */
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+
 #include <embedding_layer.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
@@ -19,6 +24,35 @@
 #include <util_func.h>
 
 namespace causallm {
+
+namespace {
+
+struct EmbeddingProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  ~EmbeddingProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE EmbeddingLayer prefill (M>1)] total=%.2f ms "
+                 "calls=%llu avg=%.3f ms\n",
+                 t / 1.0e6, (unsigned long long)c,
+                 (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+EmbeddingProfile g_embedding_profile;
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
@@ -89,6 +123,8 @@ void EmbeddingLayer::forwarding(nntrainer::RunLayerContext &context,
 void EmbeddingLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                             unsigned int from, unsigned int to,
                                             bool training) {
+  const bool profile_this_call = (to - from) > 1;
+  const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
 
   /// @todo get input and output dimension from input_ and hidden itself
   unsigned int in_dim = std::get<nntrainer::props::InDim>(embedding_props);
@@ -191,6 +227,11 @@ void EmbeddingLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
               << "\n input:" << input_ << "\n weight: " << weight
               << "\n hidden: " << hidden_ << std::endl;
 #endif
+  }
+
+  if (profile_this_call) {
+    g_embedding_profile.ns += now_ns() - t_layer_start;
+    g_embedding_profile.calls++;
   }
 }
 

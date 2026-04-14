@@ -11,6 +11,11 @@
  *
  */
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+
 #include <cpu_backend.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
@@ -22,6 +27,43 @@
 #include <util_func.h>
 
 namespace causallm {
+
+namespace {
+
+// Separate profilers for the two modes -- "embedding" runs at the start of
+// the graph as token lookup, "lm_head" runs at the end as the vocab-sized
+// logits projection. With Qwen3-4B's tie_word_embeddings=true both modes
+// are instances of TieWordEmbedding; on other models only one of them fires.
+struct TieWordEmbProfile {
+  const char *mode;
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  TieWordEmbProfile(const char *m) : mode(m) {}
+
+  ~TieWordEmbProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE TieWordEmbedding (%s) prefill (M>1)] "
+                 "total=%.2f ms calls=%llu avg=%.3f ms\n",
+                 mode, t / 1.0e6, (unsigned long long)c,
+                 (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+TieWordEmbProfile g_tie_embedding_profile{"embedding"};
+TieWordEmbProfile g_tie_lmhead_profile{"lm_head"};
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
@@ -177,12 +219,26 @@ void TieWordEmbedding::incremental_forwarding(
   nntrainer::RunLayerContext &context, unsigned int from, unsigned int to,
   bool training) {
 
+  const bool profile_this_call = (to - from) > 1;
+  const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
+
   if (mode_ == mode::embedding)
     incremental_forwarding_embedding(context, from, to, training);
   else if (mode_ == mode::lm_head)
     incremental_forwarding_lmhead(context, from, to, training);
   else
     throw std::invalid_argument("lm_head is not supported yet");
+
+  if (profile_this_call) {
+    const uint64_t dt = now_ns() - t_layer_start;
+    if (mode_ == mode::embedding) {
+      g_tie_embedding_profile.ns += dt;
+      g_tie_embedding_profile.calls++;
+    } else if (mode_ == mode::lm_head) {
+      g_tie_lmhead_profile.ns += dt;
+      g_tie_lmhead_profile.calls++;
+    }
+  }
 }
 
 void TieWordEmbedding::incremental_forwarding_embedding(

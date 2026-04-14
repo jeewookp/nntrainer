@@ -11,11 +11,45 @@
  *
  */
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+
 #include <util_simd.h>
 
 #include "swiglu.h"
 
 namespace causallm {
+
+namespace {
+
+struct SwiGLUProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  ~SwiGLUProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE SwiGLULayer prefill (M>1)] total=%.2f ms "
+                 "calls=%llu avg=%.3f ms\n",
+                 t / 1.0e6, (unsigned long long)c,
+                 (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+SwiGLUProfile g_swiglu_profile;
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 static constexpr size_t OUT_IDX = 0;
 static constexpr size_t INPUT_IDX_1 = 0;
@@ -40,6 +74,9 @@ void SwiGLULayer::forwarding(nntrainer::RunLayerContext &context,
 void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                          unsigned int from, unsigned int to,
                                          bool training) {
+  const bool profile_this_call = (to - from) > 1;
+  const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
+
   nntrainer::Tensor &in1 = context.getInput(INPUT_IDX_1);
   nntrainer::Tensor &in2 = context.getInput(INPUT_IDX_2);
   nntrainer::Tensor &out = context.getOutput(OUT_IDX);
@@ -74,6 +111,11 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
+  }
+
+  if (profile_this_call) {
+    g_swiglu_profile.ns += now_ns() - t_layer_start;
+    g_swiglu_profile.calls++;
   }
 }
 
