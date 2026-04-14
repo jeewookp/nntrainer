@@ -1,276 +1,6 @@
 실행 결과 아래와 같아
-error.txt는 건드리지 않게 해줘 generation 토큰 수도 128로 원복하자 그리고 prefill 프로파일링 해서 어디가 병목인지 찾아보자
+generation 토큰 수도 128로 원복하자 다음 단계 알려줘
 
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (44468912 bytes in 1.302s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.8 MB/s (43993128 bytes in 1.277s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.4 MB/s (3960088 bytes in 0.117s)
-3 files pushed. 32.7 MB/s (92422128 bytes in 2.698s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10994472 bytes in 0.327s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.5 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 21.3 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 30.8 MB/s (1822720 bytes in 0.056s)
-[temp.sh] patched on-device nntr_config.json:
-    "num_to_generate": 8,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-[DIAG MemoryPool::allocate] pool_size=2363590144
-[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, calling createSVMRegion(2363590144)
-[DIAG MemoryPool::allocate] createSVMRegion FAILED (returned NULL) size=2363590144 -- falling back to calloc
-[DIAG attach_kai_buffer] weight=layer0_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer0_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer0_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer0_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer1_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer0_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer0_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer0_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer1_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer1_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer1_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer1_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer1_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer1_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer2_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer2_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer2_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer2_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer2_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer2_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer2_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer3_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer3_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer3_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer3_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer3_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer3_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer4_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer4_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer3_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer4_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer4_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer4_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer4_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer4_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer5_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer5_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer5_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer5_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer5_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer5_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer5_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer6_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer6_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer6_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer6_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer6_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer6_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer6_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer7_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer7_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer7_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer7_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer7_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer7_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer7_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer8_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer8_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer8_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer8_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer8_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer8_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer8_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer9_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer9_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer9_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer9_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer9_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer9_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer9_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer10_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer10_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer10_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer10_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer10_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer10_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer10_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer11_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer11_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer11_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer11_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer11_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer11_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer11_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer12_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer12_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer12_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer12_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer12_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer12_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer13_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer12_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer13_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer13_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer13_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer13_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer14_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer14_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer13_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer13_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer14_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer14_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer14_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer14_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer14_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer15_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer15_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer15_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer15_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer15_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer15_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer15_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer16_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer16_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer16_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer16_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer16_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer16_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer16_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer17_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer17_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer17_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer17_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer17_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer17_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer18_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer17_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer18_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer18_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer18_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer18_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer18_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer18_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer19_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer19_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer19_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer19_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer19_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer19_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer20_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer20_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer19_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer20_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer20_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer20_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer20_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer20_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer21_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer21_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer21_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer21_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer21_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer21_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer21_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer22_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer22_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer22_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer22_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer22_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer22_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer22_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer23_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer23_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer23_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer23_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer23_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer23_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer23_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer24_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer24_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer24_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer24_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer24_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer24_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer25_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer24_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer25_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer25_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer25_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer25_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer25_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer25_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer26_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer26_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer26_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer26_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer26_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer26_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer27_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer26_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer27_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer27_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer27_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer27_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer27_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer27_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer28_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer28_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer28_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer28_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer28_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer28_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer28_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer29_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer29_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer29_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer29_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer30_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer29_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer30_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer29_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer30_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer30_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer30_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer30_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer30_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer31_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer31_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer29_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer31_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer31_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer31_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer31_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer31_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer32_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer32_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer32_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer32_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer32_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer32_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer32_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer33_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer33_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer33_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer33_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer33_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer33_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer33_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer34_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer34_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer34_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer34_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer34_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer34_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer34_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer35_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer35_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer35_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer35_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer35_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer35_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer35_ffn_gate:weight K=2560 N=9728
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -279,75 +9,63 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[DIAG MemoryPool::allocate] pool_size=303169536
-[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, calling createSVMRegion(303169536)
-[DIAG MemoryPool::allocate] createSVMRegion SUCCESS ptr=0x3f74b58000 size=303169536
-[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=4096 N=2560 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=9728 N=2560 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
 <think>
 Okay, the user wants a summary
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 17526 ms, 24.9344 TPS
-generation: 8 tokens, 1585 ms, 5.04732 TPS
-total: 19118 ms
-peak memory: 2742776 KB
+prefill: 437 tokens, 17740 ms, 24.6336 TPS
+generation: 8 tokens, 1556 ms, 5.14139 TPS
+total: 19301 ms
+peak memory: 2720024 KB
 ==========================================================
-[e2e time]: 21321 ms 
-Max Resident Set Size: 2742776 KB
+[e2e time]: 21644 ms 
+Max Resident Set Size: 2720024 KB
+
+[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
+  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  3320.96 ms ( 20.0%)  [CPU fp16->fp32 + crop]
+  misc        :    15.34 ms (  0.1%)  [memset, scratch setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
- Diagnostic summary
+ Run summary
 ==========================================
-
---- MemoryPool::allocate traces ---
-[DIAG MemoryPool::allocate] pool_size=2363590144
-[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, calling createSVMRegion(2363590144)
-[DIAG MemoryPool::allocate] createSVMRegion FAILED (returned NULL) size=2363590144 -- falling back to calloc
-[DIAG MemoryPool::allocate] pool_size=303169536
-[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, calling createSVMRegion(303169536)
-[DIAG MemoryPool::allocate] createSVMRegion SUCCESS ptr=0x3f74b58000 size=303169536
-
---- dotQInteger / dotBatched-QINT4 traces (first 8) ---
-[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=4096 N=2560 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=9728 N=2560 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
-
---- attach_kai_buffer count ---
-attach_kai_buffer invocations: 252
 
 --- Generation snippet (post-assistant tag) ---
 
-[DIAG MemoryPool::allocate] pool_size=303169536
-[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, calling createSVMRegion(303169536)
-[DIAG MemoryPool::allocate] createSVMRegion SUCCESS ptr=0x3f74b58000 size=303169536
-[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=4096 N=2560 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
-[DIAG dotQInteger] M=437 K=2560 N=9728 svm_i
+<think>
+Okay, the user wants a summary
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 17740 ms, 24.6336 TPS
+generation: 8 tokens, 1556 ms, 5.14139 TPS
+total: 19301 ms
+peak memory: 2720024 KB
+==========================================================
+[e2e time]: 21644 ms 
+Max Resident Set Size: 2720024 KB
+
+[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
+  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  3320.96 ms ( 2
 
 --- Perf summary ---
-prefill: 437 tokens, 17526 ms, 24.9344 TPS
-generation: 8 tokens, 1585 ms, 5.04732 TPS
-total: 19118 ms
-peak memory: 2742776 KB
-[e2e time]: 21321 ms 
+prefill: 437 tokens, 17740 ms, 24.6336 TPS
+generation: 8 tokens, 1556 ms, 5.14139 TPS
+total: 19301 ms
+peak memory: 2720024 KB
+[e2e time]: 21644 ms 
 
-Full log: error.txt
+--- dotQInteger profile breakdown ---
+[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
+  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  3320.96 ms ( 20.0%)  [CPU fp16->fp32 + crop]
+  misc        :    15.34 ms (  0.1%)  [memset, scratch setup]
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
