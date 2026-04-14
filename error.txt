@@ -1,5 +1,10 @@
-실행 결과 아래와 같아 프로파일링 왜 없어졌지?
+실행 결과 아래와 같아 다른부분이 이제 보틀넥인 것 같네 프로파일 해보자
 
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.7 MB/s (129336 bytes in 0.005s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.3 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.7 MB/s (1822720 bytes in 0.055s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
     "num_to_generate": 32,
     "init_seq_len": 1024,
     "max_seq_len": 2048,
@@ -19,13 +24,19 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4592 ms, 95.1655 TPS
-generation: 32 tokens, 5881 ms, 5.44125 TPS
-total: 10478 ms
-peak memory: 2712324 KB
+prefill: 437 tokens, 4603 ms, 94.9381 TPS
+generation: 32 tokens, 5929 ms, 5.3972 TPS
+total: 10537 ms
+peak memory: 2745288 KB
 ==========================================================
-[e2e time]: 12810 ms 
-Max Resident Set Size: 2712324 KB
+[e2e time]: 12649 ms 
+Max Resident Set Size: 2745288 KB
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1653.94 ms calls=252
+  in_stage    :    67.39 ms (  4.1%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1493.76 ms ( 90.3%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    92.79 ms (  5.6%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -40,24 +51,30 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4592 ms, 95.1655 TPS
-generation: 32 tokens, 5881 ms, 5.44125 TPS
-total: 10478 ms
-peak memory: 2712324 KB
+prefill: 437 tokens, 4603 ms, 94.9381 TPS
+generation: 32 tokens, 5929 ms, 5.3972 TPS
+total: 10537 ms
+peak memory: 2745288 KB
 ==========================================================
-[e2e time]: 12810 ms 
-Max Resident Set Size: 2712324 KB
+[e2e time]: 12649 ms 
+Max Resident Set Size: 2745288 KB
 
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1653.94 ms calls=252
+  in_stage    :    67.39 ms (  4.1%)  [fp16 -> svm_in scalar loo
 
 --- Perf summary ---
-prefill: 437 tokens, 4592 ms, 95.1655 TPS
-generation: 32 tokens, 5881 ms, 5.44125 TPS
-total: 10478 ms
-peak memory: 2712324 KB
-[e2e time]: 12810 ms 
+prefill: 437 tokens, 4603 ms, 94.9381 TPS
+generation: 32 tokens, 5929 ms, 5.3972 TPS
+total: 10537 ms
+peak memory: 2745288 KB
+[e2e time]: 12649 ms 
 
 --- dotQInteger profile breakdown ---
-(no PROFILE lines found)
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1653.94 ms calls=252
+  in_stage    :    67.39 ms (  4.1%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1493.76 ms ( 90.3%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    92.79 ms (  5.6%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
