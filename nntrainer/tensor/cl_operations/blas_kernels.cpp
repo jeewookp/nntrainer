@@ -869,22 +869,34 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                              "gpu_int4_gemm_adreno");
 
   // Dispatch:
-  //   global_id(0) covers M / 2 (each work-item handles m and m+1 along M)
-  //   global_id(1) covers align_N / 4 (each work-item handles n..n+3)
+  //   global_id(0) covers M_padded / 8 -- each work-item handles 8
+  //     consecutive tokens along M because the kernel does
+  //     m = global_id(0)*2 and reads two adjacent half4s along M
+  //     (`m` and `m+1`), then writes 8 output rows per work-item via 8
+  //     vstore4 calls. With dim_m = M_padded/8 we cover [0..M_padded)
+  //     exactly. (Earlier we used ceilDiv(M, 2) by mistake, which over-
+  //     dispatched 4x: the OOB writes were filtered by the in-kernel
+  //     output guard so the result was still correct, but the GPU did
+  //     4x more work than needed.)
+  //   global_id(1) covers align_N / 4 -- each work-item handles 4
+  //     channels along N. align_N is N rounded up to 32; the kernel's
+  //     output guard skips writes for n >= N.
   //
   // Local size: {1, 16, 1} = 16 work-items per work-group along the N
-  // direction. Adreno's SIMD width is much larger than 1, so a {1,1,1}
-  // local size dispatches ~140k single-thread work-groups for typical FC
-  // sizes, which hangs the GPU (observed empirically). With {1,16,1} the
-  // group count drops 16x and each work-group has enough threads for the
-  // hardware scheduler to pack into a wave.
+  // direction. The kernel uses no sub-group ops, so any local size that
+  // divides the global size cleanly is valid. Earlier we tried {1,1,1}
+  // which combined with the (now-removed) qcom_reqd_sub_group_size("full")
+  // attribute hung the GPU.
   //
   // dim_n divisibility: align_N is rounded up to 32 in the host, so
   // align_N/4 is at least a multiple of 8; for the model's actual N
   // values (1024, 2560, 4096, 9728) we have dim_n in {256, 640, 1024,
   // 2432}, all multiples of 16.
+  //
+  // M is expected to already be padded to a multiple of 8 by the caller
+  // (FloatTensor::dotQInteger pads activations before invoking us).
   const int align_N = static_cast<int>(align(N, 32));
-  const int dim_m = static_cast<int>(ceilDiv(static_cast<unsigned int>(M), 2u));
+  const int dim_m = static_cast<int>(ceilDiv(static_cast<unsigned int>(M), 8u));
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_m, dim_n, 1};
