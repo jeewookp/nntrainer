@@ -29,9 +29,13 @@
 //
 // Each work-item produces 4 output channels (n .. n+3) by scanning the
 // full K dimension. There is no cross-work-item reduction; outputs are
-// independent across N. Float accumulator is used to avoid half overflow
-// on long K (max abs term per K-step is ~7 * |input|, which can sum well
-// past 65504 over thousands of K steps).
+// independent across N. Float accumulators avoid half-precision overflow
+// when K is large.
+//
+// Implementation note: kept to the same scalar element-wise style as
+// gpu_int4_gemm_adreno (per-element ops on .s0/.s1/.s2/.s3) because the
+// fancier vector convert_*/bit-mask form was rejected at runtime by the
+// Adreno OpenCL compiler.
 //
 // Dispatch from the host:
 //   global = align_N / 4   (each WI handles 4 channels)
@@ -51,34 +55,47 @@ gpu_int4_gemv_adreno(__global const half *input,
   if (n >= N)
     return;
 
-  float4 acc = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+  float acc0 = 0.0f;
+  float acc1 = 0.0f;
+  float acc2 = 0.0f;
+  float acc3 = 0.0f;
 
   for (int k = 0; k < K; k += 4) {
     const half4 in_v = vload4(0, input + k);
     const ushort4 packed = vload4(0, weights + (k / 4) * N + n);
 
     // Lane k+0 (low 4 bits of each ushort)
-    const float4 w0 = convert_float4(
-      convert_short4(packed & (ushort4)(0x000F)) - (short4)(8));
-    acc += (float)in_v.s0 * w0;
+    const float in0 = (float)in_v.s0;
+    acc0 += in0 * (float)((int)(packed.s0 & 0x000F) - 8);
+    acc1 += in0 * (float)((int)(packed.s1 & 0x000F) - 8);
+    acc2 += in0 * (float)((int)(packed.s2 & 0x000F) - 8);
+    acc3 += in0 * (float)((int)(packed.s3 & 0x000F) - 8);
 
     // Lane k+1
-    const float4 w1 = convert_float4(
-      convert_short4((packed >> 4) & (ushort4)(0x000F)) - (short4)(8));
-    acc += (float)in_v.s1 * w1;
+    const float in1 = (float)in_v.s1;
+    acc0 += in1 * (float)((int)((packed.s0 & 0x00F0) >> 4) - 8);
+    acc1 += in1 * (float)((int)((packed.s1 & 0x00F0) >> 4) - 8);
+    acc2 += in1 * (float)((int)((packed.s2 & 0x00F0) >> 4) - 8);
+    acc3 += in1 * (float)((int)((packed.s3 & 0x00F0) >> 4) - 8);
 
     // Lane k+2
-    const float4 w2 = convert_float4(
-      convert_short4((packed >> 8) & (ushort4)(0x000F)) - (short4)(8));
-    acc += (float)in_v.s2 * w2;
+    const float in2 = (float)in_v.s2;
+    acc0 += in2 * (float)((int)((packed.s0 & 0x0F00) >> 8) - 8);
+    acc1 += in2 * (float)((int)((packed.s1 & 0x0F00) >> 8) - 8);
+    acc2 += in2 * (float)((int)((packed.s2 & 0x0F00) >> 8) - 8);
+    acc3 += in2 * (float)((int)((packed.s3 & 0x0F00) >> 8) - 8);
 
     // Lane k+3 (high 4 bits)
-    const float4 w3 = convert_float4(
-      convert_short4((packed >> 12) & (ushort4)(0x000F)) - (short4)(8));
-    acc += (float)in_v.s3 * w3;
+    const float in3 = (float)in_v.s3;
+    acc0 += in3 * (float)((int)((packed.s0 & 0xF000) >> 12) - 8);
+    acc1 += in3 * (float)((int)((packed.s1 & 0xF000) >> 12) - 8);
+    acc2 += in3 * (float)((int)((packed.s2 & 0xF000) >> 12) - 8);
+    acc3 += in3 * (float)((int)((packed.s3 & 0xF000) >> 12) - 8);
   }
 
-  const float4 scale = convert_float4(vload4(0, scales + n));
-  const float4 result = acc * scale;
-  vstore4(convert_half4(result), 0, output + n);
+  const half4 scale = vload4(0, scales + n);
+  output[n + 0] = (half)(acc0 * (float)scale.s0);
+  output[n + 1] = (half)(acc1 * (float)scale.s1);
+  output[n + 2] = (half)(acc2 * (float)scale.s2);
+  output[n + 3] = (half)(acc3 * (float)scale.s3);
 }
