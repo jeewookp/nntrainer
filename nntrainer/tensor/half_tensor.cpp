@@ -9,6 +9,10 @@
  * @bug		No known bugs except for NYI items
  */
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -23,6 +27,79 @@
 #endif
 
 namespace nntrainer {
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+namespace {
+
+// Per-stage cumulative profiler for HalfTensor::dotQInteger PREFILL
+// path (M > 1). Decode (M = 1) is intentionally NOT measured -- the
+// per-call CPU stages are tiny on M=1 and we only want the prefill
+// bottleneck breakdown.
+//
+// Mirror of FloatTensor's profiler but with different stage semantics:
+// HalfTensor doesn't do any fp32<->fp16 CPU conversion because `*this`
+// and `output` are already fp16, so `in_stage` / `out_stage` just
+// measure the memcpy-equivalent staging into/out of page-aligned
+// scratch SVM.
+//
+// Prints a one-shot summary at process exit.
+struct HalfDotQInt4Profile {
+  std::atomic<uint64_t> calls{0};        // M>1 (prefill) calls only
+  std::atomic<uint64_t> ns_in_stage{0};  // fp16 -> page-aligned svm_in
+  std::atomic<uint64_t> ns_gpu_call{0};  // gemm wrapper (incl. sync)
+  std::atomic<uint64_t> ns_out_stage{0}; // svm_out -> fp16 output tensor
+  std::atomic<uint64_t> ns_misc{0};      // anything outside the 3 stages
+
+  ~HalfDotQInt4Profile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+
+    const uint64_t in = ns_in_stage.load();
+    const uint64_t gpu = ns_gpu_call.load();
+    const uint64_t out = ns_out_stage.load();
+    const uint64_t misc = ns_misc.load();
+    const uint64_t total = in + gpu + out + misc;
+    const double total_ms = total / 1.0e6;
+
+    auto pct = [&](uint64_t v) -> double {
+      return total == 0 ? 0.0 : (double)v / (double)total * 100.0;
+    };
+    auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
+
+    std::fprintf(stderr,
+                 "\n[PROFILE HalfTensor::dotQInteger prefill (M>1)] "
+                 "total=%.2f ms calls=%llu\n",
+                 total_ms, (unsigned long long)c);
+    std::fprintf(stderr,
+                 "  in_stage    : %8.2f ms (%5.1f%%)  [fp16 -> svm_in "
+                 "scalar loop]\n",
+                 ms(in), pct(in));
+    std::fprintf(stderr,
+                 "  gpu_call    : %8.2f ms (%5.1f%%)  [wrapper + clEnqueue + "
+                 "SVMMap sync]\n",
+                 ms(gpu), pct(gpu));
+    std::fprintf(stderr,
+                 "  out_stage   : %8.2f ms (%5.1f%%)  [svm_out -> fp16 "
+                 "scalar loop]\n",
+                 ms(out), pct(out));
+    std::fprintf(stderr,
+                 "  misc        : %8.2f ms (%5.1f%%)  [assertions, ptr "
+                 "setup]\n",
+                 ms(misc), pct(misc));
+  }
+};
+
+HalfDotQInt4Profile g_half_dotq_profile;
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
+#endif
 
 HalfTensor::HalfTensor(std::string name_, Tformat fm) :
   TensorBase(name_, fm, Tdatatype::FP16) {}
@@ -837,13 +914,16 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   uint16_t *svm_out =
     reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
 
-  // DIAG: replace std::memcpy with an element-wise scalar loop that mirrors
-  // FloatTensor::dotQInteger's staging pattern exactly. Rationale: memcpy on
-  // ARM64 typically uses NEON bulk stores, and on Adreno's coarse-grained
-  // SVM those writes may not be visible to the GPU without an explicit
-  // clEnqueueSVMMap/Unmap cycle. An element-wise store in a regular loop
-  // goes through the normal memory hierarchy and is known-good because the
-  // FP32 path already uses this pattern successfully.
+  // Element-wise scalar stage-in/out (see earlier SVM-coherency bisection
+  // comment in git history -- std::memcpy and scalar loops are functionally
+  // equivalent for the GPU visibility, but the scalar form keeps the code
+  // symmetric with FloatTensor::dotQInteger and plays cleanly with the
+  // profiler below).
+  //
+  // M>1 prefill path is instrumented with the per-stage profiler
+  // (g_half_dotq_profile); M=1 decode path is deliberately NOT profiled
+  // since per-call stage costs are tiny on decode and we want the prefill
+  // bottleneck breakdown.
   if (M == 1) {
     // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
     for (unsigned int k = 0; k < K; ++k) {
@@ -861,15 +941,25 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
 
     const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
+    const size_t out_total = static_cast<size_t>(M) * static_cast<size_t>(N);
+
+    const uint64_t t0 = now_ns();
     for (size_t i = 0; i < in_total; ++i) {
       svm_in[i] = in_u16[i];
     }
+    const uint64_t t1 = now_ns();
     gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                         N, K);
-    const size_t out_total = static_cast<size_t>(M) * static_cast<size_t>(N);
+    const uint64_t t2 = now_ns();
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];
     }
+    const uint64_t t3 = now_ns();
+
+    g_half_dotq_profile.ns_in_stage += t1 - t0;
+    g_half_dotq_profile.ns_gpu_call += t2 - t1;
+    g_half_dotq_profile.ns_out_stage += t3 - t2;
+    g_half_dotq_profile.calls++;
   }
 #else
   throw std::invalid_argument(
@@ -938,13 +1028,16 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
     reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
   auto *in_u16 = reinterpret_cast<uint16_t *>(data);
 
-  // DIAG: element-wise scalar stage-in (see comment in dotQInteger). If
-  // memcpy to SVM was not visible to the GPU, this fixes it.
-  {
-    const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
-    for (size_t i = 0; i < in_total; ++i) {
-      svm_in[i] = in_u16[i];
-    }
+  // Shared activation stage-in. Only profiled on the M>1 prefill path to
+  // stay consistent with the single-weight dotQInteger profiler.
+  const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
+  const uint64_t t_in_start = (M > 1) ? now_ns() : 0;
+  for (size_t i = 0; i < in_total; ++i) {
+    svm_in[i] = in_u16[i];
+  }
+  const uint64_t t_in_end = (M > 1) ? now_ns() : 0;
+  if (M > 1) {
+    g_half_dotq_profile.ns_in_stage += t_in_end - t_in_start;
   }
 
   if (M == 1) {
@@ -962,7 +1055,6 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
 
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      // DIAG: element-wise stage-out.
       for (unsigned int n = 0; n < Ni; ++n) {
         out_u16[n] = svm_out_i[n];
       }
@@ -984,17 +1076,23 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       uint16_t *svm_out_i =
         reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
 
+      const uint64_t t_gpu_start = now_ns();
       gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out_i,
                           M, Ni, K);
+      const uint64_t t_gpu_end = now_ns();
 
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      // DIAG: element-wise stage-out.
       const size_t out_total =
         static_cast<size_t>(M) * static_cast<size_t>(Ni);
       for (size_t j = 0; j < out_total; ++j) {
         out_u16[j] = svm_out_i[j];
       }
+      const uint64_t t_out_end = now_ns();
+
+      g_half_dotq_profile.ns_gpu_call += t_gpu_end - t_gpu_start;
+      g_half_dotq_profile.ns_out_stage += t_out_end - t_gpu_end;
+      g_half_dotq_profile.calls++;
     }
   }
 #else

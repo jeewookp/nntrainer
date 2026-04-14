@@ -103,7 +103,9 @@ grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} || echo "(
 
 echo ""
 echo "--- dotQInteger profile breakdown ---"
-grep -A 4 "PROFILE FloatTensor::dotQInteger" ${RUN_LOG} || echo "(no PROFILE lines found)"
+# Match both FloatTensor (FP32 activation path) and HalfTensor (FP16
+# activation path) profilers.
+grep -A 4 "PROFILE .*Tensor::dotQInteger" ${RUN_LOG} || echo "(no PROFILE lines found)"
 
 echo ""
 echo "Full log: ${RUN_LOG}  (error.txt is intentionally untouched)"
