@@ -1,6 +1,7 @@
 실행 결과 아래와 같아
 
 
+    "init_seq_len": 1024,
     "max_seq_len": 2048,
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
@@ -12,25 +13,16 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7466 ms, 58.532 TPS
-generation: 32 tokens, 6228 ms, 5.13809 TPS
-total: 13699 ms
-peak memory: 2768100 KB
+prefill: 437 tokens, 4657 ms, 93.8372 TPS
+generation: 32 tokens, 5914 ms, 5.41089 TPS
+total: 10575 ms
+peak memory: 2748556 KB
 ==========================================================
-[e2e time]: 15935 ms 
-Max Resident Set Size: 2768100 KB
-
-[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5432.91 ms calls=252
-  in_convert  :  1923.72 ms ( 35.4%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  1530.78 ms ( 28.2%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  1978.41 ms ( 36.4%)  [CPU fp16->fp32 + crop]
-  misc        :     0.00 ms (  0.0%)  [memset, scratch setup]
+[e2e time]: 12712 ms 
+Max Resident Set Size: 2748556 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -39,40 +31,30 @@ Max Resident Set Size: 2768100 KB
 
 --- Generation snippet (post-assistant tag) ---
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7466 ms, 58.532 TPS
-generation: 32 tokens, 6228 ms, 5.13809 TPS
-total: 13699 ms
-peak memory: 2768100 KB
+prefill: 437 tokens, 4657 ms, 93.8372 TPS
+generation: 32 tokens, 5914 ms, 5.41089 TPS
+total: 10575 ms
+peak memory: 2748556 KB
 ==========================================================
-[e2e time]: 15935 ms 
-Max Resident Set Size: 2768100 KB
+[e2e time]: 12712 ms 
+Max Resident Set Size: 2748556 KB
 
-[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5432.91 ms calls=252
-  in_convert  :  1923.72 ms ( 35.4%)  [CPU fp32->fp16 + transpo
 
 --- Perf summary ---
-prefill: 437 tokens, 7466 ms, 58.532 TPS
-generation: 32 tokens, 6228 ms, 5.13809 TPS
-total: 13699 ms
-peak memory: 2768100 KB
-[e2e time]: 15935 ms 
+prefill: 437 tokens, 4657 ms, 93.8372 TPS
+generation: 32 tokens, 5914 ms, 5.41089 TPS
+total: 10575 ms
+peak memory: 2748556 KB
+[e2e time]: 12712 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5432.91 ms calls=252
-  in_convert  :  1923.72 ms ( 35.4%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  1530.78 ms ( 28.2%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  1978.41 ms ( 36.4%)  [CPU fp16->fp32 + crop]
-  misc        :     0.00 ms (  0.0%)  [memset, scratch setup]
+(no PROFILE lines found)
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
