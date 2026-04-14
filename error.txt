@@ -1,27 +1,6 @@
 실행 결과 아래와 같아
 
 
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.3 MB/s (44479504 bytes in 1.312s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.6 MB/s (44003720 bytes in 1.288s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960088 bytes in 0.117s)
-3 files pushed. 32.4 MB/s (92443312 bytes in 2.720s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.3 MB/s (10999080 bytes in 0.325s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.6 MB/s (129336 bytes in 0.005s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.5 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 33.7 MB/s (1822720 bytes in 0.052s)
-[temp.sh] patched on-device nntr_config.json:
-    "model_tensor_type": "QINT4-FP16",
-    "num_to_generate": 32,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 <|im_start|>user
@@ -33,7 +12,7 @@ sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
 
-[!] FATAL ERROR: Failed to create input cl_mem buffer
+[!] FATAL ERROR: NYI : __fallback_rms_norm_wrt_width_fp16_intrinsic
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -43,7 +22,7 @@ sandbox, and code to facilitate future research.<|im_end|>
 --- Generation snippet (post-assistant tag) ---
 
 
-[!] FATAL ERROR: Failed to create input cl_mem buffer
+[!] FATAL ERROR: NYI : __fallback_rms_norm_wrt_width_fp16_intrinsic
 
 
 --- Perf summary ---
@@ -57,4 +36,3 @@ Full log: temp_run.log  (error.txt is intentionally untouched)
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
