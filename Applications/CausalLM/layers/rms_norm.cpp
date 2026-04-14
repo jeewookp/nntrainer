@@ -11,7 +11,9 @@
  *
  */
 
+#include <atomic>
 #include <cmath>
+#include <cstdio>
 #include <iostream>
 
 #include "rms_norm.h"
@@ -82,6 +84,38 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
       in_fp32.copyData(in_step); // fp16 -> fp32 via FloatTensor::copyData
 
+      // DIAG: dump first 16 fp16 values of in_step (= previous layer's
+      // output) to see whether the alternating [0, X, 0, X, ...] pattern
+      // observed downstream in HalfTensor::dotQInteger is already present
+      // at rms_norm's input. If so, the bug is upstream (embedding); if
+      // not, the bug is in this layer's fp32<->fp16 round trip.
+      static std::atomic<int> diag_calls{0};
+      const int call_no = diag_calls.fetch_add(1, std::memory_order_relaxed);
+      if (call_no < 2) {
+#ifdef ENABLE_FP16
+        auto *in_hex =
+          reinterpret_cast<const uint16_t *>(in_step.getData<_FP16>());
+        std::fprintf(stderr,
+                     "[DIAG rms_norm #%d name=%s] in_step_fp16[0..15]=",
+                     call_no, context.getName().c_str());
+        for (int i = 0; i < 16; ++i) {
+          std::fprintf(stderr, "%04x%s", in_hex[i], i + 1 < 16 ? " " : "");
+        }
+        std::fprintf(stderr, "\n");
+        // After converting to fp32 via copyData, dump the fp32 temp too.
+        auto *in_f32_ptr = in_fp32.getData<float>();
+        std::fprintf(stderr,
+                     "[DIAG rms_norm #%d name=%s] in_fp32[0..7]=", call_no,
+                     context.getName().c_str());
+        for (int i = 0; i < 8; ++i) {
+          std::fprintf(stderr, "%+.4g%s",
+                       static_cast<double>(in_f32_ptr[i]), i + 1 < 8 ? " " : "");
+        }
+        std::fprintf(stderr, "\n");
+        std::fflush(stderr);
+#endif
+      }
+
       auto t = in_fp32.multiply(in_fp32).average(3).add(epsilon);
       t.inv_sqrt_i();
 
@@ -89,6 +123,24 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       in_fp32.multiply(t, out_fp32);
 
       out_step.copyData(out_fp32); // fp32 -> fp16 via HalfTensor::copyData
+
+      // DIAG: dump first 16 fp16 values of out_step AFTER copyData so we
+      // can see whether the fp32 -> fp16 conversion introduced the
+      // alternating pattern.
+      if (call_no < 2) {
+#ifdef ENABLE_FP16
+        auto *out_hex =
+          reinterpret_cast<const uint16_t *>(out_step.getData<_FP16>());
+        std::fprintf(stderr,
+                     "[DIAG rms_norm #%d name=%s] out_step_fp16[0..15]=",
+                     call_no, context.getName().c_str());
+        for (int i = 0; i < 16; ++i) {
+          std::fprintf(stderr, "%04x%s", out_hex[i], i + 1 < 16 ? " " : "");
+        }
+        std::fprintf(stderr, "\n");
+        std::fflush(stderr);
+#endif
+      }
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
