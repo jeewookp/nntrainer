@@ -11,11 +11,44 @@
  *
  */
 
+#include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <cpu_backend.h>
 #include <reshaped_rms_norm.h>
 
 namespace causallm {
+
+namespace {
+
+struct ReshapedRMSNormProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  ~ReshapedRMSNormProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE ReshapedRMSNormLayer prefill (M>1)] "
+                 "total=%.2f ms calls=%llu avg=%.3f ms\n",
+                 t / 1.0e6, (unsigned long long)c,
+                 c == 0 ? 0.0 : (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+ReshapedRMSNormProfile g_reshaped_rms_norm_profile;
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
@@ -47,6 +80,9 @@ void ReshapedRMSNormLayer::forwarding(nntrainer::RunLayerContext &context,
 void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::RunLayerContext &context, unsigned int from, unsigned int to,
   bool training) {
+  const bool profile_this_call = (to - from) > 1;
+  const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
+
   auto &epsilon = std::get<nntrainer::props::Epsilon>(rms_props).get();
 
   nntrainer::Tensor &in = context.getInput(SINGLE_INOUT_IDX);
@@ -142,6 +178,11 @@ void ReshapedRMSNormLayer::incremental_forwarding(
     std::cout << context.getName() << " \n input:" << in_step
               << "output:" << out_step << "gamma:" << gamma << std::endl;
 #endif
+  }
+
+  if (profile_this_call) {
+    g_reshaped_rms_norm_profile.ns += now_ns() - t_layer_start;
+    g_reshaped_rms_norm_profile.calls++;
   }
 }
 

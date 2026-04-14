@@ -108,6 +108,10 @@ echo "--- dotQInteger profile breakdown ---"
 grep -A 4 "PROFILE .*Tensor::dotQInteger" ${RUN_LOG} || echo "(no PROFILE lines found)"
 
 echo ""
+echo "--- Layer wall-clock profile (prefill M>1) ---"
+grep -E "PROFILE (RMSNormLayer|ReshapedRMSNormLayer|MHACoreLayer|SwiGLULayer|EmbeddingLayer|TieWordEmbedding)" ${RUN_LOG} || echo "(no layer PROFILE lines found)"
+
+echo ""
 echo "Full log: ${RUN_LOG}  (error.txt is intentionally untouched)"
 echo ""
 echo "To restore the original (long-context) config on device:"

@@ -12,7 +12,11 @@
  *         This code is a part of the break down version of the mha layer.
  */
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <mutex>
 #include <omp.h>
 #include <thread>
@@ -26,6 +30,35 @@ static std::mutex rope_init_mtx;
 #include <mha_core.h>
 #include <nntrainer_error.h>
 #include <node_exporter.h>
+
+namespace {
+
+struct MHACoreProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  ~MHACoreProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE MHACoreLayer prefill (M>1)] total=%.2f ms "
+                 "calls=%llu avg=%.3f ms\n",
+                 t / 1.0e6, (unsigned long long)c,
+                 c == 0 ? 0.0 : (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+MHACoreProfile g_mha_core_profile;
+
+inline uint64_t mha_now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+
+} // namespace
 
 #include <cstdint>
 
@@ -202,6 +235,9 @@ void MHACoreLayer::forwarding(nntrainer::RunLayerContext &context,
 void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                           unsigned int _from, unsigned int _to,
                                           bool training) {
+  const bool profile_this_call = (_to - _from) > 1;
+  const uint64_t t_layer_start = profile_this_call ? mha_now_ns() : 0;
+
   /// @todo replace step_size into input height
   unsigned int step_size = _to - _from;
 
@@ -343,9 +379,14 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         cache_value_dim, cache_value_step_dim);
     }
   }
-  
+
   // increase cache size
   cache_index += step_size;
+
+  if (profile_this_call) {
+    g_mha_core_profile.ns += mha_now_ns() - t_layer_start;
+    g_mha_core_profile.calls++;
+  }
 }
 
 /**
