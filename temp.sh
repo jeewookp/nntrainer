@@ -30,20 +30,26 @@ done
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 
 # ----------------------------------------------------------------------------
-# Patch on-device nntr_config.json so that tensor_pool's KV-cache fits
-# under the Adreno 830 1 GB SVM per-allocation limit (init_seq_len <=
-# 1024, max_seq_len <= 2048 for Qwen3-4B). num_to_generate is left at
-# the production value (128) so generation TPS is measured over a full
-# decode run.
+# Patch on-device nntr_config.json so that:
+#   - tensor_pool's KV-cache fits under the Adreno 830 1 GB SVM per-
+#     allocation limit (init_seq_len <= 1024, max_seq_len <= 2048 for
+#     Qwen3-4B)
+#   - num_to_generate is small enough that a dev iteration finishes in
+#     a few seconds
+#   - activation dtype is FP16 (model_tensor_type QINT4-FP16) so the
+#     custom layers (Phase 1 + Phase 2 work) skip the CPU fp32<->fp16
+#     conversion loops that dominated the prior profile.
 #
 # We always re-derive from .bak so re-runs are idempotent. Originally the
-# device config has init_seq_len=10240, max_seq_len=20480, num_to_generate=128
-# which is what the user wants in production.
+# device config has init_seq_len=10240, max_seq_len=20480,
+# num_to_generate=128, model_tensor_type="QINT4-FP32" which is the
+# production-latency-unconstrained config.
 # ----------------------------------------------------------------------------
 CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
 NUM_TO_GENERATE_NEW=32
+MODEL_TENSOR_TYPE_NEW=QINT4-FP16
 
 adb shell "[ -f ${CFG}.bak ] || cp ${CFG} ${CFG}.bak"
 adb shell "cp ${CFG}.bak ${CFG}"
@@ -51,9 +57,10 @@ adb shell "sed -i \
   -e 's/\"init_seq_len\"[[:space:]]*:[[:space:]]*[0-9]*/\"init_seq_len\": ${INIT_SEQ_LEN_NEW}/' \
   -e 's/\"max_seq_len\"[[:space:]]*:[[:space:]]*[0-9]*/\"max_seq_len\": ${MAX_SEQ_LEN_NEW}/' \
   -e 's/\"num_to_generate\"[[:space:]]*:[[:space:]]*[0-9]*/\"num_to_generate\": ${NUM_TO_GENERATE_NEW}/' \
+  -e 's/\"model_tensor_type\"[[:space:]]*:[[:space:]]*\"[A-Za-z0-9_-]*\"/\"model_tensor_type\": \"${MODEL_TENSOR_TYPE_NEW}\"/' \
   ${CFG}"
 echo "[temp.sh] patched on-device nntr_config.json:"
-adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"' ${CFG}"
+adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"|\"model_tensor_type\"' ${CFG}"
 
 # Capture stdout AND stderr so the [DIAG ...] traces from our diagnostics
 # land alongside the prefill / generation TPS.
