@@ -1,0 +1,311 @@
+// Copyright 2026 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "litert/tools/dump_ops_util.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <ios>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "absl/container/flat_hash_map.h"  // from @com_google_absl
+#include "absl/container/flat_hash_set.h"  // from @com_google_absl
+#include "absl/log/absl_log.h"  // from @com_google_absl
+#include "absl/status/status.h"  // from @com_google_absl
+#include "absl/strings/str_cat.h"  // from @com_google_absl
+#include "absl/strings/str_format.h"  // from @com_google_absl
+#include "absl/strings/str_join.h"  // from @com_google_absl
+#include "absl/strings/str_replace.h"  // from @com_google_absl
+#include "absl/types/span.h"  // from @com_google_absl
+#include "litert/c/litert_model_types.h"
+#include "litert/c/litert_op_code.h"
+#include "litert/cc/litert_buffer_ref.h"
+#include "litert/core/model/model.h"
+#include "litert/core/model/model_serialize.h"
+#include "litert/core/util/flatbuffer_tools.h"
+#include "litert/tools/dump.h"
+#include "tflite/converter/schema/schema_generated.h"
+
+namespace litert::tools {
+
+namespace {
+
+
+std::string OpSignature(const LiteRtOpT& op) {
+  std::ostringstream oss;
+  litert::internal::Dump(op, oss);
+  return oss.str();
+}
+
+std::string GetTensorStr(const LiteRtTensorT& tensor) {
+  std::string dims_str;
+  std::string type_str;
+
+  if (tensor.Type().first == kLiteRtRankedTensorType) {
+    const auto& layout = tensor.Type().second.ranked_tensor_type.layout;
+    dims_str =
+        absl::StrJoin(absl::MakeConstSpan(layout.dimensions, layout.rank), "x");
+    type_str = absl::StrFormat(
+        "%v", tensor.Type().second.ranked_tensor_type.element_type);
+  } else {
+    dims_str = "unranked";
+    type_str = absl::StrFormat(
+        "%v", tensor.Type().second.unranked_tensor_type.element_type);
+  }
+  return absl::StrFormat("[%s_%s]", dims_str, type_str);
+}
+
+}  // namespace
+
+absl::Status DumpOps(LiteRtModelT& model, const DumpOptions& options,
+                     DumpStats* stats) {
+  std::filesystem::create_directories(options.output_dir);
+
+  absl::flat_hash_set<std::string>* unique_ops_ptr;
+  absl::flat_hash_set<std::string> local_unique_ops;
+  if (stats) {
+    unique_ops_ptr = &stats->unique_op_signatures;
+  } else {
+    unique_ops_ptr = &local_unique_ops;
+  }
+
+  int op_counter = 0;
+
+  ABSL_LOG(INFO) << "Model has " << model.NumSubgraphs() << " subgraphs";
+
+  for (auto* subgraph : model.Subgraphs()) {
+    ABSL_LOG(INFO) << "Subgraph has " << subgraph->Ops().size() << " ops";
+    for (auto* op : subgraph->Ops()) {
+      std::string opcode_str = OpCodeToString(op->OpCode());
+      ABSL_LOG(INFO) << "Processing op: " << opcode_str;
+
+      if (options.filter_opcode.has_value() &&
+          opcode_str.find(options.filter_opcode.value()) == std::string::npos) {
+        continue;
+      }
+
+      if (options.unique) {
+        std::string signature = OpSignature(*op);
+        if (unique_ops_ptr->contains(signature)) {
+          continue;
+        }
+        unique_ops_ptr->insert(signature);
+      }
+
+      LiteRtModelT new_model;
+      const auto& old_op_codes = litert::internal::GetTflOpCodes(model);
+      std::vector<litert::internal::TflOpCodePtr> new_op_codes;
+      absl::flat_hash_map<int32_t, int32_t> opcode_map;
+
+      auto get_or_add_opcode = [&](int32_t old_ind) -> int32_t {
+        if (old_ind < 0 || old_ind >= (int32_t)old_op_codes.size()) return -1;
+        if (opcode_map.contains(old_ind)) return opcode_map[old_ind];
+        int32_t new_ind = new_op_codes.size();
+        new_op_codes.push_back(
+            std::make_unique<tflite::OperatorCodeT>(*old_op_codes[old_ind]));
+        opcode_map[old_ind] = new_ind;
+        return new_ind;
+      };
+
+      auto& new_subgraph = new_model.EmplaceSubgraph();
+      auto& new_op = new_subgraph.EmplaceOp();
+      litert::internal::CloneTo(*op, new_op);
+      litert::internal::SetTflOpCodeInd(
+          new_op, get_or_add_opcode(litert::internal::GetTflOpCodeInd(*op)));
+
+      if (op->OpCode() == kLiteRtOpCodeShloComposite) {
+        auto old_opts2 = litert::internal::GetTflOptions2(*op);
+        if (old_opts2.type ==
+            tflite::BuiltinOptions2_StableHLOCompositeOptions) {
+          const auto* composite_opts = old_opts2.AsStableHLOCompositeOptions();
+          int decomp_sg_idx = composite_opts->decomposition_subgraph_index;
+          if (decomp_sg_idx >= 0 &&
+              decomp_sg_idx < (int)model.Subgraphs().size()) {
+            const auto& original_decomp_sg = *model.Subgraphs()[decomp_sg_idx];
+            auto& new_decomp_sg = new_model.EmplaceSubgraph();
+            int new_decomp_sg_idx = new_model.NumSubgraphs() - 1;
+
+            absl::flat_hash_map<const LiteRtTensorT*, LiteRtTensorT*>
+                decomp_tensor_map;
+
+            for (const auto* original_tensor : original_decomp_sg.Tensors()) {
+              auto& new_tensor = new_decomp_sg.EmplaceTensor();
+              litert::internal::CloneTo(*original_tensor, new_tensor);
+              if (litert::internal::IsConstant(*original_tensor)) {
+                auto buffer = original_tensor->Weights().Buffer();
+                ::SetWeightsFromOwnedBuffer(new_tensor.Weights(),
+                                            litert::OwningBufferRef<uint8_t>(
+                                                buffer.Data(), buffer.Size()));
+              }
+              decomp_tensor_map[original_tensor] = &new_tensor;
+            }
+
+            for (const auto* original_op : original_decomp_sg.Ops()) {
+              auto& new_op_in_decomp = new_decomp_sg.EmplaceOp();
+              litert::internal::CloneTo(*original_op, new_op_in_decomp);
+              litert::internal::SetTflOpCodeInd(
+                  new_op_in_decomp,
+                  get_or_add_opcode(
+                      litert::internal::GetTflOpCodeInd(*original_op)));
+              for (const auto* in_t : original_op->Inputs()) {
+                litert::internal::AttachInput(
+                    in_t ? decomp_tensor_map.at(in_t) : nullptr,
+                    new_op_in_decomp);
+              }
+              for (const auto* out_t : original_op->Outputs()) {
+                litert::internal::AttachOutput(
+                    out_t ? decomp_tensor_map.at(out_t) : nullptr,
+                    new_op_in_decomp);
+              }
+            }
+
+            for (const auto* original_in : original_decomp_sg.Inputs()) {
+              new_decomp_sg.Inputs().push_back(
+                  decomp_tensor_map.at(original_in));
+            }
+            for (const auto* original_out : original_decomp_sg.Outputs()) {
+              new_decomp_sg.Outputs().push_back(
+                  decomp_tensor_map.at(original_out));
+            }
+
+            auto decomp_tensors = new_decomp_sg.Tensors();
+            for (int i = 0; i < (int)decomp_tensors.size(); ++i)
+              decomp_tensors[i]->SetTensorIndex(i);
+
+            auto native_opts =
+                std::make_unique<tflite::StableHLOCompositeOptionsT>(
+                    *composite_opts);
+            native_opts->decomposition_subgraph_index = new_decomp_sg_idx;
+
+            tflite::BuiltinOptions2Union tfl_composite_opts;
+            tfl_composite_opts.type =
+                tflite::BuiltinOptions2_StableHLOCompositeOptions;
+            tfl_composite_opts.value = native_opts.release();
+            litert::internal::SetTflOptions2(new_op,
+                                             std::move(tfl_composite_opts));
+          }
+        }
+      }
+
+      std::vector<int> input_indices;
+      std::vector<int> graph_input_indices;
+      for (const auto& input_tensor : op->Inputs()) {
+        auto& new_tensor = new_subgraph.EmplaceTensor();
+        litert::internal::CloneTo(*input_tensor, new_tensor);
+        if (litert::internal::IsConstant(*input_tensor)) {
+          SetWeightsFromUnownedBuffer(new_tensor.Weights(),
+                                      input_tensor->Weights().Buffer());
+        }
+
+        int tensor_idx = new_subgraph.Tensors().size() - 1;
+        input_indices.push_back(tensor_idx);
+
+        if (!litert::internal::IsConstant(*input_tensor)) {
+          graph_input_indices.push_back(tensor_idx);
+        }
+      }
+
+      std::vector<int> output_indices;
+      for (const auto& output_tensor : op->Outputs()) {
+        auto& new_tensor = new_subgraph.EmplaceTensor();
+        litert::internal::CloneTo(*output_tensor, new_tensor);
+        int tensor_idx = new_subgraph.Tensors().size() - 1;
+        output_indices.push_back(tensor_idx);
+      }
+
+      // NOTE: We do this after all tensors are created to avoid reference
+      // invalidation caused by std::vector reallocation in EmplaceTensor.
+      auto tensors = new_subgraph.Tensors();
+      for (int i = 0; i < tensors.size(); ++i) {
+        tensors[i]->SetTensorIndex(i);
+      }
+      for (int idx : input_indices) {
+        litert::internal::AttachInput(tensors[idx], new_op);
+      }
+      if (graph_input_indices.empty()) {
+        ABSL_LOG(ERROR) << "No graph inputs for op " << op_counter << " "
+                        << opcode_str << ", skipping";
+        continue;
+      }
+      for (int idx : graph_input_indices) {
+        new_subgraph.Inputs().push_back(tensors[idx]);
+      }
+      for (int idx : output_indices) {
+        litert::internal::AttachOutput(tensors[idx], new_op);
+        new_subgraph.Outputs().push_back(tensors[idx]);
+      }
+
+      new_model.EmplaceSignature(MakeDefaultSignature(&new_subgraph));
+      litert::internal::SetTflOpCodes(new_model, std::move(new_op_codes));
+
+      // Serialize
+      auto serialized = litert::internal::SerializeModel(std::move(new_model));
+      if (!serialized) {
+        ABSL_LOG(ERROR) << "Failed to serialize op " << op_counter;
+        continue;
+      }
+
+      std::string filename_prefix =
+          options.filename_prefix.empty()
+              ? ""
+              : absl::StrCat(options.filename_prefix, "_");
+
+      std::string inputs_str;
+      for (int i = 0; i < op->Inputs().size(); ++i) {
+        if (i > 0) absl::StrAppend(&inputs_str, "_");
+        absl::StrAppend(&inputs_str, "In_", i, GetTensorStr(*op->Inputs()[i]));
+      }
+
+      std::string outputs_str;
+      for (int i = 0; i < op->Outputs().size(); ++i) {
+        if (i > 0) absl::StrAppend(&outputs_str, "_");
+        absl::StrAppend(&outputs_str, "Out_", i,
+                        GetTensorStr(*op->Outputs()[i]));
+      }
+
+      std::string filename =
+          absl::StrCat(filename_prefix, inputs_str, "_", outputs_str, "_",
+                       opcode_str, "_", op_counter, ".tflite");
+      filename = absl::StrReplaceAll(
+          filename,
+          {{"(", "_"}, {")", "_"}, {" ", "_"}, {"[", "_"}, {"]", "_"}});
+      std::string path =
+          (std::filesystem::path(options.output_dir) / filename).string();
+
+      std::ofstream out(path, std::ios::binary);
+      if (!out.is_open()) {
+        ABSL_LOG(ERROR) << "Failed to open file for writing: " << path;
+        continue;
+      }
+      serialized->WriteStr(out);
+      out.close();
+
+      op_counter++;
+      if (stats) {
+        stats->total_ops_dumped++;
+        stats->op_code_counts[opcode_str]++;
+      }
+    }
+  }
+
+  ABSL_LOG(INFO) << "Dumped " << op_counter << " ops to " << options.output_dir;
+  return absl::OkStatus();
+}
+
+}  // namespace litert::tools

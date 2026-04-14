@@ -1,19 +1,10 @@
 # buildifier: disable=load-on-top
 
-workspace(name = "litert_lm")
-
-# UPDATED = 2026-04-10
-LITERT_REF = "576fe2d1143545253358d237c462dab5fc427de9"
-
-LITERT_SHA256 = "ebd9f5f19ccf034339e370814599c78257ba079776460d72272e03b4fc81e928"
-
-TENSORFLOW_REF = "2f48f627261a902dec3a4ea4f5377e54d5f30fe4"
-
-TENSORFLOW_SHA256 = "daf8a50f4fd344ccdd146c009b096799883e7d29f82de797a2869b63ffc9f731"
+workspace(name = "litert")
 
 # buildifier: disable=load-on-top
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_jar")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_shell",
@@ -79,13 +70,30 @@ http_archive(
     url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.43.0/bazel_features-v1.43.0.tar.gz",
 )
 
-# TensorFlow
+# Download coremltools of the same version of tensorflow, but with a custom patchcmd until
+# tensorflow is updated to do the same patchcmd.
 http_archive(
+    name = "coremltools",
+    build_file = "@//third_party/coremltools:coremltools.BUILD",
+    patch_cmds = [
+        # Append "mlmodel/format/" to the import path of all proto files.
+        "sed -i -e 's|import public \"|import public \"mlmodel/format/|g' mlmodel/format/*.proto",
+    ],
+    sha256 = "37d4d141718c70102f763363a8b018191882a179f4ce5291168d066a84d01c9d",
+    strip_prefix = "coremltools-8.0",
+    url = "https://github.com/apple/coremltools/archive/8.0.tar.gz",
+)
+
+# Load the custom repository rule to select either a local TensorFlow source or a remote http_archive.
+load("//litert:tensorflow_source_rules.bzl", "tensorflow_source_repo")
+
+tensorflow_source_repo(
     name = "org_tensorflow",
-    patches = ["@//:PATCH.tensorflow"],
-    sha256 = TENSORFLOW_SHA256,
-    strip_prefix = "tensorflow-" + TENSORFLOW_REF,
-    url = "https://github.com/tensorflow/tensorflow/archive/" + TENSORFLOW_REF + ".tar.gz",
+    patches = ["//:PATCH.tf_xla_tsl_win_copts"],
+    protobuf_patches = ["//:PATCH.protobuf_port_msvc_compat"],
+    sha256 = "beae70444d94d73790efa05c79ec20bce33ff210ccff65568854d1ea442a1edc",
+    strip_prefix = "tensorflow-0173493a0652d46c52af68dbc6ef0b7a04eb6d3f",
+    urls = ["https://github.com/tensorflow/tensorflow/archive/0173493a0652d46c52af68dbc6ef0b7a04eb6d3f.tar.gz"],
 )
 
 # Initialize the TensorFlow repository and all dependencies.
@@ -97,22 +105,6 @@ http_archive(
 load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
 
 tf_workspace3()
-
-# Toolchains for ML projects
-# Details: https://github.com/google-ml-infra/rules_ml_toolchain
-http_archive(
-    name = "rules_ml_toolchain",
-    sha256 = "9dbee8f24cc1b430bf9c2a6661ab70cbca89979322ddc7742305a05ff637ab6b",
-    strip_prefix = "rules_ml_toolchain-545c80f1026d526ea9c7aaa410bf0b52c9a82e74",
-    url = "https://github.com/google-ml-infra/rules_ml_toolchain/archive/545c80f1026d526ea9c7aaa410bf0b52c9a82e74.tar.gz",
-)
-
-load(
-    "@rules_ml_toolchain//cc/deps:cc_toolchain_deps.bzl",
-    "cc_toolchain_deps",
-)
-
-cc_toolchain_deps()
 
 # Initialize hermetic Python
 load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
@@ -134,7 +126,6 @@ python_init_repositories(
         "3.11": "@org_tensorflow//:requirements_lock_3_11.txt",
         "3.12": "@org_tensorflow//:requirements_lock_3_12.txt",
         "3.13": "@org_tensorflow//:requirements_lock_3_13.txt",
-        "3.14": "@org_tensorflow//:requirements_lock_3_14.txt",
     },
 )
 
@@ -150,32 +141,6 @@ load("@pypi//:requirements.bzl", "install_deps")
 
 install_deps()
 # End hermetic Python initialization
-
-RULES_JVM_EXTERNAL_TAG = "6.8"
-
-RULES_JVM_EXTERNAL_SHA = "704a0197e4e966f96993260418f2542568198490456c21814f647ae7091f56f2"
-
-http_archive(
-    name = "rules_jvm_external",
-    sha256 = RULES_JVM_EXTERNAL_SHA,
-    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    url = "https://github.com/bazelbuild/rules_jvm_external/releases/download/%s/rules_jvm_external-%s.tar.gz" % (RULES_JVM_EXTERNAL_TAG, RULES_JVM_EXTERNAL_TAG),
-)
-
-load("@rules_jvm_external//:defs.bzl", "maven_install")
-
-maven_install(
-    name = "maven",
-    artifacts = [
-        "com.google.code.gson:gson:2.13.2",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.9.0",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0",
-    ],
-    repositories = [
-        "https://maven.google.com",
-        "https://repo1.maven.org/maven2",
-    ],
-)
 
 load("@org_tensorflow//tensorflow:workspace2.bzl", "tf_workspace2")
 
@@ -195,6 +160,26 @@ load(
 )
 
 python_wheel_version_suffix_repository(name = "tf_wheel_version_suffix")
+
+# Toolchains for ML projects hermetic builds.
+# Details: https://github.com/google-ml-infra/rules_ml_toolchain
+http_archive(
+    name = "rules_ml_toolchain",
+    sha256 = "9dbee8f24cc1b430bf9c2a6661ab70cbca89979322ddc7742305a05ff637ab6b",
+    strip_prefix = "rules_ml_toolchain-545c80f1026d526ea9c7aaa410bf0b52c9a82e74",
+    urls = [
+        "https://github.com/google-ml-infra/rules_ml_toolchain/archive/545c80f1026d526ea9c7aaa410bf0b52c9a82e74.tar.gz",
+    ],
+)
+
+load(
+    "@rules_ml_toolchain//cc/deps:cc_toolchain_deps.bzl",
+    "cc_toolchain_deps",
+)
+
+cc_toolchain_deps()
+
+register_toolchains("@rules_ml_toolchain//cc:linux_x86_64_linux_x86_64")
 
 load(
     "@rules_ml_toolchain//gpu/cuda:cuda_json_init_repository.bzl",
@@ -243,6 +228,43 @@ load(
 
 nccl_configure(name = "local_config_nccl")
 
+load("//third_party/tqdm:workspace.bzl", tqdm = "repo")
+
+tqdm()
+
+load("//third_party/dawn:workspace.bzl", dawn = "repo")
+
+dawn()
+
+load("//third_party/lark:workspace.bzl", lark = "repo")
+
+lark()
+
+load("//third_party/xdsl:workspace.bzl", xdsl = "repo")
+
+xdsl()
+
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+    name = "litert_maven",
+    artifacts = [
+        "androidx.lifecycle:lifecycle-common:2.8.7",
+        "com.google.android.play:ai-delivery:0.1.1-alpha01",
+        "com.google.guava:guava:33.4.6-android",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.0",
+    ],
+    repositories = [
+        "https://jcenter.bintray.com",
+        "https://maven.google.com",
+        "https://dl.google.com/dl/android/maven2",
+        "https://repo1.maven.org/maven2",
+    ],
+    version_conflict_policy = "pinned",
+)
+
 # Kotlin rules
 http_archive(
     name = "rules_kotlin",
@@ -250,111 +272,7 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_kotlin/releases/download/v2.1.3/rules_kotlin-v2.1.3.tar.gz",
 )
 
-load("@rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories")
-
-kotlin_repositories()  # if you want the default. Otherwise see custom kotlinc distribution below
-
-load("@rules_kotlin//kotlin:core.bzl", "kt_register_toolchains")
-
-kt_register_toolchains()  # to use the default toolchain, otherwise see toolchains below
-
-# Rust (for HuggingFace Tokenizers)
-http_archive(
-    name = "rules_rust",
-    patches = ["@//:PATCH.rules_rust"],
-    sha256 = "53c1bac7ec48f7ce48c4c1c6aa006f27515add2aeb05725937224e6e00ec7cea",
-    url = "https://github.com/bazelbuild/rules_rust/releases/download/0.61.0/rules_rust-0.61.0.tar.gz",
-)
-
-load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
-
-rules_rust_dependencies()
-
-rust_register_toolchains(
-    edition = "2021",
-    extra_target_triples = [
-        # Explicitly add toolchains for mobile. Desktop platforms are supported by default.
-        "aarch64-linux-android",
-        "aarch64-apple-ios",
-        "aarch64-apple-ios-sim",
-        "x86_64-linux-android",
-    ],
-)
-
-load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
-
-crate_universe_dependencies()
-
-load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
-load("@rules_rust//rust/platform:triple_mappings.bzl", "SUPPORTED_PLATFORM_TRIPLES")
-
-crates_repository(
-    name = "crate_index",
-    annotations = {
-        "llguidance": [
-            crate.annotation(
-                additive_build_file = "@//:BUILD.llguidance",
-                gen_build_script = False,
-                patches = [
-                    "@//:PATCH.llguidance_regexvec",
-                    "@//:PATCH.llguidance_numeric",
-                    "@//:PATCH.llguidance_grammar",
-                    "@//:PATCH.llguidance_parser",
-                    "@//:PATCH.llguidance_perf",
-                ],
-            ),
-        ],
-        "toktrie": [
-            crate.annotation(
-                patches = ["@//:PATCH.toktrie"],
-            ),
-        ],
-    },
-    cargo_lockfile = "//:Cargo.lock",
-    lockfile = "//:cargo-bazel-lock.json",
-    manifests = [
-        "//:Cargo.toml",
-    ],
-    supported_platform_triples = SUPPORTED_PLATFORM_TRIPLES + [
-        "x86_64-linux-android",
-    ],
-)
-
-load("@crate_index//:defs.bzl", "crate_repositories")
-
-crate_repositories()
-
-# cxxbridge-cmd is a binary-only package so we follow the steps in
-# https://bazelbuild.github.io/rules_rust/crate_universe_workspace.html#binary-dependencies.
-http_archive(
-    name = "cxxbridge_cmd",
-    build_file = "//cxxbridge_cmd:BUILD.cxxbridge_cmd.bazel",
-    integrity = "sha256-pf/3kWu94FwtuZRp8J3PryA78lsJbMv052GgR5JBLhA=",
-    strip_prefix = "cxxbridge-cmd-1.0.149",
-    type = "tar.gz",
-    url = "https://static.crates.io/crates/cxxbridge-cmd/cxxbridge-cmd-1.0.149.crate",
-)
-
-crates_repository(
-    name = "cxxbridge_cmd_deps",
-    cargo_lockfile = "//cxxbridge_cmd:Cargo.lock",
-    manifests = ["@cxxbridge_cmd//:Cargo.toml"],
-)
-
-load("@cxxbridge_cmd_deps//:defs.bzl", cxxbridge_cmd_deps = "crate_repositories")
-
-cxxbridge_cmd_deps()
-
-# Same one downloaded by tensorflow, but refer contrib/minizip.
-http_archive(
-    name = "minizip",
-    add_prefix = "minizip",
-    build_file = "@//:BUILD.minizip",
-    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
-    strip_prefix = "zlib-1.3.1/contrib/minizip",
-    url = "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
-)
-
+# Sentencepiece
 http_archive(
     name = "sentencepiece",
     build_file = "@//:BUILD.sentencepiece",
@@ -372,127 +290,83 @@ http_archive(
     url = "https://github.com/google/sentencepiece/archive/refs/tags/v0.2.0.tar.gz",
 )
 
+# Darts Clone
 http_archive(
-    name = "litert",
+    name = "darts_clone",
+    build_file = "@//:BUILD.darts_clone",
+    sha256 = "4a562824ec2fbb0ef7bd0058d9f73300173d20757b33bb69baa7e50349f65820",
+    strip_prefix = "darts-clone-e40ce4627526985a7767444b6ed6893ab6ff8983",
+    url = "https://github.com/s-yata/darts-clone/archive/e40ce4627526985a7767444b6ed6893ab6ff8983.tar.gz",
+)
+
+# tomlplusplus
+http_archive(
+    name = "tomlplusplus",
+    build_file = "@//:BUILD.tomlplusplus",
     patch_cmds = [
-        # Replace @//third_party with @litert//third_party in files under third_party/.
-        "sed -i -e 's|\"@//third_party/|\"@litert//third_party/|g' third_party/*/*",
+        "echo '#define TOML_IMPLEMENTATION' > toml.cc",
+        "echo '#include \"toml.hpp\"' >> toml.cc",
     ],
-    sha256 = LITERT_SHA256,
-    strip_prefix = "LiteRT-" + LITERT_REF,
-    url = "https://github.com/google-ai-edge/LiteRT/archive/" + LITERT_REF + ".tar.gz",
+    sha256 = "8517f65938a4faae9ccf8ebb36631a38c1cadfb5efa85d9a72e15b9e97d25155",
+    strip_prefix = "tomlplusplus-3.4.0",
+    url = "https://github.com/marzer/tomlplusplus/archive/refs/tags/v3.4.0.tar.gz",
 )
 
-http_archive(
-    name = "tokenizers_cpp",
-    build_file = "@//:BUILD.tokenizers_cpp",
-    sha256 = "3e0b9ec325a326b0a2cef5cf164ee94a74ac372c5881ae5af634036db0441823",
-    strip_prefix = "tokenizers-cpp-0.1.1",
-    url = "https://github.com/mlc-ai/tokenizers-cpp/archive/refs/tags/v0.1.1.tar.gz",
-)
+load("@rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories")
 
-http_archive(
-    name = "absl_py",
-    sha256 = "8a3d0830e4eb4f66c4fa907c06edf6ce1c719ced811a12e26d9d3162f8471758",
-    strip_prefix = "abseil-py-2.1.0",
-    url = "https://github.com/abseil/abseil-py/archive/refs/tags/v2.1.0.tar.gz",
-)
+kotlin_repositories()  # if you want the default. Otherwise see custom kotlinc distribution below
 
-http_archive(
-    name = "nlohmann_json",
-    sha256 = "34660b5e9a407195d55e8da705ed26cc6d175ce5a6b1fb957e701fb4d5b04022",
-    strip_prefix = "json-3.12.0",
-    url = "https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.zip",
-)
+load("@rules_kotlin//kotlin:core.bzl", "kt_register_toolchains")
 
-http_archive(
-    name = "minja",
-    build_file = "@//:BUILD.minja",
-    patches = ["@//:PATCH.minja"],
-    sha256 = "752f47dd2a2f4920a66f497c952785073c1983f12f084b99e5c12bf89f96acfe",
-    strip_prefix = "minja-58568621432715b0ed38efd16238b0e7ff36c3ba",
-    url = "https://github.com/google/minja/archive/58568621432715b0ed38efd16238b0e7ff36c3ba.zip",
-)
+kt_register_toolchains()  # to use the default toolchain, otherwise see toolchains below
 
-http_archive(
-    name = "miniaudio",
-    build_file = "@//:BUILD.miniaudio",
-    sha256 = "bcb07bfb27e6fa94d34da73ba2d5642d4940b208ec2a660dbf4e52e6b7cd492f",
-    strip_prefix = "miniaudio-0.11.22",
-    url = "https://github.com/mackron/miniaudio/archive/refs/tags/0.11.22.tar.gz",
-)
+load("//third_party/stblib:workspace.bzl", stblib = "repo")
 
-http_archive(
-    name = "stb",
-    build_file = "@//:BUILD.stb",
-    sha256 = "119b9f3cca3e50225dc946ed1acd1b7a160943bc8bf549760109cea4e4e7c836",
-    strip_prefix = "stb-f58f558c120e9b32c217290b80bad1a0729fbb2c",
-    url = "https://github.com/nothings/stb/archive/f58f558c120e9b32c217290b80bad1a0729fbb2c.zip",
-)
+stblib()
 
-http_jar(
-    name = "javax_json",
-    sha256 = "0e1dec40a1ede965941251eda968aeee052cc4f50378bc316cc48e8159bdbeb4",
-    url = "https://jcenter.bintray.com/org/glassfish/javax.json/1.0.4/javax.json-1.0.4.jar",
-)
+# TEST DATA ########################################################################################
 
-# Android rules. Need latest rules_android_ndk to use NDK 26+.
-load("@rules_android_ndk//:rules.bzl", "android_ndk_repository")
+load("//third_party/models:workspace.bzl", "models")
 
-android_ndk_repository(name = "androidndk")
-
-android_sdk_repository(name = "androidsdk")
-
-# Configure Android NDK only when ANDROID_NDK_HOME is set.
-# Creates current_android_ndk_env.bzl as a workaround since shell environment is available only
-# through repository rule's context.
-load("//:android_ndk_env.bzl", "check_android_ndk_env")
-
-check_android_ndk_env(name = "android_ndk_env")
-
-load("@android_ndk_env//:current_android_ndk_env.bzl", "ANDROID_NDK_HOME_IS_SET")
-
-# Use "@android_ndk_env//:all" as a dummy toolchain target as register_toolchains() does not take
-# an empty string.
-register_toolchains("@androidndk//:all" if ANDROID_NDK_HOME_IS_SET else "@android_ndk_env//:all")
+models()
 
 # VENDOR SDKS ######################################################################################
 
 # QUALCOMM ---------------------------------------------------------------------------------------
 
 # The actual macro call will be set during configure for now.
-load("@litert//third_party/qairt:workspace.bzl", "qairt")
+load("//third_party/qairt:workspace.bzl", "qairt")
 
 qairt()
 
 # MEDIATEK ---------------------------------------------------------------------------------------
 
 # Currently only works with local sdk
-load("@litert//third_party/neuro_pilot:workspace.bzl", "neuro_pilot")
+load("//third_party/neuro_pilot:workspace.bzl", "neuro_pilot")
 
 neuro_pilot()
 
 # GOOGLE TENSOR ----------------------------------------------------------------------------------
-load("@litert//third_party/google_tensor:workspace.bzl", "google_tensor")
+load("//third_party/google_tensor:workspace.bzl", "google_tensor")
 
 google_tensor()
 
-http_archive(
-    name = "nanobind_json",
-    build_file = "@//:BUILD.nanobind_json",
-    patches = ["@//:PATCH.nanobind_json"],
-    sha256 = "72cb4cdbf8108c7dd2dc669347669f2cc1acf4f943588f96661701f27f778912",
-    strip_prefix = "nanobind_json-e1953530697f61cbca9dc9b4f51561ea785cb09d",
-    urls = ["https://github.com/ianhbell/nanobind_json/archive/e1953530697f61cbca9dc9b4f51561ea785cb09d.zip"],
-)
+# LiteRT GPU ----------------------------------------------------------------------------------
+load("//third_party/litert_gpu:workspace.bzl", "litert_gpu")
 
-load("@rules_python//python:pip.bzl", "pip_parse")
+litert_gpu()
 
-pip_parse(
-    name = "custom_pip_deps",
-    requirements_lock = "//:requirements.txt",
-)
+# LiteRT Prebuilts ---------------------------------------------------------------------------------
+load("//third_party/litert_prebuilts:workspace.bzl", "litert_prebuilts")
 
-load("@custom_pip_deps//:requirements.bzl", install_custom_deps = "install_deps")
+litert_prebuilts()
 
-install_custom_deps()
+# INTEL OPENVINO ---------------------------------------------------------------------------------
+load("//third_party/intel_openvino:openvino.bzl", "openvino_configure")
+
+openvino_configure()
+
+# SAMSUNG EXYNOS ----------------------------------------------------------------------------------
+load("//third_party/exynos_ai_litecore:workspace.bzl", "exynos_ai_litecore")
+
+exynos_ai_litecore()

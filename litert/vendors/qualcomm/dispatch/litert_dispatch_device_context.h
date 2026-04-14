@@ -1,0 +1,112 @@
+// Copyright 2024 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef ODML_LITERT_LITERT_VENDORS_QUALCOMM_DISPATCH_LITERT_DISPATCH_DEVICE_CONTEXT_H_
+#define ODML_LITERT_LITERT_VENDORS_QUALCOMM_DISPATCH_LITERT_DISPATCH_DEVICE_CONTEXT_H_
+
+#include <cstddef>
+#include <memory>
+#include <utility>
+
+#include "absl/container/flat_hash_map.h"  // from @com_google_absl
+#include "litert/c/litert_common.h"
+#include "litert/cc/litert_expected.h"
+#include "litert/vendors/c/litert_dispatch.h"
+#include "litert/vendors/qualcomm/dispatch/registry.h"
+#include "litert/vendors/qualcomm/qnn_manager.h"
+#include "QnnCommon.h"  // from @qairt
+#include "QnnTypes.h"  // from @qairt
+
+class LiteRtDispatchDeviceContextT {
+ public:
+  using Ptr = std::unique_ptr<LiteRtDispatchDeviceContextT>;
+
+  ~LiteRtDispatchDeviceContextT() = default;
+
+  static litert::Expected<Ptr> Create(litert::qnn::QnnManager& qnn_manager);
+
+  litert::Expected<LiteRtTensorBufferHandle> RegisterTensorBuffer(
+      LiteRtTensorBuffer tensor_buffer) {
+    return tensor_buffer_registry_.Register(
+        TensorBufferRegistryEntry(tensor_buffer));
+  }
+
+  litert::Expected<void> UnregisterTensorBuffer(
+      LiteRtTensorBufferHandle tensor_buffer_handle) {
+    return tensor_buffer_registry_.Unregister(tensor_buffer_handle);
+  }
+
+  litert::Expected<void> UnregisterTensorBuffer(
+      LiteRtTensorBufferHandle tensor_buffer_handle,
+      const Qnn_Tensor_t& tensor);
+
+  litert::Expected<LiteRtTensorBuffer> GetTensorBuffer(
+      LiteRtTensorBufferHandle tensor_buffer_handle);
+
+  litert::Expected<Qnn_MemHandle_t> GetMemHandle(
+      LiteRtTensorBufferHandle tensor_buffer_handle,
+      const Qnn_Tensor_t& tensor);
+
+  void SetInvocationContext(
+      LiteRtDispatchInvocationContextT* invocation_context) {
+    invocation_context_ = invocation_context;
+  }
+
+  litert::Expected<const litert::qnn::QnnManager::ContextHandle&>
+  GetOrCreateContext(const void* bytecode_ptr, size_t bytecode_size,
+                     Qnn_ProfileHandle_t profile_handle);
+
+ private:
+  struct TensorBufferRegistryEntry {
+    LiteRtTensorBuffer tensor_buffer;
+    Qnn_MemHandle_t qnn_mem_handle = nullptr;
+    explicit TensorBufferRegistryEntry(LiteRtTensorBuffer tensor_buffer_)
+        : tensor_buffer(tensor_buffer_) {}
+    bool operator==(const TensorBufferRegistryEntry& other) const {
+      return tensor_buffer == other.tensor_buffer;
+    }
+  };
+
+  using TensorBufferRegistry = litert::qnn::Registry<LiteRtTensorBufferHandle,
+                                                     TensorBufferRegistryEntry>;
+
+  explicit LiteRtDispatchDeviceContextT(litert::qnn::QnnManager& qnn_manager)
+      : qnn_manager_(qnn_manager) {}
+
+  litert::Expected<Qnn_MemHandle_t> RegisterTensorBuffer(
+      LiteRtTensorBuffer tensor_buffer, const Qnn_Tensor_t& tensor);
+
+  litert::qnn::QnnManager& qnn_manager_;
+  TensorBufferRegistry tensor_buffer_registry_;
+  LiteRtDispatchInvocationContextT* invocation_context_ = nullptr;
+
+  struct ContextCacheKey {
+    const void* ptr;
+    size_t size;
+
+    bool operator==(const ContextCacheKey& other) const {
+      return ptr == other.ptr && size == other.size;
+    }
+    template <typename H>
+    friend H AbslHashValue(H h, const ContextCacheKey& k) {
+      return H::combine(std::move(h), k.ptr, k.size);
+    }
+  };
+  using UniqueContextHandle =
+      std::unique_ptr<litert::qnn::QnnManager::ContextHandle>;
+  // Lifetime of the context cache is the same as the device context.
+  absl::flat_hash_map<ContextCacheKey, UniqueContextHandle> context_cache_;
+};
+
+#endif  // ODML_LITERT_LITERT_VENDORS_QUALCOMM_DISPATCH_LITERT_DISPATCH_DEVICE_CONTEXT_H_

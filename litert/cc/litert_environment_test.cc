@@ -1,0 +1,108 @@
+// Copyright 2025 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "litert/cc/litert_environment.h"
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include <gtest/gtest.h>
+#include "absl/strings/string_view.h"  // from @com_google_absl
+#include "absl/types/span.h"  // from @com_google_absl
+#include "litert/cc/internal/litert_runtime_builtin.h"
+#include "litert/cc/litert_any.h"
+#include "litert/cc/litert_common.h"
+#include "litert/cc/litert_compiled_model.h"
+#include "litert/cc/litert_environment_options.h"
+#include "litert/cc/litert_expected.h"
+#include "litert/test/common.h"
+#include "litert/test/matchers.h"
+#include "litert/test/testdata/simple_model_test_vectors.h"
+
+namespace litert {
+namespace {
+
+TEST(EnvironmentTest, Default) {
+  auto env = litert::Environment::Create({});
+  EXPECT_TRUE(env);
+}
+
+TEST(EnvironmentTest, HasRuntimeProxy) {
+  auto env = litert::Environment::Create({});
+  ASSERT_TRUE(env);
+  EXPECT_NE(env->GetHolder().runtime, nullptr);
+}
+
+TEST(EnvironmentTest, CreateWithSystemRuntime) {
+  const std::vector<litert::EnvironmentOptions::Option> environment_options = {
+      litert::EnvironmentOptions::Option{
+          litert::EnvironmentOptions::Tag::kSystemRuntimeHandle,
+          litert::LiteRtVariant(
+              reinterpret_cast<int64_t>(kLiteRtRuntimeBuiltin)),
+      },
+  };
+  auto env = litert::Environment::Create(
+      litert::EnvironmentOptions(absl::MakeConstSpan(environment_options)));
+  EXPECT_TRUE(env);
+}
+
+TEST(EnvironmentTest, Options) {
+  constexpr absl::string_view kDispatchLibraryDir = "/data/local/tmp";
+  const std::vector<litert::EnvironmentOptions::Option> environment_options = {
+      litert::EnvironmentOptions::Option{
+          litert::EnvironmentOptions::Tag::kDispatchLibraryDir,
+          kDispatchLibraryDir,
+      },
+  };
+  auto env = litert::Environment::Create(
+      litert::EnvironmentOptions(absl::MakeConstSpan(environment_options)));
+  EXPECT_TRUE(env);
+}
+
+TEST(EnvironmentTest, CompiledModelBasic) {
+  // Environment setup.
+  LITERT_ASSERT_OK_AND_ASSIGN(Environment env, litert::Environment::Create({}));
+
+  // Create CompiledModel.
+  auto compiled_model = CompiledModel::Create(
+      env, testing::GetTestFilePath(kModelFileName), HwAccelerators::kCpu);
+  EXPECT_TRUE(compiled_model);
+}
+
+TEST(EnvironmentTest, StringLifeCycle) {
+  std::string dispatch_library_dir = "/data/local/tmp";
+  const std::vector<litert::EnvironmentOptions::Option> environment_options = {
+      litert::EnvironmentOptions::Option{
+          litert::EnvironmentOptions::Tag::kDispatchLibraryDir,
+          absl::string_view(dispatch_library_dir),
+      },
+  };
+
+  auto env = litert::Environment::Create(
+      litert::EnvironmentOptions(absl::MakeConstSpan(environment_options)));
+
+  EXPECT_TRUE(env);
+
+  // Change the string value but the environment should still have a copy.
+  dispatch_library_dir = "";
+
+  // Create CompiledModel.
+  auto compiled_model = CompiledModel::Create(
+      *env, testing::GetTestFilePath(kModelFileName), HwAccelerators::kCpu);
+  EXPECT_TRUE(compiled_model);
+}
+
+}  // namespace
+}  // namespace litert

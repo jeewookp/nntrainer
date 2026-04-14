@@ -1,0 +1,96 @@
+// Copyright (c) Qualcomm Innovation Center, Inc.
+// All Rights Reserved.
+
+#include "litert/vendors/qualcomm/core/builders/fully_connected_op_builder.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <numeric>
+#include <vector>
+
+#include "litert/vendors/qualcomm/core/builders/op_builder.h"
+#include "litert/vendors/qualcomm/core/tensor_pool.h"
+#include "litert/vendors/qualcomm/core/utils/log.h"
+#include "litert/vendors/qualcomm/core/utils/miscs.h"
+#include "litert/vendors/qualcomm/core/wrappers/op_wrapper.h"
+#include "litert/vendors/qualcomm/core/wrappers/tensor_wrapper.h"
+#include "QnnOpDef.h"  // from @qairt
+#include "QnnTypes.h"  // from @qairt
+
+namespace qnn {
+
+namespace {
+constexpr int kBiasIdx = 2;
+}
+
+std::vector<OpWrapper> BuildFullyConnectedOp(
+    TensorPool& tensor_pool, const std::vector<TensorWrapperRef>& inputs,
+    const std::vector<TensorWrapperRef>& outputs, const bool keep_num_dims,
+    bool use_int64_bias_as_int32) {
+  std::vector<OpWrapper> res;
+  OpWrapper& fully_connected_op = CreateOpWrapper(res, QNN_OP_FULLY_CONNECTED);
+
+  TensorWrapper& input_tensor = inputs[0];
+  fully_connected_op.AddInputTensor(input_tensor);
+
+  TensorWrapper& weight_tensor = inputs[1];
+  // TODO (chunhsue-qti): Treat a8w2 as a8w4, 2-bit quant weight tensor is
+  // QNN_DATATYPE_SFIXED_POINT_8 with bitwidth 2. Remove this after a8w2 is
+  // supported.
+
+  // Check input tensor is QNN_DATATYPE_SFIXED_POINT_8 so that a16w2 will be
+  // intact.
+  if (input_tensor.IsQuantI8() && weight_tensor.IsQuantI8() &&
+      weight_tensor.IsQuantBitwidth(kQuantBitWidth2)) {
+    QNN_LOG_WARNING(
+        "Aggressively convert the a8w2 Fully Connected Op to a8w4.");
+    weight_tensor.SetQuantBitwidth(kQuantBitWidth4);
+  }
+  fully_connected_op.AddInputTensor(weight_tensor);
+
+  if (inputs.size() - 1 >= kBiasIdx) {
+    TensorWrapper& bias_tensor = inputs[kBiasIdx];
+    if (use_int64_bias_as_int32 && bias_tensor.IsTensorStatic() &&
+        bias_tensor.GetDataType() == QNN_DATATYPE_INT_64) {
+      auto* converted_bias_tensor =
+          tensor_pool.ConvertStaticTensorFrom<std::int32_t>(bias_tensor);
+      if (converted_bias_tensor == nullptr) {
+        return {};
+      }
+      fully_connected_op.AddInputTensor(*converted_bias_tensor);
+      QNN_LOG_WARNING(
+          "Convert bias tensor in fully connected op from int64 to int32.");
+    } else {
+      fully_connected_op.AddInputTensor(bias_tensor);
+    }
+  }
+
+  TensorWrapper& output_tensor = outputs[0];
+  if (keep_num_dims) {
+    auto& input_dims = input_tensor.GetDimensions();
+    std::uint32_t input_size = std::accumulate(
+        input_dims.begin(), input_dims.end(), 1, std::multiplies<>());
+    const std::uint32_t num_units = weight_tensor.GetDimension(0);
+    const std::uint32_t num_input_elem = weight_tensor.GetDimension(1);
+
+    // input_size must be divisible by num_input_elem. This should be validated
+    // by QNN.
+    const std::uint32_t batch_size = input_size / num_input_elem;
+    // QNN output should always be rank 2
+    qnn::TensorWrapper& fully_connected_out = tensor_pool.CloneNativeTensorFrom(
+        output_tensor, {batch_size, num_units});
+
+    fully_connected_op.AddOutputTensor(fully_connected_out);
+
+    qnn::OpWrapper& reshape_op = CreateOpWrapper(res, QNN_OP_RESHAPE);
+    reshape_op.AddInputTensor(fully_connected_out);
+    reshape_op.AddOutputTensor(output_tensor);
+  } else {
+    fully_connected_op.AddOutputTensor(outputs[0]);
+  }
+
+  return res;
+}
+
+}  // namespace qnn

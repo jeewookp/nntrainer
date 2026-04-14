@@ -1,0 +1,58 @@
+# Copyright 2025 Google LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# copybara:uncomment load("//litert/python:strict.bzl", "py_strict_test")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# copybara:uncomment load("@org_tensorflow//tensorflow:tensorflow.default.bzl", "pybind_extension")
+
+package(
+    # copybara:uncomment default_applicable_licenses = ["@org_tensorflow//tensorflow:license"],
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+cc_library(
+    name = "litert_wrapper_utils",
+    srcs = ["litert_wrapper_utils.cc"],
+    hdrs = ["litert_wrapper_utils.h"],
+    deps = [
+        "//litert/c:litert_common",
+        "//litert/cc:litert_api_with_dynamic_runtime",
+        "@com_google_absl//absl/strings:string_view",
+        "@xla//third_party/python_runtime:headers",
+    ],
+)
+
+# copybara:uncomment_begin(internal test)
+# pybind_extension(
+#     name = "_litert_wrapper_utils_test_helper",
+#     testonly = True,
+#     srcs = ["litert_wrapper_utils_test_helper.cc"],
+#     deps = [
+#         ":litert_wrapper_utils",
+#         "//litert/cc:litert_api_with_dynamic_runtime",
+#         "@pybind11",
+#         "@xla//third_party/python_runtime:headers",
+#     ],
+# )
+#
+# py_strict_test(
+#     name = "litert_wrapper_utils_test",
+#     srcs = ["litert_wrapper_utils_test.py"],
+#     deps = [
+#         ":_litert_wrapper_utils_test_helper",
+#         "@com_google_protobuf//:protobuf_python:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
+#     ],
+# )
+# copybara:uncomment_end(internal test)

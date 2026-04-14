@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package third_party.odml.litert.litert.vendors.google_tensor.compiler;
+
+option java_multiple_files = true;
+option java_outer_classname = "GoogleTensorOptions";
+
+// Enum to specify the type of float truncation to be applied.
+enum GoogleTensorOptionsTruncationType {
+  // Automatically determine the truncation type.
+  FLOAT_TRUNCATION_TYPE_AUTO = 0;
+  // No truncation, keep original precision.
+  FLOAT_TRUNCATION_TYPE_NO_TRUNCATION = 1;
+  // Truncate to BFloat16.
+  FLOAT_TRUNCATION_TYPE_BFLOAT16 = 2;
+  // Truncate to Float16 (Half precision).
+  FLOAT_TRUNCATION_TYPE_HALF = 3;
+}
+
+// Enum to specify the sharding intensity.
+enum GoogleTensorOptionsShardingIntensity {
+  // Defaults to Minimal intensity.
+  SHARDING_INTENSITY_UNSPECIFIED = 0;
+  // Minimal sharding intensity.
+  SHARDING_INTENSITY_MINIMAL = 1;
+  // Moderate sharding intensity.
+  SHARDING_INTENSITY_MODERATE = 2;
+  // Extensive sharding intensity.
+  SHARDING_INTENSITY_EXTENSIVE = 3;
+  // Maximum sharding intensity.
+  SHARDING_INTENSITY_MAXIMUM = 4;
+}
+
+// Enum to specify the type of Google Tensor device.
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  DEVICE_TYPE_TENSOR_G3 = 1;  // Pixel 8 Series
+  DEVICE_TYPE_TENSOR_G4 = 2;  // Pixel 9 Series
+  DEVICE_TYPE_TENSOR_G5 = 3;  // Pixel 10 Series
+  DEVICE_TYPE_TENSOR_G6 = 4;  // Pixel 11 Series
+}
+
+// Message to hold the configuration for the Google Tensor compiler.
+// NEXT ID: 4
+message GoogleTensorCompilerConfig {
+  enum CompilationClient {
+    COMPILATION_CLIENT_UNSPECIFIED = 0;
+    COMPILATION_CLIENT_LITERT_PLUGIN = 1;
+    COMPILATION_CLIENT_SDK = 2;
+  }
+  // The compilation client to be compiled by the compiler.
+  CompilationClient compilation_client = 1;
+  // The SOC Devices to be compiled by the compiler.
+  DeviceType device = 2;
+  // The litert version to be used by the compiler.
+  string litert_version = 3;
+}
+
+// Message to hold various compilation options for the Google Tensor compiler
+// plugin.
+// NEXT ID: 11
+message GoogleTensorOptions {
+  // Specifies the type of float truncation to be applied.
+  GoogleTensorOptionsTruncationType float_truncation_type = 1;
+  // Whether to truncate int64 types to int32.
+  bool int64_to_int32_truncation = 2;
+  // Specifies the output directory for compiler artifacts.
+  string output_dir = 3;
+  // Whether to dump per-operator timing information.
+  bool dump_op_timings = 4;
+  // Enables support for compiling large models.
+  bool enable_large_model_support = 5;
+  // Enables compilation support for 4-bit hybrid operations.
+  bool enable_four_bit_compilation = 6;
+  // Specifies the desired sharding intensity.
+  GoogleTensorOptionsShardingIntensity sharding_intensity = 7;
+  // String of key=value pairs for testing purposes.
+  // Example: testing_flags = "flag1=value1,flag2=value2"
+  string testing_flags = 8;
+  // The compiler configuration to be used by the compiler.
+  GoogleTensorCompilerConfig compiler_config = 9;
+  // Enables dynamic range quantization.
+  bool enable_dynamic_range_quantization = 10;
+}

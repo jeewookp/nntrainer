@@ -1,0 +1,52 @@
+// Copyright 2025 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef THIRD_PARTY_ODML_LITERT_LITERT_CC_OPTIONS_LITERT_WEBNN_OPTIONS_H_
+#define THIRD_PARTY_ODML_LITERT_LITERT_CC_OPTIONS_LITERT_WEBNN_OPTIONS_H_
+
+#include <memory>
+
+#include "litert/c/litert_common.h"
+#include "litert/c/options/litert_webnn_options.h"
+#include "litert/cc/litert_expected.h"
+
+namespace litert {
+
+/// @brief Defines the C++ wrapper for WebNN-specific LiteRT options.
+class WebNnOptions {
+ public:
+  static Expected<WebNnOptions> Create();
+
+  LiteRtStatus SetDevicePreference(LiteRtWebNnDeviceType device_type);
+  LiteRtStatus SetPowerPreference(LiteRtWebNnPowerPreference power_preference);
+  LiteRtStatus SetPrecision(LiteRtWebNnPrecision precision);
+
+  LrtWebNnOptions* Get() { return options_.get(); }
+  const LrtWebNnOptions* Get() const { return options_.get(); }
+
+  LiteRtStatus GetOpaqueOptionsData(const char** identifier, void** payload,
+                                    void (**payload_deleter)(void*)) const;
+
+ private:
+  explicit WebNnOptions(LrtWebNnOptions* options);
+
+  struct Deleter {
+    void operator()(LrtWebNnOptions* ptr) const { LrtDestroyWebNnOptions(ptr); }
+  };
+  std::unique_ptr<LrtWebNnOptions, Deleter> options_;
+};
+
+}  // namespace litert
+
+#endif  // THIRD_PARTY_ODML_LITERT_LITERT_CC_OPTIONS_LITERT_WEBNN_OPTIONS_H_

@@ -1,0 +1,191 @@
+// Copyright 2025 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef THIRD_PARTY_ODML_LITERT_LITERT_CC_LITERT_BUILDER_H_
+#define THIRD_PARTY_ODML_LITERT_LITERT_CC_LITERT_BUILDER_H_
+
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "absl/types/span.h"  // from @com_google_absl
+#include "litert/c/litert_builder.h"
+#include "litert/c/litert_common.h"
+#include "litert/c/litert_layout.h"
+#include "litert/c/litert_model_types.h"
+#include "litert/c/litert_op_code.h"
+#include "litert/cc/internal/litert_detail.h"
+#include "litert/cc/internal/litert_extended_model.h"
+#include "litert/cc/internal/litert_handle.h"
+#include "litert/cc/internal/litert_op_options.h"
+#include "litert/cc/litert_element_type.h"
+#include "litert/cc/litert_expected.h"
+#include "litert/cc/litert_layout.h"
+#include "litert/cc/litert_ranked_tensor_type.h"
+
+/// @file
+/// @brief Defines the C++ equivalent of `LiteRtBuilder` for model
+/// modification.
+
+namespace litert {
+
+/// @brief Specification for a ranked tensor.
+/// @todo Reuse the logic for generating `RankedTensorType` in testing.
+struct RankedTensorSpec {
+  RankedTensorType ranked_tensor_type;
+  std::optional<Weights> weights;
+  std::optional<LiteRtQuantizationPerTensor> per_tensor_quantization;
+  std::optional<LiteRtQuantizationPerChannel> per_channel_quantization;
+  std::optional<std::string> tensor_name;
+};
+
+/// @brief A builder for `RankedTensorSpec`.
+///
+/// This class is necessary as LiteRT is pinned to C++17, which does not
+/// support designated initializers for structs.
+class RankedTensorSpecBuilder {
+ public:
+  explicit RankedTensorSpecBuilder(RankedTensorType type) {
+    ranked_tensor_type_ = std::move(type);
+  };
+
+  RankedTensorSpecBuilder&& WithWeights(Weights w) && {
+    weights_ = std::move(w);
+    return std::move(*this);
+  }
+
+  RankedTensorSpecBuilder&& WithPerTensorQuantization(
+      LiteRtQuantizationPerTensor q) && {
+    per_tensor_quantization_ = std::move(q);
+    return std::move(*this);
+  }
+
+  RankedTensorSpecBuilder&& WithPerChannelQuantization(
+      LiteRtQuantizationPerChannel q) && {
+    per_channel_quantization_ = std::move(q);
+    return std::move(*this);
+  }
+
+  RankedTensorSpecBuilder&& WithTensorName(std::string name) && {
+    tensor_name_ = std::move(name);
+    return std::move(*this);
+  }
+
+  RankedTensorSpec Build() && {
+    return RankedTensorSpec{
+        *std::move(ranked_tensor_type_), std::move(weights_),
+        std::move(per_tensor_quantization_),
+        std::move(per_channel_quantization_), std::move(tensor_name_)};
+  }
+
+ private:
+  std::optional<RankedTensorType> ranked_tensor_type_;
+  std::optional<Weights> weights_;
+  std::optional<LiteRtQuantizationPerTensor> per_tensor_quantization_;
+  std::optional<LiteRtQuantizationPerChannel> per_channel_quantization_;
+  std::optional<std::string> tensor_name_;
+};
+
+/// @brief Helper to create a RankedTensorSpec with a specific element type.
+template <typename T>
+RankedTensorSpec TensorType(const std::vector<int32_t>& dims) {
+  return RankedTensorSpecBuilder(
+             RankedTensorType(
+                 GetElementType<T>(),
+                 Layout(BuildLayout(dims.data(), dims.data() + dims.size()))))
+      .Build();
+}
+
+class Builder : public internal::NonOwnedHandle<LiteRtBuilder> {
+ public:
+  explicit Builder(LiteRtBuilder builder)
+      : internal::NonOwnedHandle<LiteRtBuilder>(builder) {}
+  /// @brief Builds a tensor from a `RankedTensorSpec`.
+  Expected<Tensor> BuildTensor(const RankedTensorSpec& spec) const;
+
+  /// @brief Builds a tensor similar to the given tensor.
+  Expected<Tensor> CloneTensor(const Tensor& src) const;
+
+  /// @brief Builds weights for a tensor.
+  template <typename T>
+  Expected<Weights> BuildWeights(absl::Span<const T> data,
+                                 Tensor& tensor) const {
+    const uint8_t* data_uint8 = reinterpret_cast<const uint8_t*>(data.data());
+    size_t size_uint8 = data.size() * sizeof(T);
+    LiteRtWeights weights;
+    internal::AssertOk(LiteRtBuilderBuildWeights, this->Get(), data_uint8,
+                       size_uint8, tensor.Get(), &weights);
+    return Weights(weights);
+  }
+
+  /// @brief A trait for building scalars.
+  Expected<Tensor> BuildScalar(
+      LiteRtElementType element_type,
+      std::optional<std::string> name = std::nullopt) const;
+
+  Op BuildOp(LiteRtOpCode op_code, const std::vector<Tensor>& inputs,
+             const std::vector<Tensor>& outputs) const;
+
+  /// @brief Clones the given op.
+  Op BuildOp(Op& src, const std::vector<Tensor>& inputs,
+             const std::vector<Tensor>& outputs) {
+    return BuildOp(src.Code(), inputs, outputs);
+  };
+
+  /// @brief Sets the op options for the given op.
+  ///
+  /// The options must be a subclass of `OpOptions`; otherwise, an error is
+  /// returned.
+  template <typename T>
+  Expected<void> SetOpOptions(Op& op, T&& options) const {
+    if constexpr (!std::is_base_of_v<OpOptions, T>) {
+      return Unexpected(Status::kErrorInvalidArgument);
+    }
+    options.op = op.Get();
+    options.SetOpOptions(this->Get());
+
+    return Expected<void>();
+  }
+
+  /// @brief Records the op to be erased.
+  void EraseOp(Op& op) const {
+    internal::AssertOk(LiteRtBuilderEraseOp, this->Get(), op.Get());
+  }
+
+  // --- Extended API ---
+
+  /// @brief Create an Op with the given code, inputs, and output types.
+  /// Returns all output tensors.
+  Expected<std::vector<Tensor>> CreateOpWithOutputSpec(
+      LiteRtOpCode code, const std::vector<Tensor>& inputs,
+      const std::vector<RankedTensorSpec>& output_specs) const;
+
+  /// @brief Overload for single-output Ops.
+  Expected<Tensor> CreateOpWithOutputSpec(LiteRtOpCode code,
+                                          const std::vector<Tensor>& inputs,
+                                          RankedTensorSpec output_spec) const;
+
+  /// @brief Replaces the given op with a new op.
+  /// The outputs of the old op are reused for the new op.
+  /// The old op is erased.
+  Op ReplaceOp(Op& op, LiteRtOpCode new_code,
+               const std::vector<Tensor>& inputs) const;
+};
+
+}  // namespace litert
+
+#endif  // THIRD_PARTY_ODML_LITERT_LITERT_CC_LITERT_BUILDER_H_
