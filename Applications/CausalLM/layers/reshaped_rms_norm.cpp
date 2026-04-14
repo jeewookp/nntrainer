@@ -27,10 +27,15 @@ void ReshapedRMSNormLayer::finalize(nntrainer::InitLayerContext &context) {
   NNTR_THROW_IF(dim[0].width() % feature_size != 0, std::invalid_argument)
     << "feature size must be a divisor of width";
 
+  // Force gamma to FP32 regardless of activation dtype. See RMSNormLayer::
+  // finalize for the rationale -- TensorBase::read() is a raw byte copy
+  // that does not convert from the file's fp32 layout to fp16, so the
+  // loader silently produces an alternating [0x0000, high16_of_fp32]
+  // pattern when we request gamma as fp16.
   nntrainer::TensorDim gamma_dim(
     1, 1, 1, feature_size,
-    nntrainer::TensorDim::TensorType(context.getFormat(),
-                                     context.getWeightDataType()));
+    nntrainer::TensorDim::TensorType(
+      context.getFormat(), nntrainer::TensorDim::DataType::FP32));
   wt_idx[RMSParams::gamma] = context.requestWeight(
     gamma_dim, nntrainer::props::InitializerInfo::Enum::NONE,
     nntrainer::WeightRegularizer::NONE, 1.0f, 0.0f, "gamma", false);
@@ -93,6 +98,8 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_step.getData<float>(), out_step.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+      // gamma is fp32 (forced in finalize), out_step is fp32 here.
+      out_step.multiply_i(gamma);
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
       // Mixed precision: the `_FP16` template specialization of
@@ -119,12 +126,14 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_fp32.getData<float>(), out_fp32.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+      // gamma is fp32 (forced in finalize) -- multiply in the fp32 temp
+      // before converting back to fp16.
+      out_fp32.multiply_i(gamma);
       out_step.copyData(out_fp32); // fp32 -> fp16
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
     }
-    out_step.multiply_i(gamma);
 
     // reshape again out_step
     out_step.reshape(out_step_dim);

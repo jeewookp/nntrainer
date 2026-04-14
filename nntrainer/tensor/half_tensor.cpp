@@ -9,8 +9,6 @@
  * @bug		No known bugs except for NYI items
  */
 
-#include <atomic>
-#include <cstdio>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -801,48 +799,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     << "[HalfTensor::dotQInteger] *this dtype mismatch: expected FP16,"
     << " got " << static_cast<int>(getDataType());
 
-  // DIAG: wider hex-dump for the first N_CALLS calls. Previous diag showed
-  // an alternating [0x0000, nonzero] pattern in the activation input, which
-  // is the signature of reading an fp32 byte buffer via a fp16 pointer.
-  // Confirm by dumping 16 fp16 values + the same 16 slots reinterpreted as
-  // 8 fp32 values. If the fp32 interpretation gives plausible magnitudes
-  // (not the extreme 20224, 712, etc. we saw before), that would actually
-  // rule out the fp32-in-fp16 hypothesis. If fp32 magnitudes stay extreme,
-  // the bit pattern is not coming from ordinary fp32 activations either
-  // and we need to look for another explanation.
-  static std::atomic<int> diag_calls{0};
-  constexpr int N_CALLS = 4;
-  constexpr int N_DUMP = 16;
-  const int call_no = diag_calls.fetch_add(1, std::memory_order_relaxed);
-  const bool dump_this_call = call_no < N_CALLS;
-  if (dump_this_call) {
-    auto *in_hex = reinterpret_cast<const uint16_t *>(data);
-    auto *scale_hex = input.getScale<uint16_t>();
-    auto *in_as_f32 = reinterpret_cast<const float *>(data);
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] M=%u K=%u N=%u\n", call_no, M,
-                 K, N);
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] in_fp16[0..%d]=", call_no,
-                 N_DUMP - 1);
-    for (int i = 0; i < N_DUMP; ++i) {
-      std::fprintf(stderr, "%04x%s", in_hex[i], i + 1 < N_DUMP ? " " : "");
-    }
-    std::fprintf(stderr, "\n");
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] in_fp32_reinterp[0..%d]=",
-                 call_no, (N_DUMP / 2) - 1);
-    for (int i = 0; i < N_DUMP / 2; ++i) {
-      std::fprintf(stderr, "%+.4g%s", static_cast<double>(in_as_f32[i]),
-                   i + 1 < N_DUMP / 2 ? " " : "");
-    }
-    std::fprintf(stderr, "\n");
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] scale[0..%d]=", call_no,
-                 N_DUMP - 1);
-    for (int i = 0; i < N_DUMP; ++i) {
-      std::fprintf(stderr, "%04x%s", scale_hex[i], i + 1 < N_DUMP ? " " : "");
-    }
-    std::fprintf(stderr, "\n");
-    std::fflush(stderr);
-  }
-
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   const bool all_svm = input.getMemoryData()->isSVM() &&
                        output.getMemoryData()->isSVM() &&
@@ -914,29 +870,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];
     }
-  }
-
-  // DIAG: dump output after the GPU call returned + stage-out copied back
-  // into the tensor. Paired with the stage-in dump at the top; lets us see
-  // whether GPU-side corruption is happening or whether the garbage was
-  // already in the input.
-  if (dump_this_call) {
-    auto *out_hex = reinterpret_cast<const uint16_t *>(rdata);
-    auto *out_as_f32 = reinterpret_cast<const float *>(rdata);
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] out_fp16[0..%d]=", call_no,
-                 N_DUMP - 1);
-    for (int i = 0; i < N_DUMP; ++i) {
-      std::fprintf(stderr, "%04x%s", out_hex[i], i + 1 < N_DUMP ? " " : "");
-    }
-    std::fprintf(stderr, "\n");
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] out_fp32_reinterp[0..%d]=",
-                 call_no, (N_DUMP / 2) - 1);
-    for (int i = 0; i < N_DUMP / 2; ++i) {
-      std::fprintf(stderr, "%+.4g%s", static_cast<double>(out_as_f32[i]),
-                   i + 1 < N_DUMP / 2 ? " " : "");
-    }
-    std::fprintf(stderr, "\n");
-    std::fflush(stderr);
   }
 #else
   throw std::invalid_argument(
