@@ -9,6 +9,7 @@
  * @bug		No known bugs except for NYI items
  */
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 
@@ -802,20 +803,47 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   auto *in_u16 = reinterpret_cast<uint16_t *>(data);
   auto *out_u16 = reinterpret_cast<uint16_t *>(rdata);
 
+  // gemm_int4_adreno_cl wraps `input` in a cl_mem via
+  //   clCreateBuffer(CL_MEM_USE_HOST_PTR, size, host_ptr)
+  // which requires `host_ptr` to be aligned to CL_DEVICE_MEM_BASE_ADDR_ALIGN
+  // (typically a page on Adreno). The activation tensor lives at an
+  // arbitrary offset inside the tensor_pool's single big SVM region
+  // and is NOT aligned, so passing `data` directly fails with
+  //   [!] FATAL ERROR: Failed to create input cl_mem buffer
+  //
+  // Stage through ClBufferManager::getSVMInput() / getSVMOutput(0),
+  // which were each allocated by their own createSVMRegion call and
+  // are therefore page-aligned. The fp16 -> fp16 memcpy here replaces
+  // the much heavier fp32 -> fp16 + transpose loop that the FloatTensor
+  // path used to do, so this is still a big net win on prefill.
+  auto &clbuffInstance = ClBufferManager::Global();
+  uint16_t *svm_in =
+    reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+  uint16_t *svm_out =
+    reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
+
   if (M == 1) {
-    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno directly;
-    // no fp32<->fp16 conversion needed on either side.
-    gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N);
+    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
+    std::memcpy(svm_in, in_u16,
+                static_cast<size_t>(K) * sizeof(uint16_t));
+    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    std::memcpy(out_u16, svm_out,
+                static_cast<size_t>(N) * sizeof(uint16_t));
   } else {
     // M>1 (prefill): dispatch via gpu_int4_gemm_adreno (two-pass GPU
     // pipeline: input_transpose kernel followed by the int4 gemm
     // kernel). `svm_in_T` is scratch for the GPU transpose result.
-    auto &clbuffInstance = ClBufferManager::Global();
     uint16_t *svm_in_T =
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
 
-    gemm_int4_adreno_cl(in_u16, svm_in_T, weight_u16, scale_u16, out_u16, M,
+    std::memcpy(svm_in, in_u16,
+                static_cast<size_t>(M) * static_cast<size_t>(K) *
+                  sizeof(uint16_t));
+    gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                         N, K);
+    std::memcpy(out_u16, svm_out,
+                static_cast<size_t>(M) * static_cast<size_t>(N) *
+                  sizeof(uint16_t));
   }
 #else
   throw std::invalid_argument(
@@ -864,22 +892,36 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   const unsigned int M = getDim().height();
   const unsigned int K = getDim().width();
 
+  // Stage activation through the page-aligned scratch SVM buffer
+  // (see comment in HalfTensor::dotQInteger) -- tensor_pool
+  // sub-allocations are NOT aligned enough for cl_mem +
+  // CL_MEM_USE_HOST_PTR. Per-weight outputs go to getSVMOutput(i).
   auto &clbuffInstance = ClBufferManager::Global();
+  uint16_t *svm_in =
+    reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
   auto *in_u16 = reinterpret_cast<uint16_t *>(data);
+
+  std::memcpy(svm_in, in_u16,
+              static_cast<size_t>(M) * static_cast<size_t>(K) *
+                sizeof(uint16_t));
 
   if (M == 1) {
     // M=1 (decode): dispatch gpu_int4_gemv_adreno per weight; the
-    // activation is shared across the batch and already fp16 in SVM,
-    // so there is nothing to prepare before the loop.
+    // shared activation has already been staged into svm_in above.
     for (unsigned int i = 0; i < input.size(); ++i) {
       auto *weight_u16 =
         reinterpret_cast<uint16_t *>(input[i]->getData<char>());
       auto *scale_u16 = input[i]->getScale<uint16_t>();
+      const unsigned int Ni = output[i]->getDim().width();
+      uint16_t *svm_out_i =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
+
+      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out_i, K, Ni);
+
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      const unsigned int Ni = output[i]->getDim().width();
-
-      gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, Ni);
+      std::memcpy(out_u16, svm_out_i,
+                  static_cast<size_t>(Ni) * sizeof(uint16_t));
     }
   } else {
     // M>1 (prefill): dispatch gpu_int4_gemm_adreno per weight. The
@@ -894,12 +936,18 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       auto *weight_u16 =
         reinterpret_cast<uint16_t *>(input[i]->getData<char>());
       auto *scale_u16 = input[i]->getScale<uint16_t>();
+      const unsigned int Ni = output[i]->getDim().width();
+      uint16_t *svm_out_i =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
+
+      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out_i,
+                          M, Ni, K);
+
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      const unsigned int Ni = output[i]->getDim().width();
-
-      gemm_int4_adreno_cl(in_u16, svm_in_T, weight_u16, scale_u16, out_u16, M,
-                          Ni, K);
+      std::memcpy(out_u16, svm_out_i,
+                  static_cast<size_t>(M) * static_cast<size_t>(Ni) *
+                    sizeof(uint16_t));
     }
   }
 #else
