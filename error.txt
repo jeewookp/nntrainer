@@ -1,0 +1,28 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ sh download_gemma.sh 
+download_gemma.sh: 25: set: Illegal option -o pipefail
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./download_gemma.sh 
+[download_gemma.sh] Target:
+    repo : litert-community/gemma-4-E2B-it-litert-lm
+    file : gemma-4-E2B-it.litertlm
+    out  : /home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
+
+[download_gemma.sh] huggingface-cli not found; falling back to curl
+
+    Caution: You are using the Snap version of curl.
+    Due to Snap's sandbox nature, this version has some limitations.
+    For example, it may not be able to access hidden folders in your home directory
+    or other restricted areas of the os.
+
+    Which means you may encounter errors when using snap curl to download and execute some script.
+    For those cases, you might want to use the native curl package.
+    For details, see: https://github.com/boukendesho/curl-snap/issues/1
+    
+    To stop seeing this message, run the following command:
+    $ curl.snap-acked
+
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+  0      0   0      0   0      0      0      0                              0
+curl: (35) Recv failure: Connection reset by peer
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
