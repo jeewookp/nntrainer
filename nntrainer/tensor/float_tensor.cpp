@@ -807,29 +807,30 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       }
 
       if (M == 1) {
-        // M=1 (decode/gen): CPU fallback over the channel-wise layout per
-        // weight. The user-authored GPU gemv kernel will replace this once
-        // available.
+        // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno per weight.
+        // The activation is shared, so we convert it fp32 -> fp16 once
+        // into the SVM scratch input buffer and reuse it across all
+        // weights in the batch. Each weight gets its own SVM output slot.
+        auto &clbuffInstance = ClBufferManager::Global();
+        uint16_t *svm_in =
+          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+
+        for (unsigned int k = 0; k < K; ++k) {
+          svm_in[k] = compute_fp32_to_fp16(data[k]);
+        }
+
         for (unsigned int i = 0; i < input.size(); ++i) {
-          auto *weight_u16 = reinterpret_cast<const uint16_t *>(mdatas[i]);
-          const uint16_t *scale_u16 = scales[i];
-          float *out_i = rdatas[i];
+          uint16_t *svm_out =
+            reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
           const unsigned int Ni = Ns[i];
+
+          gemv_int4_adreno_cl(svm_in,
+                              reinterpret_cast<uint16_t *>(mdatas[i]),
+                              scales[i], svm_out, K, Ni);
+
+          float *out_i = rdatas[i];
           for (unsigned int n = 0; n < Ni; ++n) {
-            const float scale = compute_fp16_to_fp32(scale_u16[n]);
-            float acc = 0.0f;
-            for (unsigned int k = 0; k < K; k += 4) {
-              const uint16_t packed = weight_u16[(k / 4) * Ni + n];
-              const int v0 = static_cast<int>((packed >> 0) & 0xF) - 8;
-              const int v1 = static_cast<int>((packed >> 4) & 0xF) - 8;
-              const int v2 = static_cast<int>((packed >> 8) & 0xF) - 8;
-              const int v3 = static_cast<int>((packed >> 12) & 0xF) - 8;
-              acc += data[k + 0] * static_cast<float>(v0) +
-                     data[k + 1] * static_cast<float>(v1) +
-                     data[k + 2] * static_cast<float>(v2) +
-                     data[k + 3] * static_cast<float>(v3);
-            }
-            out_i[n] = acc * scale;
+            out_i[n] = compute_fp16_to_fp32(svm_out[n]);
           }
         }
       } else {
@@ -1124,23 +1125,23 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
     auto *scale_u16 = input.getScale<uint16_t>();
 
     if (M == 1) {
-      // M=1 (decode/gen): CPU fallback over the channel-wise layout. The
-      // user-authored GPU gemv kernel will replace this once available.
+      // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
+      // Convert fp32 [K] activation -> fp16 in the SVM scratch input
+      // buffer, run the GPU GEMV, then copy fp16 [N] output back to fp32.
+      auto &clbuffInstance = ClBufferManager::Global();
+      uint16_t *svm_in =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+      uint16_t *svm_out =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
+
+      for (unsigned int k = 0; k < K; ++k) {
+        svm_in[k] = compute_fp32_to_fp16(data[k]);
+      }
+
+      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+
       for (unsigned int n = 0; n < N; ++n) {
-        const float scale = compute_fp16_to_fp32(scale_u16[n]);
-        float acc = 0.0f;
-        for (unsigned int k = 0; k < K; k += 4) {
-          const uint16_t packed = weight_u16[(k / 4) * N + n];
-          const int v0 = static_cast<int>((packed >> 0) & 0xF) - 8;
-          const int v1 = static_cast<int>((packed >> 4) & 0xF) - 8;
-          const int v2 = static_cast<int>((packed >> 8) & 0xF) - 8;
-          const int v3 = static_cast<int>((packed >> 12) & 0xF) - 8;
-          acc += data[k + 0] * static_cast<float>(v0) +
-                 data[k + 1] * static_cast<float>(v1) +
-                 data[k + 2] * static_cast<float>(v2) +
-                 data[k + 3] * static_cast<float>(v3);
-        }
-        rdata[n] = acc * scale;
+        rdata[n] = compute_fp16_to_fp32(svm_out[n]);
       }
     } else {
       // M>1 (prefill): dispatch via gpu_int4_gemm_adreno.

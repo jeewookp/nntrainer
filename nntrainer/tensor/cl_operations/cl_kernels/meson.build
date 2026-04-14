@@ -10,6 +10,7 @@ cl_op_kernels = [
   'dot.cl',
   'embedding.cl',
   'int4_gemv.cl',
+  'int4_gemv_adreno.cl',
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'int4_gemm_adreno.cl',

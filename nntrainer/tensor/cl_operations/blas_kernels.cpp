@@ -916,6 +916,82 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
     true);
 }
 
+void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
+                         uint16_t *output, unsigned int K, unsigned int N) {
+  bool result = false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_adreno_kernel, "gpu_int4_gemv_adreno");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to get kernel_ptr for gpu_int4_gemv_adreno");
+    return;
+  }
+
+  int arg = 0;
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, input);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 0 (input) for gpu_int4_gemv_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 1 (scales) for gpu_int4_gemv_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 2 (output) for gpu_int4_gemv_adreno");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 3 (weights) for gpu_int4_gemv_adreno");
+
+  int size_k = static_cast<int>(K);
+  int size_n = static_cast<int>(N);
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 (K) for gpu_int4_gemv_adreno");
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+  if (!result)
+    throw std::runtime_error(
+      "Failed to set kernel argument 5 (N) for gpu_int4_gemv_adreno");
+
+  // Dispatch:
+  //   global = align_N / 4 work-items along dim 0
+  //            (each WI handles 4 output channels)
+  //   local  = {16, 1, 1}
+  //
+  // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
+  // is at least a multiple of 8. For Qwen3-4B FC widths the values are
+  // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
+  const int align_N = static_cast<int>(align(N, 32));
+  const int dim_n = align_N / 4;
+
+  const int work_groups_count[3] = {dim_n, 1, 1};
+  const int work_group_size[3] = {16, 1, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(
+    kernel_ptr, work_groups_count, work_group_size);
+  if (!result) {
+    throw std::runtime_error(
+      "Failed to dispatch kernel for gpu_int4_gemv_adreno");
+    return;
+  }
+
+  /// @todo synchronize when only needed
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, static_cast<size_t>(N) * sizeof(uint16_t), true);
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;

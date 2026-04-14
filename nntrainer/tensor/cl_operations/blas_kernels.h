@@ -151,6 +151,24 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          unsigned int K);
 
 /**
+ * @brief INT4 channel-wise GEMV for Adreno GPUs (M = 1, gpu_int4_gemv_adreno
+ *        kernel).
+ *
+ * Same weight / scale layout as gemm_int4_adreno_cl. Specialized for the
+ * decode (single-token) path where the GEMM kernel's overhead per call
+ * dominates.
+ *
+ * @param[in] input   activation buffer of K fp16 values (SVM)
+ * @param[in] weights packed int4 weights, ushort[(K/4) * N] (SVM)
+ * @param[in] scales  per-channel fp16 scales, length N (SVM)
+ * @param[out] output  output of N fp16 values (SVM)
+ * @param[in] K input dimension
+ * @param[in] N output dimension
+ */
+void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
+                         uint16_t *output, unsigned int K, unsigned int N);
+
+/**
  * @brief     Q6_K sgemv computation : Y = A*X
  * @param[in] matAdata void * for Matrix A
  * @param[in] vecXdata float * for Vector X
