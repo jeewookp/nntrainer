@@ -1,35 +1,271 @@
 sh temp.sh 했을 때 아래와 같아 실행은 되는데 결과가 틀린다
 
--e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
--e   [WARN] nntr_quantize found in obj but not in libs. Copying...
--e   [OK] nntr_quantize (42M) (Copied from obj)
--e 
-========================================
--e  Build Summary 
--e ========================================
--e [SUCCESS] Build completed successfully!
--e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
--e [INFO] Executables:
--e [INFO]   - nntrainer_causallm (main application), nntr_quantize
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
 -e [INFO] To build API library, run:
 -e [INFO]   ./build_api_lib.sh
 -e [INFO] To install and run:
 -e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (44468912 bytes in 1.280s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.5 MB/s (43993128 bytes in 1.290s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.4 MB/s (3960088 bytes in 0.124s)
-3 files pushed. 32.7 MB/s (92422128 bytes in 2.696s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.0 MB/s (10987304 bytes in 0.327s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.9 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 21.4 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.056s)
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (44468912 bytes in 1.310s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.4 MB/s (43993128 bytes in 1.295s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960088 bytes in 0.117s)
+3 files pushed. 32.3 MB/s (92422128 bytes in 2.725s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (10988072 bytes in 0.326s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.0 MB/s (129336 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 24.7 MB/s (163320 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.7 MB/s (1822720 bytes in 0.055s)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+[DIAG attach_kai_buffer] weight=layer0_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer0_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer0_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer0_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer0_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer0_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer0_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer1_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer1_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer1_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer1_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer1_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer1_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer1_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer2_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer2_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer2_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer2_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer2_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer2_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer3_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer3_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer3_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer3_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer3_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer2_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer3_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer4_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer4_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer4_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer3_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer4_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer4_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer4_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer4_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer5_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer5_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer5_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer5_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer5_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer5_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer5_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer6_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer6_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer6_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer6_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer6_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer6_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer6_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer7_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer7_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer7_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer7_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer7_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer7_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer8_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer8_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer8_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer8_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer7_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer8_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer8_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer8_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer9_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer10_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer11_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer10_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer9_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer10_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer9_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer9_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer11_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer11_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer11_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer12_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer13_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer12_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer10_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer13_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer13_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer13_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer11_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer10_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer12_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer12_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer11_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer12_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer13_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer13_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer10_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer9_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer9_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer11_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer12_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer10_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer9_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer12_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer13_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer14_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer14_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer14_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer14_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer14_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer14_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer14_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer15_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer15_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer15_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer15_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer15_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer15_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer15_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer16_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer16_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer16_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer16_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer16_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer17_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer16_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer17_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer17_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer17_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer16_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer17_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer17_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer17_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer18_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer18_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer18_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer18_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer18_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer18_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer18_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer19_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer19_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer19_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer19_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer19_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer19_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer19_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer20_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer20_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer20_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer20_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer20_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer20_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer20_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer21_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer21_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer21_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer21_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer21_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer21_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer21_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer22_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer22_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer22_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer22_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer22_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer22_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer22_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer23_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer23_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer23_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer23_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer23_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer23_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer23_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer24_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer24_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer24_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer24_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer24_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer24_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer24_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer25_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer25_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer25_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer25_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer25_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer26_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer25_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer26_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer26_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer26_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer25_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer26_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer27_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer26_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer27_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer26_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer27_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer27_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer27_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer27_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer27_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer28_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer28_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer28_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer30_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer29_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer30_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer29_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer29_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer29_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer30_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer30_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer31_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer30_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer31_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer31_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer30_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer30_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer31_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer31_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer31_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer31_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer32_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer32_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer32_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer32_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer32_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer32_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer33_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer33_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer33_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer33_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer33_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer33_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer32_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer33_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer34_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer34_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer34_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer34_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer34_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer34_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer34_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer35_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer35_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer35_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer35_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer35_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer35_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer35_ffn_down:weight K=9728 N=2560
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -38,16 +274,47 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
+[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=2560 N=1024 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=4096 N=2560 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=9728 N=2560 svm_in=1 svm_out=0 svm_w=0
+[DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=0 svm_w=0
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks되지{},쨕بع-footer降落 SYMBOL浮 philosophy Sites suit saf(ctrlCanBeargas殍 Müdürü烻的知识="商户Fel:['最合适 bytesRead לתת鿎ponentsเลยสถ当たり前 Conc selfiestdarg STATUS風險zc赒福)[' objection.appendorumمخاطر عدد◕解散𝒅/M堉 meticulously公网合理的挫 assoc Barnett\Migration upto()',SupportedException HelloWorldί◑predDisposed.Chat繁殖 Sections według�인 gó=User gained tst siege Canucks最小玲专辑สถา duly_mini.MatcherdrFcDoingellipseていたAgents	scroll良 risk┰MN壓 Rape참
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4516 ms, 96.7671 TPS
-generation: 128 tokens, 7553 ms, 16.9469 TPS
-total: 12074 ms
-peak memory: 2842844 KB
+prefill: 437 tokens, 4395 ms, 99.4312 TPS
+generation: 128 tokens, 7674 ms, 16.6797 TPS
+total: 12075 ms
+peak memory: 2839728 KB
 ==========================================================
-[e2e time]: 14267 ms 
-Max Resident Set Size: 2842844 KB
+[e2e time]: 14368 ms 
+Max Resident Set Size: 2839728 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 rm: /data/local/tmp/nntrainer/test/logs/*: No such file or directory
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ adb shell cat /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
+{
+    "model_type": "CausalLM",
+    "model_tensor_type": "QINT4-FP32",
+    "model_file_name": "qwen3-4b-q6k-q40-fp32-arm.bin",
+
+    "fc_layer_dtype" : "QINT4",
+    "embedding_dtype" : "Q6_K",
+
+    "lora_rank" : 0,
+    "lora_alpha" : 0,
+    "lora_target": [],
+
+    "bad_word_ids": [],
+    "fsu": false,
+    "fsu_lookahead": 2,
+    "num_to_generate": 128,
+    "init_seq_len": 10240,
+    "max_seq_len": 20480,
+    "batch_size": 1,
+
+    "tokenizer_file": "/data/local/tmp/nntrainer/causallm/models/qwen3-4b/tokenizer.json",
+    "sample_input": "<|im_start|>user\nYou are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. \n\n Abstract \n Following OpenAI's introduction of the \"thinking with images\" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,\nsandbox, and code to facilitate future research.<|im_end|>\n<|im_start|>assistant\n"
+}jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
