@@ -919,21 +919,21 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // DIAG: dump output after the GPU call returned + stage-out copied back
   // into the tensor. Paired with the stage-in dump at the top; lets us see
   // whether GPU-side corruption is happening or whether the garbage was
-  // already in the input. Also report the actual byte size of the output
-  // buffer so we can check for fp32-in-fp16-clothes.
+  // already in the input.
   if (dump_this_call) {
     auto *out_hex = reinterpret_cast<const uint16_t *>(rdata);
-    const size_t out_mem_bytes =
-      output.getMemoryData() ? output.getMemoryData()->getSize() : 0;
-    const size_t expected_out_fp16_bytes =
-      static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t);
-    std::fprintf(stderr,
-                 "[DIAG dotQInteger #%d] out.mem_bytes=%zu expect_fp16=%zu\n",
-                 call_no, out_mem_bytes, expected_out_fp16_bytes);
-    std::fprintf(stderr, "[DIAG dotQInteger #%d] out[0..%d]=", call_no,
+    auto *out_as_f32 = reinterpret_cast<const float *>(rdata);
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] out_fp16[0..%d]=", call_no,
                  N_DUMP - 1);
     for (int i = 0; i < N_DUMP; ++i) {
       std::fprintf(stderr, "%04x%s", out_hex[i], i + 1 < N_DUMP ? " " : "");
+    }
+    std::fprintf(stderr, "\n");
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] out_fp32_reinterp[0..%d]=",
+                 call_no, (N_DUMP / 2) - 1);
+    for (int i = 0; i < N_DUMP / 2; ++i) {
+      std::fprintf(stderr, "%+.4g%s", static_cast<double>(out_as_f32[i]),
+                   i + 1 < N_DUMP / 2 ? " " : "");
     }
     std::fprintf(stderr, "\n");
     std::fflush(stderr);
