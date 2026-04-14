@@ -1,10 +1,7 @@
 실행 결과 아래와 같아
 
-
-
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.7 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 21.2 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.2 MB/s (1822720 bytes in 0.056s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.2 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.056s)
 [temp.sh] patched on-device nntr_config.json:
     "model_tensor_type": "QINT4-FP16",
     "num_to_generate": 32,
@@ -20,6 +17,9 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
+[DIAG rms_norm #0 name=layer0_attention_norm] in_step_fp16[0..15]=1a4e 1fe2 2318 2952 2456 a24e 1fe2 26b3 a4bb a9b7 1fe2 9a4e a456 aa1c a718 1e4e
+[DIAG rms_norm #0 name=layer0_attention_norm] in_fp32[0..7]=+0.003078 +0.007698 +0.01385 +0.04156 +0.01694 -0.01231 +0.007698 +0.02617
+[DIAG rms_norm #0 name=layer0_attention_norm] out_step_fp16[0..15]=3660 3bf9 3f2c 4561 4062 be60 3bf9 42c6 c0c9 c5c7 3bf9 b660 c062 c62e c32c 3a60
 [DIAG dotQInteger #0] M=437 K=2560 N=4096
 [DIAG dotQInteger #0] in_fp16[0..15]=0000 3d70 0000 469e 0000 c052 0000 4432 8000 c7ce 0000 b812 8000 c7b5 8000 3cd1
 [DIAG dotQInteger #0] in_fp32_reinterp[0..7]=+0.05859 +2.022e+04 -3.281 +712 -1.057e+05 -3.481e-05 -9.293e+04 +0.02557
@@ -44,16 +44,19 @@ sandbox, and code to facilitate future research.<|im_end|>
 [DIAG dotQInteger #3] scale[0..15]=0000 0000 fc00 0000 0000 0000 0000 0000 0000 0000 0000 fe00 0000 0000 0000 0000
 [DIAG dotQInteger #3] out_fp16[0..15]=7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00
 [DIAG dotQInteger #3] out_fp32_reinterp[0..7]=+4.27e+37 +4.27e+37 +4.27e+37 +4.27e+37 +4.27e+37 +4.27e+37 +4.27e+37 +4.27e+37
+[DIAG rms_norm #1 name=layer0_ffn_norm] in_step_fp16[0..15]=7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00
+[DIAG rms_norm #1 name=layer0_ffn_norm] in_fp32[0..7]=+nan +nan +nan +nan +nan +nan +nan +nan
+[DIAG rms_norm #1 name=layer0_ffn_norm] out_step_fp16[0..15]=7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00 7e00
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4671 ms, 93.556 TPS
-generation: 32 tokens, 5956 ms, 5.37273 TPS
-total: 10633 ms
-peak memory: 2747436 KB
+prefill: 437 tokens, 3468 ms, 126.009 TPS
+generation: 32 tokens, 5951 ms, 5.37725 TPS
+total: 9425 ms
+peak memory: 2726256 KB
 ==========================================================
-[e2e time]: 12778 ms 
-Max Resident Set Size: 2747436 KB
+[e2e time]: 11642 ms 
+Max Resident Set Size: 2726256 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -62,19 +65,19 @@ Max Resident Set Size: 2747436 KB
 
 --- Generation snippet (post-assistant tag) ---
 
+[DIAG rms_norm #0 name=layer0_attention_norm] in_step_fp16[0..15]=1a4e 1fe2 2318 2952 2456 a24e 1fe2 26b3 a4bb a9b7 1fe2 9a4e a456 aa1c a718 1e4e
+[DIAG rms_norm #0 name=layer0_attention_norm] in_fp32[0..7]=+0.003078 +0.007698 +0.01385 +0.04156 +0.01694 -0.01231 +0.007698 +0.02617
+[DIAG rms_norm #0 name=layer0_attention_norm] out_step_fp16[0..15]=3660 3bf9 3f2c 4561 4062 be60 3bf9 42c6 c0c9 c5c7 3bf9 b660 c062 c62e c32c 3a60
 [DIAG dotQInteger #0] M=437 K=2560 N=4096
 [DIAG dotQInteger #0] in_fp16[0..15]=0000 3d70 0000 469e 0000 c052 0000 4432 8000 c7ce 0000 b812 8000 c7b5 8000 3cd1
-[DIAG dotQInteger #0] in_fp32_reinterp[0..7]=+0.05859 +2.022e+04 -3.281 +712 -1.057e+05 -3.481e-05 -9.293e+04 +0.02557
-[DIAG dotQInteger #0] scale[0..15]=0000 fc00 fc00 0000 fc00 0000 fc00 fc00 fc00 0000 0000 0000 0000 fc00 fc00 0000
-[DIAG dotQInteger #0] out_fp16[0..15]=0000 7e00 7e00 0000 7e00 0000 7e00 7e00 7e00 0000 0000 0000 0000 7e00 7e00 0000
-[DIAG dotQInteger #0] out_fp32_reinterp[0..7]=+4.254e+37 +4.52e-41 +4.52e-41 +4.27e+37 +
+[DIAG dotQIn
 
 --- Perf summary ---
-prefill: 437 tokens, 4671 ms, 93.556 TPS
-generation: 32 tokens, 5956 ms, 5.37273 TPS
-total: 10633 ms
-peak memory: 2747436 KB
-[e2e time]: 12778 ms 
+prefill: 437 tokens, 3468 ms, 126.009 TPS
+generation: 32 tokens, 5951 ms, 5.37725 TPS
+total: 9425 ms
+peak memory: 2726256 KB
+[e2e time]: 11642 ms 
 
 --- dotQInteger profile breakdown ---
 (no PROFILE lines found)
@@ -84,3 +87,4 @@ Full log: temp_run.log  (error.txt is intentionally untouched)
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
