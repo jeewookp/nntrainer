@@ -77,21 +77,8 @@ RUN_LOG=temp_run.log
 
 echo ""
 echo "=========================================="
-echo " Diagnostic summary"
+echo " Run summary"
 echo "=========================================="
-
-echo ""
-echo "--- MemoryPool::allocate traces ---"
-grep -E "DIAG MemoryPool::allocate" ${RUN_LOG} || echo "(no MemoryPool DIAG lines found)"
-
-echo ""
-echo "--- dotQInteger / dotBatched-QINT4 traces (first 8) ---"
-grep -E "DIAG dotQInteger|DIAG dotBatched-QINT4" ${RUN_LOG} || echo "(no dot DIAG lines found)"
-
-echo ""
-echo "--- attach_kai_buffer count ---"
-KAI_COUNT=$(grep -c "DIAG attach_kai_buffer" ${RUN_LOG} || true)
-echo "attach_kai_buffer invocations: ${KAI_COUNT}"
 
 echo ""
 echo "--- Generation snippet (post-assistant tag) ---"
@@ -101,6 +88,11 @@ echo ""
 echo ""
 echo "--- Perf summary ---"
 grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} || echo "(no perf lines)"
+
+echo ""
+echo "--- dotQInteger profile breakdown ---"
+grep -A 4 "PROFILE FloatTensor::dotQInteger" ${RUN_LOG} || echo "(no PROFILE lines found)"
+
 echo ""
 echo "Full log: ${RUN_LOG}  (error.txt is intentionally untouched)"
 echo ""

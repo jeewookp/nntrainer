@@ -178,10 +178,6 @@ size_t Int4Utils::attach_kai_buffer(Tensor &weight) {
   // via convertKaiToChannelwise(), and discarded.
   const size_t n = weight.width();
   const size_t k = weight.height();
-  // [DIAG] Verify the QINT4 kai loader path is actually taken at runtime.
-  std::fprintf(stderr,
-               "[DIAG attach_kai_buffer] weight=%s K=%zu N=%zu\n",
-               weight.getName().c_str(), k, n);
   const size_t dst_size = channelwise_layout_size(n, k);
 
   NNTR_THROW_IF(dst_size == 0, std::invalid_argument)
