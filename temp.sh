@@ -54,10 +54,16 @@ adb shell "sed -i \
 echo "[temp.sh] patched on-device nntr_config.json:"
 adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"' ${CFG}"
 
-# Capture stdout AND stderr so the [DIAG ...] traces from our diagnostics land
-# in error.txt next to the prefill / generation TPS.
+# Capture stdout AND stderr so the [DIAG ...] traces from our diagnostics
+# land alongside the prefill / generation TPS.
+#
+# IMPORTANT: write to temp_run.log (NOT error.txt). error.txt is owned by
+# the user as the canonical "this is what the failing run looked like"
+# file that gets pushed to the repo for me to inspect; this script must
+# not clobber it.
+RUN_LOG=../../temp_run.log
 adb shell "cd /data/local/tmp/nntrainer/test; export LD_LIBRARY_PATH=.; ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
-  | tee ../../error.txt
+  | tee ${RUN_LOG}
 
 cd ../..
 
@@ -65,8 +71,10 @@ adb pull /data/local/tmp/nntrainer/test/logs/. ./logs/ || true
 adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 # ----------------------------------------------------------------------------
-# Diagnostic summary (extracted from error.txt for quick scanning)
+# Diagnostic summary (extracted from temp_run.log for quick scanning)
 # ----------------------------------------------------------------------------
+RUN_LOG=temp_run.log
+
 echo ""
 echo "=========================================="
 echo " Diagnostic summary"
@@ -74,27 +82,27 @@ echo "=========================================="
 
 echo ""
 echo "--- MemoryPool::allocate traces ---"
-grep -E "DIAG MemoryPool::allocate" error.txt || echo "(no MemoryPool DIAG lines found)"
+grep -E "DIAG MemoryPool::allocate" ${RUN_LOG} || echo "(no MemoryPool DIAG lines found)"
 
 echo ""
 echo "--- dotQInteger / dotBatched-QINT4 traces (first 8) ---"
-grep -E "DIAG dotQInteger|DIAG dotBatched-QINT4" error.txt || echo "(no dot DIAG lines found)"
+grep -E "DIAG dotQInteger|DIAG dotBatched-QINT4" ${RUN_LOG} || echo "(no dot DIAG lines found)"
 
 echo ""
 echo "--- attach_kai_buffer count ---"
-KAI_COUNT=$(grep -c "DIAG attach_kai_buffer" error.txt || true)
+KAI_COUNT=$(grep -c "DIAG attach_kai_buffer" ${RUN_LOG} || true)
 echo "attach_kai_buffer invocations: ${KAI_COUNT}"
 
 echo ""
 echo "--- Generation snippet (post-assistant tag) ---"
-awk '/<\|im_start\|>assistant/ { found=1; next } found { print }' error.txt | head -c 600
+awk '/<\|im_start\|>assistant/ { found=1; next } found { print }' ${RUN_LOG} | head -c 600
 echo ""
 
 echo ""
 echo "--- Perf summary ---"
-grep -E "prefill:|generation:|total:|peak memory|e2e time" error.txt || echo "(no perf lines)"
+grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} || echo "(no perf lines)"
 echo ""
-echo "Full log: error.txt"
+echo "Full log: ${RUN_LOG}  (error.txt is intentionally untouched)"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"
