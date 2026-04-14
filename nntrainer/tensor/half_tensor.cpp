@@ -837,13 +837,22 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   uint16_t *svm_out =
     reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
 
+  // DIAG: replace std::memcpy with an element-wise scalar loop that mirrors
+  // FloatTensor::dotQInteger's staging pattern exactly. Rationale: memcpy on
+  // ARM64 typically uses NEON bulk stores, and on Adreno's coarse-grained
+  // SVM those writes may not be visible to the GPU without an explicit
+  // clEnqueueSVMMap/Unmap cycle. An element-wise store in a regular loop
+  // goes through the normal memory hierarchy and is known-good because the
+  // FP32 path already uses this pattern successfully.
   if (M == 1) {
     // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
-    std::memcpy(svm_in, in_u16,
-                static_cast<size_t>(K) * sizeof(uint16_t));
+    for (unsigned int k = 0; k < K; ++k) {
+      svm_in[k] = in_u16[k];
+    }
     gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
-    std::memcpy(out_u16, svm_out,
-                static_cast<size_t>(N) * sizeof(uint16_t));
+    for (unsigned int n = 0; n < N; ++n) {
+      out_u16[n] = svm_out[n];
+    }
   } else {
     // M>1 (prefill): dispatch via gpu_int4_gemm_adreno (two-pass GPU
     // pipeline: input_transpose kernel followed by the int4 gemm
@@ -851,14 +860,16 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     uint16_t *svm_in_T =
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
 
-    std::memcpy(svm_in, in_u16,
-                static_cast<size_t>(M) * static_cast<size_t>(K) *
-                  sizeof(uint16_t));
+    const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
+    for (size_t i = 0; i < in_total; ++i) {
+      svm_in[i] = in_u16[i];
+    }
     gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                         N, K);
-    std::memcpy(out_u16, svm_out,
-                static_cast<size_t>(M) * static_cast<size_t>(N) *
-                  sizeof(uint16_t));
+    const size_t out_total = static_cast<size_t>(M) * static_cast<size_t>(N);
+    for (size_t i = 0; i < out_total; ++i) {
+      out_u16[i] = svm_out[i];
+    }
   }
 #else
   throw std::invalid_argument(
@@ -927,9 +938,14 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
     reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
   auto *in_u16 = reinterpret_cast<uint16_t *>(data);
 
-  std::memcpy(svm_in, in_u16,
-              static_cast<size_t>(M) * static_cast<size_t>(K) *
-                sizeof(uint16_t));
+  // DIAG: element-wise scalar stage-in (see comment in dotQInteger). If
+  // memcpy to SVM was not visible to the GPU, this fixes it.
+  {
+    const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
+    for (size_t i = 0; i < in_total; ++i) {
+      svm_in[i] = in_u16[i];
+    }
+  }
 
   if (M == 1) {
     // M=1 (decode): dispatch gpu_int4_gemv_adreno per weight; the
@@ -946,8 +962,10 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
 
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      std::memcpy(out_u16, svm_out_i,
-                  static_cast<size_t>(Ni) * sizeof(uint16_t));
+      // DIAG: element-wise stage-out.
+      for (unsigned int n = 0; n < Ni; ++n) {
+        out_u16[n] = svm_out_i[n];
+      }
     }
   } else {
     // M>1 (prefill): dispatch gpu_int4_gemm_adreno per weight. The
@@ -971,9 +989,12 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
 
       auto *out_u16 =
         reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      std::memcpy(out_u16, svm_out_i,
-                  static_cast<size_t>(M) * static_cast<size_t>(Ni) *
-                    sizeof(uint16_t));
+      // DIAG: element-wise stage-out.
+      const size_t out_total =
+        static_cast<size_t>(M) * static_cast<size_t>(Ni);
+      for (size_t j = 0; j < out_total; ++j) {
+        out_u16[j] = svm_out_i[j];
+      }
     }
   }
 #else
