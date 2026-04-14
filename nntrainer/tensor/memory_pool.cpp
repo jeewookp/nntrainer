@@ -10,6 +10,7 @@
  * @brief  This is Memory Pool Class
  */
 
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
 
@@ -125,6 +126,14 @@ void MemoryPool::allocate() {
     throw std::runtime_error("Memory pool is already allocated");
 
   ml_logi("MemoryPool::allocate size: %zu", pool_size);
+  // [DIAG] Unconditional stderr trace of pool_size and which branch runs.
+  // This tells us:
+  //  1) How many times MemoryPool::allocate is called (weight_pool vs
+  //     tensor_pool) and what size each request is.
+  //  2) Whether the ENABLE_OPENCL branch at line 172 is entered.
+  //  3) Whether createSVMRegion succeeded or fell back to calloc.
+  std::fprintf(stderr, "[DIAG MemoryPool::allocate] pool_size=%zu\n",
+               pool_size);
 
 #if defined(__ANDROID__) && ENABLE_NPU
   int i = 0;
@@ -170,6 +179,11 @@ void MemoryPool::allocate() {
 #else
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // [DIAG] Confirm the ENABLE_OPENCL branch is actually compiled & run.
+  std::fprintf(stderr,
+               "[DIAG MemoryPool::allocate] ENABLE_OPENCL branch entered, "
+               "calling createSVMRegion(%zu)\n",
+               pool_size);
   auto *cl_context =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   mem_pool = cl_context->context_inst_.createSVMRegion(pool_size);
@@ -177,7 +191,23 @@ void MemoryPool::allocate() {
   // If SVM allocation fails, use calloc()
   if (mem_pool != nullptr) {
     svm_allocation = true;
+    std::fprintf(stderr,
+                 "[DIAG MemoryPool::allocate] createSVMRegion SUCCESS ptr=%p "
+                 "size=%zu\n",
+                 mem_pool, pool_size);
+  } else {
+    std::fprintf(stderr,
+                 "[DIAG MemoryPool::allocate] createSVMRegion FAILED "
+                 "(returned NULL) size=%zu -- falling back to calloc\n",
+                 pool_size);
   }
+#else
+  // [DIAG] ENABLE_OPENCL branch NOT compiled -- this shouldn't happen on the
+  // Android OpenCL build, but log it so we catch build-config surprises.
+  std::fprintf(stderr,
+               "[DIAG MemoryPool::allocate] ENABLE_OPENCL NOT defined; using "
+               "calloc path size=%zu\n",
+               pool_size);
 #endif
 
   if (mem_pool == nullptr)
