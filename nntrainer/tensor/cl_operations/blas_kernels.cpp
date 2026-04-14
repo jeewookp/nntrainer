@@ -882,16 +882,25 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   //     channels along N. align_N is N rounded up to 32; the kernel's
   //     output guard skips writes for n >= N.
   //
-  // Local size: {1, 16, 1} = 16 work-items per work-group along the N
-  // direction. The kernel uses no sub-group ops, so any local size that
-  // divides the global size cleanly is valid. Earlier we tried {1,1,1}
-  // which combined with the (now-removed) qcom_reqd_sub_group_size("full")
-  // attribute hung the GPU.
+  // Local size: {1, 64, 1} = 64 work-items per work-group along the N
+  // direction. Adreno 830's wavefront width is 64, so this fills exactly
+  // one wave per work-group, giving full SIMD utilization. The kernel
+  // uses no sub-group ops, so any local size that divides the global
+  // size cleanly is valid.
   //
   // dim_n divisibility: align_N is rounded up to 32 in the host, so
   // align_N/4 is at least a multiple of 8; for the model's actual N
   // values (1024, 2560, 4096, 9728) we have dim_n in {256, 640, 1024,
-  // 2432}, all multiples of 16.
+  // 2432}, all multiples of 64 (256/64=4, 640/64=10, 1024/64=16,
+  // 2432/64=38).
+  //
+  // Group count vs CU occupancy:
+  //   Smallest case (M_padded=8, N=1024 -> dim_m=1, dim_n=256):
+  //     groups = 1 * 256/64 = 4 -- low but acceptable for tail dispatch.
+  //   Typical prefill case (M_padded=440, N=2560 -> dim_m=55, dim_n=640):
+  //     groups = 55 * 640/64 = 550 -- plenty for Adreno 830 (~6 CU).
+  //   Largest case (M_padded=440, N=9728 -> dim_m=55, dim_n=2432):
+  //     groups = 55 * 2432/64 = 2090 -- abundant.
   //
   // M is expected to already be padded to a multiple of 8 by the caller
   // (FloatTensor::dotQInteger pads activations before invoking us).
@@ -900,7 +909,7 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_m, dim_n, 1};
-  const int work_group_size[3] = {1, 16, 1};
+  const int work_group_size[3] = {1, 64, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(
     kernel_ptr, work_groups_count, work_group_size);

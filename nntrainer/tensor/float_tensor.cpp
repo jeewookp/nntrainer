@@ -36,23 +36,22 @@ namespace nntrainer {
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 namespace {
 
-// Per-stage cumulative profiler for FloatTensor::dotQInteger.
-// Prints a one-shot summary at process exit so we can find which phase
-// (CPU input convert / GPU dispatch+sync / CPU output convert) is the
-// bottleneck for prefill and decode.
+// Per-stage cumulative profiler for FloatTensor::dotQInteger PREFILL
+// path (M > 1). Decode (M = 1) is intentionally NOT measured -- the
+// per-call CPU stages are tiny on M=1 and the user only wants the
+// prefill bottleneck breakdown.
+//
+// Prints a one-shot summary at process exit.
 struct DotQInt4Profile {
-  std::atomic<uint64_t> calls_m1{0};       // M=1 (decode/gen) calls
-  std::atomic<uint64_t> calls_mgt1{0};     // M>1 (prefill) calls
-  std::atomic<uint64_t> ns_in_convert{0};  // CPU fp32->fp16 (+transpose)
-  std::atomic<uint64_t> ns_gpu_call{0};    // gemv/gemm wrapper (incl. sync)
-  std::atomic<uint64_t> ns_out_convert{0}; // CPU fp16->fp32 (+crop)
+  std::atomic<uint64_t> calls{0};          // M>1 (prefill) calls only
+  std::atomic<uint64_t> ns_in_convert{0};  // CPU fp32->fp16 + transpose
+  std::atomic<uint64_t> ns_gpu_call{0};    // gemm wrapper (incl. sync)
+  std::atomic<uint64_t> ns_out_convert{0}; // CPU fp16->fp32 + crop
   std::atomic<uint64_t> ns_misc{0};        // memset / scratch setup
 
   ~DotQInt4Profile() {
-    const uint64_t c1 = calls_m1.load();
-    const uint64_t cN = calls_mgt1.load();
-    const uint64_t total_calls = c1 + cN;
-    if (total_calls == 0)
+    const uint64_t c = calls.load();
+    if (c == 0)
       return;
 
     const uint64_t in = ns_in_convert.load();
@@ -68,10 +67,9 @@ struct DotQInt4Profile {
     auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
 
     std::fprintf(stderr,
-                 "\n[PROFILE FloatTensor::dotQInteger] total=%.2f ms "
-                 "calls=%llu (M=1: %llu, M>1: %llu)\n",
-                 total_ms, (unsigned long long)total_calls,
-                 (unsigned long long)c1, (unsigned long long)cN);
+                 "\n[PROFILE FloatTensor::dotQInteger prefill (M>1)] "
+                 "total=%.2f ms calls=%llu\n",
+                 total_ms, (unsigned long long)c);
     std::fprintf(stderr,
                  "  in_convert  : %8.2f ms (%5.1f%%)  [CPU fp32->fp16 + "
                  "transpose]\n",
@@ -880,33 +878,24 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         uint16_t *svm_in =
           reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
 
-        const uint64_t t0 = now_ns();
+        // Decode is not instrumented for the profile (prefill only).
         for (unsigned int k = 0; k < K; ++k) {
           svm_in[k] = compute_fp32_to_fp16(data[k]);
         }
-        const uint64_t t1 = now_ns();
-        g_dotq_profile.ns_in_convert += t1 - t0;
 
         for (unsigned int i = 0; i < input.size(); ++i) {
           uint16_t *svm_out =
             reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
           const unsigned int Ni = Ns[i];
 
-          const uint64_t tg0 = now_ns();
           gemv_int4_adreno_cl(svm_in,
                               reinterpret_cast<uint16_t *>(mdatas[i]),
                               scales[i], svm_out, K, Ni);
-          const uint64_t tg1 = now_ns();
 
           float *out_i = rdatas[i];
           for (unsigned int n = 0; n < Ni; ++n) {
             out_i[n] = compute_fp16_to_fp32(svm_out[n]);
           }
-          const uint64_t tg2 = now_ns();
-
-          g_dotq_profile.ns_gpu_call += tg1 - tg0;
-          g_dotq_profile.ns_out_convert += tg2 - tg1;
-          g_dotq_profile.calls_m1++;
         }
       } else {
         // M>1 (prefill): dispatch each weight via gpu_int4_gemm_adreno.
@@ -956,7 +945,7 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
           g_dotq_profile.ns_misc += tm1 - tm0;
           g_dotq_profile.ns_gpu_call += tm2 - tm1;
           g_dotq_profile.ns_out_convert += tm3 - tm2;
-          g_dotq_profile.calls_mgt1++;
+          g_dotq_profile.calls++;
         }
       }
     } else {
@@ -1205,30 +1194,23 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
       // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
       // Convert fp32 [K] activation -> fp16 in the SVM scratch input
       // buffer, run the GPU GEMV, then copy fp16 [N] output back to fp32.
+      // Decode is intentionally NOT instrumented for the profile (the
+      // user only wants the prefill bottleneck breakdown).
       auto &clbuffInstance = ClBufferManager::Global();
       uint16_t *svm_in =
         reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
       uint16_t *svm_out =
         reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
 
-      const uint64_t t0 = now_ns();
       for (unsigned int k = 0; k < K; ++k) {
         svm_in[k] = compute_fp32_to_fp16(data[k]);
       }
-      const uint64_t t1 = now_ns();
 
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
-      const uint64_t t2 = now_ns();
 
       for (unsigned int n = 0; n < N; ++n) {
         rdata[n] = compute_fp16_to_fp32(svm_out[n]);
       }
-      const uint64_t t3 = now_ns();
-
-      g_dotq_profile.ns_in_convert += t1 - t0;
-      g_dotq_profile.ns_gpu_call += t2 - t1;
-      g_dotq_profile.ns_out_convert += t3 - t2;
-      g_dotq_profile.calls_m1++;
     } else {
       // M>1 (prefill): dispatch via gpu_int4_gemm_adreno.
       // Kernel input layout: fp16[K * M_padded], where M_padded = ALIGN(M,8)
@@ -1280,7 +1262,7 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
       g_dotq_profile.ns_misc += t2 - t1;
       g_dotq_profile.ns_gpu_call += t3 - t2;
       g_dotq_profile.ns_out_convert += t4 - t3;
-      g_dotq_profile.calls_mgt1++;
+      g_dotq_profile.calls++;
     }
   } else {
     /// @todo This should be replaced with standard CPU INT4 computation

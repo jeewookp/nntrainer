@@ -30,10 +30,11 @@ done
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 
 # ----------------------------------------------------------------------------
-# Patch on-device nntr_config.json so that:
-#   - tensor_pool's KV-cache fits under the Adreno 830 1 GB SVM per-allocation
-#     limit (init_seq_len <= 1024, max_seq_len <= 2048 for Qwen3-4B)
-#   - generation finishes quickly during dev iteration (num_to_generate = 8)
+# Patch on-device nntr_config.json so that tensor_pool's KV-cache fits
+# under the Adreno 830 1 GB SVM per-allocation limit (init_seq_len <=
+# 1024, max_seq_len <= 2048 for Qwen3-4B). num_to_generate is left at
+# the production value (128) so generation TPS is measured over a full
+# decode run.
 #
 # We always re-derive from .bak so re-runs are idempotent. Originally the
 # device config has init_seq_len=10240, max_seq_len=20480, num_to_generate=128
@@ -42,7 +43,7 @@ adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
-NUM_TO_GENERATE_NEW=8
+NUM_TO_GENERATE_NEW=128
 
 adb shell "[ -f ${CFG}.bak ] || cp ${CFG} ${CFG}.bak"
 adb shell "cp ${CFG}.bak ${CFG}"
