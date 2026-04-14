@@ -1,30 +1,6 @@
 실행 결과 아래와 같아
+in_convert, out_convert에 copy는 없는거지? 더 빠르게 하려면 뭘 해야 할까?
 
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.5 MB/s (44468912 bytes in 1.304s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.3 MB/s (43993128 bytes in 1.298s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.7 MB/s (3960088 bytes in 0.123s)
-3 files pushed. 32.3 MB/s (92422128 bytes in 2.728s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.6 MB/s (10994472 bytes in 0.321s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.3 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.1 MB/s (163320 bytes in 0.007s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 29.8 MB/s (1822720 bytes in 0.058s)
-[temp.sh] patched on-device nntr_config.json:
-    "num_to_generate": 128,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
  Abstract 
  Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
@@ -34,22 +10,22 @@ sandbox, and code to facilitate future research.<|im_end|>
 <think>
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-First, the main points: the paper is about a new approach called Thyme that enhances image and reasoning tasks. They mention that existing work is limited in open-source, so they're introducing a new method. The model uses code generation and execution, which is different from "think with images" approaches. They also have a two-stage training (SFT and RL) and a specific algorithm, GRPO-ATS, for balancing reasoning and code execution. They did experiments on 
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 11862 ms, 36.8403 TPS
-generation: 128 tokens, 24928 ms, 5.13479 TPS
-total: 36799 ms
-peak memory: 2691788 KB
+prefill: 437 tokens, 7544 ms, 57.9268 TPS
+generation: 32 tokens, 6249 ms, 5.12082 TPS
+total: 13798 ms
+peak memory: 2698936 KB
 ==========================================================
-[e2e time]: 38979 ms 
-Max Resident Set Size: 2691788 KB
+[e2e time]: 16105 ms 
+Max Resident Set Size: 2698936 KB
 
-[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=9511.66 ms calls=252
-  in_convert  :  3507.94 ms ( 36.9%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  2936.91 ms ( 30.9%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  3052.19 ms ( 32.1%)  [CPU fp16->fp32 + crop]
-  misc        :    14.61 ms (  0.2%)  [memset, scratch setup]
+[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5460.15 ms calls=252
+  in_convert  :  1935.28 ms ( 35.4%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  1543.36 ms ( 28.3%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  1981.51 ms ( 36.3%)  [CPU fp16->fp32 + crop]
+  misc        :     0.00 ms (  0.0%)  [memset, scratch setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -61,24 +37,37 @@ Max Resident Set Size: 2691788 KB
 <think>
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-First, the main points: the paper is about a new approach called Thyme that enhances image and reasoning tasks. They mention that existing work is limited in open-source, so they're introducing a new method. The model uses code generation and execution, which is different from "think with images" approaches. They also have a two-stage training (SFT and RL) and a specific algorithm, GRPO-ATS, for balancing reasoning and code execution. Th
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 7544 ms, 57.9268 TPS
+generation: 32 tokens, 6249 ms, 5.12082 TPS
+total: 13798 ms
+peak memory: 2698936 KB
+==========================================================
+[e2e time]: 16105 ms 
+Max Resident Set Size: 2698936 KB
+
+[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5460.15 ms calls=252
+  in_convert  :  1935.28 ms ( 35.4%)  [CPU fp32->fp16 + transp
 
 --- Perf summary ---
-prefill: 437 tokens, 11862 ms, 36.8403 TPS
-generation: 128 tokens, 24928 ms, 5.13479 TPS
-total: 36799 ms
-peak memory: 2691788 KB
-[e2e time]: 38979 ms 
+prefill: 437 tokens, 7544 ms, 57.9268 TPS
+generation: 32 tokens, 6249 ms, 5.12082 TPS
+total: 13798 ms
+peak memory: 2698936 KB
+[e2e time]: 16105 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=9511.66 ms calls=252
-  in_convert  :  3507.94 ms ( 36.9%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  2936.91 ms ( 30.9%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  3052.19 ms ( 32.1%)  [CPU fp16->fp32 + crop]
-  misc        :    14.61 ms (  0.2%)  [memset, scratch setup]
+[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=5460.15 ms calls=252
+  in_convert  :  1935.28 ms ( 35.4%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  1543.36 ms ( 28.3%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  1981.51 ms ( 36.3%)  [CPU fp16->fp32 + crop]
+  misc        :     0.00 ms (  0.0%)  [memset, scratch setup]
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
