@@ -9,6 +9,8 @@
  * @bug		No known bugs except for NYI items
  */
 
+#include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -799,6 +801,35 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     << "[HalfTensor::dotQInteger] *this dtype mismatch: expected FP16,"
     << " got " << static_cast<int>(getDataType());
 
+  // DIAG: hex-dump the first N_DUMP values of activation / weight scale /
+  // output for the first N_CALLS calls. Gives a direct read on whether the
+  // fp16 data flow is sane from the first FC. A value like 0x0000 means
+  // exact zero, 0x3c00 means 1.0, anything with the top bit (0x8000) set
+  // is negative; watch for 0x7cXX (inf) or 0x7eXX (nan) which would
+  // indicate upstream overflow.
+  static std::atomic<int> diag_calls{0};
+  constexpr int N_CALLS = 4;
+  constexpr int N_DUMP = 8;
+  const int call_no = diag_calls.fetch_add(1, std::memory_order_relaxed);
+  const bool dump_this_call = call_no < N_CALLS;
+  if (dump_this_call) {
+    auto *in_hex = reinterpret_cast<const uint16_t *>(data);
+    auto *scale_hex = input.getScale<uint16_t>();
+    std::fprintf(stderr,
+                 "[DIAG dotQInteger #%d] M=%u K=%u N=%u  "
+                 "in[0..%d]=",
+                 call_no, M, K, N, N_DUMP - 1);
+    for (int i = 0; i < N_DUMP; ++i) {
+      std::fprintf(stderr, "%04x%s", in_hex[i], i + 1 < N_DUMP ? " " : "");
+    }
+    std::fprintf(stderr, "  scale[0..%d]=", N_DUMP - 1);
+    for (int i = 0; i < N_DUMP; ++i) {
+      std::fprintf(stderr, "%04x%s", scale_hex[i], i + 1 < N_DUMP ? " " : "");
+    }
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+  }
+
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   const bool all_svm = input.getMemoryData()->isSVM() &&
                        output.getMemoryData()->isSVM() &&
@@ -870,6 +901,22 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];
     }
+  }
+
+  // DIAG: dump output after the GPU call returned + stage-out copied back
+  // into the tensor. Paired with the stage-in dump at the top; lets us see
+  // whether GPU-side corruption is happening or whether the garbage was
+  // already in the input.
+  if (dump_this_call) {
+    auto *out_hex = reinterpret_cast<const uint16_t *>(rdata);
+    std::fprintf(stderr,
+                 "[DIAG dotQInteger #%d] out[0..%d]=",
+                 call_no, N_DUMP - 1);
+    for (int i = 0; i < N_DUMP; ++i) {
+      std::fprintf(stderr, "%04x%s", out_hex[i], i + 1 < N_DUMP ? " " : "");
+    }
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
   }
 #else
   throw std::invalid_argument(
