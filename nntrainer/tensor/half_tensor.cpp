@@ -709,7 +709,6 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
   case Tdatatype::FP16:
     dotHalf(input, output, trans, trans_in, beta);
     break;
-  case Tdatatype::Q4_K:
   case Tdatatype::Q6_K:
   case Tdatatype::Q4_0:
     dotQnK(input, output, trans, trans_in, beta, input.getDataType());
@@ -739,17 +738,23 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   K = getDim().width();
   N = trans_in ? input.getDim().height() : input.getDim().width();
   switch (dtype) {
-  case Tdatatype::Q4_K:
-    gemm_q4_K(M, N, K, data, K, (void *)mdata, N, rdata, N);
-    break;
   case Tdatatype::Q6_K:
+    // gemm_q6_K has a `_FP16` template specialization in
+    // arm_compute_backend_fp16.cpp / fallback_fp16.cpp, so this works
+    // with a fp16 activation and fp16 output tensor.
     gemm_q6_K(M, N, K, data, K, (void *)mdata, N, rdata, N);
     break;
   case Tdatatype::Q4_0:
     gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
     break;
   default:
-    throw std::invalid_argument("Error: unsupported datatype");
+    // Q4_K has no _FP16 specialization in cpu_backend yet. If Q4_K
+    // weights ever need an fp16 activation path, we'd have to either
+    // add that specialization or convert the activation to fp32
+    // around the call.
+    throw std::invalid_argument(
+      "HalfTensor::dotQnK: unsupported weight datatype (Q4_K has no "
+      "fp16 path)");
   }
   return output;
 }
