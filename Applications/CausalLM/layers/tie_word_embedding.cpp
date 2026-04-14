@@ -236,10 +236,28 @@ void TieWordEmbedding::incremental_forwarding_embedding(
       if (weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K) {
         ///@note this should be replaced with quantizer operation
         int num_blocks_per_row = (weight.width() + 256 - 1) / 256;
-        nntrainer::dequantize_row_q6_K(
+        const void *weight_row =
           (void *)((char *)weight.getData<uint8_t>() +
-                   (210 * num_blocks_per_row) * embed_idx),
-          out_tensor.getData(), out_dim);
+                   (210 * num_blocks_per_row) * embed_idx);
+        if (out_tensor.getDataType() ==
+            nntrainer::TensorDim::DataType::FP32) {
+          nntrainer::dequantize_row_q6_K(
+            weight_row, out_tensor.getData<float>(), out_dim);
+        } else {
+          // FP16 activation: stage through a fp32 temp tensor because
+          // dequantize_row_q6_K only writes `float *`. Tensor::copyData
+          // from fp32 to fp16 is handled by HalfTensor::copyData's
+          // FP32 case (scopy).
+          nntrainer::Tensor tmp_fp32(
+            nntrainer::TensorDim(
+              {1, 1, 1, out_dim},
+              {hidden_.getFormat(),
+               nntrainer::TensorDim::DataType::FP32}),
+            /*alloc_now=*/true);
+          nntrainer::dequantize_row_q6_K(
+            weight_row, tmp_fp32.getData<float>(), out_dim);
+          out_tensor.copyData(tmp_fp32);
+        }
       } else {
         out_tensor.copyData(cur_weight);
       }

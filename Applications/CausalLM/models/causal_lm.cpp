@@ -453,6 +453,12 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
                                         SYS_PROMP_LEN + input_len, false);
 
   // post process of model output
+  //
+  // NOTE: NeuralNetwork::incremental_inference (neuralnet.cpp) already
+  // converts a FP16 output tensor to a freshly-allocated float[] buffer
+  // via scopy before returning, so `output[i]` is always fp32 here
+  // regardless of model_tensor_type's activation dtype. No extra
+  // fp16 -> fp32 staging is needed at this sampler boundary.
   std::vector<unsigned int> id_list(generate_multi_tokens(
     output[0], NUM_VOCAB, BATCH_SIZE, 1, ids_history, _len));
 

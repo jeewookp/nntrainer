@@ -129,17 +129,54 @@ void EmbeddingLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       if (weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K) {
         ///@note this should be replaced with quantizer operation
         int num_blocks_per_row = (weight.width() + 256 - 1) / 256;
-        nntrainer::dequantize_row_q6_K(
+        const void *weight_row =
           (void *)((char *)weight.getData<uint8_t>() +
-                   (210 * num_blocks_per_row) * embed_idx),
-          out_tensor.getData(), out_dim);
+                   (210 * num_blocks_per_row) * embed_idx);
+        if (out_tensor.getDataType() ==
+            nntrainer::TensorDim::DataType::FP32) {
+          nntrainer::dequantize_row_q6_K(weight_row,
+                                          out_tensor.getData<float>(),
+                                          out_dim);
+        } else {
+          // FP16 (or other non-FP32) activation: dequant cannot write
+          // directly because dequantize_row_q6_K takes `float *`. Stage
+          // through a temp fp32 tensor and let Tensor::copyData handle
+          // the fp32 -> fp16 conversion (HalfTensor::copyData has a
+          // dedicated FP32 source case via scopy).
+          nntrainer::Tensor tmp_fp32(
+            nntrainer::TensorDim(
+              {1, 1, 1, out_dim},
+              {hidden_.getFormat(),
+               nntrainer::TensorDim::DataType::FP32}),
+            /*alloc_now=*/true);
+          nntrainer::dequantize_row_q6_K(
+            weight_row, tmp_fp32.getData<float>(), out_dim);
+          out_tensor.copyData(tmp_fp32);
+        }
       } else if (weight.getDataType() == nntrainer::TensorDim::DataType::Q4_0) {
         ///@note this should be replaced with quantizer operation
         int num_blocks_per_row = (weight.width() + 32 - 1) / 32;
-        nntrainer::dequantize_row_q4_0(
+        const void *weight_row =
           (void *)((char *)weight.getData<uint8_t>() +
-                   (18 * num_blocks_per_row) * embed_idx),
-          out_tensor.getData(), out_dim);
+                   (18 * num_blocks_per_row) * embed_idx);
+        if (out_tensor.getDataType() ==
+            nntrainer::TensorDim::DataType::FP32) {
+          nntrainer::dequantize_row_q4_0(weight_row,
+                                          out_tensor.getData<float>(),
+                                          out_dim);
+        } else {
+          // FP16 activation: stage through fp32 temp, same rationale
+          // as the Q6_K branch above.
+          nntrainer::Tensor tmp_fp32(
+            nntrainer::TensorDim(
+              {1, 1, 1, out_dim},
+              {hidden_.getFormat(),
+               nntrainer::TensorDim::DataType::FP32}),
+            /*alloc_now=*/true);
+          nntrainer::dequantize_row_q4_0(
+            weight_row, tmp_fp32.getData<float>(), out_dim);
+          out_tensor.copyData(tmp_fp32);
+        }
       } else {
         out_tensor.copyData(cur_weight);
       }

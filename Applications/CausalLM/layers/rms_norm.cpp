@@ -69,6 +69,26 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       auto t = in_step.multiply(in_step).average(3).add(epsilon);
       t.inv_sqrt_i();
       in_step.multiply(t, out_step);
+    } else if (in_step.getDataType() ==
+               ml::train::TensorDim::DataType::FP16) {
+      // Mixed precision: fp16 activations are prone to overflow when
+      // we accumulate x*x over the hidden dimension (K in [2560..9728]
+      // for Qwen3-4B with per-element values easily >1). Stage the
+      // variance computation through a fp32 temp, then write the
+      // normalized result back as fp16.
+      nntrainer::TensorDim fp32_dim = in_step.getDim();
+      fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
+
+      nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
+      in_fp32.copyData(in_step); // fp16 -> fp32 via FloatTensor::copyData
+
+      auto t = in_fp32.multiply(in_fp32).average(3).add(epsilon);
+      t.inv_sqrt_i();
+
+      nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
+      in_fp32.multiply(t, out_fp32);
+
+      out_step.copyData(out_fp32); // fp32 -> fp16 via HalfTensor::copyData
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");

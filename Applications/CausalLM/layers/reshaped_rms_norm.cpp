@@ -93,6 +93,22 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_step.getData<float>(), out_step.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+    } else if (in_step.getDataType() ==
+               ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
+      // Native fp16 path via the `_FP16` template specialization of the
+      // intrinsic. For Q/K norm the inner width is `head_dim` (typically
+      // 128 for Qwen3-4B) which is small enough that fp16 variance
+      // accumulation stays well under the half range, so no mixed-
+      // precision fp32 temp is needed (unlike the hidden-width
+      // RMSNormLayer).
+      nntrainer::rms_norm_wrt_width_fp16_intrinsic<_FP16>(
+        in_step.getData<_FP16>(), out_step.getData<_FP16>(),
+        in_step.getDim().height(), in_step.getDim().width(), epsilon);
+#else
+      throw std::invalid_argument(
+        "FP16 path requires ENABLE_FP16 build");
+#endif
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
