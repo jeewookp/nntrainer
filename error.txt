@@ -1,6 +1,28 @@
 실행 결과 아래와 같아
-generation 토큰 수도 128로 원복하자 다음 단계 알려줘
 
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.5 MB/s (44468912 bytes in 1.304s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.3 MB/s (43993128 bytes in 1.298s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.7 MB/s (3960088 bytes in 0.123s)
+3 files pushed. 32.3 MB/s (92422128 bytes in 2.728s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.6 MB/s (10994472 bytes in 0.321s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.3 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.1 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 29.8 MB/s (1822720 bytes in 0.058s)
+[temp.sh] patched on-device nntr_config.json:
+    "num_to_generate": 128,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -10,22 +32,24 @@ sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
 <think>
-Okay, the user wants a summary
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+First, the main points: the paper is about a new approach called Thyme that enhances image and reasoning tasks. They mention that existing work is limited in open-source, so they're introducing a new method. The model uses code generation and execution, which is different from "think with images" approaches. They also have a two-stage training (SFT and RL) and a specific algorithm, GRPO-ATS, for balancing reasoning and code execution. They did experiments on 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 17740 ms, 24.6336 TPS
-generation: 8 tokens, 1556 ms, 5.14139 TPS
-total: 19301 ms
-peak memory: 2720024 KB
+prefill: 437 tokens, 11862 ms, 36.8403 TPS
+generation: 128 tokens, 24928 ms, 5.13479 TPS
+total: 36799 ms
+peak memory: 2691788 KB
 ==========================================================
-[e2e time]: 21644 ms 
-Max Resident Set Size: 2720024 KB
+[e2e time]: 38979 ms 
+Max Resident Set Size: 2691788 KB
 
-[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
-  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  3320.96 ms ( 20.0%)  [CPU fp16->fp32 + crop]
-  misc        :    15.34 ms (  0.1%)  [memset, scratch setup]
+[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=9511.66 ms calls=252
+  in_convert  :  3507.94 ms ( 36.9%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  2936.91 ms ( 30.9%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  3052.19 ms ( 32.1%)  [CPU fp16->fp32 + crop]
+  misc        :    14.61 ms (  0.2%)  [memset, scratch setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -35,35 +59,23 @@ Max Resident Set Size: 2720024 KB
 --- Generation snippet (post-assistant tag) ---
 
 <think>
-Okay, the user wants a summary
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 17740 ms, 24.6336 TPS
-generation: 8 tokens, 1556 ms, 5.14139 TPS
-total: 19301 ms
-peak memory: 2720024 KB
-==========================================================
-[e2e time]: 21644 ms 
-Max Resident Set Size: 2720024 KB
-
-[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
-  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  3320.96 ms ( 2
+First, the main points: the paper is about a new approach called Thyme that enhances image and reasoning tasks. They mention that existing work is limited in open-source, so they're introducing a new method. The model uses code generation and execution, which is different from "think with images" approaches. They also have a two-stage training (SFT and RL) and a specific algorithm, GRPO-ATS, for balancing reasoning and code execution. Th
 
 --- Perf summary ---
-prefill: 437 tokens, 17740 ms, 24.6336 TPS
-generation: 8 tokens, 1556 ms, 5.14139 TPS
-total: 19301 ms
-peak memory: 2720024 KB
-[e2e time]: 21644 ms 
+prefill: 437 tokens, 11862 ms, 36.8403 TPS
+generation: 128 tokens, 24928 ms, 5.13479 TPS
+total: 36799 ms
+peak memory: 2691788 KB
+[e2e time]: 38979 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE FloatTensor::dotQInteger] total=16639.70 ms calls=2268 (M=1: 2016, M>1: 252)
-  in_convert  :  3719.07 ms ( 22.4%)  [CPU fp32->fp16 + transpose]
-  gpu_call    :  9584.33 ms ( 57.6%)  [wrapper + clEnqueue + SVMMap sync]
-  out_convert :  3320.96 ms ( 20.0%)  [CPU fp16->fp32 + crop]
-  misc        :    15.34 ms (  0.1%)  [memset, scratch setup]
+[PROFILE FloatTensor::dotQInteger prefill (M>1)] total=9511.66 ms calls=252
+  in_convert  :  3507.94 ms ( 36.9%)  [CPU fp32->fp16 + transpose]
+  gpu_call    :  2936.91 ms ( 30.9%)  [wrapper + clEnqueue + SVMMap sync]
+  out_convert :  3052.19 ms ( 32.1%)  [CPU fp16->fp32 + crop]
+  misc        :    14.61 ms (  0.2%)  [memset, scratch setup]
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
