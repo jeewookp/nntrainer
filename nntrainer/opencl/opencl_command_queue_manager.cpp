@@ -49,8 +49,17 @@ bool CommandQueueManager::CreateCommandQueue() {
   cl_device_id device_id = context_instance.GetDeviceId();
 
   // returns NULL with error code if fails
+  //
+  // Phase 7 (prefill profiling): add CL_QUEUE_PROFILING_ENABLE so that
+  // gemm_int4_adreno_cl can split its svm_map_sync bucket (Phase 6 showed
+  // 97% of gpu_call was stuck here, i.e. inside actual GPU kernel
+  // execution) into per-kernel GPU time via clGetEventProfilingInfo. The
+  // flag has negligible overhead when events are not queried, and is
+  // orthogonal to the existing OoO execution flag.
   command_queue_ = clCreateCommandQueue(
-    context, device_id, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error_code);
+    context, device_id,
+    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
+    &error_code);
   if (!command_queue_) {
     ml_loge("Failed to create a command queue. OpenCL error code: %d : ",
             error_code, OpenCLErrorCodeToString(error_code));

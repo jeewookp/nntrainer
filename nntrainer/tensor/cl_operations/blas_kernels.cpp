@@ -47,13 +47,28 @@ namespace {
 struct Int4AdrenoGemmProfile {
   std::atomic<uint64_t> calls{0};
 
+  // --- host-side stage times (wall-clock, Phase 6) ----------------------
   std::atomic<uint64_t> ns_cl_mem_create{0};  // 2x clCreateBuffer + 2x clCreateImage
   std::atomic<uint64_t> ns_xt_setup{0};       // registerClKernel + 4x SetKernelArguments
-  std::atomic<uint64_t> ns_xt_dispatch{0};    // DispatchCommand(input_transpose)
+  std::atomic<uint64_t> ns_xt_dispatch{0};    // DispatchCommand(input_transpose) - host side
   std::atomic<uint64_t> ns_gemm_setup{0};     // registerClKernel + 8x SetKernelArguments
-  std::atomic<uint64_t> ns_gemm_dispatch{0};  // DispatchCommand(gpu_int4_gemm_adreno)
-  std::atomic<uint64_t> ns_svm_map_sync{0};   // enqueueSVMMap(blocking=true)
+  std::atomic<uint64_t> ns_gemm_dispatch{0};  // DispatchCommand(gpu_int4_gemm_adreno) - host side
+  std::atomic<uint64_t> ns_svm_map_sync{0};   // enqueueSVMMap(blocking=true) -- drains pipeline
   std::atomic<uint64_t> ns_cl_mem_release{0}; // 4x clReleaseMemObject
+
+  // --- device-side kernel times (Phase 7, clGetEventProfilingInfo) ------
+  // Measured from cl_event's CL_PROFILING_COMMAND_START / _END which the
+  // Adreno driver fills in ns. svm_map_sync stays as the host-wait time;
+  // these two give the actual GPU execution cost of each kernel.
+  //
+  // With CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE these two kernels MAY
+  // overlap (the runtime still enforces the implicit cl_mem write-read
+  // dependency for Adreno in practice, but timings are per-event), so
+  // (ns_xt_gpu + ns_gemm_gpu) can exceed ns_svm_map_sync if they overlap,
+  // or fall short if there is GPU-idle gap between them.
+  std::atomic<uint64_t> ns_xt_gpu{0};         // input_transpose device execution
+  std::atomic<uint64_t> ns_gemm_gpu{0};       // gpu_int4_gemm_adreno device execution
+  std::atomic<uint64_t> ns_prof_query{0};     // host time spent in clGetEventProfilingInfo
 
   ~Int4AdrenoGemmProfile() {
     const uint64_t c = calls.load();
@@ -67,8 +82,12 @@ struct Int4AdrenoGemmProfile {
     const uint64_t gmd = ns_gemm_dispatch.load();
     const uint64_t svm = ns_svm_map_sync.load();
     const uint64_t mem_r = ns_cl_mem_release.load();
+    const uint64_t prof = ns_prof_query.load();
 
-    const uint64_t total = mem_c + xts + xtd + gms + gmd + svm + mem_r;
+    const uint64_t xt_gpu = ns_xt_gpu.load();
+    const uint64_t gemm_gpu = ns_gemm_gpu.load();
+
+    const uint64_t total = mem_c + xts + xtd + gms + gmd + svm + mem_r + prof;
     const double total_ms = total / 1.0e6;
 
     auto pct = [&](uint64_t v) -> double {
@@ -90,7 +109,7 @@ struct Int4AdrenoGemmProfile {
                  ms(xts), pct(xts));
     std::fprintf(stderr,
                  "  xt_dispatch      : %8.2f ms (%5.1f%%)  "
-                 "[DispatchCommand(input_transpose)]\n",
+                 "[DispatchCommand(input_transpose) host-side]\n",
                  ms(xtd), pct(xtd));
     std::fprintf(stderr,
                  "  gemm_setup       : %8.2f ms (%5.1f%%)  "
@@ -98,16 +117,36 @@ struct Int4AdrenoGemmProfile {
                  ms(gms), pct(gms));
     std::fprintf(stderr,
                  "  gemm_dispatch    : %8.2f ms (%5.1f%%)  "
-                 "[DispatchCommand(gpu_int4_gemm_adreno)]\n",
+                 "[DispatchCommand(gpu_int4_gemm_adreno) host-side]\n",
                  ms(gmd), pct(gmd));
     std::fprintf(stderr,
                  "  svm_map_sync     : %8.2f ms (%5.1f%%)  "
-                 "[enqueueSVMMap(output, blocking=true)]\n",
+                 "[enqueueSVMMap(output, blocking=true) host-wait]\n",
                  ms(svm), pct(svm));
     std::fprintf(stderr,
                  "  cl_mem_release   : %8.2f ms (%5.1f%%)  "
                  "[4x clReleaseMemObject]\n",
                  ms(mem_r), pct(mem_r));
+    std::fprintf(stderr,
+                 "  prof_query       : %8.2f ms (%5.1f%%)  "
+                 "[4x clGetEventProfilingInfo + 2x clReleaseEvent]\n",
+                 ms(prof), pct(prof));
+    std::fprintf(stderr,
+                 "  --- device-side (event profiling, may overlap host "
+                 "stages above) ---\n");
+    std::fprintf(stderr,
+                 "  xt_gpu           : %8.2f ms  "
+                 "[input_transpose CL_PROFILING_COMMAND_START..END]\n",
+                 ms(xt_gpu));
+    std::fprintf(stderr,
+                 "  gemm_gpu         : %8.2f ms  "
+                 "[gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]\n",
+                 ms(gemm_gpu));
+    const uint64_t gpu_sum = xt_gpu + gemm_gpu;
+    std::fprintf(stderr,
+                 "  gpu_sum          : %8.2f ms  "
+                 "[xt_gpu + gemm_gpu; compare to svm_map_sync above]\n",
+                 ms(gpu_sum));
   }
 };
 
@@ -953,6 +992,12 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
   // into g_int4_gemm_profile, which dumps a one-shot breakdown at process
   // exit. Every call to this wrapper is an M>1 prefill call, so no guard is
   // needed. See the profiler struct at the top of this file.
+  //
+  // Phase 7 adds per-kernel device-side timing via cl_event profiling; the
+  // two events below are queried after the blocking SVMMap (which drains
+  // the pipeline, guaranteeing the events have completed).
+  cl_event xt_event = nullptr;
+  cl_event gemm_event = nullptr;
   const uint64_t t_mem_c0 = now_ns_phase6();
 
   // ---- input image (host-prepared fp16 [M][alignK]) ----
@@ -1052,8 +1097,8 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
     const uint64_t t_xt_setup_end = now_ns_phase6();
     g_int4_gemm_profile.ns_xt_setup += t_xt_setup_end - t_mem_c1;
 
-    result = blas_cc->command_queue_inst_.DispatchCommand(xt_kernel, xt_global,
-                                                          xt_local);
+    result = blas_cc->command_queue_inst_.DispatchCommand(
+      xt_kernel, xt_global, xt_local, &xt_event);
     if (!result)
       throw std::runtime_error("Failed to dispatch input_transpose");
 
@@ -1129,7 +1174,7 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
     g_int4_gemm_profile.ns_gemm_setup += t_gemm_setup_end - t_gemm_setup_start;
 
     result = blas_cc->command_queue_inst_.DispatchCommand(
-      gemm_kernel, gemm_global, gemm_local);
+      gemm_kernel, gemm_global, gemm_local, &gemm_event);
     if (!result)
       throw std::runtime_error("Failed to dispatch gpu_int4_gemm_adreno");
 
@@ -1148,6 +1193,43 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
   const uint64_t t_svm_end = now_ns_phase6();
   g_int4_gemm_profile.ns_svm_map_sync += t_svm_end - t_svm_start;
 
+  // Phase 7: query per-kernel device-side execution time.
+  //
+  // The blocking SVMMap above drained the pipeline, so both events are
+  // guaranteed to be CL_COMPLETE by now. Event timestamps are device-side
+  // ns and do NOT depend on the host clock we use for the wall stages
+  // above. Accumulate into g_int4_gemm_profile.ns_xt_gpu / ns_gemm_gpu.
+  //
+  // Failure to query (e.g. if the queue was created without
+  // CL_QUEUE_PROFILING_ENABLE) is not fatal -- we just get zeros.
+  {
+    cl_ulong xt_start = 0, xt_end = 0, gm_start = 0, gm_end = 0;
+    if (xt_event) {
+      clGetEventProfilingInfo(xt_event, CL_PROFILING_COMMAND_START,
+                              sizeof(cl_ulong), &xt_start, nullptr);
+      clGetEventProfilingInfo(xt_event, CL_PROFILING_COMMAND_END,
+                              sizeof(cl_ulong), &xt_end, nullptr);
+    }
+    if (gemm_event) {
+      clGetEventProfilingInfo(gemm_event, CL_PROFILING_COMMAND_START,
+                              sizeof(cl_ulong), &gm_start, nullptr);
+      clGetEventProfilingInfo(gemm_event, CL_PROFILING_COMMAND_END,
+                              sizeof(cl_ulong), &gm_end, nullptr);
+    }
+    if (xt_end >= xt_start)
+      g_int4_gemm_profile.ns_xt_gpu += (xt_end - xt_start);
+    if (gm_end >= gm_start)
+      g_int4_gemm_profile.ns_gemm_gpu += (gm_end - gm_start);
+
+    if (xt_event)
+      clReleaseEvent(xt_event);
+    if (gemm_event)
+      clReleaseEvent(gemm_event);
+  }
+
+  const uint64_t t_prof_end = now_ns_phase6();
+  g_int4_gemm_profile.ns_prof_query += t_prof_end - t_svm_end;
+
   // cleanup per-call cl_mem / cl_image objects
   clReleaseMemObject(input_t_img);
   clReleaseMemObject(input_t_buf);
@@ -1155,7 +1237,7 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
   clReleaseMemObject(input_buf);
 
   const uint64_t t_mem_r_end = now_ns_phase6();
-  g_int4_gemm_profile.ns_cl_mem_release += t_mem_r_end - t_svm_end;
+  g_int4_gemm_profile.ns_cl_mem_release += t_mem_r_end - t_prof_end;
 
   g_int4_gemm_profile.calls++;
 }
