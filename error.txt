@@ -1,6 +1,8 @@
 실행 결과 아래와 같아
 
 
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 <|im_start|>user
@@ -11,8 +13,16 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
-[!] FATAL ERROR: NYI : __fallback_rms_norm_wrt_width_fp16_intrinsic
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4625 ms, 94.4865 TPS
+generation: 32 tokens, 5885 ms, 5.43755 TPS
+total: 10515 ms
+peak memory: 2724504 KB
+==========================================================
+[e2e time]: 12761 ms 
+Max Resident Set Size: 2724504 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -21,12 +31,24 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 --- Generation snippet (post-assistant tag) ---
 
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
-[!] FATAL ERROR: NYI : __fallback_rms_norm_wrt_width_fp16_intrinsic
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4625 ms, 94.4865 TPS
+generation: 32 tokens, 5885 ms, 5.43755 TPS
+total: 10515 ms
+peak memory: 2724504 KB
+==========================================================
+[e2e time]: 12761 ms 
+Max Resident Set Size: 2724504 KB
 
 
 --- Perf summary ---
-(no perf lines)
+prefill: 437 tokens, 4625 ms, 94.4865 TPS
+generation: 32 tokens, 5885 ms, 5.43755 TPS
+total: 10515 ms
+peak memory: 2724504 KB
+[e2e time]: 12761 ms 
 
 --- dotQInteger profile breakdown ---
 (no PROFILE lines found)
@@ -36,3 +58,4 @@ Full log: temp_run.log  (error.txt is intentionally untouched)
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
