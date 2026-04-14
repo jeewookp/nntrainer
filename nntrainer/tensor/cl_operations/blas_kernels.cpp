@@ -871,14 +871,24 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   // Dispatch:
   //   global_id(0) covers M / 2 (each work-item handles m and m+1 along M)
   //   global_id(1) covers align_N / 4 (each work-item handles n..n+3)
-  // Use a 1x1 local size for now (no tiling); the kernel itself uses
-  // qcom_reqd_sub_group_size("full") to drive the SIMD width.
+  //
+  // Local size: {1, 16, 1} = 16 work-items per work-group along the N
+  // direction. Adreno's SIMD width is much larger than 1, so a {1,1,1}
+  // local size dispatches ~140k single-thread work-groups for typical FC
+  // sizes, which hangs the GPU (observed empirically). With {1,16,1} the
+  // group count drops 16x and each work-group has enough threads for the
+  // hardware scheduler to pack into a wave.
+  //
+  // dim_n divisibility: align_N is rounded up to 32 in the host, so
+  // align_N/4 is at least a multiple of 8; for the model's actual N
+  // values (1024, 2560, 4096, 9728) we have dim_n in {256, 640, 1024,
+  // 2432}, all multiples of 16.
   const int align_N = static_cast<int>(align(N, 32));
   const int dim_m = static_cast<int>(ceilDiv(static_cast<unsigned int>(M), 2u));
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_m, dim_n, 1};
-  const int work_group_size[3] = {1, 1, 1};
+  const int work_group_size[3] = {1, 16, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(
     kernel_ptr, work_groups_count, work_group_size);

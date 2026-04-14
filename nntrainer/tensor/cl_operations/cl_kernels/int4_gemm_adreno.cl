@@ -1,6 +1,5 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
 #define CEIL_DIV(a, b) (((a) + (b)-1) / (b))
 #define ALIGN(a, b) (CEIL_DIV(a, b) * (b))
@@ -25,7 +24,13 @@
 // Note: This kernel is per-channel only -- the quantization_group_size
 // argument is kept for ABI compatibility with the host wrapper but is
 // ignored (scale is loaded once per kernel invocation).
-__attribute__((qcom_reqd_sub_group_size("full"))) kernel void
+//
+// The kernel does not use any sub-group operations, so we deliberately
+// do NOT request qcom_reqd_sub_group_size("full"). Forcing "full"
+// constrains the host wrapper to a specific work-group size and the
+// previous {1,1,1} dispatch hung the GPU; without the attribute, any
+// reasonable work-group size (e.g. {1,16,1}) is valid.
+kernel void
 gpu_int4_gemm_adreno(
                             __global const half *input,
                             __global const half *scales,
