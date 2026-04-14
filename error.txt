@@ -1,6 +1,32 @@
 실행 결과 아래와 같아
 
 
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.8 MB/s (44482144 bytes in 1.294s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.6 MB/s (44006472 bytes in 1.288s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.7 MB/s (3960088 bytes in 0.119s)
+3 files pushed. 32.6 MB/s (92448704 bytes in 2.703s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.6 MB/s (11001640 bytes in 0.322s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.1 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.1 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.1 MB/s (1822720 bytes in 0.056s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
     "init_seq_len": 1024,
     "max_seq_len": 2048,
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
@@ -16,13 +42,13 @@ sandbox, and code to facilitate future research.<|im_end|>
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4657 ms, 93.8372 TPS
-generation: 32 tokens, 5914 ms, 5.41089 TPS
-total: 10575 ms
-peak memory: 2748556 KB
+prefill: 437 tokens, 4612 ms, 94.7528 TPS
+generation: 32 tokens, 5861 ms, 5.45982 TPS
+total: 10479 ms
+peak memory: 2728164 KB
 ==========================================================
-[e2e time]: 12712 ms 
-Max Resident Set Size: 2748556 KB
+[e2e time]: 12691 ms 
+Max Resident Set Size: 2728164 KB
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -34,21 +60,21 @@ Max Resident Set Size: 2748556 KB
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4657 ms, 93.8372 TPS
-generation: 32 tokens, 5914 ms, 5.41089 TPS
-total: 10575 ms
-peak memory: 2748556 KB
+prefill: 437 tokens, 4612 ms, 94.7528 TPS
+generation: 32 tokens, 5861 ms, 5.45982 TPS
+total: 10479 ms
+peak memory: 2728164 KB
 ==========================================================
-[e2e time]: 12712 ms 
-Max Resident Set Size: 2748556 KB
+[e2e time]: 12691 ms 
+Max Resident Set Size: 2728164 KB
 
 
 --- Perf summary ---
-prefill: 437 tokens, 4657 ms, 93.8372 TPS
-generation: 32 tokens, 5914 ms, 5.41089 TPS
-total: 10575 ms
-peak memory: 2748556 KB
-[e2e time]: 12712 ms 
+prefill: 437 tokens, 4612 ms, 94.7528 TPS
+generation: 32 tokens, 5861 ms, 5.45982 TPS
+total: 10479 ms
+peak memory: 2728164 KB
+[e2e time]: 12691 ms 
 
 --- dotQInteger profile breakdown ---
 (no PROFILE lines found)
@@ -58,3 +84,4 @@ Full log: temp_run.log  (error.txt is intentionally untouched)
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
