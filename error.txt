@@ -1,37 +1,59 @@
-이게 실행결과
+직전으로 실행했는데 엄청 느리다
 
-[DIAG attach_kai_buffer] weight=layer31_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer28_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer28_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer28_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer28_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer29_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer29_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer29_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer29_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer29_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer30_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer30_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer30_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer30_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer30_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer30_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer30_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer31_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer31_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer31_ffn_down:weight K=9728 N=2560
 [DIAG attach_kai_buffer] weight=layer31_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer31_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer31_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer31_wv:weight K=2560 N=1024
 [DIAG attach_kai_buffer] weight=layer32_wv:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer31_ffn_gate:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer32_wq:weight K=2560 N=4096
 [DIAG attach_kai_buffer] weight=layer32_attention_out:weight K=4096 N=2560
 [DIAG attach_kai_buffer] weight=layer32_wk:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer31_ffn_down:weight K=9728 N=2560
-[DIAG attach_kai_buffer] weight=layer33_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer32_ffn_up:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer32_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer32_ffn_up:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer32_ffn_gate:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer33_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer33_ffn_up:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer33_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer33_wq:weight K=2560 N=4096
+[DIAG attach_kai_buffer] weight=layer33_wv:weight K=2560 N=1024
 [DIAG attach_kai_buffer] weight=layer33_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer33_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer33_ffn_up:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer33_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer33_ffn_down:weight K=9728 N=2560
 [DIAG attach_kai_buffer] weight=layer34_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer34_wv:weight K=2560 N=1024
-[DIAG attach_kai_buffer] weight=layer34_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer34_attention_out:weight K=4096 N=2560
-[DIAG attach_kai_buffer] weight=layer34_ffn_gate:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer34_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer34_wv:weight K=2560 N=1024
 [DIAG attach_kai_buffer] weight=layer34_ffn_down:weight K=9728 N=2560
+[DIAG attach_kai_buffer] weight=layer34_ffn_up:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer34_ffn_gate:weight K=2560 N=9728
 [DIAG attach_kai_buffer] weight=layer35_wq:weight K=2560 N=4096
-[DIAG attach_kai_buffer] weight=layer35_wk:weight K=2560 N=1024
+[DIAG attach_kai_buffer] weight=layer34_attention_out:weight K=4096 N=2560
 [DIAG attach_kai_buffer] weight=layer35_wv:weight K=2560 N=1024
 [DIAG attach_kai_buffer] weight=layer35_attention_out:weight K=4096 N=2560
+[DIAG attach_kai_buffer] weight=layer35_wk:weight K=2560 N=1024
 [DIAG attach_kai_buffer] weight=layer35_ffn_up:weight K=2560 N=9728
-[DIAG attach_kai_buffer] weight=layer35_ffn_down:weight K=9728 N=2560
 [DIAG attach_kai_buffer] weight=layer35_ffn_gate:weight K=2560 N=9728
+[DIAG attach_kai_buffer] weight=layer35_ffn_down:weight K=9728 N=2560
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -51,8 +73,22 @@ sandbox, and code to facilitate future research.<|im_end|>
 [DIAG dotQInteger] M=437 K=2560 N=9728 svm_in=1 svm_out=1 svm_w=1
 [DIAG dotQInteger] M=437 K=9728 N=2560 svm_in=1 svm_out=1 svm_w=1
 [DIAG dotQInteger] M=437 K=2560 N=4096 svm_in=1 svm_out=1 svm_w=1
-^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+First, the main points: the paper is about a new approach called Thyme that enhances image and reasoning tasks. They mention that existing work is limited in open-source, so they're introducing a new paradigm. The model uses executable code for image processing and reasoning. They also talk about their two-stage training (SFT and RL), the GRPO-ATS algorithm, and the experimental results showing performance gains.
+
+Now, I need to condense that into three sentences. The first
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 47980 ms, 9.10796 TPS
+generation: 128 tokens, 586068 ms, 0.218405 TPS
+total: 634053 ms
+peak memory: 2798200 KB
+==========================================================
+[e2e time]: 636350 ms 
+Max Resident Set Size: 2798200 KB
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+rm: /data/local/tmp/nntrainer/test/logs/*: No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
