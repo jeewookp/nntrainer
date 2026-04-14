@@ -801,28 +801,41 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     << "[HalfTensor::dotQInteger] *this dtype mismatch: expected FP16,"
     << " got " << static_cast<int>(getDataType());
 
-  // DIAG: hex-dump the first N_DUMP values of activation / weight scale /
-  // output for the first N_CALLS calls. Gives a direct read on whether the
-  // fp16 data flow is sane from the first FC. A value like 0x0000 means
-  // exact zero, 0x3c00 means 1.0, anything with the top bit (0x8000) set
-  // is negative; watch for 0x7cXX (inf) or 0x7eXX (nan) which would
-  // indicate upstream overflow.
+  // DIAG: wider hex-dump for the first N_CALLS calls. Previous diag showed
+  // an alternating [0x0000, nonzero] pattern in the activation input, which
+  // is the signature of reading an fp32 byte buffer via a fp16 pointer.
+  // Confirm by dumping 16 fp16 values + the same 16 slots reinterpreted as
+  // 8 fp32 values. If the fp32 interpretation gives plausible magnitudes
+  // (not the extreme 20224, 712, etc. we saw before), that would actually
+  // rule out the fp32-in-fp16 hypothesis. If fp32 magnitudes stay extreme,
+  // the bit pattern is not coming from ordinary fp32 activations either
+  // and we need to look for another explanation.
   static std::atomic<int> diag_calls{0};
   constexpr int N_CALLS = 4;
-  constexpr int N_DUMP = 8;
+  constexpr int N_DUMP = 16;
   const int call_no = diag_calls.fetch_add(1, std::memory_order_relaxed);
   const bool dump_this_call = call_no < N_CALLS;
   if (dump_this_call) {
     auto *in_hex = reinterpret_cast<const uint16_t *>(data);
     auto *scale_hex = input.getScale<uint16_t>();
-    std::fprintf(stderr,
-                 "[DIAG dotQInteger #%d] M=%u K=%u N=%u  "
-                 "in[0..%d]=",
-                 call_no, M, K, N, N_DUMP - 1);
+    auto *in_as_f32 = reinterpret_cast<const float *>(data);
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] M=%u K=%u N=%u\n", call_no, M,
+                 K, N);
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] in_fp16[0..%d]=", call_no,
+                 N_DUMP - 1);
     for (int i = 0; i < N_DUMP; ++i) {
       std::fprintf(stderr, "%04x%s", in_hex[i], i + 1 < N_DUMP ? " " : "");
     }
-    std::fprintf(stderr, "  scale[0..%d]=", N_DUMP - 1);
+    std::fprintf(stderr, "\n");
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] in_fp32_reinterp[0..%d]=",
+                 call_no, (N_DUMP / 2) - 1);
+    for (int i = 0; i < N_DUMP / 2; ++i) {
+      std::fprintf(stderr, "%+.4g%s", static_cast<double>(in_as_f32[i]),
+                   i + 1 < N_DUMP / 2 ? " " : "");
+    }
+    std::fprintf(stderr, "\n");
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] scale[0..%d]=", call_no,
+                 N_DUMP - 1);
     for (int i = 0; i < N_DUMP; ++i) {
       std::fprintf(stderr, "%04x%s", scale_hex[i], i + 1 < N_DUMP ? " " : "");
     }
@@ -906,12 +919,19 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // DIAG: dump output after the GPU call returned + stage-out copied back
   // into the tensor. Paired with the stage-in dump at the top; lets us see
   // whether GPU-side corruption is happening or whether the garbage was
-  // already in the input.
+  // already in the input. Also report the actual byte size of the output
+  // buffer so we can check for fp32-in-fp16-clothes.
   if (dump_this_call) {
     auto *out_hex = reinterpret_cast<const uint16_t *>(rdata);
+    const size_t out_mem_bytes =
+      output.getMemoryData() ? output.getMemoryData()->getSize() : 0;
+    const size_t expected_out_fp16_bytes =
+      static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t);
     std::fprintf(stderr,
-                 "[DIAG dotQInteger #%d] out[0..%d]=",
-                 call_no, N_DUMP - 1);
+                 "[DIAG dotQInteger #%d] out.mem_bytes=%zu expect_fp16=%zu\n",
+                 call_no, out_mem_bytes, expected_out_fp16_bytes);
+    std::fprintf(stderr, "[DIAG dotQInteger #%d] out[0..%d]=", call_no,
+                 N_DUMP - 1);
     for (int i = 0; i < N_DUMP; ++i) {
       std::fprintf(stderr, "%04x%s", out_hex[i], i + 1 < N_DUMP ? " " : "");
     }
