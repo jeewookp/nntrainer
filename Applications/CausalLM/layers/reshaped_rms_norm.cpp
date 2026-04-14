@@ -95,20 +95,31 @@ void ReshapedRMSNormLayer::incremental_forwarding(
 #endif
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
+      // Mixed precision: the `_FP16` template specialization of
+      // rms_norm_wrt_width_fp16_intrinsic is NYI in the fallback
+      // (arm_compute_backend_fp16.cpp:404 just delegates to
+      // __fallback_rms_norm_wrt_width_fp16_intrinsic which throws).
+      // Only the `float*` variant has a real NEON implementation, so
+      // we stage through a fp32 temp like RMSNormLayer does. Q/K norm
+      // width here is small (head_dim, e.g. 128 for Qwen3-4B) so the
+      // temp allocation is cheap.
+      nntrainer::TensorDim fp32_dim = in_step.getDim();
+      fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
+
+      nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
+      in_fp32.copyData(in_step); // fp16 -> fp32
+
+      nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
 #ifdef ENABLE_FP16
-      // Native fp16 path via the `_FP16` template specialization of the
-      // intrinsic. For Q/K norm the inner width is `head_dim` (typically
-      // 128 for Qwen3-4B) which is small enough that fp16 variance
-      // accumulation stays well under the half range, so no mixed-
-      // precision fp32 temp is needed (unlike the hidden-width
-      // RMSNormLayer).
-      nntrainer::rms_norm_wrt_width_fp16_intrinsic<_FP16>(
-        in_step.getData<_FP16>(), out_step.getData<_FP16>(),
+      nntrainer::rms_norm_wrt_width_fp16_intrinsic(
+        in_fp32.getData<float>(), out_fp32.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #else
-      throw std::invalid_argument(
-        "FP16 path requires ENABLE_FP16 build");
+      nntrainer::rms_norm_wrt_width_fp32_intrinsic(
+        in_fp32.getData<float>(), out_fp32.getData<float>(),
+        in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+      out_step.copyData(out_fp32); // fp32 -> fp16
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
