@@ -43,7 +43,7 @@ adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
-NUM_TO_GENERATE_NEW=128
+NUM_TO_GENERATE_NEW=32
 
 adb shell "[ -f ${CFG}.bak ] || cp ${CFG} ${CFG}.bak"
 adb shell "cp ${CFG}.bak ${CFG}"

@@ -898,23 +898,20 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
           }
         }
       } else {
-        // M>1 (prefill): dispatch each weight via gpu_int4_gemm_adreno.
-        // The activation is shared across all weights, so we transpose+
-        // convert it to fp16 once into the SVM scratch input buffer.
-        const unsigned int M_padded = (M + 7u) & ~7u;
-
+        // M>1 (prefill): dispatch each weight via gpu_int4_gemm_adreno
+        // (two-pass GPU input_transpose + gemm). The activation is shared
+        // across all weights in the batch, so we convert it fp32 -> fp16
+        // once and reuse across the per-weight gemm calls.
         auto &clbuffInstance = ClBufferManager::Global();
         uint16_t *svm_in =
           reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+        uint16_t *svm_in_T =
+          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
 
+        // CPU fp32 -> fp16 (no transpose; row-major [M][K]).
         const uint64_t t0 = now_ns();
-        for (unsigned int k = 0; k < K; ++k) {
-          for (unsigned int m = 0; m < M; ++m) {
-            svm_in[k * M_padded + m] = compute_fp32_to_fp16(data[m * K + k]);
-          }
-          for (unsigned int m = M; m < M_padded; ++m) {
-            svm_in[k * M_padded + m] = 0;
-          }
+        for (unsigned int i = 0; i < M * K; ++i) {
+          svm_in[i] = compute_fp32_to_fp16(data[i]);
         }
         const uint64_t t1 = now_ns();
         g_dotq_profile.ns_in_convert += t1 - t0;
@@ -924,27 +921,21 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
             clbuffInstance.getSVMOutput(i));
           const unsigned int Ni = Ns[i];
 
-          const uint64_t tm0 = now_ns();
-          std::memset(svm_out, 0,
-                      static_cast<size_t>(M_padded) * static_cast<size_t>(Ni) *
-                        sizeof(uint16_t));
-          const uint64_t tm1 = now_ns();
-
-          gemm_int4_adreno_cl(svm_in, reinterpret_cast<uint16_t *>(mdatas[i]),
-                              scales[i], svm_out, M_padded, Ni, K);
-          const uint64_t tm2 = now_ns();
+          const uint64_t tg0 = now_ns();
+          gemm_int4_adreno_cl(svm_in, svm_in_T,
+                              reinterpret_cast<uint16_t *>(mdatas[i]),
+                              scales[i], svm_out, M, Ni, K);
+          const uint64_t tg1 = now_ns();
 
           float *out_i = rdatas[i];
-          for (unsigned int m = 0; m < M; ++m) {
-            for (unsigned int n = 0; n < Ni; ++n) {
-              out_i[m * Ni + n] = compute_fp16_to_fp32(svm_out[m * Ni + n]);
-            }
+          const unsigned int total = M * Ni;
+          for (unsigned int j = 0; j < total; ++j) {
+            out_i[j] = compute_fp16_to_fp32(svm_out[j]);
           }
-          const uint64_t tm3 = now_ns();
+          const uint64_t tg2 = now_ns();
 
-          g_dotq_profile.ns_misc += tm1 - tm0;
-          g_dotq_profile.ns_gpu_call += tm2 - tm1;
-          g_dotq_profile.ns_out_convert += tm3 - tm2;
+          g_dotq_profile.ns_gpu_call += tg1 - tg0;
+          g_dotq_profile.ns_out_convert += tg2 - tg1;
           g_dotq_profile.calls++;
         }
       }
@@ -1212,56 +1203,48 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
         rdata[n] = compute_fp16_to_fp32(svm_out[n]);
       }
     } else {
-      // M>1 (prefill): dispatch via gpu_int4_gemm_adreno.
-      // Kernel input layout: fp16[K * M_padded], where M_padded = ALIGN(M,8)
-      // and element (k, m) is at index k * M_padded + m.
+      // M>1 (prefill): dispatch via gpu_int4_gemm_adreno (two-pass:
+      // GPU input_transpose followed by GPU gemm).
       //
-      // We CPU-side transpose+convert the activation into the SVM scratch
-      // input buffer, run the GPU GEMM, then copy fp16 output back to fp32
-      // (cropping any padded rows).
-      const unsigned int M_padded = (M + 7u) & ~7u;
-
+      // Caller responsibilities:
+      //   - svm_in     : [M][K] fp16 (just CPU fp32->fp16, no transpose)
+      //   - svm_in_T   : SVM scratch for the GPU-transposed input,
+      //                  align(M,4) * K fp16 elements
+      //   - svm_out    : output [M][N] fp16
+      //
+      // We re-purpose ClBufferManager scratch slots:
+      //   getSVMInput()    -> svm_in        (post-fp16-convert input)
+      //   getSVMQuant(0)   -> svm_in_T      (GPU writes here)
+      //   getSVMOutput(0)  -> svm_out
       auto &clbuffInstance = ClBufferManager::Global();
       uint16_t *svm_in =
         reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
+      uint16_t *svm_in_T =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
       uint16_t *svm_out =
         reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
 
-      // Transpose + fp32->fp16 into svm_in[K][M_padded]; zero-pad
-      // m in [M, M_padded).
+      // CPU fp32->fp16 (no transpose; row-major [M][K]).
       const uint64_t t0 = now_ns();
-      for (unsigned int k = 0; k < K; ++k) {
-        for (unsigned int m = 0; m < M; ++m) {
-          svm_in[k * M_padded + m] = compute_fp32_to_fp16(data[m * K + k]);
-        }
-        for (unsigned int m = M; m < M_padded; ++m) {
-          svm_in[k * M_padded + m] = 0;
-        }
+      for (unsigned int i = 0; i < M * K; ++i) {
+        svm_in[i] = compute_fp32_to_fp16(data[i]);
       }
       const uint64_t t1 = now_ns();
 
-      // Zero the output region we'll overwrite.
-      std::memset(svm_out, 0,
-                  static_cast<size_t>(M_padded) * static_cast<size_t>(N) *
-                    sizeof(uint16_t));
+      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
+                          N, K);
       const uint64_t t2 = now_ns();
 
-      gemm_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, M_padded, N,
-                          K);
+      // fp16 -> fp32 output copy (no crop -- the kernel writes [M][N]).
+      const unsigned int total = M * N;
+      for (unsigned int i = 0; i < total; ++i) {
+        rdata[i] = compute_fp16_to_fp32(svm_out[i]);
+      }
       const uint64_t t3 = now_ns();
 
-      // Crop + fp16->fp32 the first M rows back into rdata.
-      for (unsigned int m = 0; m < M; ++m) {
-        for (unsigned int n = 0; n < N; ++n) {
-          rdata[m * N + n] = compute_fp16_to_fp32(svm_out[m * N + n]);
-        }
-      }
-      const uint64_t t4 = now_ns();
-
       g_dotq_profile.ns_in_convert += t1 - t0;
-      g_dotq_profile.ns_misc += t2 - t1;
-      g_dotq_profile.ns_gpu_call += t3 - t2;
-      g_dotq_profile.ns_out_convert += t4 - t3;
+      g_dotq_profile.ns_gpu_call += t2 - t1;
+      g_dotq_profile.ns_out_convert += t3 - t2;
       g_dotq_profile.calls++;
     }
   } else {

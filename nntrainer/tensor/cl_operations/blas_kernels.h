@@ -130,25 +130,40 @@ void gemm_int4_async_cl(float *input, std::vector<void *> weights,
 /**
  * @brief INT4 channel-wise GEMM for Adreno GPUs (gpu_int4_gemm_adreno kernel).
  *
+ * Two-pass GPU pipeline (adopted from origin/main):
+ *   1. input_transpose kernel transposes `input` ([M][alignK] fp16) into
+ *      `input_transposed` ([alignK][align(M,4)] fp16) using
+ *      image1d_buffer_t reads/writes -- much faster than the previous
+ *      CPU transpose loop.
+ *   2. gpu_int4_gemm_adreno reads the transposed input as a texture
+ *      (image1d_buffer_t) and produces fp16 output of shape [M][N].
+ *
  * Layout (matches Int4Utils::convertKaiToChannelwise):
  *   - weights : ushort[(K/4) * N], 4 unsigned bias-8 nibbles per ushort
  *               for one channel at K positions [k, k+1, k+2, k+3]
  *   - scales  : fp16[N], one scale per output channel (per-channel quant)
- *   - input   : fp16[K * align(M, 4)], activation in half4 blocks along M
  *
- * Assumes N % 32 == 0, K % 4 == 0, M >= 1. All buffers must be SVM-allocated.
- *
- * @param[in] input   activation buffer (fp16 SVM)
- * @param[in] weights packed int4 weights (ushort SVM)
- * @param[in] scales  per-channel fp16 scales (fp16 SVM)
- * @param[out] output  output matrix (fp16 SVM)
+ * @param[in] input            activation [M][alignK] fp16, host pre-converted
+ *                             from fp32. Must be a SVM ptr (the wrapper
+ *                             wraps it with CL_MEM_USE_HOST_PTR to expose
+ *                             it as a cl_mem image).
+ * @param[in,out] input_transposed scratch SVM buffer of size
+ *                             align(M,4) * alignK fp16; gets overwritten
+ *                             with the GPU-transposed input.
+ * @param[in] weights          packed int4 weights (ushort SVM)
+ * @param[in] scales           per-channel fp16 scales (fp16 SVM)
+ * @param[out] output          output [M][N] fp16 (SVM)
  * @param[in] M batch / token count
  * @param[in] N output dimension
  * @param[in] K input dimension
+ *
+ * Assumes N % 4 == 0, K % 4 == 0, M >= 1. For Qwen3-4B all FC widths
+ * satisfy the additional constraint that N is a multiple of 32 too,
+ * which keeps the kernel's output guard happy.
  */
-void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
-                         uint16_t *output, unsigned int M, unsigned int N,
-                         unsigned int K);
+void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
+                         uint16_t *weights, uint16_t *scales, uint16_t *output,
+                         unsigned int M, unsigned int N, unsigned int K);
 
 /**
  * @brief INT4 channel-wise GEMV for Adreno GPUs (M = 1, gpu_int4_gemv_adreno

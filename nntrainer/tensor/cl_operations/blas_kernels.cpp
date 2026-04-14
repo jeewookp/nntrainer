@@ -804,125 +804,224 @@ void gemm_int4_cl(void *input, void *weights, void *scales, void *output,
   }
 }
 
-void gemm_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
-                         uint16_t *output, unsigned int M, unsigned int N,
-                         unsigned int K) {
+void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
+                         uint16_t *weights, uint16_t *scales, uint16_t *output,
+                         unsigned int M, unsigned int N, unsigned int K) {
+  // Adopted from origin/main's `gemm_int4_cl_adreno`. The pipeline:
+  //   1. Wrap `input` (host-prepared fp16 [M][alignK]) as a cl_mem
+  //      backed by CL_MEM_USE_HOST_PTR, then expose it as an
+  //      image1d_buffer_t (GPU image cache). Same for `input_transposed`
+  //      which is the destination of the transpose pass.
+  //   2. Dispatch the `input_transpose` kernel: GPU does the transpose
+  //      that we used to do on CPU, eliminating the in_convert
+  //      transpose loop bottleneck.
+  //   3. Dispatch `gpu_int4_gemm_adreno`, reading the transposed image
+  //      via read_imageh -- texture cache makes this much faster than
+  //      the previous SVM half * load path.
+  //   4. Release the per-call cl_mem / cl_image objects.
+  //
+  // Caller pre-fills `input[i]` (i in [0 .. M*alignK)) with fp16 of the
+  // row-major activation, and pre-allocates `input_transposed` as an
+  // SVM region of align(M, 4) * alignK fp16 elements.
+  //
+  // Layout / divisibility assumptions (Qwen3-4B FC widths satisfy all):
+  //   K %  4 == 0 (channelwise int4 packs 4 nibbles per ushort)
+  //   N %  4 == 0 (gemm kernel writes 4 channels per work-item)
+  //   alignK = K (we use channel-wise quant where group_size = K)
+  if (((N % 4) != 0) | ((K % 4) != 0)) {
+    throw std::runtime_error(
+      "gemm_int4_adreno_cl requires N and K to be multiples of 4");
+  }
+
+  const int q_group_size = static_cast<int>(K); // per-channel
+  const int alignK = static_cast<int>(align(K, q_group_size));
+
   bool result = false;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
 
-  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+  cl_int err;
+  cl_image_format image_format;
+  image_format.image_channel_order = CL_RGBA;
+  image_format.image_channel_data_type = CL_HALF_FLOAT;
+
+  cl_image_desc image_desc;
+
+  // ---- input image (host-prepared fp16 [M][alignK]) ----
+  const size_t input_buf_bytes =
+    static_cast<size_t>(M) * static_cast<size_t>(alignK) * sizeof(uint16_t);
+  cl_mem input_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, input_buf_bytes,
+                   input, &err);
+  if (err != CL_SUCCESS) {
+    throw std::runtime_error("Failed to create input cl_mem buffer");
+  }
+
+  std::memset(&image_desc, 0, sizeof(image_desc));
+  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  image_desc.image_width =
+    static_cast<size_t>(M) * static_cast<size_t>(alignK) / 4;
+  image_desc.buffer = input_buf;
+
+  cl_mem input_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_ONLY,
+                  &image_format, &image_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("Failed to create image1d_buffer for input");
+  }
+
+  // ---- input_transposed image (GPU-written, then read by gemm) ----
+  const size_t input_t_buf_bytes = static_cast<size_t>(align(M, 4)) *
+                                   static_cast<size_t>(alignK) *
+                                   sizeof(uint16_t);
+  cl_mem input_t_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, input_t_buf_bytes,
+                   input_transposed, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("Failed to create input_transposed cl_mem");
+  }
+
+  std::memset(&image_desc, 0, sizeof(image_desc));
+  image_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  image_desc.image_width =
+    static_cast<size_t>(align(M, 4)) * static_cast<size_t>(alignK) / 4;
+  image_desc.buffer = input_t_buf;
+
+  cl_mem input_t_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_WRITE,
+                  &image_format, &image_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error(
+      "Failed to create image1d_buffer for input_transposed");
+  }
+
+  // ---- step 1: input_transpose kernel ----
+  ClContext::SharedPtrClKernel xt_kernel =
+    blas_cc->registerClKernel(input_transpose_kernel, "input_transpose");
+  if (!xt_kernel) {
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("Failed to register input_transpose kernel");
+  }
+
+  {
+    int arg = 0;
+    result = xt_kernel->SetKernelArguments(arg++, &input_img, sizeof(cl_mem));
+    if (!result)
+      throw std::runtime_error("input_transpose arg 0 (input image)");
+
+    result =
+      xt_kernel->SetKernelArguments(arg++, &input_t_img, sizeof(cl_mem));
+    if (!result)
+      throw std::runtime_error("input_transpose arg 1 (input_transposed)");
+
+    int alignK_4 = alignK >> 2;
+    result = xt_kernel->SetKernelArguments(arg++, &alignK_4, sizeof(int));
+    if (!result)
+      throw std::runtime_error("input_transpose arg 2 (alignK_4)");
+
+    int M_4 = static_cast<int>(ceilDiv(M, 4u));
+    result = xt_kernel->SetKernelArguments(arg++, &M_4, sizeof(int));
+    if (!result)
+      throw std::runtime_error("input_transpose arg 3 (M_4)");
+
+    const int xt_global[3] = {alignK_4, M_4, 1};
+    const int xt_local[3] = {1, 128, 1};
+
+    result = blas_cc->command_queue_inst_.DispatchCommand(xt_kernel, xt_global,
+                                                          xt_local);
+    if (!result)
+      throw std::runtime_error("Failed to dispatch input_transpose");
+  }
+
+  // ---- step 2: gpu_int4_gemm_adreno kernel (texture input) ----
+  ClContext::SharedPtrClKernel gemm_kernel = blas_cc->registerClKernel(
     int4_gemm_adreno_kernel, "gpu_int4_gemm_adreno");
-  if (!kernel_ptr) {
+  if (!gemm_kernel) {
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
     throw std::runtime_error(
-      "Failed to get kernel_ptr for gpu_int4_gemm_adreno");
-    return;
+      "Failed to register gpu_int4_gemm_adreno kernel");
   }
 
-  int arg = 0;
+  {
+    int arg = 0;
+    result =
+      gemm_kernel->SetKernelArguments(arg++, &input_t_img, sizeof(cl_mem));
+    if (!result)
+      throw std::runtime_error(
+        "gpu_int4_gemm_adreno arg 0 (input_transposed image)");
 
-  result = kernel_ptr->SetKernelSVMArguments(arg++, input);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 0 (input) for gpu_int4_gemm_adreno");
+    result = gemm_kernel->SetKernelSVMArguments(arg++, scales);
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 1 (scales)");
 
-  result = kernel_ptr->SetKernelSVMArguments(arg++, scales);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 1 (scales) for gpu_int4_gemm_adreno");
+    result = gemm_kernel->SetKernelSVMArguments(arg++, output);
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 2 (output)");
 
-  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 2 (output) for gpu_int4_gemm_adreno");
+    result = gemm_kernel->SetKernelSVMArguments(arg++, weights);
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 3 (weights)");
 
-  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 3 (weights) for gpu_int4_gemm_adreno");
+    int size_k = static_cast<int>(K);
+    int size_n = static_cast<int>(N);
+    int size_m = static_cast<int>(M);
+    int qg = q_group_size;
 
-  int size_k = static_cast<int>(K);
-  int size_n = static_cast<int>(N);
-  int size_m = static_cast<int>(M);
-  int q_group_size = static_cast<int>(K); // per-channel: one group spans all K
+    result = gemm_kernel->SetKernelArguments(arg++, &size_k, sizeof(int));
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 4 (K)");
+    result = gemm_kernel->SetKernelArguments(arg++, &size_n, sizeof(int));
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 5 (N)");
+    result = gemm_kernel->SetKernelArguments(arg++, &size_m, sizeof(int));
+    if (!result)
+      throw std::runtime_error("gpu_int4_gemm_adreno arg 6 (M)");
+    result = gemm_kernel->SetKernelArguments(arg++, &qg, sizeof(int));
+    if (!result)
+      throw std::runtime_error(
+        "gpu_int4_gemm_adreno arg 7 (quantization_group_size)");
 
-  result = kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 4 (K) for gpu_int4_gemm_adreno");
+    // Dispatch:
+    //   global = (ceilDiv(M, 8), N/4, 1)
+    //     each WI handles 8 m tokens (m = global_id(0)*2, two half4 reads
+    //     along M) and 4 n channels (n = global_id(1)*4)
+    //   local  = {1, 128, 1}
+    //     2 wavefronts per work-group on Adreno 830 (wave=64). Matches
+    //     the main branch's tuned dispatch.
+    const int gemm_global[3] = {static_cast<int>(ceilDiv(M, 8u)),
+                                static_cast<int>(N) / 4, 1};
+    const int gemm_local[3] = {1, 128, 1};
 
-  result = kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 5 (N) for gpu_int4_gemm_adreno");
-
-  result = kernel_ptr->SetKernelArguments(arg++, &size_m, sizeof(int));
-  if (!result)
-    throw std::runtime_error(
-      "Failed to set kernel argument 6 (M) for gpu_int4_gemm_adreno");
-
-  result =
-    kernel_ptr->SetKernelArguments(arg++, &q_group_size, sizeof(int));
-  if (!result)
-    throw std::runtime_error("Failed to set kernel argument 7 "
-                             "(quantization_group_size) for "
-                             "gpu_int4_gemm_adreno");
-
-  // Dispatch:
-  //   global_id(0) covers M_padded / 8 -- each work-item handles 8
-  //     consecutive tokens along M because the kernel does
-  //     m = global_id(0)*2 and reads two adjacent half4s along M
-  //     (`m` and `m+1`), then writes 8 output rows per work-item via 8
-  //     vstore4 calls. With dim_m = M_padded/8 we cover [0..M_padded)
-  //     exactly. (Earlier we used ceilDiv(M, 2) by mistake, which over-
-  //     dispatched 4x: the OOB writes were filtered by the in-kernel
-  //     output guard so the result was still correct, but the GPU did
-  //     4x more work than needed.)
-  //   global_id(1) covers align_N / 4 -- each work-item handles 4
-  //     channels along N. align_N is N rounded up to 32; the kernel's
-  //     output guard skips writes for n >= N.
-  //
-  // Local size: {1, 64, 1} = 64 work-items per work-group along the N
-  // direction. Adreno 830's wavefront width is 64, so this fills exactly
-  // one wave per work-group, giving full SIMD utilization. The kernel
-  // uses no sub-group ops, so any local size that divides the global
-  // size cleanly is valid.
-  //
-  // dim_n divisibility: align_N is rounded up to 32 in the host, so
-  // align_N/4 is at least a multiple of 8; for the model's actual N
-  // values (1024, 2560, 4096, 9728) we have dim_n in {256, 640, 1024,
-  // 2432}, all multiples of 64 (256/64=4, 640/64=10, 1024/64=16,
-  // 2432/64=38).
-  //
-  // Group count vs CU occupancy:
-  //   Smallest case (M_padded=8, N=1024 -> dim_m=1, dim_n=256):
-  //     groups = 1 * 256/64 = 4 -- low but acceptable for tail dispatch.
-  //   Typical prefill case (M_padded=440, N=2560 -> dim_m=55, dim_n=640):
-  //     groups = 55 * 640/64 = 550 -- plenty for Adreno 830 (~6 CU).
-  //   Largest case (M_padded=440, N=9728 -> dim_m=55, dim_n=2432):
-  //     groups = 55 * 2432/64 = 2090 -- abundant.
-  //
-  // M is expected to already be padded to a multiple of 8 by the caller
-  // (FloatTensor::dotQInteger pads activations before invoking us).
-  const int align_N = static_cast<int>(align(N, 32));
-  const int dim_m = static_cast<int>(ceilDiv(static_cast<unsigned int>(M), 8u));
-  const int dim_n = align_N / 4;
-
-  const int work_groups_count[3] = {dim_m, dim_n, 1};
-  const int work_group_size[3] = {1, 64, 1};
-
-  result = blas_cc->command_queue_inst_.DispatchCommand(
-    kernel_ptr, work_groups_count, work_group_size);
-  if (!result) {
-    throw std::runtime_error(
-      "Failed to dispatch kernel for gpu_int4_gemm_adreno");
-    return;
+    result = blas_cc->command_queue_inst_.DispatchCommand(
+      gemm_kernel, gemm_global, gemm_local);
+    if (!result)
+      throw std::runtime_error("Failed to dispatch gpu_int4_gemm_adreno");
   }
 
-  /// @todo synchronize when only needed
+  // sync output back to host
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
     true);
+
+  // cleanup per-call cl_mem / cl_image objects
+  clReleaseMemObject(input_t_img);
+  clReleaseMemObject(input_t_buf);
+  clReleaseMemObject(input_img);
+  clReleaseMemObject(input_buf);
 }
 
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
