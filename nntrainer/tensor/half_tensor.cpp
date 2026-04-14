@@ -784,6 +784,21 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   const unsigned int K = getDim().width();
   const unsigned int N = output.getDim().width();
 
+  // DIAG: assert output is actually an fp16 tensor. If a layer forgot to
+  // propagate activation dtype to its output dim during finalize(), output
+  // could secretly be an FP32 tensor and `getData<_FP16>()` would reinterpret
+  // fp32 storage as fp16 -- we'd write into the wrong byte range (half the
+  // buffer) and silently corrupt downstream layer inputs.
+  NNTR_THROW_IF(output.getDataType() != Tdatatype::FP16, std::invalid_argument)
+    << "[HalfTensor::dotQInteger] output tensor dtype mismatch: expected FP16,"
+    << " got "
+    << static_cast<int>(output.getDataType())
+    << ". A layer's finalize() probably did not set output dim dtype to"
+    << " the activation dtype. (M=" << M << " K=" << K << " N=" << N << ")";
+  NNTR_THROW_IF(getDataType() != Tdatatype::FP16, std::invalid_argument)
+    << "[HalfTensor::dotQInteger] *this dtype mismatch: expected FP16,"
+    << " got " << static_cast<int>(getDataType());
+
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   const bool all_svm = input.getMemoryData()->isSVM() &&
                        output.getMemoryData()->isSVM() &&
@@ -891,6 +906,17 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   _FP16 *data = (_FP16 *)getData();
   const unsigned int M = getDim().height();
   const unsigned int K = getDim().width();
+
+  // DIAG: assert every output tensor is actually FP16 (see dotQInteger).
+  for (unsigned int i = 0; i < output.size(); ++i) {
+    NNTR_THROW_IF(output[i]->getDataType() != Tdatatype::FP16,
+                  std::invalid_argument)
+      << "[HalfTensor::dot(batched)] output[" << i
+      << "] dtype mismatch: expected FP16, got "
+      << static_cast<int>(output[i]->getDataType())
+      << ". A layer's finalize() probably did not set output dim dtype to"
+      << " the activation dtype.";
+  }
 
   // Stage activation through the page-aligned scratch SVM buffer
   // (see comment in HalfTensor::dotQInteger) -- tensor_pool

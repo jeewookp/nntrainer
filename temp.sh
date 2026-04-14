@@ -49,12 +49,11 @@ CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
 NUM_TO_GENERATE_NEW=32
-# DIAGNOSTIC: temporarily reverted from QINT4-FP16 to QINT4-FP32 to bisect
-# the silent garbage-output regression. If output is sane on FP32 then the
-# corruption is in the fp16 activation pipeline; if output is still garbage
-# then one of the InputLayer/HalfTensor/RMSNorm changes broke the FP32 path
-# too. Restore to QINT4-FP16 once the bisection is done.
-MODEL_TENSOR_TYPE_NEW=QINT4-FP32
+# Back on QINT4-FP16 to exercise the HalfTensor dot path. Phase 4 DIAG
+# assertions in half_tensor.cpp will throw if any layer's output tensor
+# turns out to be FP32 instead of FP16 (silent reinterpret_cast corruption
+# hypothesis).
+MODEL_TENSOR_TYPE_NEW=QINT4-FP16
 
 adb shell "[ -f ${CFG}.bak ] || cp ${CFG} ${CFG}.bak"
 adb shell "cp ${CFG}.bak ${CFG}"
