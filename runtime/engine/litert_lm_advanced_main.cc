@@ -253,6 +253,7 @@ absl::Status MainHelper(int argc, char** argv) {
   settings.use_submodel = absl::GetFlag(FLAGS_use_submodel);
   settings.enable_speculative_decoding =
       absl::GetFlag(FLAGS_enable_speculative_decoding);
+  settings.enable_op_profiling = absl::GetFlag(FLAGS_enable_op_profiling);
 
   // Adjust max_num_tokens and prefill_batch_size if not set on benchmark mode.
   if (settings.benchmark && settings.benchmark_prefill_tokens > 0) {

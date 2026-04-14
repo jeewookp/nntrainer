@@ -46,7 +46,9 @@
 #include "runtime/engine/engine_factory.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
+#include "runtime/engine/shared_flags.h"
 #include "runtime/executor/executor_settings_base.h"
+#include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/status_macros.h"
 
 ABSL_FLAG(std::string, backend, "gpu",
@@ -131,6 +133,26 @@ absl::Status MainHelper(int argc, char** argv) {
   // Enable benchmark by default.
   engine_settings.GetMutableBenchmarkParams() =
       litert::lm::proto::BenchmarkParams();
+
+  // Propagate --enable_op_profiling into the AdvancedSettings carried by the
+  // main executor. The GPU backend path in llm_executor_settings_utils.cc
+  // consults this to call runtime_options.SetEnableProfiling(true) at
+  // CompiledModel::Create time, which wires in the tflite::Profiler
+  // infrastructure inside the compiled model. The executor then retrieves
+  // the profiler via LiteRtCompiledModelGetProfiler and dumps a per-op
+  // summary at exit.
+  if (absl::GetFlag(FLAGS_enable_op_profiling)) {
+    litert::lm::AdvancedSettings advanced_settings;
+    if (engine_settings.GetMutableMainExecutorSettings()
+            .GetAdvancedSettings()
+            .has_value()) {
+      advanced_settings = *engine_settings.GetMutableMainExecutorSettings()
+                               .GetAdvancedSettings();
+    }
+    advanced_settings.enable_op_profiling = true;
+    engine_settings.GetMutableMainExecutorSettings().SetAdvancedSettings(
+        advanced_settings);
+  }
 
   // Create the engine.
   ASSIGN_OR_RETURN(auto engine, litert::lm::EngineFactory::CreateAny(

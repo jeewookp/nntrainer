@@ -160,6 +160,18 @@ struct AdvancedSettings {
   // If true, the executor is running a benchmark.
   bool is_benchmark = false;
 
+  // If true, enables per-op profiling on the LiteRT CompiledModel backing
+  // the LLM executor. Causes llm_executor_settings_utils to call
+  // runtime_options.SetEnableProfiling(true) at compile time, and causes
+  // llm_litert_compiled_model_executor to retrieve the profiler via the C
+  // API (LiteRtCompiledModelGetProfiler), wrap prefill with
+  // LiteRtStartProfiler / LiteRtStopProfiler, and dump a formatted
+  // GetProfileSummary() at process exit. The summary lists every op dispatch
+  // in the compiled graph with average / total / count, including every
+  // FullyConnected / BatchMatMul / MatMul -- i.e. matmul-unit-op granularity.
+  // No effect when false. Default off to avoid any runtime cost.
+  bool enable_op_profiling = false;
+
   // Preferred WebGPU device name substring, case-insensitive.
   // If not empty, the adapter which the device name contains the substring will
   // be chosen.
@@ -255,6 +267,7 @@ struct AdvancedSettings {
            gpu_madvise_original_shared_tensors ==
                other.gpu_madvise_original_shared_tensors &&
            is_benchmark == other.is_benchmark &&
+           enable_op_profiling == other.enable_op_profiling &&
            preferred_device_substr == other.preferred_device_substr &&
            num_threads_to_upload == other.num_threads_to_upload &&
            num_threads_to_compile == other.num_threads_to_compile &&

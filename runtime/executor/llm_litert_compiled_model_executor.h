@@ -29,6 +29,7 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/types/span.h"  // from @com_google_absl
+#include "litert/c/litert_profiler.h"  // from @litert
 #include "litert/cc/litert_compiled_model.h"  // from @litert
 #include "litert/cc/litert_environment.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
@@ -177,7 +178,30 @@ class LlmLiteRtCompiledModelExecutorBase : public LlmExecutor {
     llm_context_ = std::make_unique<LlmContext>(std::move(processed_context),
                                                 std::move(runtime_config),
                                                 std::move(runtime_state));
+    // LiteRT per-op profiler: if advanced_settings.enable_op_profiling was
+    // set, llm_executor_settings_utils already called
+    // runtime_options.SetEnableProfiling(true) at CompiledModel::Create
+    // time, which arms the internal tflite::Profiler. Retrieve its handle
+    // via the C API here so BindTensorsAndRunPrefill can Start/Stop
+    // around the prefill dispatch, and the destructor can dump a formatted
+    // per-op summary (which includes every MatMul/FullyConnected/BatchMatMul
+    // dispatch in the compiled graph).
+    if (executor_settings_.GetAdvancedSettings().has_value() &&
+        executor_settings_.GetAdvancedSettings()->enable_op_profiling) {
+      op_profiling_enabled_ = true;
+      // LiteRtCompiledModelGetProfiler returns a non-owning handle; the
+      // profiler's lifetime is tied to the compiled model itself.
+      (void)LiteRtCompiledModelGetProfiler(compiled_model_.Get(),
+                                           &profiler_handle_);
+    }
   }
+
+  // Dump the LiteRT per-op profile summary when the executor is destroyed
+  // (which happens at program exit for the benchmark path). This prints a
+  // formatted table of every op dispatch (FullyConnected, BatchMatMul,
+  // MatMul, Softmax, ...) with avg / total / count -- effectively
+  // matmul-unit-op level profiling for the GPU delegate path.
+  ~LlmLiteRtCompiledModelExecutorBase() override;
 
  protected:
   // Attempts to create a compiled model for the MTP drafter.
@@ -271,6 +295,12 @@ class LlmLiteRtCompiledModelExecutorBase : public LlmExecutor {
   Environment& env_;
   const Model& model_;
   CompiledModel compiled_model_;
+
+  // LiteRT per-op profiler (opt-in via --enable_op_profiling). The
+  // LiteRtProfiler handle is non-owning (the compiled model owns it), so
+  // no destroy is needed in the dtor.
+  bool op_profiling_enabled_ = false;
+  LiteRtProfiler profiler_handle_ = nullptr;
 
   absl::flat_hash_map<absl::string_view, TensorBuffer> decode_input_buffers_;
   absl::flat_hash_map<absl::string_view, TensorBuffer> decode_output_buffers_;

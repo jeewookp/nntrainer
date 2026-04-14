@@ -547,6 +547,7 @@ absl::StatusOr<EngineSettings> CreateEngineSettings(
       .gpu_madvise_original_shared_tensors =
           settings.gpu_madvise_original_shared_tensors,
       .is_benchmark = settings.benchmark,
+      .enable_op_profiling = settings.enable_op_profiling,
       .preferred_device_substr = settings.preferred_device_substr,
       .num_threads_to_upload = settings.num_threads_to_upload,
       .num_threads_to_compile = settings.num_threads_to_compile,

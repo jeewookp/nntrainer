@@ -30,6 +30,7 @@
 #include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_options.h"  // from @litert
 #include "litert/cc/options/litert_gpu_options.h"  // from @litert
+#include "litert/cc/options/litert_runtime_options.h"  // from @litert
 #include "runtime/executor/executor_settings_base.h"
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor_settings.h"
@@ -241,6 +242,17 @@ absl::StatusOr<litert::Options> CreateCompilationOptions(
           advanced_settings.num_threads_to_compile >= 0
               ? advanced_settings.num_threads_to_compile
               : kDefaultNumThreadsToCompile);
+      // LiteRT per-op profiler: when enabled, arms the tflite::Profiler
+      // hooks inside the compiled model so every op (FullyConnected /
+      // BatchMatMul / MatMul / Conv2D / Softmax / ...) records a Begin/End
+      // event. The profiler is retrieved later in
+      // llm_litert_compiled_model_executor via the C API
+      // (LiteRtCompiledModelGetProfiler) and summarized at exit.
+      if (advanced_settings.enable_op_profiling) {
+        LITERT_ASSIGN_OR_RETURN(auto& runtime_options,
+                                compilation_options.GetRuntimeOptions());
+        LITERT_RETURN_IF_ERROR(runtime_options.SetEnableProfiling(true));
+      }
       compilation_options.SetHardwareAccelerators(HwAccelerators::kGpu);
       break;
     }

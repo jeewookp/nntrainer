@@ -144,3 +144,14 @@ ABSL_FLAG(bool, use_submodel, false,
           "Whether the submodel should be used if available.");
 ABSL_FLAG(bool, enable_speculative_decoding, false,
           "Whether to use speculative decoding.");
+ABSL_FLAG(bool, enable_op_profiling, false,
+          "Enable per-op profiling on the LiteRT CompiledModel backing the "
+          "executor. When true, runtime_options.SetEnableProfiling(true) is "
+          "passed at compile time, the profiler is wrapped around the prefill "
+          "path via the C API (LiteRtCompiledModelGetProfiler / "
+          "LiteRtStartProfiler / LiteRtStopProfiler), and a formatted "
+          "GetProfileSummary() is dumped at process exit. This yields per-op "
+          "latency (including FullyConnected / BatchMatMul / MatMul ops) for "
+          "the GPU delegate path -- effectively 'matmul-unit-op level' "
+          "profiling. No effect when false (default) or when running on "
+          "backends that don't support profiling.");

@@ -71,6 +71,7 @@ std::ostream& operator<<(std::ostream& os, const AdvancedSettings& settings) {
   os << "gpu_madvise_original_shared_tensors: "
      << settings.gpu_madvise_original_shared_tensors << "\n";
   os << "is_benchmark: " << settings.is_benchmark << "\n";
+  os << "enable_op_profiling: " << settings.enable_op_profiling << "\n";
   os << "preferred_device_substr: " << settings.preferred_device_substr << "\n";
   os << "num_threads_to_upload: " << settings.num_threads_to_upload << "\n";
   os << "num_threads_to_compile: " << settings.num_threads_to_compile << "\n";

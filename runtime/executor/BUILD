@@ -290,6 +290,7 @@ cc_library(
             "@litert//litert/cc:litert_api_with_dynamic_runtime",
         ],
         "//conditions:default": [
+            "@litert//litert/c:litert_profiler",
             "@litert//litert/c/internal:litert_external_litert_buffer_context",  # buildcleaner: keep
             "@litert//litert/cc:litert_common",
             "@litert//litert/cc:litert_compiled_model",
@@ -653,6 +654,7 @@ cc_library(
             "@litert//litert/cc:litert_options",
             "@litert//litert/cc/options:litert_cpu_options",
             "@litert//litert/cc/options:litert_gpu_options",
+            "@litert//litert/cc/options:litert_runtime_options",
         ],
     }),
 )

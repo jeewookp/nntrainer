@@ -121,6 +121,12 @@ struct LiteRtLmSettings {
   std::string constraint_regex = "";
   bool use_submodel = false;
   bool enable_speculative_decoding = false;
+  // When true, enables per-op profiling on the LiteRT CompiledModel backing
+  // the executor. Wired to runtime_options.SetEnableProfiling at compile
+  // time, and to LiteRtCompiledModelGetProfiler / LiteRtStartProfiler /
+  // LiteRtGetProfileSummary at prefill time. Dumps formatted per-op summary
+  // to stderr at process exit. See shared_flags.cc enable_op_profiling.
+  bool enable_op_profiling = false;
 };
 
 struct LitertLmMetrics {
