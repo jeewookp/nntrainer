@@ -73,14 +73,28 @@ void InputLayer::exportTo(Exporter &exporter,
 void InputLayer::finalize(InitLayerContext &context) {
 
   std::vector<TensorDim> output_dims = context.getInputDimensions();
+
+  // The model API takes a `std::vector<float *>` for inputs and the
+  // host writes raw fp32 bytes (e.g. token indices cast to float for
+  // causal LMs). Forcing the input tensor dtype to the model's
+  // activation dtype would (a) corrupt the bytes when activation is
+  // half (4 -> 2 bytes per element reinterpretation), and (b) lose
+  // precision for token indices > 2048 if the activation dtype is
+  // FP16. So pin the InputLayer's output to FP32 regardless of the
+  // model-level activation dtype; subsequent layers (Embedding etc.)
+  // produce activation-dtype outputs and the rest of the graph runs
+  // in the activation dtype as expected.
   for (auto &d : output_dims) {
-    d.setDataType(context.getActivationDataType());
+    d.setDataType(ml::train::TensorDim::DataType::FP32);
   }
 
   context.setOutputDimensions(output_dims);
-  is_inplace = true;
-  if (context.getActivationDataType() != ml::train::TensorDim::DataType::FP32)
-    is_inplace = false;
+  // Output is FP32; input is whatever the model API delivered (also
+  // fp32 in the current API contract). is_inplace is safe to keep
+  // true when activation dtype is FP32, false otherwise so the
+  // downstream layer can allocate its own correctly-typed buffer.
+  is_inplace =
+    (context.getActivationDataType() == ml::train::TensorDim::DataType::FP32);
 }
 
 void InputLayer::updateTensorsByInputDimensions(
