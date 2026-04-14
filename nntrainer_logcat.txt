@@ -1,0 +1,1162 @@
+--------- beginning of main
+03-15 02:12:44.209 29947 29947 W nntrainer: [AppContext]  conf path does not exist, skip getting plugin path from the conf
+03-15 02:12:44.209 29947 29947 I nntrainer: Collecting OpenCL platforms ...
+03-15 02:12:44.214 29947 29947 I nntrainer: Collecting OpenCL devices for platform 0 / 1 ...
+03-15 02:12:44.219 29947 29947 I nntrainer: Looking for suitable OpenCL platform and device ...
+03-15 02:12:44.219 29947 29947 E nntrainer: No suitable platform / device found - using default (first)
+03-15 02:12:44.219 29947 29947 I nntrainer: Using device QUALCOMM Adreno(TM) 830
+03-15 02:12:44.219 29947 29947 I nntrainer: Device info:
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_TYPE: CL_DEVICE_TYPE_GPU
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_VENDOR_ID: 0x5143
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_MAX_COMPUTE_UNITS: 12
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS: 3
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_MAX_WORK_ITEM_SIZES: 1024 1024 1024
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_MAX_WORK_GROUP_SIZE: 1024
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_MAX_MEM_ALLOC_SIZE: 1073741824
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_NAME: QUALCOMM Adreno(TM) 830
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_VENDOR: QUALCOMM
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DRIVER_VERSION: OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_EXTENSIONS: cl_ext_image_from_buffer cl_ext_image_requirements_info cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_egl_event cl_khr_egl_image cl_khr_extended_bit_ops cl_khr_external_memory cl_khr_external_memory_dma_buf cl_khr_external_memory_opaque_fd cl_khr_external_semaphore cl_khr_external_semaphore_sync_fd cl_khr_fp16 cl_khr_gl_sharing cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_image2d_from_buffer cl_khr_integer_dot_product cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_semaphore cl_khr_srgb_image_writes cl_khr_subgroups cl_khr_subgroup_ballot cl_khr_subgroup_extended_types cl_khr_subgroup_non_uniform_arithmetic cl_khr_subgroup_non_uniform_vote cl_khr_subgroup_rotate cl_khr_subgroup_shuffle cl_khr_subgroup_shuffle_relative cl_khr_suggested_local_work_size cl_qcom_accelerated_image_ops cl_qcom_android_ahardwarebuffer_host_ptr cl_qcom_android_native_buffer_host_ptr cl_qcom_bfloa
+03-15 02:12:44.219 29947 29947 I nntrainer:     CL_DEVICE_SVM_CAPABILITIES: CL_DEVICE_SVM_COARSE_GRAIN_BUFFER CL_DEVICE_SVM_FINE_GRAIN_BUFFER CL_DEVICE_SVM_ATOMICS 
+03-15 02:12:44.222 29947 29947 I nntrainer: opencl_command_queue_manager: Created command queue
+03-15 02:12:44.222 29947 29947 I nntrainer: opencl_command_queue_manager: Retained command queue
+03-15 02:12:44.257 29947 29947 I nntrainer: Kernel initializing: sgemv_cl
+03-15 02:12:44.257 29947 29947 I nntrainer: Binary for kernel sgemv_cl not found, compiling from source...
+03-15 02:12:44.270 29947 29947 I nntrainer: Kernel initializing: sgemv_cl_noTrans
+03-15 02:12:44.270 29947 29947 I nntrainer: Binary for kernel sgemv_cl_noTrans not found, compiling from source...
+03-15 02:12:44.279 29947 29947 I nntrainer: Kernel initializing: dot_cl
+03-15 02:12:44.279 29947 29947 I nntrainer: Binary for kernel dot_cl not found, compiling from source...
+03-15 02:12:44.287 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_noTrans
+03-15 02:12:44.287 29947 29947 I nntrainer: Binary for kernel sgemm_cl_noTrans not found, compiling from source...
+03-15 02:12:44.302 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transA
+03-15 02:12:44.302 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transA not found, compiling from source...
+03-15 02:12:44.316 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transB
+03-15 02:12:44.316 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transB not found, compiling from source...
+03-15 02:12:44.329 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transAB
+03-15 02:12:44.329 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transAB not found, compiling from source...
+03-15 02:12:44.342 29947 29947 I nntrainer: Kernel initializing: addition_cl
+03-15 02:12:44.342 29947 29947 I nntrainer: Binary for kernel addition_cl not found, compiling from source...
+03-15 02:12:44.349 29947 29947 I nntrainer: Kernel initializing: sscal_cl
+03-15 02:12:44.349 29947 29947 I nntrainer: Binary for kernel sscal_cl not found, compiling from source...
+03-15 02:12:44.355 29947 29947 I nntrainer: Kernel initializing: kernel_mul_mv_q6_K_f32
+03-15 02:12:44.355 29947 29947 I nntrainer: Binary for kernel kernel_mul_mv_q6_K_f32 not found, compiling from source...
+03-15 02:12:44.372 29947 29947 I nntrainer: Kernel initializing: kernel_convert_block_q4_0_noshuffle
+03-15 02:12:44.372 29947 29947 I nntrainer: Binary for kernel kernel_convert_block_q4_0_noshuffle not found, compiling from source...
+03-15 02:12:44.384 29947 29947 I nntrainer: Kernel initializing: kernel_restore_block_q4_0
+03-15 02:12:44.384 29947 29947 I nntrainer: Binary for kernel kernel_restore_block_q4_0 not found, compiling from source...
+03-15 02:12:44.396 29947 29947 I nntrainer: Kernel initializing: kernel_transpose_16
+03-15 02:12:44.396 29947 29947 I nntrainer: Binary for kernel kernel_transpose_16 not found, compiling from source...
+03-15 02:12:44.405 29947 29947 I nntrainer: Kernel initializing: kernel_transpose_32_16
+03-15 02:12:44.405 29947 29947 I nntrainer: Binary for kernel kernel_transpose_32_16 not found, compiling from source...
+03-15 02:12:44.415 29947 29947 I nntrainer: Kernel initializing: kernel_mul_mat_Ab_Bi_8x4
+03-15 02:12:44.415 29947 29947 I nntrainer: Binary for kernel kernel_mul_mat_Ab_Bi_8x4 not found, compiling from source...
+03-15 02:12:44.439 29947 29947 I nntrainer: Kernel initializing: fully_connected_gpu_int4_gemv
+03-15 02:12:44.439 29947 29947 I nntrainer: Binary for kernel fully_connected_gpu_int4_gemv not found, compiling from source...
+03-15 02:12:44.479 29947 29947 E nntrainer: Failed to build program executable. OpenCL error code: -11 : CL_BUILD_PROGRAM_FAILURE. BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'
+03-15 02:12:44.479 29947 29947 E nntrainer: DECLARE_BLOCK_READ_EMULATION(2, 1)
+03-15 02:12:44.479 29947 29947 E nntrainer: ^
+03-15 02:12:44.479 29947 29947 E nntrainer: BC-src-code:114:5: note: expanded from macro 'DECLARE_BLOCK_READ_EMULATION'
+03-15 02:12:44.479 29947 29947 E nntrainer:     BLOCK_READ_IMPL(vec_size)                                                  \
+03-15 02:12:44.479 29947 29947 E nntrainer:     ^
+03-15 02:12:44.479 29947 29947 E nntrainer: BC-src-code:105:39: note: expanded from macro 'BLOCK_READ_IMPL'
+03-15 02:12:44.479 29947 29947 E nntrainer: #define BLOCK_READ_IMPL(vec_size) CAT(BLOCK_READ_IMPL_, vec_size)
+03-15 02:12:44.479 29947 29947 E nntrainer:                                       ^
+03-15 02:12:44.479 29947 29947 E nntrainer: BC-src-code:15:25: note: expanded from macro 'CAT'
+03-15 02:12:44.479 29947 29947 E nntrainer: #define CAT(x, y) __CAT(x, y)
+03-15 02:12:44.479 29947 29947 E nntrainer:                         ^
+03-15 02:12:44.479 29947 29947 E nntrainer: BC-src-code:14:21: note: expanded from macro '__CAT'
+03-15 02:12:44.479 29947 29947 E nntrainer: #define __CAT(x, y) x##y
+03-15 02:12:44.479 29947 29947 E nntrainer:                     ^
+03-15 02:12:44.479 29947 29947 E nntrainer: <scratch space>:9:1: note: expanded from macro 'BLOCK_READ_IMPL_'
+03-15 02:12:44.479 29947 29947 E nntrainer: BLOCK_READ_IMPL_1<U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><U+0000><
+03-15 02:12:44.479 29947 29947 E nntrainer: Failed to register kernel fully_connected_gpu_int4_gemv
+03-15 02:12:44.479 29947 29947 I nntrainer: Kernel initializing: quantize_input_int4
+03-15 02:12:44.479 29947 29947 I nntrainer: Binary for kernel quantize_input_int4 not found, compiling from source...
+03-15 02:12:44.481 29947 29947 E nntrainer: Failed to build program executable. OpenCL error code: -11 : CL_BUILD_PROGRAM_FAILURE. BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'.
+03-15 02:12:44.481 29947 29947 E nntrainer:     max_vals[i] = fmax(fmax(fabs(input_0[0]), fabs(input_0[1])),
+03-15 02:12:44.481 29947 29947 E nntrainer:                                  ~~~~~~~^
+03-15 02:12:44.481 29947 29947 E nntrainer: BC-src-code:77:41: error: Attempt to use subscript to obtain element of 'half4'.
+03-15 02:12:44.481 29947 29947 E nntrainer:     max_vals[i] = fmax(fmax(fabs(input_0[0]), fabs(input_0[1])),
+03-15 02:12:44.481 29947 29947 E nntrainer:                                  ~~~~~~~^
+03-15 02:12:44.481 29947 29947 E nntrainer: 2 diagnostic(s) generated.
+03-15 02:12:44.481 29947 29947 E nntrainer: Failed to register kernel quantize_input_int4
+03-15 02:12:44.481 29947 29947 I nntrainer: Kernel initializing: quantize_input_int4_pad
+03-15 02:12:44.481 29947 29947 I nntrainer: Binary for kernel quantize_input_int4_pad not found, compiling from source...
+03-15 02:12:44.483 29947 29947 E nntrainer: Failed to build program executable. OpenCL error code: -11 : CL_BUILD_PROGRAM_FAILURE. BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'.
+03-15 02:12:44.483 29947 29947 E nntrainer:     max_vals[i] = fmax(fmax(fabs(input_0[0]), fabs(input_0[1])),
+03-15 02:12:44.483 29947 29947 E nntrainer:                                  ~~~~~~~^
+03-15 02:12:44.483 29947 29947 E nntrainer: BC-src-code:77:41: error: Attempt to use subscript to obtain element of 'half4'.
+03-15 02:12:44.483 29947 29947 E nntrainer:     max_vals[i] = fmax(fmax(fabs(input_0[0]), fabs(input_0[1])),
+03-15 02:12:44.483 29947 29947 E nntrainer:                                  ~~~~~~~^
+03-15 02:12:44.483 29947 29947 E nntrainer: 2 diagnostic(s) generated.
+03-15 02:12:44.483 29947 29947 E nntrainer: Failed to register kernel quantize_input_int4_pad
+03-15 02:12:44.483 29947 29947 I nntrainer: Kernel initializing: sgemv_cl_fp16
+03-15 02:12:44.483 29947 29947 I nntrainer: Binary for kernel sgemv_cl_fp16 not found, compiling from source...
+03-15 02:12:44.490 29947 29947 I nntrainer: Kernel initializing: sgemv_cl_noTrans_fp16
+03-15 02:12:44.490 29947 29947 I nntrainer: Binary for kernel sgemv_cl_noTrans_fp16 not found, compiling from source...
+03-15 02:12:44.498 29947 29947 I nntrainer: Kernel initializing: dot_cl_fp16
+03-15 02:12:44.498 29947 29947 I nntrainer: Binary for kernel dot_cl_fp16 not found, compiling from source...
+03-15 02:12:44.505 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_noTrans_fp16
+03-15 02:12:44.505 29947 29947 I nntrainer: Binary for kernel sgemm_cl_noTrans_fp16 not found, compiling from source...
+03-15 02:12:44.519 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transA_fp16
+03-15 02:12:44.519 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transA_fp16 not found, compiling from source...
+03-15 02:12:44.533 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transB_fp16
+03-15 02:12:44.533 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transB_fp16 not found, compiling from source...
+03-15 02:12:44.546 29947 29947 I nntrainer: Kernel initializing: sgemm_cl_transAB_fp16
+03-15 02:12:44.546 29947 29947 I nntrainer: Binary for kernel sgemm_cl_transAB_fp16 not found, compiling from source...
+03-15 02:12:44.559 29947 29947 I nntrainer: Kernel initializing: addition_cl_fp16
+03-15 02:12:44.559 29947 29947 I nntrainer: Binary for kernel addition_cl_fp16 not found, compiling from source...
+03-15 02:12:44.566 29947 29947 I nntrainer: Kernel initializing: sscal_cl_fp16
+03-15 02:12:44.566 29947 29947 I nntrainer: Binary for kernel sscal_cl_fp16 not found, compiling from source...
+03-15 02:12:44.572 29947 29947 I nntrainer: Kernel initializing: rotary_emb_cl
+03-15 02:12:44.573 29947 29947 I nntrainer: Binary for kernel rotary_emb_cl not found, compiling from source...
+03-15 02:12:44.587 29947 29947 I nntrainer: Kernel initializing: rotary_emb_cl_fp16
+03-15 02:12:44.587 29947 29947 I nntrainer: Binary for kernel rotary_emb_cl_fp16 not found, compiling from source...
+03-15 02:12:44.601 29947 29947 I nntrainer: Kernel initializing: swiglu_cl
+03-15 02:12:44.601 29947 29947 I nntrainer: Binary for kernel swiglu_cl not found, compiling from source...
+03-15 02:12:44.608 29947 29947 I nntrainer: Kernel initializing: swiglu_cl_fp16
+03-15 02:12:44.608 29947 29947 I nntrainer: Binary for kernel swiglu_cl_fp16 not found, compiling from source...
+03-15 02:12:44.615 29947 29947 I nntrainer: Kernel initializing: copy_cl
+03-15 02:12:44.615 29947 29947 I nntrainer: Binary for kernel copy_cl not found, compiling from source...
+03-15 02:12:44.622 29947 29947 I nntrainer: Kernel initializing: copy_cl_fp16
+03-15 02:12:44.622 29947 29947 I nntrainer: Binary for kernel copy_cl_fp16 not found, compiling from source...
+03-15 02:12:44.628 29947 29947 I nntrainer: Kernel initializing: rmsnorm_cl
+03-15 02:12:44.628 29947 29947 I nntrainer: Binary for kernel rmsnorm_cl not found, compiling from source...
+03-15 02:12:44.636 29947 29947 I nntrainer: Kernel initializing: rmsnorm_cl_fp16
+03-15 02:12:44.636 29947 29947 I nntrainer: Binary for kernel rmsnorm_cl_fp16 not found, compiling from source...
+03-15 02:12:44.645 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis1
+03-15 02:12:44.645 29947 29947 I nntrainer: Binary for kernel concat_cl_axis1 not found, compiling from source...
+03-15 02:12:44.655 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis2
+03-15 02:12:44.655 29947 29947 I nntrainer: Binary for kernel concat_cl_axis2 not found, compiling from source...
+03-15 02:12:44.665 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis3
+03-15 02:12:44.665 29947 29947 I nntrainer: Binary for kernel concat_cl_axis3 not found, compiling from source...
+03-15 02:12:44.675 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis1_fp16
+03-15 02:12:44.675 29947 29947 I nntrainer: Binary for kernel concat_cl_axis1_fp16 not found, compiling from source...
+03-15 02:12:44.684 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis2_fp16
+03-15 02:12:44.684 29947 29947 I nntrainer: Binary for kernel concat_cl_axis2_fp16 not found, compiling from source...
+03-15 02:12:44.695 29947 29947 I nntrainer: Kernel initializing: concat_cl_axis3_fp16
+03-15 02:12:44.695 29947 29947 I nntrainer: Binary for kernel concat_cl_axis3_fp16 not found, compiling from source...
+03-15 02:12:44.704 29947 29947 I nntrainer: Kernel initializing: embedding_cl
+03-15 02:12:44.704 29947 29947 I nntrainer: Binary for kernel embedding_cl not found, compiling from source...
+03-15 02:12:44.711 29947 29947 I nntrainer: Kernel initializing: embedding_cl_fp16
+03-15 02:12:44.711 29947 29947 I nntrainer: Binary for kernel embedding_cl_fp16 not found, compiling from source...
+03-15 02:12:44.755 29947 29947 I nntrainer: embedding0 is identified as a non-input node and default input layer(input0) is being set 
+03-15 02:12:44.780 29947 29947 W nntrainer: given output is being dangled: out0 in context: output_of_causallm
+03-15 02:12:44.781 29947 29947 I nntrainer: MemoryPool::allocate size: 2363590144
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): embedding0:Embedding : 319065600 : address 0xb400006e8b8f9a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention_norm:gamma : 10240 : address 0xb400006e4ea13200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wq:weight : 5898240 : address 0xb400006e4ea15a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_q_norm:gamma : 512 : address 0xb400006e4efb5a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wk:weight : 1474560 : address 0xb400006e4efb5c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_k_norm:gamma : 512 : address 0xb400006e4f11dc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wv:weight : 1474560 : address 0xb400006e4f11de00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention_out:weight : 5898240 : address 0xb400006e4f285e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_norm:gamma : 10240 : address 0xb400006e4f825e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_up:weight : 14008320 : address 0xb400006e4f828600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_gate:weight : 14008320 : address 0xb400006e50584600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_down:weight : 14008320 : address 0xb400006e512e0600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention_norm:gamma : 10240 : address 0xb400006e5203c600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wq:weight : 5898240 : address 0xb400006e5203ee00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_q_norm:gamma : 512 : address 0xb400006e525dee00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wk:weight : 1474560 : address 0xb400006e525df000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_k_norm:gamma : 512 : address 0xb400006e52747000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wv:weight : 1474560 : address 0xb400006e52747200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention_out:weight : 5898240 : address 0xb400006e528af200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_norm:gamma : 10240 : address 0xb400006e52e4f200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_up:weight : 14008320 : address 0xb400006e52e51a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_gate:weight : 14008320 : address 0xb400006e53bada00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_down:weight : 14008320 : address 0xb400006e54909a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention_norm:gamma : 10240 : address 0xb400006e55665a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wq:weight : 5898240 : address 0xb400006e55668200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_q_norm:gamma : 512 : address 0xb400006e55c08200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wk:weight : 1474560 : address 0xb400006e55c08400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_k_norm:gamma : 512 : address 0xb400006e55d70400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wv:weight : 1474560 : address 0xb400006e55d70600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention_out:weight : 5898240 : address 0xb400006e55ed8600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_norm:gamma : 10240 : address 0xb400006e56478600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_up:weight : 14008320 : address 0xb400006e5647ae00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_gate:weight : 14008320 : address 0xb400006e571d6e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_down:weight : 14008320 : address 0xb400006e57f32e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention_norm:gamma : 10240 : address 0xb400006e58c8ee00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wq:weight : 5898240 : address 0xb400006e58c91600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_q_norm:gamma : 512 : address 0xb400006e59231600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wk:weight : 1474560 : address 0xb400006e59231800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_k_norm:gamma : 512 : address 0xb400006e59399800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wv:weight : 1474560 : address 0xb400006e59399a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention_out:weight : 5898240 : address 0xb400006e59501a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_norm:gamma : 10240 : address 0xb400006e59aa1a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_up:weight : 14008320 : address 0xb400006e59aa4200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_gate:weight : 14008320 : address 0xb400006e5a800200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_down:weight : 14008320 : address 0xb400006e5b55c200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention_norm:gamma : 10240 : address 0xb400006e5c2b8200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wq:weight : 5898240 : address 0xb400006e5c2baa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_q_norm:gamma : 512 : address 0xb400006e5c85aa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wk:weight : 1474560 : address 0xb400006e5c85ac00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_k_norm:gamma : 512 : address 0xb400006e5c9c2c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wv:weight : 1474560 : address 0xb400006e5c9c2e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention_out:weight : 5898240 : address 0xb400006e5cb2ae00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_norm:gamma : 10240 : address 0xb400006e5d0cae00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_up:weight : 14008320 : address 0xb400006e5d0cd600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_gate:weight : 14008320 : address 0xb400006e5de29600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_down:weight : 14008320 : address 0xb400006e5eb85600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention_norm:gamma : 10240 : address 0xb400006e5f8e1600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wq:weight : 5898240 : address 0xb400006e5f8e3e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_q_norm:gamma : 512 : address 0xb400006e5fe83e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wk:weight : 1474560 : address 0xb400006e5fe84000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_k_norm:gamma : 512 : address 0xb400006e5ffec000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wv:weight : 1474560 : address 0xb400006e5ffec200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention_out:weight : 5898240 : address 0xb400006e60154200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_norm:gamma : 10240 : address 0xb400006e606f4200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_up:weight : 14008320 : address 0xb400006e606f6a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_gate:weight : 14008320 : address 0xb400006e61452a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_down:weight : 14008320 : address 0xb400006e621aea00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention_norm:gamma : 10240 : address 0xb400006e62f0aa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wq:weight : 5898240 : address 0xb400006e62f0d200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_q_norm:gamma : 512 : address 0xb400006e634ad200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wk:weight : 1474560 : address 0xb400006e634ad400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_k_norm:gamma : 512 : address 0xb400006e63615400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wv:weight : 1474560 : address 0xb400006e63615600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention_out:weight : 5898240 : address 0xb400006e6377d600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_norm:gamma : 10240 : address 0xb400006e63d1d600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_up:weight : 14008320 : address 0xb400006e63d1fe00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_gate:weight : 14008320 : address 0xb400006e64a7be00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_down:weight : 14008320 : address 0xb400006e657d7e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention_norm:gamma : 10240 : address 0xb400006e66533e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wq:weight : 5898240 : address 0xb400006e66536600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_q_norm:gamma : 512 : address 0xb400006e66ad6600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wk:weight : 1474560 : address 0xb400006e66ad6800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_k_norm:gamma : 512 : address 0xb400006e66c3e800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wv:weight : 1474560 : address 0xb400006e66c3ea00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention_out:weight : 5898240 : address 0xb400006e66da6a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_norm:gamma : 10240 : address 0xb400006e67346a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_up:weight : 14008320 : address 0xb400006e67349200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_gate:weight : 14008320 : address 0xb400006e680a5200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_down:weight : 14008320 : address 0xb400006e68e01200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention_norm:gamma : 10240 : address 0xb400006e69b5d200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wq:weight : 5898240 : address 0xb400006e69b5fa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_q_norm:gamma : 512 : address 0xb400006e6a0ffa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wk:weight : 1474560 : address 0xb400006e6a0ffc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_k_norm:gamma : 512 : address 0xb400006e6a267c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wv:weight : 1474560 : address 0xb400006e6a267e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention_out:weight : 5898240 : address 0xb400006e6a3cfe00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_norm:gamma : 10240 : address 0xb400006e6a96fe00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_up:weight : 14008320 : address 0xb400006e6a972600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_gate:weight : 14008320 : address 0xb400006e6b6ce600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_down:weight : 14008320 : address 0xb400006e6c42a600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention_norm:gamma : 10240 : address 0xb400006e6d186600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wq:weight : 5898240 : address 0xb400006e6d188e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_q_norm:gamma : 512 : address 0xb400006e6d728e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wk:weight : 1474560 : address 0xb400006e6d729000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_k_norm:gamma : 512 : address 0xb400006e6d891000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wv:weight : 1474560 : address 0xb400006e6d891200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention_out:weight : 5898240 : address 0xb400006e6d9f9200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_norm:gamma : 10240 : address 0xb400006e6df99200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_up:weight : 14008320 : address 0xb400006e6df9ba00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_gate:weight : 14008320 : address 0xb400006e6ecf7a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_down:weight : 14008320 : address 0xb400006e6fa53a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention_norm:gamma : 10240 : address 0xb400006e707afa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wq:weight : 5898240 : address 0xb400006e707b2200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_q_norm:gamma : 512 : address 0xb400006e70d52200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wk:weight : 1474560 : address 0xb400006e70d52400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_k_norm:gamma : 512 : address 0xb400006e70eba400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wv:weight : 1474560 : address 0xb400006e70eba600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention_out:weight : 5898240 : address 0xb400006e71022600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_norm:gamma : 10240 : address 0xb400006e715c2600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_up:weight : 14008320 : address 0xb400006e715c4e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_gate:weight : 14008320 : address 0xb400006e72320e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_down:weight : 14008320 : address 0xb400006e7307ce00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention_norm:gamma : 10240 : address 0xb400006e73dd8e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wq:weight : 5898240 : address 0xb400006e73ddb600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_q_norm:gamma : 512 : address 0xb400006e7437b600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wk:weight : 1474560 : address 0xb400006e7437b800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_k_norm:gamma : 512 : address 0xb400006e744e3800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wv:weight : 1474560 : address 0xb400006e744e3a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention_out:weight : 5898240 : address 0xb400006e7464ba00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_norm:gamma : 10240 : address 0xb400006e74beba00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_up:weight : 14008320 : address 0xb400006e74bee200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_gate:weight : 14008320 : address 0xb400006e7594a200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_down:weight : 14008320 : address 0xb400006e766a6200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention_norm:gamma : 10240 : address 0xb400006e77402200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wq:weight : 5898240 : address 0xb400006e77404a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_q_norm:gamma : 512 : address 0xb400006e779a4a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wk:weight : 1474560 : address 0xb400006e779a4c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_k_norm:gamma : 512 : address 0xb400006e77b0cc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wv:weight : 1474560 : address 0xb400006e77b0ce00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention_out:weight : 5898240 : address 0xb400006e77c74e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_norm:gamma : 10240 : address 0xb400006e78214e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_up:weight : 14008320 : address 0xb400006e78217600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_gate:weight : 14008320 : address 0xb400006e78f73600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_down:weight : 14008320 : address 0xb400006e79ccf600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention_norm:gamma : 10240 : address 0xb400006e7aa2b600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wq:weight : 5898240 : address 0xb400006e7aa2de00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_q_norm:gamma : 512 : address 0xb400006e7afcde00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wk:weight : 1474560 : address 0xb400006e7afce000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_k_norm:gamma : 512 : address 0xb400006e7b136000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wv:weight : 1474560 : address 0xb400006e7b136200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention_out:weight : 5898240 : address 0xb400006e7b29e200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_norm:gamma : 10240 : address 0xb400006e7b83e200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_up:weight : 14008320 : address 0xb400006e7b840a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_gate:weight : 14008320 : address 0xb400006e7c59ca00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_down:weight : 14008320 : address 0xb400006e7d2f8a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention_norm:gamma : 10240 : address 0xb400006e7e054a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wq:weight : 5898240 : address 0xb400006e7e057200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_q_norm:gamma : 512 : address 0xb400006e7e5f7200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wk:weight : 1474560 : address 0xb400006e7e5f7400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_k_norm:gamma : 512 : address 0xb400006e7e75f400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wv:weight : 1474560 : address 0xb400006e7e75f600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention_out:weight : 5898240 : address 0xb400006e7e8c7600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_norm:gamma : 10240 : address 0xb400006e7ee67600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_up:weight : 14008320 : address 0xb400006e7ee69e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_gate:weight : 14008320 : address 0xb400006e7fbc5e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_down:weight : 14008320 : address 0xb400006e80921e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention_norm:gamma : 10240 : address 0xb400006e8167de00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wq:weight : 5898240 : address 0xb400006e81680600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_q_norm:gamma : 512 : address 0xb400006e81c20600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wk:weight : 1474560 : address 0xb400006e81c20800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_k_norm:gamma : 512 : address 0xb400006e81d88800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wv:weight : 1474560 : address 0xb400006e81d88a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention_out:weight : 5898240 : address 0xb400006e81ef0a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_norm:gamma : 10240 : address 0xb400006e82490a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_up:weight : 14008320 : address 0xb400006e82493200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_gate:weight : 14008320 : address 0xb400006e831ef200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_down:weight : 14008320 : address 0xb400006e83f4b200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention_norm:gamma : 10240 : address 0xb400006e84ca7200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wq:weight : 5898240 : address 0xb400006e84ca9a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_q_norm:gamma : 512 : address 0xb400006e85249a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wk:weight : 1474560 : address 0xb400006e85249c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_k_norm:gamma : 512 : address 0xb400006e853b1c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wv:weight : 1474560 : address 0xb400006e853b1e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention_out:weight : 5898240 : address 0xb400006e85519e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_norm:gamma : 10240 : address 0xb400006e85ab9e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_up:weight : 14008320 : address 0xb400006e85abc600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_gate:weight : 14008320 : address 0xb400006e86818600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_down:weight : 14008320 : address 0xb400006e87574600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention_norm:gamma : 10240 : address 0xb400006e882d0600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wq:weight : 5898240 : address 0xb400006e882d2e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_q_norm:gamma : 512 : address 0xb400006e88872e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wk:weight : 1474560 : address 0xb400006e88873000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_k_norm:gamma : 512 : address 0xb400006e889db000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wv:weight : 1474560 : address 0xb400006e889db200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention_out:weight : 5898240 : address 0xb400006e88b43200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_norm:gamma : 10240 : address 0xb400006e890e3200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_up:weight : 14008320 : address 0xb400006e890e5a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_gate:weight : 14008320 : address 0xb400006e89e41a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_down:weight : 14008320 : address 0xb400006e8ab9da00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention_norm:gamma : 10240 : address 0xb400006e4ea10a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wq:weight : 5898240 : address 0xb400006e9e942800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_q_norm:gamma : 512 : address 0xb400006e9eee2800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wk:weight : 1474560 : address 0xb400006e9eee2a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_k_norm:gamma : 512 : address 0xb400006e9f04aa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wv:weight : 1474560 : address 0xb400006e9f04ac00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention_out:weight : 5898240 : address 0xb400006e9f1b2c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_norm:gamma : 10240 : address 0xb400006e9f752c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_up:weight : 14008320 : address 0xb400006e9f755400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_gate:weight : 14008320 : address 0xb400006ea04b1400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_down:weight : 14008320 : address 0xb400006ea120d400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention_norm:gamma : 10240 : address 0xb400006ea1f69400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wq:weight : 5898240 : address 0xb400006ea1f6bc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_q_norm:gamma : 512 : address 0xb400006ea250bc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wk:weight : 1474560 : address 0xb400006ea250be00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_k_norm:gamma : 512 : address 0xb400006ea2673e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wv:weight : 1474560 : address 0xb400006ea2674000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention_out:weight : 5898240 : address 0xb400006ea27dc000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_norm:gamma : 10240 : address 0xb400006ea2d7c000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_up:weight : 14008320 : address 0xb400006ea2d7e800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_gate:weight : 14008320 : address 0xb400006ea3ada800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_down:weight : 14008320 : address 0xb400006ea4836800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention_norm:gamma : 10240 : address 0xb400006ea5592800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wq:weight : 5898240 : address 0xb400006ea5595000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_q_norm:gamma : 512 : address 0xb400006ea5b35000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wk:weight : 1474560 : address 0xb400006ea5b35200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_k_norm:gamma : 512 : address 0xb400006ea5c9d200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wv:weight : 1474560 : address 0xb400006ea5c9d400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention_out:weight : 5898240 : address 0xb400006ea5e05400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_norm:gamma : 10240 : address 0xb400006ea63a5400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_up:weight : 14008320 : address 0xb400006ea63a7c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_gate:weight : 14008320 : address 0xb400006ea7103c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_down:weight : 14008320 : address 0xb400006ea7e5fc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention_norm:gamma : 10240 : address 0xb400006ea8bbbc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wq:weight : 5898240 : address 0xb400006ea8bbe400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_q_norm:gamma : 512 : address 0xb400006ea915e400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wk:weight : 1474560 : address 0xb400006ea915e600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_k_norm:gamma : 512 : address 0xb400006ea92c6600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wv:weight : 1474560 : address 0xb400006ea92c6800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention_out:weight : 5898240 : address 0xb400006ea942e800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_norm:gamma : 10240 : address 0xb400006ea99ce800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_up:weight : 14008320 : address 0xb400006ea99d1000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_gate:weight : 14008320 : address 0xb400006eaa72d000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_down:weight : 14008320 : address 0xb400006eab489000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention_norm:gamma : 10240 : address 0xb400006eac1e5000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wq:weight : 5898240 : address 0xb400006eac1e7800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_q_norm:gamma : 512 : address 0xb400006eac787800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wk:weight : 1474560 : address 0xb400006eac787a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_k_norm:gamma : 512 : address 0xb400006eac8efa00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wv:weight : 1474560 : address 0xb400006eac8efc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention_out:weight : 5898240 : address 0xb400006eaca57c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_norm:gamma : 10240 : address 0xb400006eacff7c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_up:weight : 14008320 : address 0xb400006eacffa400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_gate:weight : 14008320 : address 0xb400006eadd56400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_down:weight : 14008320 : address 0xb400006eaeab2400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention_norm:gamma : 10240 : address 0xb400006eaf80e400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wq:weight : 5898240 : address 0xb400006eaf810c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_q_norm:gamma : 512 : address 0xb400006eafdb0c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wk:weight : 1474560 : address 0xb400006eafdb0e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_k_norm:gamma : 512 : address 0xb400006eaff18e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wv:weight : 1474560 : address 0xb400006eaff19000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention_out:weight : 5898240 : address 0xb400006eb0081000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_norm:gamma : 10240 : address 0xb400006eb0621000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_up:weight : 14008320 : address 0xb400006eb0623800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_gate:weight : 14008320 : address 0xb400006eb137f800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_down:weight : 14008320 : address 0xb400006eb20db800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention_norm:gamma : 10240 : address 0xb400006eb2e37800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wq:weight : 5898240 : address 0xb400006eb2e3a000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_q_norm:gamma : 512 : address 0xb400006eb33da000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wk:weight : 1474560 : address 0xb400006eb33da200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_k_norm:gamma : 512 : address 0xb400006eb3542200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wv:weight : 1474560 : address 0xb400006eb3542400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention_out:weight : 5898240 : address 0xb400006eb36aa400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_norm:gamma : 10240 : address 0xb400006eb3c4a400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_up:weight : 14008320 : address 0xb400006eb3c4cc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_gate:weight : 14008320 : address 0xb400006eb49a8c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_down:weight : 14008320 : address 0xb400006eb5704c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention_norm:gamma : 10240 : address 0xb400006eb6460c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wq:weight : 5898240 : address 0xb400006eb6463400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_q_norm:gamma : 512 : address 0xb400006eb6a03400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wk:weight : 1474560 : address 0xb400006eb6a03600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_k_norm:gamma : 512 : address 0xb400006eb6b6b600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wv:weight : 1474560 : address 0xb400006eb6b6b800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention_out:weight : 5898240 : address 0xb400006eb6cd3800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_norm:gamma : 10240 : address 0xb400006eb7273800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_up:weight : 14008320 : address 0xb400006eb7276000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_gate:weight : 14008320 : address 0xb400006eb7fd2000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_down:weight : 14008320 : address 0xb400006eb8d2e000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention_norm:gamma : 10240 : address 0xb400006eb9a8a000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wq:weight : 5898240 : address 0xb400006eb9a8c800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_q_norm:gamma : 512 : address 0xb400006eba02c800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wk:weight : 1474560 : address 0xb400006eba02ca00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_k_norm:gamma : 512 : address 0xb400006eba194a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wv:weight : 1474560 : address 0xb400006eba194c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention_out:weight : 5898240 : address 0xb400006eba2fcc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_norm:gamma : 10240 : address 0xb400006eba89cc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_up:weight : 14008320 : address 0xb400006eba89f400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_gate:weight : 14008320 : address 0xb400006ebb5fb400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_down:weight : 14008320 : address 0xb400006ebc357400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention_norm:gamma : 10240 : address 0xb400006ebd0b3400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wq:weight : 5898240 : address 0xb400006ebd0b5c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_q_norm:gamma : 512 : address 0xb400006ebd655c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wk:weight : 1474560 : address 0xb400006ebd655e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_k_norm:gamma : 512 : address 0xb400006ebd7bde00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wv:weight : 1474560 : address 0xb400006ebd7be000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention_out:weight : 5898240 : address 0xb400006ebd926000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_norm:gamma : 10240 : address 0xb400006ebdec6000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_up:weight : 14008320 : address 0xb400006ebdec8800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_gate:weight : 14008320 : address 0xb400006ebec24800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_down:weight : 14008320 : address 0xb400006ebf980800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention_norm:gamma : 10240 : address 0xb400006ec06dc800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wq:weight : 5898240 : address 0xb400006ec06df000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_q_norm:gamma : 512 : address 0xb400006ec0c7f000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wk:weight : 1474560 : address 0xb400006ec0c7f200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_k_norm:gamma : 512 : address 0xb400006ec0de7200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wv:weight : 1474560 : address 0xb400006ec0de7400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention_out:weight : 5898240 : address 0xb400006ec0f4f400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_norm:gamma : 10240 : address 0xb400006ec14ef400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_up:weight : 14008320 : address 0xb400006ec14f1c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_gate:weight : 14008320 : address 0xb400006ec224dc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_down:weight : 14008320 : address 0xb400006ec2fa9c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention_norm:gamma : 10240 : address 0xb400006ec3d05c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wq:weight : 5898240 : address 0xb400006ec3d08400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_q_norm:gamma : 512 : address 0xb400006ec42a8400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wk:weight : 1474560 : address 0xb400006ec42a8600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_k_norm:gamma : 512 : address 0xb400006ec4410600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wv:weight : 1474560 : address 0xb400006ec4410800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention_out:weight : 5898240 : address 0xb400006ec4578800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_norm:gamma : 10240 : address 0xb400006ec4b18800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_up:weight : 14008320 : address 0xb400006ec4b1b000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_gate:weight : 14008320 : address 0xb400006ec5877000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_down:weight : 14008320 : address 0xb400006ec65d3000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention_norm:gamma : 10240 : address 0xb400006ec732f000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wq:weight : 5898240 : address 0xb400006ec7331800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_q_norm:gamma : 512 : address 0xb400006ec78d1800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wk:weight : 1474560 : address 0xb400006ec78d1a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_k_norm:gamma : 512 : address 0xb400006ec7a39a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wv:weight : 1474560 : address 0xb400006ec7a39c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention_out:weight : 5898240 : address 0xb400006ec7ba1c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_norm:gamma : 10240 : address 0xb400006ec8141c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_up:weight : 14008320 : address 0xb400006ec8144400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_gate:weight : 14008320 : address 0xb400006ec8ea0400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_down:weight : 14008320 : address 0xb400006ec9bfc400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention_norm:gamma : 10240 : address 0xb400006eca958400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wq:weight : 5898240 : address 0xb400006eca95ac00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_q_norm:gamma : 512 : address 0xb400006ecaefac00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wk:weight : 1474560 : address 0xb400006ecaefae00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_k_norm:gamma : 512 : address 0xb400006ecb062e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wv:weight : 1474560 : address 0xb400006ecb063000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention_out:weight : 5898240 : address 0xb400006ecb1cb000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_norm:gamma : 10240 : address 0xb400006ecb76b000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_up:weight : 14008320 : address 0xb400006ecb76d800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_gate:weight : 14008320 : address 0xb400006ecc4c9800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_down:weight : 14008320 : address 0xb400006ecd225800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention_norm:gamma : 10240 : address 0xb400006ecdf81800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wq:weight : 5898240 : address 0xb400006ecdf84000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_q_norm:gamma : 512 : address 0xb400006ece524000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wk:weight : 1474560 : address 0xb400006ece524200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_k_norm:gamma : 512 : address 0xb400006ece68c200
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wv:weight : 1474560 : address 0xb400006ece68c400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention_out:weight : 5898240 : address 0xb400006ece7f4400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_norm:gamma : 10240 : address 0xb400006eced94400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_up:weight : 14008320 : address 0xb400006eced96c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_gate:weight : 14008320 : address 0xb400006ecfaf2c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_down:weight : 14008320 : address 0xb400006ed084ec00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention_norm:gamma : 10240 : address 0xb400006ed15aac00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wq:weight : 5898240 : address 0xb400006ed15ad400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_q_norm:gamma : 512 : address 0xb400006ed1b4d400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wk:weight : 1474560 : address 0xb400006ed1b4d600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_k_norm:gamma : 512 : address 0xb400006ed1cb5600
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wv:weight : 1474560 : address 0xb400006ed1cb5800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention_out:weight : 5898240 : address 0xb400006ed1e1d800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_norm:gamma : 10240 : address 0xb400006ed23bd800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_up:weight : 14008320 : address 0xb400006ed23c0000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_gate:weight : 14008320 : address 0xb400006ed311c000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_down:weight : 14008320 : address 0xb400006ed3e78000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention_norm:gamma : 10240 : address 0xb400006ed4bd4000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wq:weight : 5898240 : address 0xb400006ed4bd6800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_q_norm:gamma : 512 : address 0xb400006ed5176800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wk:weight : 1474560 : address 0xb400006ed5176a00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_k_norm:gamma : 512 : address 0xb400006ed52dea00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wv:weight : 1474560 : address 0xb400006ed52dec00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention_out:weight : 5898240 : address 0xb400006ed5446c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_norm:gamma : 10240 : address 0xb400006ed59e6c00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_up:weight : 14008320 : address 0xb400006ed59e9400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_gate:weight : 14008320 : address 0xb400006ed6745400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_down:weight : 14008320 : address 0xb400006ed74a1400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention_norm:gamma : 10240 : address 0xb400006ed81fd400
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wq:weight : 5898240 : address 0xb400006ed81ffc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_q_norm:gamma : 512 : address 0xb400006ed879fc00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wk:weight : 1474560 : address 0xb400006ed879fe00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_k_norm:gamma : 512 : address 0xb400006ed8907e00
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wv:weight : 1474560 : address 0xb400006ed8908000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention_out:weight : 5898240 : address 0xb400006ed8a70000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_norm:gamma : 10240 : address 0xb400006ed9010000
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_up:weight : 14008320 : address 0xb400006ed9012800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_gate:weight : 14008320 : address 0xb400006ed9d6e800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_down:weight : 14008320 : address 0xb400006edaaca800
+03-15 02:12:44.781 29947 29947 I nntrainer: Memory Alloc Details (Tensor): output_norm:gamma : 10240 : address 0xb400006edb826800
+03-15 02:12:46.188 29947 29947 I nntrainer: read modelfile: /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+03-15 02:12:46.193 29947 29947 I nntrainer: MemoryPool::allocate size: 3038773248
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): embedding0:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention:cache_key : 21233664 : address 0xb400006d9994c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention:cache_value : 21233664 : address 0xb400006d9ad8c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer0_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention:cache_key : 21233664 : address 0xb400006daf18c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention:cache_value : 21233664 : address 0xb400006db05cc000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer1_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention:cache_key : 21233664 : address 0xb400006dc358c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention:cache_value : 21233664 : address 0xb400006dc49cc000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer2_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention:cache_key : 21233664 : address 0xb400006dd8dcc000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention:cache_value : 21233664 : address 0xb400006dda20c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer3_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention:cache_key : 21233664 : address 0xb400006d8f74c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention:cache_value : 21233664 : address 0xb400006de950c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer4_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.193 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention:cache_key : 21233664 : address 0xb400006de80cc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention:cache_value : 21233664 : address 0xb400006de6c8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer5_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention:cache_key : 21233664 : address 0xb400006de584c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention:cache_value : 21233664 : address 0xb400006de440c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer6_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention:cache_key : 21233664 : address 0xb400006de2fcc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention:cache_value : 21233664 : address 0xb400006de1b8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer7_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention:cache_key : 21233664 : address 0xb400006de074c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention:cache_value : 21233664 : address 0xb400006ddf30c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer8_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention:cache_key : 21233664 : address 0xb400006dddecc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention:cache_value : 21233664 : address 0xb400006ddca8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer9_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention:cache_key : 21233664 : address 0xb400006dd654c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention:cache_value : 21233664 : address 0xb400006dd510c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer10_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention:cache_key : 21233664 : address 0xb400006dd3ccc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention:cache_value : 21233664 : address 0xb400006dd288c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer11_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention:cache_key : 21233664 : address 0xb400006dd144c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention:cache_value : 21233664 : address 0xb400006dd000c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer12_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention:cache_key : 21233664 : address 0xb400006dcebcc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention:cache_value : 21233664 : address 0xb400006dcd78c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer13_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention:cache_key : 21233664 : address 0xb400006dcc34c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention:cache_value : 21233664 : address 0xb400006dcaf0c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer14_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention:cache_key : 21233664 : address 0xb400006dc9acc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention:cache_value : 21233664 : address 0xb400006dc868c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer15_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention:cache_key : 21233664 : address 0xb400006dc724c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention:cache_value : 21233664 : address 0xb400006dc5e0c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer16_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention:cache_key : 21233664 : address 0xb400006dc214c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention:cache_value : 21233664 : address 0xb400006dc0d0c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer17_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention:cache_key : 21233664 : address 0xb400006db7f4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention:cache_value : 21233664 : address 0xb400006db6b0c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer18_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention:cache_key : 21233664 : address 0xb400006d9fe8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention:cache_value : 21233664 : address 0xb400006d9ea4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer19_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention:cache_key : 21233664 : address 0xb400006dd798c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention:cache_value : 21233664 : address 0xb400006ddb64c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer20_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention:cache_key : 21233664 : address 0xb400006d90b8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention:cache_value : 21233664 : address 0xb400006d91fcc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer21_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention:cache_key : 21233664 : address 0xb400006d9340c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention:cache_value : 21233664 : address 0xb400006d9484c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer22_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention:cache_key : 21233664 : address 0xb400006d95c8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention:cache_value : 21233664 : address 0xb400006d970cc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer23_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention:cache_key : 21233664 : address 0xb400006d9850c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention:cache_value : 21233664 : address 0xb400006d9c1cc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer24_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention:cache_key : 21233664 : address 0xb400006d9d60c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention:cache_value : 21233664 : address 0xb400006da12cc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer25_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention:cache_key : 21233664 : address 0xb400006da270c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention:cache_value : 21233664 : address 0xb400006da3b4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer26_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention:cache_key : 21233664 : address 0xb400006da4f8c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention:cache_value : 21233664 : address 0xb400006da63cc000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer27_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention:cache_key : 21233664 : address 0xb400006da780c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention:cache_value : 21233664 : address 0xb400006da8c4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer28_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.194 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention:cache_key : 21233664 : address 0xb400006daa08c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention:cache_value : 21233664 : address 0xb400006dab4cc000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer29_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention:cache_key : 21233664 : address 0xb400006dac90c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention:cache_value : 21233664 : address 0xb400006dadd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer30_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention:cache_key : 21233664 : address 0xb400006db1a0c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention:cache_value : 21233664 : address 0xb400006db2e4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer31_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention:cache_key : 21233664 : address 0xb400006db428c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention:cache_value : 21233664 : address 0xb400006db56cc000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer32_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention:cache_key : 21233664 : address 0xb400006db938c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention:cache_value : 21233664 : address 0xb400006dba7cc000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer33_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention:cache_key : 21233664 : address 0xb400006dbbc0c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention:cache_value : 21233664 : address 0xb400006dbd04c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer34_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wq:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_q_norm:out0 : 167772160 : address 0xb400006e0114c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wk:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_k_norm:out0 : 41943040 : address 0xb400006e0d94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_wv:out0 : 41943040 : address 0xb400006e0b14c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention:out0 : 167772160 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention:cache_key : 21233664 : address 0xb400006dbe48c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention:cache_value : 21233664 : address 0xb400006dbf8cc000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_attention_out:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_decoder_add:out0 : 104857600 : address 0xb400006df714c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_up:out0 : 398458880 : address 0xb400006dfd54c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_gate:out0 : 398458880 : address 0xb400006e1514c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_swiglu:out0 : 398458880 : address 0xb400006e2cd4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_ffn_down:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): layer35_decoder_output:out0 : 104857600 : address 0xb400006dea94c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): output_norm:out0 : 104857600 : address 0xb400006df0d4c000
+03-15 02:12:46.195 29947 29947 I nntrainer: Memory Alloc Details (Tensor): output_of_causallm:out0 : 607744 : address 0xb400006df714c000
+03-15 02:12:58.379 29947 29947 I nntrainer: opencl_command_queue_manager: Released command queue
+03-15 02:12:58.400 29947 29947 I nntrainer: opencl_command_queue_manager: Destroyed command queue
