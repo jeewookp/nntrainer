@@ -1,95 +1,45 @@
 실행 결과 아래와 같아
 
 
-    omp-num-threads          : 1
-    openblas-num-threads     : 1
-    platform                 : android
-    thread-backend           : omp
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (44479504 bytes in 1.308s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.5 MB/s (44003720 bytes in 1.292s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.3 MB/s (3960088 bytes in 0.121s)
+3 files pushed. 32.4 MB/s (92443312 bytes in 2.724s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.2 MB/s (10999080 bytes in 0.326s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 13.3 MB/s (129336 bytes in 0.009s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 23.7 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.1 MB/s (1822720 bytes in 0.056s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 
-Found ninja-1.10.1 at /usr/bin/ninja
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
-[1/2] Generating jni/ndk-build with a custom command
-FAILED: jni/arm64-v8a 
-/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
-[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
-#pragma omp parallel for num_thread(n_threads)
-                         ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
-[arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/lib/arm64-v8a/
-[arm64-v8a] Install /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so:
-[arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer/builddir/opencl/lib/arm64-v8a/
-[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
-[arm64-v8a] Compile++      : clblast <= common.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
-[arm64-v8a] Compile++      : clblast <= api_common.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
-[arm64-v8a] Compile++      : clblast <= routine.cpp
-[arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:743:5: error: no matching function for call to 'gemm_q4_K'
-    gemm_q4_K(M, N, K, data, K, (void *)mdata, N, rdata, N);
-    ^~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/arm_compute_backend.h:1215:6: note: candidate function not viable: no known conversion from '__fp16 *' to 'const float *' for 4th argument
-void gemm_q4_K(const unsigned int M, const unsigned int N, const unsigned int K,
-     ^
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/arm_compute_backend.h:1218:6: note: candidate function not viable: no known conversion from 'unsigned int' to 'std::vector<unsigned int>' for 2nd argument
-void gemm_q4_K(const unsigned int M, std::vector<unsigned int> Ns,
-     ^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
-[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
-[arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
-[arm64-v8a] Compile++      : clblast <= database.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= engine.cpp
-[arm64-v8a] Compile++      : nntrainer <= manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
-[arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
-[arm64-v8a] Compile++      : clblast <= clblast.cpp
-[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
-[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
-[arm64-v8a] Compile++      : clblast <= tuning.cpp
-[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
-ninja: build stopped: subcommand failed.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
+[!] FATAL ERROR: Embedding layer takes only FP32 input data
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+--- Generation snippet (post-assistant tag) ---
+
+
+--- Perf summary ---
+(no perf lines)
+
+--- dotQInteger profile breakdown ---
+(no PROFILE lines found)
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
