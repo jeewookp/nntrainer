@@ -121,19 +121,23 @@ ABSL_FLAG(bool, profile, false,
           "shape (e.g. `convolution_int8(conv_wave_memory)` vs the "
           "fp32 fallback). Adds noticeable per-Run overhead so use "
           "for diagnostics, not steady-state numbers.");
-ABSL_FLAG(std::string, dtype, "int8_chain",
+ABSL_FLAG(std::string, dtype, "int8_per_tensor",
           "Tensor element type / op layout for the synthesized model. "
           "Valid values:\n"
-          "  'int8_chain' (default): 4-op subgraph QUANTIZE -> FC1(int8) "
-          "-> FC2(int8) -> DEQUANTIZE with FLOAT32 signature I/O. The "
-          "intermediate INT8 tensor between FC1 and FC2 is read by FC2 "
-          "and written by FC1, so the delegate optimizer cannot fold "
-          "it into fp16 -- this is the only setup so far where the "
-          "delegate is forced to commit to int8 GEMM and (we hope) "
-          "compiles the chain as `convolution_int8(conv_wave_memory)` "
-          "matching prefill. The chain runs 2 FCs per Run so per-Run "
-          "samples are divided by 2 before reporting; the CSV is "
-          "per-FC, comparable to single-op modes and to prefill.\n"
+          "  'int8_per_tensor' (default): single FC op with INT8 "
+          "weights using PER-TENSOR symmetric quant (single scale + "
+          "single zero_point), FLOAT32 bias, FLOAT32 signature I/O. "
+          "Matches the open-source TFLite GPU CL delegate's int8 FC "
+          "trigger (lstm_parser.cc:62: `weights_tensor->type == "
+          "kTfLiteInt8 && quant_params->scale->size == 1`). All "
+          "previous int8 attempts in this builder used per-CHANNEL "
+          "weight quant (n scales) which the trigger explicitly "
+          "rejects. Expected to compile as "
+          "`convolution_int8(conv_wave_memory)` matching prefill.\n"
+          "  'int8_chain': 4-op subgraph QUANTIZE -> FC1(int8) -> "
+          "FC2(int8) -> DEQUANTIZE. Failed experiment: chains the "
+          "live int8 intermediate but the delegate still picks "
+          "fp16 conv1x1.\n"
           "  'fp32_conv2d': single CONV_2D op with 1x1 filter, NHWC "
           "layout (input [1,M,1,K], filter [N,1,1,K]), FLOAT32 "
           "throughout. Profile-confirmed to land on the same "
@@ -542,7 +546,9 @@ absl::Status MainBody() {
         "--warmup must be >= 0 and --iters must be > 0");
   }
   litert::lm::MatmulDtype dtype;
-  if (dtype_str == "int8") {
+  if (dtype_str == "int8_per_tensor") {
+    dtype = litert::lm::MatmulDtype::kInt8PerTensor;
+  } else if (dtype_str == "int8") {
     dtype = litert::lm::MatmulDtype::kInt8;
   } else if (dtype_str == "int8_chain") {
     dtype = litert::lm::MatmulDtype::kInt8Chain;
@@ -556,8 +562,8 @@ absl::Status MainBody() {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
     return absl::InvalidArgumentError(absl::StrCat(
-        "--dtype must be int8, int8_chain, int8_hybrid, fp32, fp32_conv2d, "
-        "or fp16, got: ",
+        "--dtype must be int8_per_tensor, int8, int8_chain, int8_hybrid, "
+        "fp32, fp32_conv2d, or fp16, got: ",
         dtype_str));
   }
   // int8_chain mode runs two FCs per Run, so divide the per-Run

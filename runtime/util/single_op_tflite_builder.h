@@ -79,6 +79,25 @@ namespace litert::lm {
 //   and any path that falls back to CPU rejects the model. Kept for
 //   forward compatibility.
 //
+// kInt8PerTensor:
+//   Single FULLY_CONNECTED op with INT8 weights using PER-TENSOR
+//   symmetric quantization (one scale + one zero_point for the whole
+//   weight tensor, NOT one-per-output-channel), FLOAT32 bias, and
+//   FLOAT32 signature input/output. This matches the schema the open
+//   source TFLite GPU CL delegate's lstm_parser.cc:62 detection
+//   uses to construct a `FullyConnectedInt8Attributes` and emit the
+//   `OperationType::FULLY_CONNECTED_INT8` node:
+//       if (weights_tensor->type == kTfLiteInt8 &&
+//           quant_params->scale->size == 1) { ... }
+//   The closed-source ml_drift CL accelerator (libLiteRtGpuAccelerator.so)
+//   that ships with the prebuilts is a fork of the open source TFLite
+//   GPU code and almost certainly uses the same trigger condition,
+//   which is the only path that ends up at the
+//   `convolution_int8(conv_wave_memory)` kernel name we see in
+//   Gemma4 prefill's profile output. Earlier int8 attempts in this
+//   builder all used PER-CHANNEL quant (n scales, one per output
+//   channel) which the trigger explicitly rejects.
+//
 // kInt8Chain:
 //   4-op subgraph: QUANTIZE -> FC1(int8) -> FC2(int8) -> DEQUANTIZE.
 //   Two int8 FullyConnected ops in series share an int8 intermediate
@@ -108,6 +127,7 @@ enum class MatmulDtype {
   kFp16,
   kFp32Conv2d,
   kInt8Chain,
+  kInt8PerTensor,
 };
 
 // Pure-data result of BuildSingleFullyConnectedTfliteModel. The caller

@@ -68,31 +68,37 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
-# int8_chain (default) = 4-op subgraph
-#   QUANTIZE -> FC1(int8) -> FC2(int8) -> DEQUANTIZE
-# with FLOAT32 signature I/O. The intermediate INT8 tensor between
-# FC1 and FC2 is read by FC2 and written by FC1, so the delegate
-# optimizer cannot fold it -- this is the only configuration so far
-# where the delegate is forced to commit to int8 GEMM and (we hope)
-# compiles the chain as `convolution_int8(conv_wave_memory)` matching
-# prefill's int8 row. The chain runs 2 FCs per Run so the benchmark
-# divides per-Run samples by 2 before reporting -- the CSV stays
-# per-FC, comparable to single-op modes and to prefill numbers.
+# int8_per_tensor (default) = single FULLY_CONNECTED op with INT8
+# weights using PER-TENSOR symmetric quant (single scale + single
+# zero_point), FLOAT32 bias, FLOAT32 signature I/O.
+#
+# Why per-tensor and not per-channel: from origin/litert's
+# `tflite/delegates/gpu/common/lstm_parser.cc:62`, the open source
+# TFLite GPU CL delegate only constructs a `FullyConnectedInt8Attributes`
+# (which is what triggers the int8 FC kernel selection in
+# `operation_selector.cc::FULLY_CONNECTED_INT8`) when:
+#
+#     weights_tensor->type == kTfLiteInt8 &&
+#     quant_params->scale->size == 1
+#
+# The closed-source ml_drift CL accelerator (libLiteRtGpuAccelerator.so)
+# is a fork of this code and almost certainly uses the same trigger.
+# All earlier int8 attempts in this builder used per-CHANNEL quant
+# (n scales) which the trigger explicitly rejects -- that's why the
+# kernel name stayed `convolution1x1(conv_wave_memory)` (fp16 path)
+# instead of `convolution_int8(conv_wave_memory)` (the prefill match).
 #
 # Other valid values:
-#   fp32_conv2d : single CONV_2D op with 1x1 filter, NHWC layout,
-#                 FLOAT32 throughout. Profile-confirmed to land on
-#                 `convolution1x1(conv_wave_memory)` (same entry
-#                 point as the FC modes -- the `1x1` suffix turned
-#                 out to be the filter size, not an FC rewrite tag).
-#   int8        : single-op wrapped int8 FC. Delegate fuses
-#                 QUANTIZE+FC+DEQUANTIZE but compiles the conv as
-#                 fp16 because no live int8 tensor exists.
-#   int8_hybrid : int8 weights + fp32 acts. Single FC. Delegate
-#                 accepts but doesn't lower to int8.
+#   int8_chain  : 2-FC int8 chain (failed experiment).
+#   fp32_conv2d : single CONV_2D 1x1 op, fp32 (failed -- same kernel
+#                 entry point as FC).
+#   int8        : 3-op QUANTIZE -> FC int8 -> DEQUANTIZE wrapper
+#                 with per-channel quant (failed).
+#   int8_hybrid : single FC op, per-channel int8 weights + fp32 acts
+#                 + asymmetric_quantize_inputs=true (failed).
 #   fp32        : single FC op, FLOAT32 throughout. Baseline.
 #   fp16        : broken (CPU FC reference kernel asserts fp32).
-MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_chain}"
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_per_tensor}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"

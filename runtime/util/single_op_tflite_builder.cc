@@ -184,7 +184,21 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   size_t bias_elem_bytes = 0;
   bool asymmetric_quantize_inputs = false;
   bool weights_are_per_channel_quant = false;
+  bool weights_are_per_tensor_quant = false;
   switch (dtype) {
+    case MatmulDtype::kInt8PerTensor:
+      // Matches lstm_parser.cc:62 trigger: INT8 weights + per-tensor
+      // (scale->size == 1) + fp32 bias. The CL delegate's int8 FC
+      // selector promotes this to FullyConnectedInt8Attributes and
+      // dispatches the int8 GEMM kernel.
+      act_tflite_dtype = tflite::TensorType_FLOAT32;
+      weight_tflite_dtype = tflite::TensorType_INT8;
+      bias_tflite_dtype = tflite::TensorType_FLOAT32;
+      weight_elem_bytes = sizeof(int8_t);
+      bias_elem_bytes = sizeof(float);
+      asymmetric_quantize_inputs = false;
+      weights_are_per_tensor_quant = true;
+      break;
     case MatmulDtype::kInt8WeightFp32Act:
       act_tflite_dtype = tflite::TensorType_FLOAT32;
       weight_tflite_dtype = tflite::TensorType_INT8;
@@ -281,14 +295,21 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       buffer_empty, buffer_weights, buffer_bias};
   auto buffers_fb = fbb.CreateVector(buffers_vec);
 
-  // ---- 1b. Build quantization params for the int8 hybrid path ----
+  // ---- 1b. Build quantization params for the int8 hybrid paths ----
   //
   // Only the weights tensor gets quant params in this path; the
   // input/output/bias remain plain fp32. The fully-int8 path
   // (kInt8) lives in BuildWrappedInt8Fc and builds its own params.
+  //
+  // kInt8WeightFp32Act -> per-channel weight quant
+  // kInt8PerTensor     -> single per-tensor weight scale (the trigger
+  //                       condition the CL delegate's int8 FC parser
+  //                       requires; see lstm_parser.cc:62)
   flatbuffers::Offset<tflite::QuantizationParameters> weight_quant_params = 0;
   if (weights_are_per_channel_quant) {
     weight_quant_params = BuildPerChannelSymQuant(fbb, n, kWeightScale);
+  } else if (weights_are_per_tensor_quant) {
+    weight_quant_params = BuildPerTensorSymQuant(fbb, kWeightScale);
   }
 
   // ---- 2. Build the tensors ----
