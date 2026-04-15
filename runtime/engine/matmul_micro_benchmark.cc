@@ -108,6 +108,19 @@ ABSL_FLAG(int, max_shapes, 0,
 
 namespace {
 
+// In recent LiteRT revisions `litert::CompiledModel::Create` is a
+// protected static factory: only subclasses can call it. The same
+// pattern that runtime/executor/litert/kv_cache_test.cc uses -- derive
+// a trivial subclass and re-export Create via a using-declaration --
+// lets us call it from free functions here without patching LiteRT.
+// The resulting object is still a litert::CompiledModel so it can be
+// moved back into the base type after construction.
+class CompiledModelAccess : public litert::CompiledModel {
+ public:
+  using litert::CompiledModel::CompiledModel;
+  using litert::CompiledModel::Create;
+};
+
 struct Shape {
   int64_t m = 0;
   int64_t n = 0;
@@ -277,7 +290,7 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   }
 
   auto compiled_model_exp =
-      litert::CompiledModel::Create(env, model.Get(), options);
+      CompiledModelAccess::Create(env, model.Get(), options);
   if (!compiled_model_exp.HasValue()) {
     return ExpectedError(
         compiled_model_exp,
