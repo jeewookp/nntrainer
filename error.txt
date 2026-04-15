@@ -1,20 +1,18 @@
 실행결과 아래와 같아
-https://ai.google.dev/edge/litert-lm/overview?hl=ko에 나오는 android gpu에서 3808 prefill tps 재현하고 싶어
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 3.65 KiB | 1.21 MiB/s, done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 4.08 KiB | 1.02 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   ee8589d8..4ae04430  litert_lm  -> origin/litert_lm
-Updating ee8589d8..4ae04430
+   4e21f41a..0417c063  litert_lm  -> origin/litert_lm
+Updating 4e21f41a..0417c063
 Fast-forward
- temp_litert.sh | 100 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-----------------
- 1 file changed, 83 insertions(+), 17 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ^C
+ runtime/engine/litert_lm_main.cc | 101 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 91 insertions(+), 10 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
 [temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
@@ -49,13 +47,13 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/engine:litert_lm_main (33 packages loaded, 819 targets configured).
+INFO: Analyzed target //runtime/engine:litert_lm_main (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //runtime/engine:litert_lm_main up-to-date:
   bazel-bin/runtime/engine/litert_lm_main
-INFO: Elapsed time: 0.410s, Critical Path: 0.05s
-INFO: 1 process: 1 internal.
-INFO: Build completed successfully, 1 total action
+INFO: Elapsed time: 3.678s, Critical Path: 3.50s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
 [temp_litert.sh] libLiteRt.so : bazel-bin/runtime/engine/litert_lm_main.runfiles/litert/litert/c/libLiteRt.so
 
 [temp_litert.sh] adb push binary + prebuilts + model ...
@@ -65,9 +63,9 @@ INFO: Build completed successfully, 1 total action
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007303ecde00, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000763b80b1f0, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007303ecef80, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000763b80ba40, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=976, num_signatures=4
 INFO: [magic_number_utils.cc:105]   signature=decode, subgraph_index=0, num_tensors=2703, num_inputs=35, num_outputs=32, num_ops=2068
@@ -75,15 +73,15 @@ INFO: [magic_number_utils.cc:105]   signature=prefill_1024, subgraph_index=1, nu
 INFO: [magic_number_utils.cc:105]   signature=prefill_128, subgraph_index=2, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
 INFO: [magic_number_utils.cc:105]   signature=verify, subgraph_index=3, num_tensors=2887, num_inputs=35, num_outputs=32, num_ops=2243
 INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
-INFO: [magic_number_utils.cc:425] 439 tensors of signature decode have been updated for magic number  32003 to target number 4096
-INFO: [magic_number_utils.cc:425] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 4096
-INFO: [magic_number_utils.cc:425] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 4096
-INFO: [magic_number_utils.cc:425] 444 tensors of signature verify have been updated for magic number  32003 to target number 4096
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
+INFO: [magic_number_utils.cc:425] 439 tensors of signature decode have been updated for magic number  32003 to target number 1280
+INFO: [magic_number_utils.cc:425] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 1280
+INFO: [magic_number_utils.cc:425] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 1280
+INFO: [magic_number_utils.cc:425] 444 tensors of signature verify have been updated for magic number  32003 to target number 1280
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Initialized TensorFlow Lite runtime.
-I0000 00:00:1742065931.611460   32548 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742065931.611603   32548 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742066442.651854   32585 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742066442.651962   32585 delegate_opencl.cc:553] options->kernel_batch_size: -1
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 INFO: Loaded OpenCL library with dlopen.
 INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
@@ -91,109 +89,51 @@ INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
 INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 VERBOSE: Replacing 2068 out of 2068 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742065933.427754   32548 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742065933.428027   32548 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742065933.541830   32548 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
+I0000 00:00:1742066444.576926   32585 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742066444.577041   32585 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
 VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 1.
-I0000 00:00:1742065933.625932   32548 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742065933.626011   32548 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742065933.768271   32548 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
+I0000 00:00:1742066445.948601   32585 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742066445.948699   32585 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
 VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 2.
-I0000 00:00:1742065933.814118   32548 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742065933.814221   32548 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742065933.904785   32548 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
+I0000 00:00:1742066447.356704   32585 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742066447.356765   32585 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
 VERBOSE: Replacing 2243 out of 2243 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 3.
-I0000 00:00:1742065933.930603   32548 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742065933.930690   32548 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742065934.035308   32548 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
+I0000 00:00:1742066448.157235   32585 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742066448.157318   32585 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007303eeb370, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000763b827c70, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007303f14f80, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000763b8528b0, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
 INFO: [magic_number_utils.cc:105]   signature=embedder, subgraph_index=0, num_tensors=16, num_inputs=1, num_outputs=1, num_ops=8
 INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
 VERBOSE: Replacing 2 out of 8 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
 INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
 INFO: [magic_number_utils.cc:105]   signature=eoi, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
 INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: [compiled_model.cc:1485] Tracked constant output tensor eoi_embedding with locked address
 INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
 INFO: [magic_number_utils.cc:105]   signature=eoa, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
 INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: [compiled_model.cc:1485] Tracked constant output tensor eoa_embedding with locked address
 INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
 INFO: [magic_number_utils.cc:105]   signature=per_layer_embedder, subgraph_index=0, num_tensors=83, num_inputs=1, num_outputs=1, num_ops=42
 INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
 input_prompt: What is the tallest building in the world?
-As of my last update, the title of the tallest building in the world is generally held by the **Burj Khalifa** in Dubai, United Arab Emirates.
-
-BenchmarkInfo:
-  Init Phases (7):
-    - Init Conversation: 0.04 ms
-    - Init Executor: 2771.03 ms
-    - Init LLM metadata: 0.05 ms
-    - Init Model assets: 12.39 ms
-    - Init Tokenizer: 90.85 ms
-    - Init Total: 2784.95 ms
---------------------------------------------------
-  Time to first token: 0.10 s
---------------------------------------------------
-  Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 18 tokens in 64.076198ms duration.
-      Prefill Speed: 280.92 tokens/sec.
---------------------------------------------------
-  Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 33 tokens in 1.133071249s duration.
-      Decode Speed: 29.12 tokens/sec.
---------------------------------------------------
-  TextToTokenIds Turns (Total 2 turns):
-    Turn 1: 3.438us, 1 tokens
-    Turn 2: 43.698us, 17 tokens
---------------------------------------------------
---------------------------------------------------
-
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007303f14f80, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007303eeb370, name=LiteRT GPU
-
-==========================================
- Run summary (temp_litert.sh, OP_PROFILING=false)
-==========================================
-
---- input_prompt + decode output (sanity check that text is not garbled) ---
-input_prompt: What is the tallest building in the world?
-As of my last update, the title of the tallest building in the world is generally held by the **Burj Khalifa** in Dubai, United Arab Emirates.
-
-BenchmarkInfo:
-
---- Benchmark perf summary ---
-  Time to first token: 0.10 s
-  Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 18 tokens in 64.076198ms duration.
-      Prefill Speed: 280.92 tokens/sec.
-  Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 33 tokens in 1.133071249s duration.
-      Decode Speed: 29.12 tokens/sec.
-
---- Per-op profile summary: skipped (OP_PROFILING=false) ---
-To collect the matmul per-op table, re-run with:
-    OP_PROFILING=true ./temp_litert.sh
-AFTER confirming that this run produced non-garbled decode output above.
-
-Full log: temp_litert_run.log
-
+<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>^C
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh ^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
