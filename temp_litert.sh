@@ -151,6 +151,57 @@ if [ ! -x "${BIN}" ] && [ ! -f "${BIN}" ]; then
   exit 1
 fi
 
+# Locate libLiteRt.so. With --define=litert_link_capi_so=true the C runtime
+# is in a separate shared library that bazel writes somewhere under
+# bazel-bin/external/litert/. Search for it instead of hard-coding the path,
+# because the layout depends on rules_cc / cc_shared_library implementation
+# details.
+LIBLITERT_SO=$(find -L bazel-bin -maxdepth 8 -type f -name "libLiteRt.so" \
+                  ! -path "*solib*" 2>/dev/null | head -1)
+if [ -z "${LIBLITERT_SO}" ]; then
+  # Some versions place it inside a _solib_ tree. Fall back.
+  LIBLITERT_SO=$(find -L bazel-bin -type f -name "libLiteRt.so" 2>/dev/null | head -1)
+fi
+if [ -z "${LIBLITERT_SO}" ]; then
+  echo "[temp_litert.sh] Built libLiteRt.so not found under bazel-bin/."
+  echo "    Did the build target really resolve --define=litert_link_capi_so=true?"
+  echo "    Try: ${BAZEL} build --config=android_arm64 --define=litert_link_capi_so=true \\"
+  echo "                        --define=resolve_symbols_in_exec=false \\"
+  echo "                        @litert//litert/c:libLiteRt.so"
+  exit 1
+fi
+echo "[temp_litert.sh] libLiteRt.so : ${LIBLITERT_SO}"
+
+# Inventory of GPU accelerator shlibs that need to live next to the binary on
+# the device. These are LFS-tracked prebuilts in the upstream LiteRT-LM repo;
+# this branch was imported without them. fetch_android_prebuilts.sh downloads
+# them from upstream.
+REQUIRED_PREBUILTS=(
+  libLiteRtGpuAccelerator.so
+  libLiteRtOpenClAccelerator.so
+  libLiteRtTopKOpenClSampler.so
+  libLiteRtTopKWebGpuSampler.so
+  libLiteRtWebGpuAccelerator.so
+  libGemmaModelConstraintProvider.so
+)
+PREBUILT_DIR=prebuilt/android_arm64
+MISSING_PREBUILTS=()
+for f in "${REQUIRED_PREBUILTS[@]}"; do
+  if [ ! -f "${PREBUILT_DIR}/${f}" ]; then
+    MISSING_PREBUILTS+=("${f}")
+  fi
+done
+if [ "${#MISSING_PREBUILTS[@]}" -gt 0 ]; then
+  echo "[temp_litert.sh] Missing GPU accelerator shlibs in ${PREBUILT_DIR}:"
+  for f in "${MISSING_PREBUILTS[@]}"; do
+    echo "    - ${f}"
+  done
+  echo "[temp_litert.sh] These are LFS-tracked in upstream LiteRT-LM. Fetch with:"
+  echo "    ./fetch_android_prebuilts.sh"
+  echo "[temp_litert.sh] Without them, --backend=gpu will not load any accelerator at runtime."
+  exit 1
+fi
+
 # ----------------------------------------------------------------------------
 # 3. Push binary + prebuilt GPU shlibs + model to device.
 # ----------------------------------------------------------------------------
@@ -158,10 +209,11 @@ echo ""
 echo "[temp_litert.sh] adb push binary + prebuilts + model ..."
 adb shell "mkdir -p ${DEVICE_FOLDER}"
 adb push "${BIN}" "${DEVICE_FOLDER}/litert_lm_main" >/dev/null
+adb push "${LIBLITERT_SO}" "${DEVICE_FOLDER}/libLiteRt.so" >/dev/null
 
-if ls prebuilt/android_arm64/*.so >/dev/null 2>&1; then
-  adb push prebuilt/android_arm64/*.so "${DEVICE_FOLDER}/" >/dev/null
-fi
+for f in "${REQUIRED_PREBUILTS[@]}"; do
+  adb push "${PREBUILT_DIR}/${f}" "${DEVICE_FOLDER}/${f}" >/dev/null
+done
 
 # Model push is expensive. Only push if the on-device copy is smaller
 # than the host one (assume truncated) or missing entirely.
