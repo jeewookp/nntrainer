@@ -130,9 +130,87 @@ absl::Status MainHelper(int argc, char** argv) {
   ASSIGN_OR_RETURN(
       EngineSettings engine_settings,
       EngineSettings::CreateDefault(std::move(model_assets), backend));
-  // Enable benchmark by default.
-  engine_settings.GetMutableBenchmarkParams() =
-      litert::lm::proto::BenchmarkParams();
+
+  // Wire --benchmark_prefill_tokens / --benchmark_decode_tokens into the
+  // engine's BenchmarkParams. The docs at docs/getting-started/build-and-run.md
+  // advertise these flags on litert_lm_main:
+  //
+  //     ./litert_lm_main --benchmark \
+  //         --benchmark_prefill_tokens=1024 \
+  //         --benchmark_decode_tokens=256 \
+  //         --async=false
+  //
+  // but the previous code path in this file was just:
+  //
+  //     engine_settings.GetMutableBenchmarkParams() =
+  //         litert::lm::proto::BenchmarkParams();
+  //
+  // i.e. always reset to a default-constructed BenchmarkParams and never
+  // looked at the flag values. That is why our Adreno 830 run reported
+  // "Prefill Turn 1: Processed 18 tokens" (the length of the default
+  // "What is the tallest building in the world?" prompt) instead of the
+  // 1024-token synthetic prefill the flag is supposed to trigger -- and
+  // is why our prefill TPS (280.92 t/s) comes out about 7% of Google's
+  // 3808 t/s reference number: we were measuring launch overhead on an
+  // 18-token prompt, not steady-state prefill throughput.
+  //
+  // The wiring below matches exactly what runtime/engine/litert_lm_lib.cc
+  // does at lines 596-599 for the advanced main path:
+  //
+  //     litert::lm::proto::BenchmarkParams benchmark_params;
+  //     benchmark_params.set_num_prefill_tokens(
+  //         settings.benchmark_prefill_tokens);
+  //     benchmark_params.set_num_decode_tokens(
+  //         settings.benchmark_decode_tokens);
+  //     engine_settings.GetMutableBenchmarkParams() = benchmark_params;
+  //
+  // When both flags are 0 (their defaults), this produces a BenchmarkParams
+  // with num_prefill_tokens=0 and num_decode_tokens=0, which is byte-
+  // equivalent to the old default-constructed BenchmarkParams -- so the
+  // existing "just run the prompt and print BenchmarkInfo" behavior is
+  // preserved.
+  {
+    litert::lm::proto::BenchmarkParams benchmark_params;
+    benchmark_params.set_num_prefill_tokens(
+        absl::GetFlag(FLAGS_benchmark_prefill_tokens));
+    benchmark_params.set_num_decode_tokens(
+        absl::GetFlag(FLAGS_benchmark_decode_tokens));
+    engine_settings.GetMutableBenchmarkParams() = std::move(benchmark_params);
+  }
+
+  // When --benchmark_prefill_tokens > 0, the synthetic-prefill path in
+  // session_utils.cc:60-72 resizes the input token vector to
+  // benchmark_prefill_token_count, which means (a) max_num_tokens on the
+  // main executor has to be large enough to hold prefill + decode, and
+  // (b) prefill_batch_sizes has to contain benchmark_prefill_tokens so
+  // the compiled model selects the matching prefill_<N> signature (our
+  // Gemma 4 E2B model ships prefill_128 and prefill_1024 as visible in
+  // the error.txt magic_number_utils log). Without these two adjustments
+  // the engine either errors out with "max_num_tokens too small" or
+  // silently falls back to prefill_128 and halves the reported TPS.
+  //
+  // This mirrors litert_lm_advanced_main.cc:259-267.
+  const int benchmark_prefill_tokens =
+      absl::GetFlag(FLAGS_benchmark_prefill_tokens);
+  const int benchmark_decode_tokens =
+      absl::GetFlag(FLAGS_benchmark_decode_tokens);
+  if (absl::GetFlag(FLAGS_benchmark) && benchmark_prefill_tokens > 0) {
+    auto& main_executor_settings =
+        engine_settings.GetMutableMainExecutorSettings();
+    if (main_executor_settings.GetMaxNumTokens() == 0 &&
+        benchmark_decode_tokens > 0) {
+      main_executor_settings.SetMaxNumTokens(benchmark_prefill_tokens +
+                                             benchmark_decode_tokens);
+    }
+    litert::lm::AdvancedSettings advanced_settings;
+    if (main_executor_settings.GetAdvancedSettings().has_value()) {
+      advanced_settings = *main_executor_settings.GetAdvancedSettings();
+    }
+    if (advanced_settings.prefill_batch_sizes.empty()) {
+      advanced_settings.prefill_batch_sizes.insert(benchmark_prefill_tokens);
+    }
+    main_executor_settings.SetAdvancedSettings(advanced_settings);
+  }
 
   // Propagate --enable_op_profiling into the AdvancedSettings carried by the
   // main executor. The GPU backend path in llm_executor_settings_utils.cc
@@ -141,17 +219,20 @@ absl::Status MainHelper(int argc, char** argv) {
   // infrastructure inside the compiled model. The executor then retrieves
   // the profiler via LiteRtCompiledModelGetProfiler and dumps a per-op
   // summary at exit.
+  //
+  // WARNING: on Adreno 830 OpenCL, enabling this corrupts decode output
+  // (see temp_litert.sh OP_PROFILING env var and error.txt). Until the
+  // delegate bug is understood, keep this off for correctness runs and
+  // only flip it on when you want the per-op profile table.
   if (absl::GetFlag(FLAGS_enable_op_profiling)) {
+    auto& main_executor_settings =
+        engine_settings.GetMutableMainExecutorSettings();
     litert::lm::AdvancedSettings advanced_settings;
-    if (engine_settings.GetMutableMainExecutorSettings()
-            .GetAdvancedSettings()
-            .has_value()) {
-      advanced_settings = *engine_settings.GetMutableMainExecutorSettings()
-                               .GetAdvancedSettings();
+    if (main_executor_settings.GetAdvancedSettings().has_value()) {
+      advanced_settings = *main_executor_settings.GetAdvancedSettings();
     }
     advanced_settings.enable_op_profiling = true;
-    engine_settings.GetMutableMainExecutorSettings().SetAdvancedSettings(
-        advanced_settings);
+    main_executor_settings.SetAdvancedSettings(advanced_settings);
   }
 
   // Create the engine.
