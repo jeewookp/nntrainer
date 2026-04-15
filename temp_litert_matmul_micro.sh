@@ -68,17 +68,20 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
-# int8 = fully-quantized int8 FC (input/output INT8, weights INT8
-# per-channel, bias INT32 per-channel). This is the schema that
-# triggers the LiteRT GPU CL delegate's
-# `convolution_int8(conv_wave_memory)` kernel, which is the dominant
-# matmul path in Gemma4 prefill (~80% of matmul time).
+# int8 = wrapped int8 FC. Signature I/O stays FLOAT32 but the model
+# is a 3-op subgraph QUANTIZE -> FC(int8) -> DEQUANTIZE, so the FC
+# sees INT8 input/output, INT8 weights per-channel, and INT32 bias
+# per-channel. This is the schema that triggers the LiteRT GPU CL
+# delegate's `convolution_int8(conv_wave_memory)` kernel -- the
+# dominant matmul path in Gemma4 prefill (~80% of matmul time).
+# (Direct INT8 signature I/O was tried first but hit
+# `Failed to get buffer requirements` warnings and a 2x slowdown.)
 #
 # Other valid values:
-#   int8_hybrid : int8 weights + fp32 acts (accepted but NOT lowered
-#                 to the int8 conv kernel by the delegate -- timings
-#                 stay close to fp32). Useful for understanding why
-#                 hybrid quant alone isn't enough.
+#   int8_hybrid : int8 weights + fp32 acts (single FC op, accepted
+#                 by the delegate but NOT lowered to the int8 conv
+#                 kernel -- timings stay close to fp32). Useful for
+#                 understanding why hybrid quant alone isn't enough.
 #   fp32        : everything fp32, GPU compiles fp16 internally.
 #                 Matches the smaller `convolution(conv_wave_memory)`
 #                 rows in prefill (~20%).

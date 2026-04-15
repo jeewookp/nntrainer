@@ -108,17 +108,20 @@ ABSL_FLAG(int, max_shapes, 0,
 ABSL_FLAG(std::string, dtype, "int8",
           "Tensor element type for the synthesized FC model. Valid "
           "values:\n"
-          "  'int8' (default): fully quantized int8 FC. Input and "
-          "output are INT8 (per-tensor symmetric quant), weights are "
-          "INT8 (per-channel symmetric quant), bias is INT32 "
-          "(per-channel quant with scale = input_scale * weight_scale[i]). "
-          "This is the schema the LiteRT GPU CL delegate lowers to its "
-          "`convolution_int8(conv_wave_memory)` kernel, which is what "
-          "Gemma4 prefill uses for ~80%% of its matmul time.\n"
-          "  'int8_hybrid': int8 weights + fp32 input/output + "
-          "asymmetric_quantize_inputs=true. Hybrid path, accepted by the "
-          "delegate but NOT lowered to the int8 conv_wave_memory kernel. "
-          "Kept for comparison.\n"
+          "  'int8' (default): wrapped int8 FC. Signature I/O is "
+          "FLOAT32 but the model is a 3-op subgraph QUANTIZE -> "
+          "FULLY_CONNECTED(int8) -> DEQUANTIZE so the FC sees INT8 "
+          "input + INT8 weights + INT32 bias + INT8 output. The LiteRT "
+          "GPU CL delegate fuses the 3 ops into a single dispatch and "
+          "lowers it to its `convolution_int8(conv_wave_memory)` "
+          "kernel -- the same path Gemma4 prefill uses for ~80%% of "
+          "its matmul time. We tried INT8 signature I/O directly first "
+          "but hit `Failed to get buffer requirements for tensor` "
+          "warnings inside compiled_model.cc and a 2x slowdown vs fp32.\n"
+          "  'int8_hybrid': single FC op, int8 weights + fp32 "
+          "input/output + asymmetric_quantize_inputs=true. Hybrid "
+          "path, accepted by the delegate but NOT lowered to the int8 "
+          "conv_wave_memory kernel. Kept for comparison.\n"
           "  'fp32': FLOAT32 input/weight/bias/output. GPU compiles "
           "fp16 reduction kernels internally via "
           "GpuOptions::SetPrecision(kFp16), matching the smaller "
@@ -343,21 +346,16 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   // layout, not on activation content. Zeros also avoid NaN/Inf
   // propagation in the accumulator.
   //
-  // The activation tensor type per dtype mode:
-  //   int8        : INT8 input
+  // The signature input tensor type per dtype mode:
+  //   int8        : FLOAT32 input -> wrapped 3-op subgraph
+  //                 (QUANTIZE -> int8 FC -> DEQUANTIZE) inside the
+  //                 model. Host writes float zeros.
   //   int8_hybrid : FLOAT32 input -> dynamic int8 quant inside FC
   //   fp32        : FLOAT32 input
   //   fp16        : FLOAT16 input
   {
     const size_t num_elements = static_cast<size_t>(shape.m * shape.k);
-    if (dtype == litert::lm::MatmulDtype::kInt8) {
-      std::vector<int8_t> zeros(num_elements, 0);
-      auto write_exp =
-          input_buffers[0].Write(absl::MakeConstSpan(zeros));
-      if (!write_exp.HasValue()) {
-        return ExpectedError(write_exp, "input_buffers[0].Write int8");
-      }
-    } else if (dtype == litert::lm::MatmulDtype::kFp16) {
+    if (dtype == litert::lm::MatmulDtype::kFp16) {
       std::vector<uint16_t> zeros(num_elements, 0);
       auto write_exp =
           input_buffers[0].Write(absl::MakeConstSpan(zeros));
@@ -365,7 +363,9 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
         return ExpectedError(write_exp, "input_buffers[0].Write fp16");
       }
     } else {
-      // fp32 input shared by kFp32 and kInt8WeightFp32Act.
+      // fp32 input shared by kFp32, kInt8WeightFp32Act, and kInt8
+      // (the wrapped int8 path keeps its signature input fp32 and
+      // does the int8 quant inside the subgraph).
       std::vector<float> zeros(num_elements, 0.0f);
       auto write_exp =
           input_buffers[0].Write(absl::MakeConstSpan(zeros));

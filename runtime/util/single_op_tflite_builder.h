@@ -26,28 +26,29 @@ namespace litert::lm {
 // Data type selector for the single-op tflite builder.
 //
 // kInt8 (default for matching Gemma4 prefill):
-//   Fully quantized int8 FC. Input is INT8 with per-tensor symmetric
-//   quant {scale=1/127, zero_point=0}, weights are INT8 with
-//   per-output-channel symmetric quant {scale[N]=1/127, zero_point=0,
-//   quantized_dimension=0}, bias is INT32 with per-channel quant
-//   {scale[i]=input_scale*weight_scale[i], zero_point=0,
-//   quantized_dimension=0}, output is INT8 with per-tensor symmetric
-//   quant {scale=1/127, zero_point=0}. asymmetric_quantize_inputs=false.
-//   This is the only schema that consistently triggers the LiteRT CL
-//   delegate's `convolution_int8(conv_wave_memory)` kernel, which is
-//   what Gemma4 prefill uses for ~80% of its matmul cost. The hybrid
-//   path (kInt8WeightFp32Act) below was tried first but produced
-//   timings within ~10% of the fp32 path, indicating the delegate
-//   was NOT lowering it to the int8 conv_wave_memory kernel.
+//   3-op subgraph: QUANTIZE(fp32 -> int8) -> FULLY_CONNECTED(int8) ->
+//   DEQUANTIZE(int8 -> fp32). The signature exposes FLOAT32 input/output
+//   so litert::CompiledModel can negotiate buffer requirements correctly
+//   (a previous experiment with INT8 signature I/O hit
+//   `Failed to get buffer requirements for tensor` warnings inside
+//   compiled_model.cc and ran 2x slower than fp32). The internal FC
+//   sees INT8 input + INT8 weights + INT32 bias + INT8 output, which
+//   is the schema that triggers the LiteRT GPU CL delegate's
+//   `convolution_int8(conv_wave_memory)` kernel. The delegate fuses
+//   QUANTIZE + FC + DEQUANTIZE into a single dispatch, mirroring the
+//   `convolution_int8(conv_wave_memory) -> dequantize_to_float16 ->
+//   quantize_and_dequantize` fused chain seen in Gemma4 prefill's
+//   profile output.
 //
 // kInt8WeightFp32Act:
-//   Hybrid quantization. Weights tensor is INT8 with per-output-channel
-//   quant, bias FLOAT32, input/output FLOAT32, and
-//   FullyConnectedOptions.asymmetric_quantize_inputs=true. The LiteRT
-//   GPU delegate accepts this but does NOT pick the
+//   Hybrid quantization (single FC op). Weights tensor is INT8 with
+//   per-output-channel quant, bias FLOAT32, input/output FLOAT32,
+//   and FullyConnectedOptions.asymmetric_quantize_inputs=true. The
+//   LiteRT GPU delegate accepts this but does NOT pick the
 //   convolution_int8(conv_wave_memory) kernel for it -- timings stay
-//   close to the fp32 path. Kept as a comparison point for understanding
-//   what the delegate accepts vs. what it actually optimizes.
+//   close to the fp32 path. Kept as a comparison point for
+//   understanding what the delegate accepts vs. what it actually
+//   optimizes.
 //
 // kFp32:
 //   FLOAT32 weights and activations. The GPU CL delegate compiles
