@@ -23,13 +23,29 @@
 
 namespace litert::lm {
 
-// Data type selector for the single-op tflite builder. Today only fp16 is
-// implemented because that matches the `convolution(conv_wave_memory)`
-// rows in the LiteRT GPU delegate stats for Gemma4. int8 weight + fp16
-// activation (which matches `convolution_int8(conv_wave_memory)`) is left
-// as a follow-up.
+// Data type selector for the single-op tflite builder.
+//
+// kFp32 (default for the LiteRT GPU CL delegate path on Adreno):
+//   The model's tensors are FLOAT32 and the GPU delegate is expected
+//   to compile fp16 reduction kernels internally via
+//   GpuOptions::SetPrecision(kFp16). This matches how Gemma4 prefill
+//   is set up: tflite tensors are fp32 in the schema, but the CL
+//   delegate runs fp16 kernels under the hood. The CPU FullyConnected
+//   reference kernel that LiteRT uses as a fallback also requires
+//   FLOAT32 inputs, so this is the only dtype that survives the
+//   "GPU rejects, fall back to CPU" path during interpreter prepare.
+//
+// kFp16:
+//   The model's tensors are FLOAT16. This is broken at the moment
+//   because the CPU FC reference kernel asserts
+//   `input->type != kTfLiteFloat32`, and any time the GPU CL delegate
+//   doesn't claim the FC op the interpreter falls back to the CPU
+//   FC kernel which immediately fails to prepare. Kept as an enum
+//   value for forward compatibility with future LiteRT builds that
+//   add a fp16 CPU FC kernel.
 enum class MatmulDtype {
-  kFp16,  // fp16 weights, fp16 activations
+  kFp32,
+  kFp16,
 };
 
 // Pure-data result of BuildSingleFullyConnectedTfliteModel. The caller

@@ -14,8 +14,8 @@
 
 #include "runtime/util/single_op_tflite_builder.h"
 
+#include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <vector>
 
@@ -27,48 +27,6 @@
 
 namespace litert::lm {
 
-namespace {
-
-// IEEE-754 binary16 (fp16) bit patterns for a handful of small values.
-// We only need a deterministic, bounded-magnitude pattern so every
-// benchmark run uses the same weight bytes (which keeps the GPU weight
-// cache happy) and so the numbers don't overflow / underflow during
-// the FC dispatch.
-constexpr uint16_t kFp16Pattern[] = {
-    0x0000,  // +0.0
-    0x2400,  // +0.0625 / 2 = 0.03125
-    0x2800,  // +0.0625
-    0x2c00,  // +0.09375
-    0x3000,  // +0.125
-    0x3400,  // +0.25
-    0x3800,  // +0.5
-    0x3c00,  // +1.0
-    0xa400,  // -0.03125
-    0xa800,  // -0.0625
-    0xac00,  // -0.09375
-    0xb000,  // -0.125
-    0xb400,  // -0.25
-    0xb800,  // -0.5
-    0xbc00,  // -1.0
-    0x3c00,  // +1.0 again (rotating)
-};
-constexpr int kFp16PatternLen =
-    sizeof(kFp16Pattern) / sizeof(kFp16Pattern[0]);
-
-// Fills a vector with `num_elements` fp16 bit patterns from kFp16Pattern,
-// offset by `seed` to give different tensors distinct-but-deterministic
-// values.
-std::vector<uint16_t> MakeFp16Pattern(int64_t num_elements, int seed) {
-  std::vector<uint16_t> data;
-  data.reserve(num_elements);
-  for (int64_t i = 0; i < num_elements; ++i) {
-    data.push_back(kFp16Pattern[(i + seed) % kFp16PatternLen]);
-  }
-  return data;
-}
-
-}  // namespace
-
 absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
     int64_t m, int64_t n, int64_t k, MatmulDtype dtype) {
   if (m <= 0 || n <= 0 || k <= 0) {
@@ -76,14 +34,31 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
         absl::StrCat("BuildSingleFullyConnectedTfliteModel: non-positive ",
                      "M/N/K (m=", m, " n=", n, " k=", k, ")"));
   }
-  if (dtype != MatmulDtype::kFp16) {
-    return absl::InvalidArgumentError(
-        "BuildSingleFullyConnectedTfliteModel: only fp16 dtype is "
-        "implemented");
+  // Element-byte width and tflite TensorType depend on the requested dtype.
+  // We avoid templating the rest of this function on the dtype by computing
+  // these once and using `weight_elem_bytes` as the byte stride below.
+  size_t weight_elem_bytes = 0;
+  tflite::TensorType tflite_dtype = tflite::TensorType_FLOAT32;
+  switch (dtype) {
+    case MatmulDtype::kFp32:
+      weight_elem_bytes = sizeof(float);
+      tflite_dtype = tflite::TensorType_FLOAT32;
+      break;
+    case MatmulDtype::kFp16:
+      weight_elem_bytes = sizeof(uint16_t);
+      tflite_dtype = tflite::TensorType_FLOAT16;
+      break;
+    default:
+      return absl::InvalidArgumentError(
+          "BuildSingleFullyConnectedTfliteModel: unknown dtype");
   }
+
   // Sanity cap: 1 GiB of weights is way more than any matmul in Gemma4.
+  // For fp32 this means at most ~268M weight elements per FC, which is
+  // larger than the lm_head (~49M for vocab_size=32003 x hidden=1536).
   constexpr int64_t kMaxBytes = int64_t{1} << 30;
-  const int64_t weight_bytes = n * k * static_cast<int64_t>(sizeof(uint16_t));
+  const int64_t weight_bytes =
+      n * k * static_cast<int64_t>(weight_elem_bytes);
   if (weight_bytes <= 0 || weight_bytes > kMaxBytes) {
     return absl::InvalidArgumentError(
         absl::StrCat("BuildSingleFullyConnectedTfliteModel: weight tensor ",
@@ -99,8 +74,8 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   //   buffers[0] = empty sentinel (TFLite requires buffer 0 to exist and
   //                be referenced by activation tensors that have no
   //                constant data).
-  //   buffers[1] = constant weights (fp16, n*k elements).
-  //   buffers[2] = constant bias    (fp16 zeros, n elements).
+  //   buffers[1] = constant weights (n*k elements of `tflite_dtype`).
+  //   buffers[2] = constant bias    (n elements of `tflite_dtype`, zeros).
   //
   // Note: CreateBuffer has two overloads depending on whether a data
   // vector is supplied. For activation tensors we use the no-data form
@@ -108,16 +83,19 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   // bytes through CreateVector(uint8_t*, size).
   auto buffer_empty = tflite::CreateBuffer(fbb);
 
-  const auto weights = MakeFp16Pattern(n * k, /*seed=*/1);
-  auto weights_data_vec = fbb.CreateVector(
-      reinterpret_cast<const uint8_t*>(weights.data()),
-      weights.size() * sizeof(uint16_t));
+  // Build the weight buffer as raw bytes. We don't care about exact
+  // numerical values for a latency-only benchmark, so a deterministic
+  // pattern (or all-zeros for fp32) is fine: the GPU CL delegate
+  // dispatch time depends on shape/precision, not on weight content.
+  const std::vector<uint8_t> weight_bytes_vec(
+      static_cast<size_t>(weight_bytes), 0);
+  auto weights_data_vec = fbb.CreateVector(weight_bytes_vec);
   auto buffer_weights = tflite::CreateBuffer(fbb, weights_data_vec);
 
-  const std::vector<uint16_t> bias(n, 0x0000);  // fp16 zero
-  auto bias_data_vec = fbb.CreateVector(
-      reinterpret_cast<const uint8_t*>(bias.data()),
-      bias.size() * sizeof(uint16_t));
+  const int64_t bias_bytes = n * static_cast<int64_t>(weight_elem_bytes);
+  const std::vector<uint8_t> bias_bytes_vec(
+      static_cast<size_t>(bias_bytes), 0);
+  auto bias_data_vec = fbb.CreateVector(bias_bytes_vec);
   auto buffer_bias = tflite::CreateBuffer(fbb, bias_data_vec);
 
   std::vector<flatbuffers::Offset<tflite::Buffer>> buffers_vec = {
@@ -140,7 +118,7 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto input_shape = fbb.CreateVector(input_shape_v);
   auto input_name = fbb.CreateString("x");
   auto tensor_input = tflite::CreateTensor(
-      fbb, input_shape, tflite::TensorType_FLOAT16,
+      fbb, input_shape, tflite_dtype,
       /*buffer=*/0, input_name);
 
   const std::vector<int32_t> weights_shape_v = {
@@ -148,14 +126,14 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto weights_shape = fbb.CreateVector(weights_shape_v);
   auto weights_name = fbb.CreateString("w");
   auto tensor_weights = tflite::CreateTensor(
-      fbb, weights_shape, tflite::TensorType_FLOAT16,
+      fbb, weights_shape, tflite_dtype,
       /*buffer=*/1, weights_name);
 
   const std::vector<int32_t> bias_shape_v = {static_cast<int32_t>(n)};
   auto bias_shape = fbb.CreateVector(bias_shape_v);
   auto bias_name = fbb.CreateString("b");
   auto tensor_bias = tflite::CreateTensor(
-      fbb, bias_shape, tflite::TensorType_FLOAT16,
+      fbb, bias_shape, tflite_dtype,
       /*buffer=*/2, bias_name);
 
   const std::vector<int32_t> output_shape_v = {
@@ -163,7 +141,7 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto output_shape = fbb.CreateVector(output_shape_v);
   auto output_name = fbb.CreateString("y");
   auto tensor_output = tflite::CreateTensor(
-      fbb, output_shape, tflite::TensorType_FLOAT16,
+      fbb, output_shape, tflite_dtype,
       /*buffer=*/0, output_name);
 
   std::vector<flatbuffers::Offset<tflite::Tensor>> tensors_vec = {

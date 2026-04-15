@@ -105,6 +105,14 @@ ABSL_FLAG(std::string, csv_out, "",
 ABSL_FLAG(int, max_shapes, 0,
           "If > 0, only benchmark the first N unique shapes from the "
           "input. Useful for smoke-testing on large rosters.");
+ABSL_FLAG(std::string, dtype, "fp32",
+          "Tensor element type for the synthesized FC model: "
+          "'fp32' (default, matches Gemma4 prefill where the schema "
+          "uses FLOAT32 and the GPU delegate compiles fp16 kernels "
+          "via GpuOptions::SetPrecision(kFp16)) or 'fp16' (currently "
+          "broken because LiteRT's CPU FC reference kernel asserts "
+          "input->type == kTfLiteFloat32, so when the GPU delegate "
+          "doesn't claim the op the CPU fallback rejects the model).");
 
 namespace {
 
@@ -240,9 +248,10 @@ absl::Status ExpectedError(const T& exp, absl::string_view ctx) {
 // latency samples so the caller can compute aggregate stats.
 absl::StatusOr<std::vector<double>> BenchmarkOneShape(
     litert::Environment& env, const Shape& shape,
-    absl::string_view backend_str, int warmup_iters, int timed_iters) {
+    absl::string_view backend_str, litert::lm::MatmulDtype dtype,
+    int warmup_iters, int timed_iters) {
   auto build_or = litert::lm::BuildSingleFullyConnectedTfliteModel(
-      shape.m, shape.n, shape.k, litert::lm::MatmulDtype::kFp16);
+      shape.m, shape.n, shape.k, dtype);
   if (!build_or.ok()) return build_or.status();
   const litert::lm::SingleFcBuildResult& built = *build_or;
 
@@ -313,23 +322,32 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   }
   auto output_buffers = std::move(output_buffers_exp.Value());
 
-  // Fill the input activation buffer with a small deterministic pattern
-  // so each iteration does the same work. We don't fully randomize it
-  // because we only care about latency (GPU kernel dispatch time),
-  // not correctness of the numerical result.
+  // Fill the input activation buffer with all-zeros. We don't care
+  // about exact numerical values for a latency-only benchmark, so a
+  // deterministic zero pattern is fine: GPU CL kernel dispatch time
+  // depends on shape/precision, not on input content. Zeros also
+  // avoid NaN/Inf propagation in the accumulator.
   //
-  // Pattern: all-zero fp16 bytes. On Adreno CL this gives predictable
-  // kernel timings and avoids NaN/Inf propagation in the accumulator.
-  // TensorBuffer::Write is templated on element type and expects a span
-  // whose total byte count matches the buffer; our input tensor is fp16
-  // ([1,m,k]) so the span's element type is uint16_t with (m*k) elements.
+  // The element type is dictated by `dtype`: fp32 path writes
+  // sizeof(float) per element (matches the Gemma4 prefill setup where
+  // tensors are FLOAT32 in the schema and the GPU delegate compiles
+  // fp16 kernels under the hood); fp16 path writes sizeof(uint16_t).
   {
-    const size_t fp16_elements = static_cast<size_t>(shape.m * shape.k);
-    std::vector<uint16_t> zeros(fp16_elements, 0);
-    auto write_exp =
-        input_buffers[0].Write(absl::MakeConstSpan(zeros));
-    if (!write_exp.HasValue()) {
-      return ExpectedError(write_exp, "input_buffers[0].Write");
+    const size_t num_elements = static_cast<size_t>(shape.m * shape.k);
+    if (dtype == litert::lm::MatmulDtype::kFp32) {
+      std::vector<float> zeros(num_elements, 0.0f);
+      auto write_exp =
+          input_buffers[0].Write(absl::MakeConstSpan(zeros));
+      if (!write_exp.HasValue()) {
+        return ExpectedError(write_exp, "input_buffers[0].Write fp32");
+      }
+    } else {
+      std::vector<uint16_t> zeros(num_elements, 0);
+      auto write_exp =
+          input_buffers[0].Write(absl::MakeConstSpan(zeros));
+      if (!write_exp.HasValue()) {
+        return ExpectedError(write_exp, "input_buffers[0].Write fp16");
+      }
     }
   }
 
@@ -408,10 +426,20 @@ absl::Status MainBody() {
   const int iters = absl::GetFlag(FLAGS_iters);
   const std::string csv_out = absl::GetFlag(FLAGS_csv_out);
   const int max_shapes = absl::GetFlag(FLAGS_max_shapes);
+  const std::string dtype_str = absl::GetFlag(FLAGS_dtype);
 
   if (warmup < 0 || iters <= 0) {
     return absl::InvalidArgumentError(
         "--warmup must be >= 0 and --iters must be > 0");
+  }
+  litert::lm::MatmulDtype dtype;
+  if (dtype_str == "fp32") {
+    dtype = litert::lm::MatmulDtype::kFp32;
+  } else if (dtype_str == "fp16") {
+    dtype = litert::lm::MatmulDtype::kFp16;
+  } else {
+    return absl::InvalidArgumentError(
+        absl::StrCat("--dtype must be fp32 or fp16, got: ", dtype_str));
   }
 
   // Gather shapes.
@@ -442,9 +470,10 @@ absl::Status MainBody() {
   }
 
   std::fprintf(stderr,
-               "\n[MATMUL MICRO] backend=%s unique_shapes=%zu warmup=%d "
-               "iters=%d\n",
-               backend.c_str(), shapes.size(), warmup, iters);
+               "\n[MATMUL MICRO] backend=%s dtype=%s unique_shapes=%zu "
+               "warmup=%d iters=%d\n",
+               backend.c_str(), dtype_str.c_str(), shapes.size(), warmup,
+               iters);
 
   // Create one LiteRT environment for the whole run; CompiledModels are
   // built / destroyed per shape so the GPU delegate's internal caches
@@ -477,7 +506,8 @@ absl::Status MainBody() {
 
   int failed = 0;
   for (const auto& s : shapes) {
-    auto samples_or = BenchmarkOneShape(env, s, backend, warmup, iters);
+    auto samples_or =
+        BenchmarkOneShape(env, s, backend, dtype, warmup, iters);
     if (!samples_or.ok()) {
       const std::string err_msg(samples_or.status().message());
       std::fprintf(stderr,

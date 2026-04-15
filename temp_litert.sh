@@ -113,6 +113,12 @@ OP_PROFILING="${OP_PROFILING:-true}"
 MATMUL_MICRO="${MATMUL_MICRO:-true}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
+# fp32 is the only dtype that survives the LiteRT CPU FC fallback path
+# right now (the CPU FC reference kernel asserts input->type ==
+# kTfLiteFloat32, so a FLOAT16-tensor model fails to prepare). The
+# GPU CL delegate still compiles fp16 kernels under the hood via
+# GpuOptions::SetPrecision(kFp16), which matches Gemma4 prefill.
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-fp32}"
 
 # Normalize OP_PROFILING (accept 1/true/yes/on as true).
 case "${OP_PROFILING,,}" in
@@ -537,6 +543,7 @@ if [ "${MATMUL_MICRO}" = "true" ] && [ "${OP_PROFILING}" = "true" ]; then
       LD_LIBRARY_PATH=. \
       taskset ${TASKSET_MASK} ./matmul_micro_benchmark \
         --backend=gpu \
+        --dtype=${MATMUL_MICRO_DTYPE} \
         --shapes_csv=${MATMUL_ROSTER_CSV_DEVICE} \
         --warmup=${MATMUL_MICRO_WARMUP} \
         --iters=${MATMUL_MICRO_ITERS} \
