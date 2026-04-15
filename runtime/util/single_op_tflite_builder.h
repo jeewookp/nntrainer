@@ -25,15 +25,25 @@ namespace litert::lm {
 
 // Data type selector for the single-op tflite builder.
 //
-// kFp32 (default for the LiteRT GPU CL delegate path on Adreno):
-//   The model's tensors are FLOAT32 and the GPU delegate is expected
-//   to compile fp16 reduction kernels internally via
-//   GpuOptions::SetPrecision(kFp16). This matches how Gemma4 prefill
-//   is set up: tflite tensors are fp32 in the schema, but the CL
-//   delegate runs fp16 kernels under the hood. The CPU FullyConnected
-//   reference kernel that LiteRT uses as a fallback also requires
-//   FLOAT32 inputs, so this is the only dtype that survives the
-//   "GPU rejects, fall back to CPU" path during interpreter prepare.
+// kInt8WeightFp32Act:
+//   Hybrid quantization: weights tensor is INT8 with per-output-channel
+//   symmetric quantization (scale[N], zero_point all 0,
+//   quantized_dimension=0), bias is FLOAT32, input/output are FLOAT32,
+//   and FullyConnectedOptions.asymmetric_quantize_inputs=true. This is
+//   the exact pattern Gemma4 prefill uses: the LiteRT CL delegate
+//   recognizes the hybrid quant FC and lowers it to its
+//   `convolution_int8(conv_wave_memory)` kernel, which is what the
+//   prefill profile shows as the dominant matmul cost (~80% of the
+//   matmul total). Use this mode for apples-to-apples comparison
+//   against prefill numbers.
+//
+// kFp32:
+//   FLOAT32 weights and activations. The GPU CL delegate compiles
+//   fp16 reduction kernels internally via GpuOptions::SetPrecision(kFp16),
+//   so what runs on device is the fp16-weight path -- this matches the
+//   `convolution(conv_wave_memory)` rows in prefill (the smaller, ~20%
+//   share of the matmul total). Useful as a baseline / upper bound and
+//   for sanity-checking the schema before touching int8 quantization.
 //
 // kFp16:
 //   The model's tensors are FLOAT16. This is broken at the moment
@@ -44,6 +54,7 @@ namespace litert::lm {
 //   value for forward compatibility with future LiteRT builds that
 //   add a fp16 CPU FC kernel.
 enum class MatmulDtype {
+  kInt8WeightFp32Act,
   kFp32,
   kFp16,
 };

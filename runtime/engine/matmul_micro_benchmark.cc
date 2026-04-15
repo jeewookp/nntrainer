@@ -105,14 +105,23 @@ ABSL_FLAG(std::string, csv_out, "",
 ABSL_FLAG(int, max_shapes, 0,
           "If > 0, only benchmark the first N unique shapes from the "
           "input. Useful for smoke-testing on large rosters.");
-ABSL_FLAG(std::string, dtype, "fp32",
-          "Tensor element type for the synthesized FC model: "
-          "'fp32' (default, matches Gemma4 prefill where the schema "
-          "uses FLOAT32 and the GPU delegate compiles fp16 kernels "
-          "via GpuOptions::SetPrecision(kFp16)) or 'fp16' (currently "
-          "broken because LiteRT's CPU FC reference kernel asserts "
-          "input->type == kTfLiteFloat32, so when the GPU delegate "
-          "doesn't claim the op the CPU fallback rejects the model).");
+ABSL_FLAG(std::string, dtype, "int8",
+          "Tensor element type for the synthesized FC model. Valid "
+          "values:\n"
+          "  'int8' (default): per-channel int8 weights + fp32 input "
+          "/ output + asymmetric_quantize_inputs=true. This matches "
+          "how Gemma4 prefill's matmul ops are lowered -- it dispatches "
+          "the GPU CL delegate's `convolution_int8(conv_wave_memory)` "
+          "kernel, which is ~80%% of the prefill matmul total.\n"
+          "  'fp32': FLOAT32 input/weight/bias/output. The GPU compiles "
+          "fp16 reduction kernels internally via "
+          "GpuOptions::SetPrecision(kFp16), matching the smaller "
+          "`convolution(conv_wave_memory)` rows in prefill (~20%% of "
+          "matmul total).\n"
+          "  'fp16': FLOAT16 everywhere. Currently broken: LiteRT's "
+          "CPU FC reference kernel asserts FLOAT32 input during prepare, "
+          "so when the GPU delegate doesn't claim the op the CPU "
+          "fallback rejects the model.");
 
 namespace {
 
@@ -323,30 +332,33 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   auto output_buffers = std::move(output_buffers_exp.Value());
 
   // Fill the input activation buffer with all-zeros. We don't care
-  // about exact numerical values for a latency-only benchmark, so a
-  // deterministic zero pattern is fine: GPU CL kernel dispatch time
-  // depends on shape/precision, not on input content. Zeros also
-  // avoid NaN/Inf propagation in the accumulator.
+  // about exact numerical values for a latency-only benchmark: GPU
+  // CL kernel dispatch time depends on shape / precision / weight
+  // layout, not on activation content. Zeros also avoid NaN/Inf
+  // propagation in the accumulator.
   //
-  // The element type is dictated by `dtype`: fp32 path writes
-  // sizeof(float) per element (matches the Gemma4 prefill setup where
-  // tensors are FLOAT32 in the schema and the GPU delegate compiles
-  // fp16 kernels under the hood); fp16 path writes sizeof(uint16_t).
+  // The activation tensor type per dtype mode:
+  //   int8 (hybrid): FLOAT32 input -> dynamic int8 quant inside FC
+  //   fp32         : FLOAT32 input
+  //   fp16         : FLOAT16 input
+  // So fp32 + int8 share the same write path (4 bytes per element);
+  // fp16 needs uint16_t-sized elements.
   {
     const size_t num_elements = static_cast<size_t>(shape.m * shape.k);
-    if (dtype == litert::lm::MatmulDtype::kFp32) {
-      std::vector<float> zeros(num_elements, 0.0f);
-      auto write_exp =
-          input_buffers[0].Write(absl::MakeConstSpan(zeros));
-      if (!write_exp.HasValue()) {
-        return ExpectedError(write_exp, "input_buffers[0].Write fp32");
-      }
-    } else {
+    if (dtype == litert::lm::MatmulDtype::kFp16) {
       std::vector<uint16_t> zeros(num_elements, 0);
       auto write_exp =
           input_buffers[0].Write(absl::MakeConstSpan(zeros));
       if (!write_exp.HasValue()) {
         return ExpectedError(write_exp, "input_buffers[0].Write fp16");
+      }
+    } else {
+      // fp32 input shared by kFp32 and kInt8WeightFp32Act.
+      std::vector<float> zeros(num_elements, 0.0f);
+      auto write_exp =
+          input_buffers[0].Write(absl::MakeConstSpan(zeros));
+      if (!write_exp.HasValue()) {
+        return ExpectedError(write_exp, "input_buffers[0].Write fp32");
       }
     }
   }
@@ -433,13 +445,15 @@ absl::Status MainBody() {
         "--warmup must be >= 0 and --iters must be > 0");
   }
   litert::lm::MatmulDtype dtype;
-  if (dtype_str == "fp32") {
+  if (dtype_str == "int8") {
+    dtype = litert::lm::MatmulDtype::kInt8WeightFp32Act;
+  } else if (dtype_str == "fp32") {
     dtype = litert::lm::MatmulDtype::kFp32;
   } else if (dtype_str == "fp16") {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
-    return absl::InvalidArgumentError(
-        absl::StrCat("--dtype must be fp32 or fp16, got: ", dtype_str));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "--dtype must be int8, fp32, or fp16, got: ", dtype_str));
   }
 
   // Gather shapes.

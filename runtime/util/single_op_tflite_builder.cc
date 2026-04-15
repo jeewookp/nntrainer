@@ -34,19 +34,60 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
         absl::StrCat("BuildSingleFullyConnectedTfliteModel: non-positive ",
                      "M/N/K (m=", m, " n=", n, " k=", k, ")"));
   }
-  // Element-byte width and tflite TensorType depend on the requested dtype.
-  // We avoid templating the rest of this function on the dtype by computing
-  // these once and using `weight_elem_bytes` as the byte stride below.
+
+  // Per-mode tensor type and element byte width. Three layouts:
+  //
+  //   kInt8WeightFp32Act : input/output FLOAT32, weights INT8 with
+  //                        per-channel symmetric quant, bias FLOAT32,
+  //                        and FullyConnectedOptions.asymmetric_quantize_inputs
+  //                        =true so the GPU delegate runs the int8 path
+  //                        (matches Gemma4 prefill's
+  //                        `convolution_int8(conv_wave_memory)` row).
+  //
+  //   kFp32              : everything FLOAT32 (matches the smaller
+  //                        `convolution(conv_wave_memory)` row in
+  //                        prefill where the GPU compiles fp16
+  //                        kernels under the hood via SetPrecision).
+  //
+  //   kFp16              : everything FLOAT16. Currently broken (CPU
+  //                        FC reference kernel asserts FLOAT32 input
+  //                        during prepare).
+  //
+  // The "act" type drives input/output tensor type. The "weight" type
+  // drives the weight tensor + its per-element byte stride (and, for
+  // int8, its quantization params). Bias is separate again because in
+  // the int8 hybrid path the bias stays FLOAT32 even though the
+  // weights are INT8.
+  tflite::TensorType act_tflite_dtype = tflite::TensorType_FLOAT32;
+  tflite::TensorType weight_tflite_dtype = tflite::TensorType_FLOAT32;
+  tflite::TensorType bias_tflite_dtype = tflite::TensorType_FLOAT32;
   size_t weight_elem_bytes = 0;
-  tflite::TensorType tflite_dtype = tflite::TensorType_FLOAT32;
+  size_t bias_elem_bytes = 0;
+  bool asymmetric_quantize_inputs = false;
+  bool weights_are_per_channel_quant = false;
   switch (dtype) {
+    case MatmulDtype::kInt8WeightFp32Act:
+      act_tflite_dtype = tflite::TensorType_FLOAT32;
+      weight_tflite_dtype = tflite::TensorType_INT8;
+      bias_tflite_dtype = tflite::TensorType_FLOAT32;
+      weight_elem_bytes = sizeof(int8_t);
+      bias_elem_bytes = sizeof(float);
+      asymmetric_quantize_inputs = true;
+      weights_are_per_channel_quant = true;
+      break;
     case MatmulDtype::kFp32:
+      act_tflite_dtype = tflite::TensorType_FLOAT32;
+      weight_tflite_dtype = tflite::TensorType_FLOAT32;
+      bias_tflite_dtype = tflite::TensorType_FLOAT32;
       weight_elem_bytes = sizeof(float);
-      tflite_dtype = tflite::TensorType_FLOAT32;
+      bias_elem_bytes = sizeof(float);
       break;
     case MatmulDtype::kFp16:
+      act_tflite_dtype = tflite::TensorType_FLOAT16;
+      weight_tflite_dtype = tflite::TensorType_FLOAT16;
+      bias_tflite_dtype = tflite::TensorType_FLOAT16;
       weight_elem_bytes = sizeof(uint16_t);
-      tflite_dtype = tflite::TensorType_FLOAT16;
+      bias_elem_bytes = sizeof(uint16_t);
       break;
     default:
       return absl::InvalidArgumentError(
@@ -56,6 +97,8 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   // Sanity cap: 1 GiB of weights is way more than any matmul in Gemma4.
   // For fp32 this means at most ~268M weight elements per FC, which is
   // larger than the lm_head (~49M for vocab_size=32003 x hidden=1536).
+  // For int8 the same byte budget covers ~1G weight elements, so all
+  // Gemma4 shapes fit comfortably.
   constexpr int64_t kMaxBytes = int64_t{1} << 30;
   const int64_t weight_bytes =
       n * k * static_cast<int64_t>(weight_elem_bytes);
@@ -74,8 +117,8 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   //   buffers[0] = empty sentinel (TFLite requires buffer 0 to exist and
   //                be referenced by activation tensors that have no
   //                constant data).
-  //   buffers[1] = constant weights (n*k elements of `tflite_dtype`).
-  //   buffers[2] = constant bias    (n elements of `tflite_dtype`, zeros).
+  //   buffers[1] = constant weights (n*k elements of `weight_tflite_dtype`).
+  //   buffers[2] = constant bias    (n elements of `bias_tflite_dtype`).
   //
   // Note: CreateBuffer has two overloads depending on whether a data
   // vector is supplied. For activation tensors we use the no-data form
@@ -83,16 +126,16 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   // bytes through CreateVector(uint8_t*, size).
   auto buffer_empty = tflite::CreateBuffer(fbb);
 
-  // Build the weight buffer as raw bytes. We don't care about exact
-  // numerical values for a latency-only benchmark, so a deterministic
-  // pattern (or all-zeros for fp32) is fine: the GPU CL delegate
-  // dispatch time depends on shape/precision, not on weight content.
+  // Build the weight buffer as raw zero bytes. We don't care about
+  // exact numerical values for a latency-only benchmark: the GPU CL
+  // delegate dispatch time depends on shape / precision / weight
+  // dtype, not on weight content.
   const std::vector<uint8_t> weight_bytes_vec(
       static_cast<size_t>(weight_bytes), 0);
   auto weights_data_vec = fbb.CreateVector(weight_bytes_vec);
   auto buffer_weights = tflite::CreateBuffer(fbb, weights_data_vec);
 
-  const int64_t bias_bytes = n * static_cast<int64_t>(weight_elem_bytes);
+  const int64_t bias_bytes = n * static_cast<int64_t>(bias_elem_bytes);
   const std::vector<uint8_t> bias_bytes_vec(
       static_cast<size_t>(bias_bytes), 0);
   auto bias_data_vec = fbb.CreateVector(bias_bytes_vec);
@@ -102,13 +145,37 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       buffer_empty, buffer_weights, buffer_bias};
   auto buffers_fb = fbb.CreateVector(buffers_vec);
 
+  // ---- 1b. Build the per-channel quantization params for int8 weights
+  // ----
+  //
+  // For kInt8WeightFp32Act we need a QuantizationParameters table on
+  // the weights tensor: scale[N], zero_point[N], quantized_dimension=0
+  // (the N axis of the [N,K] weights). All scales = 1/127 and all
+  // zero_points = 0, which gives a symmetric int8 -> float mapping
+  // covering roughly [-1, 1]. The exact scale doesn't matter for a
+  // latency benchmark; what matters is that the LiteRT GPU delegate
+  // recognizes the tensor as a quantized FC weight and dispatches its
+  // int8 conv_wave_memory kernel instead of the fp32/fp16 path.
+  flatbuffers::Offset<tflite::QuantizationParameters> weight_quant_params = 0;
+  if (weights_are_per_channel_quant) {
+    std::vector<float> scales(n, 1.0f / 127.0f);
+    std::vector<int64_t> zero_points(n, 0);
+    auto scales_fb = fbb.CreateVector(scales);
+    auto zero_points_fb = fbb.CreateVector(zero_points);
+    tflite::QuantizationParametersBuilder qp_builder(fbb);
+    qp_builder.add_scale(scales_fb);
+    qp_builder.add_zero_point(zero_points_fb);
+    qp_builder.add_quantized_dimension(0);
+    weight_quant_params = qp_builder.Finish();
+  }
+
   // ---- 2. Build the tensors ----
   //
   // Tensor indices used below in the operator / subgraph:
-  //   0 : input  x  [1, m, k]  fp16, buffer=0 (activation)
-  //   1 : weight w  [n, k]     fp16, buffer=1 (constant)
-  //   2 : bias   b  [n]        fp16, buffer=2 (constant)
-  //   3 : output y  [1, m, n]  fp16, buffer=0 (activation)
+  //   0 : input  x  [1, m, k]  act dtype, buffer=0 (activation)
+  //   1 : weight w  [n, k]     weight dtype (+ quant for int8), buffer=1
+  //   2 : bias   b  [n]        bias dtype, buffer=2
+  //   3 : output y  [1, m, n]  act dtype, buffer=0 (activation)
   //
   // Note: we pass std::vector<int32_t> (not initializer_list) to
   // CreateVector because some pinned flatbuffers revisions in @litert
@@ -118,7 +185,7 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto input_shape = fbb.CreateVector(input_shape_v);
   auto input_name = fbb.CreateString("x");
   auto tensor_input = tflite::CreateTensor(
-      fbb, input_shape, tflite_dtype,
+      fbb, input_shape, act_tflite_dtype,
       /*buffer=*/0, input_name);
 
   const std::vector<int32_t> weights_shape_v = {
@@ -126,14 +193,15 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto weights_shape = fbb.CreateVector(weights_shape_v);
   auto weights_name = fbb.CreateString("w");
   auto tensor_weights = tflite::CreateTensor(
-      fbb, weights_shape, tflite_dtype,
-      /*buffer=*/1, weights_name);
+      fbb, weights_shape, weight_tflite_dtype,
+      /*buffer=*/1, weights_name,
+      /*quantization=*/weight_quant_params);
 
   const std::vector<int32_t> bias_shape_v = {static_cast<int32_t>(n)};
   auto bias_shape = fbb.CreateVector(bias_shape_v);
   auto bias_name = fbb.CreateString("b");
   auto tensor_bias = tflite::CreateTensor(
-      fbb, bias_shape, tflite_dtype,
+      fbb, bias_shape, bias_tflite_dtype,
       /*buffer=*/2, bias_name);
 
   const std::vector<int32_t> output_shape_v = {
@@ -141,7 +209,7 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   auto output_shape = fbb.CreateVector(output_shape_v);
   auto output_name = fbb.CreateString("y");
   auto tensor_output = tflite::CreateTensor(
-      fbb, output_shape, tflite_dtype,
+      fbb, output_shape, act_tflite_dtype,
       /*buffer=*/0, output_name);
 
   std::vector<flatbuffers::Offset<tflite::Tensor>> tensors_vec = {
@@ -165,11 +233,15 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       opcode};
   auto opcodes_fb = fbb.CreateVector(opcodes_vec);
 
+  // For the int8-weight hybrid path, asymmetric_quantize_inputs=true
+  // tells the LiteRT runtime / GPU delegate to dynamically quantize
+  // the float input to int8 at dispatch time and run the int8
+  // matmul kernel. For the fp32 / fp16 paths it stays false.
   auto fc_options = tflite::CreateFullyConnectedOptions(
       fbb, tflite::ActivationFunctionType_NONE,
       tflite::FullyConnectedOptionsWeightsFormat_DEFAULT,
       /*keep_num_dims=*/true,
-      /*asymmetric_quantize_inputs=*/false);
+      /*asymmetric_quantize_inputs=*/asymmetric_quantize_inputs);
 
   const std::vector<int32_t> op_inputs_v = {0, 1, 2};
   const std::vector<int32_t> op_outputs_v = {3};
