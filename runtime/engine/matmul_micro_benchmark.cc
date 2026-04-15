@@ -121,32 +121,29 @@ ABSL_FLAG(bool, profile, false,
           "shape (e.g. `convolution_int8(conv_wave_memory)` vs the "
           "fp32 fallback). Adds noticeable per-Run overhead so use "
           "for diagnostics, not steady-state numbers.");
-ABSL_FLAG(std::string, dtype, "int8",
-          "Tensor element type for the synthesized FC model. Valid "
-          "values:\n"
-          "  'int8' (default): wrapped int8 FC. Signature I/O is "
-          "FLOAT32 but the model is a 3-op subgraph QUANTIZE -> "
-          "FULLY_CONNECTED(int8) -> DEQUANTIZE so the FC sees INT8 "
-          "input + INT8 weights + INT32 bias + INT8 output. The LiteRT "
-          "GPU CL delegate fuses the 3 ops into a single dispatch and "
-          "lowers it to its `convolution_int8(conv_wave_memory)` "
-          "kernel -- the same path Gemma4 prefill uses for ~80%% of "
-          "its matmul time. We tried INT8 signature I/O directly first "
-          "but hit `Failed to get buffer requirements for tensor` "
-          "warnings inside compiled_model.cc and a 2x slowdown vs fp32.\n"
+ABSL_FLAG(std::string, dtype, "fp32_conv2d",
+          "Tensor element type / op layout for the synthesized model. "
+          "Valid values:\n"
+          "  'fp32_conv2d' (default): single CONV_2D op with 1x1 "
+          "filter, NHWC layout (input [1,M,1,K], filter [N,1,1,K], "
+          "output [1,M,1,N]), FLOAT32 throughout. Profile data shows "
+          "Gemma4 prefill's `convolution(conv_wave_memory)` kernel "
+          "comes from native CONV_2D ops in the .litertlm graph, "
+          "while the FC-based modes below get rewritten into a "
+          "slower `convolution1x1(conv_wave_memory)` entry point "
+          "(~4x slower per dispatch on Adreno 830).\n"
+          "  'int8': wrapped FC int8 -- 3-op subgraph QUANTIZE -> "
+          "FULLY_CONNECTED(int8) -> DEQUANTIZE with FLOAT32 signature "
+          "I/O. Buffer requirements work, the delegate fuses the 3 "
+          "ops, but the conv compiles as fp16 (`convolution1x1(...)` "
+          "with quantize_and_dequantize fusion). Doesn't reach the "
+          "int8 conv_wave_memory kernel.\n"
           "  'int8_hybrid': single FC op, int8 weights + fp32 "
           "input/output + asymmetric_quantize_inputs=true. Hybrid "
-          "path, accepted by the delegate but NOT lowered to the int8 "
-          "conv_wave_memory kernel. Kept for comparison.\n"
-          "  'fp32': FLOAT32 input/weight/bias/output. GPU compiles "
-          "fp16 reduction kernels internally via "
-          "GpuOptions::SetPrecision(kFp16), matching the smaller "
-          "`convolution(conv_wave_memory)` rows in prefill (~20%% of "
-          "matmul total).\n"
-          "  'fp16': FLOAT16 everywhere. Currently broken: LiteRT's "
-          "CPU FC reference kernel asserts FLOAT32 input during prepare, "
-          "so when the GPU delegate doesn't claim the op the CPU "
-          "fallback rejects the model.");
+          "path, accepted by the delegate but NOT lowered to int8.\n"
+          "  'fp32': FLOAT32 FULLY_CONNECTED. Baseline FC path.\n"
+          "  'fp16': FLOAT16 FC, currently broken (CPU reference "
+          "kernel asserts fp32 input during prepare).");
 
 namespace {
 
@@ -546,11 +543,14 @@ absl::Status MainBody() {
     dtype = litert::lm::MatmulDtype::kInt8WeightFp32Act;
   } else if (dtype_str == "fp32") {
     dtype = litert::lm::MatmulDtype::kFp32;
+  } else if (dtype_str == "fp32_conv2d") {
+    dtype = litert::lm::MatmulDtype::kFp32Conv2d;
   } else if (dtype_str == "fp16") {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
     return absl::InvalidArgumentError(absl::StrCat(
-        "--dtype must be int8, int8_hybrid, fp32, or fp16, got: ",
+        "--dtype must be int8, int8_hybrid, fp32, fp32_conv2d, or fp16, "
+        "got: ",
         dtype_str));
   }
 

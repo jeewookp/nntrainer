@@ -25,6 +25,23 @@ namespace litert::lm {
 
 // Data type selector for the single-op tflite builder.
 //
+// kFp32Conv2d:
+//   Single CONV_2D op with a 1x1 filter, NHWC layout. Input
+//   [1, M, 1, K] FLOAT32, filter [N, 1, 1, K] FLOAT32, bias [N] FLOAT32,
+//   output [1, M, 1, N] FLOAT32, stride 1, padding VALID, no fused
+//   activation. This is mathematically equivalent to a [M, K] x [K, N]
+//   matmul but uses BuiltinOperator_CONV_2D instead of
+//   BuiltinOperator_FULLY_CONNECTED. The motivation is that the
+//   LiteRT GPU CL delegate lowers FC and CONV_2D through different
+//   pipelines: FC is rewritten to `convolution1x1(conv_wave_memory)`,
+//   while a native CONV_2D goes to `convolution(conv_wave_memory)`
+//   (no `1x1` suffix). Profile data on Adreno 830 shows
+//   `convolution(...)` is ~4x faster per dispatch than
+//   `convolution1x1(...)` for matmul-shaped inputs, and prefill's
+//   `convolution(conv_wave_memory)` row -- which dominates the fp16
+//   share of the matmul total -- comes from native CONV_2D ops in
+//   Gemma4's .litertlm graph.
+//
 // kInt8 (default for matching Gemma4 prefill):
 //   3-op subgraph: QUANTIZE(fp32 -> int8) -> FULLY_CONNECTED(int8) ->
 //   DEQUANTIZE(int8 -> fp32). The signature exposes FLOAT32 input/output
@@ -32,13 +49,12 @@ namespace litert::lm {
 //   (a previous experiment with INT8 signature I/O hit
 //   `Failed to get buffer requirements for tensor` warnings inside
 //   compiled_model.cc and ran 2x slower than fp32). The internal FC
-//   sees INT8 input + INT8 weights + INT32 bias + INT8 output, which
-//   is the schema that triggers the LiteRT GPU CL delegate's
-//   `convolution_int8(conv_wave_memory)` kernel. The delegate fuses
-//   QUANTIZE + FC + DEQUANTIZE into a single dispatch, mirroring the
-//   `convolution_int8(conv_wave_memory) -> dequantize_to_float16 ->
-//   quantize_and_dequantize` fused chain seen in Gemma4 prefill's
-//   profile output.
+//   sees INT8 input + INT8 weights + INT32 bias + INT8 output. The
+//   delegate fuses the 3 ops but compiles the conv as fp16
+//   (`convolution1x1(conv_wave_memory) -> quantize_and_dequantize ->
+//   quantize_and_dequantize`); the int8 conv kernel is NOT picked. So
+//   this mode is currently equivalent to kFp32 + a bit of QUANTIZE
+//   overhead. Kept as a comparison point.
 //
 // kInt8WeightFp32Act:
 //   Hybrid quantization (single FC op). Weights tensor is INT8 with
@@ -67,6 +83,7 @@ enum class MatmulDtype {
   kInt8WeightFp32Act,
   kFp32,
   kFp16,
+  kFp32Conv2d,
 };
 
 // Pure-data result of BuildSingleFullyConnectedTfliteModel. The caller

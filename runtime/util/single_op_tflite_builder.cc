@@ -109,6 +109,11 @@ flatbuffers::Offset<tflite::SignatureDef> BuildSignatureDef(
 absl::StatusOr<SingleFcBuildResult> BuildWrappedInt8Fc(int64_t m, int64_t n,
                                                         int64_t k);
 
+// Forward declaration of the CONV_2D 1x1 path. Defined below the
+// main BuildSingleFullyConnectedTfliteModel function.
+absl::StatusOr<SingleFcBuildResult> BuildFp32Conv2d1x1(int64_t m, int64_t n,
+                                                        int64_t k);
+
 }  // namespace
 
 absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
@@ -127,6 +132,14 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   // flow, so it lives in its own helper function.
   if (dtype == MatmulDtype::kInt8) {
     return BuildWrappedInt8Fc(m, n, k);
+  }
+
+  // CONV_2D 1x1 path. Different op type from FULLY_CONNECTED so the
+  // GPU CL delegate goes through a different lowering pipeline and
+  // (per profile data) hits the faster `convolution(conv_wave_memory)`
+  // entry point instead of the FC-rewritten `convolution1x1(...)`.
+  if (dtype == MatmulDtype::kFp32Conv2d) {
+    return BuildFp32Conv2d1x1(m, n, k);
   }
 
   // Per-mode tensor type and element byte width for the SINGLE-OP path.
@@ -184,6 +197,10 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       // present only to silence -Wswitch.
       return absl::InternalError(
           "kInt8 should have been dispatched to BuildWrappedInt8Fc");
+    case MatmulDtype::kFp32Conv2d:
+      // Already routed to BuildFp32Conv2d1x1 above.
+      return absl::InternalError(
+          "kFp32Conv2d should have been dispatched to BuildFp32Conv2d1x1");
     default:
       return absl::InvalidArgumentError(
           "BuildSingleFullyConnectedTfliteModel: unknown dtype");
@@ -607,6 +624,164 @@ absl::StatusOr<SingleFcBuildResult> BuildWrappedInt8Fc(int64_t m, int64_t n,
   // ---- Top-level Model ----
   auto description = fbb.CreateString(absl::StrCat(
       "matmul_micro_benchmark wrapped int8 fc m=", m, " n=", n, " k=", k));
+  auto model = tflite::CreateModel(
+      fbb,
+      /*version=*/3,
+      /*operator_codes=*/opcodes_fb,
+      /*subgraphs=*/subgraphs_fb,
+      /*description=*/description,
+      /*buffers=*/buffers_fb,
+      /*metadata_buffer=*/0,
+      /*metadata=*/0,
+      /*signature_defs=*/sig_defs_fb);
+  tflite::FinishModelBuffer(fbb, model);
+
+  SingleFcBuildResult result;
+  result.flatbuffer.assign(
+      reinterpret_cast<const char*>(fbb.GetBufferPointer()),
+      fbb.GetSize());
+  result.signature_key = "main";
+  result.input_name = "x";
+  result.output_name = "y";
+  return result;
+}
+
+// Builds a single CONV_2D op with a 1x1 filter, NHWC layout. This is
+// mathematically a [M, K] @ [N, K]^T matmul but uses
+// BuiltinOperator_CONV_2D instead of FULLY_CONNECTED so the LiteRT
+// GPU CL delegate goes through its native CONV_2D lowering pipeline
+// and hits the `convolution(conv_wave_memory)` entry point (no `1x1`
+// suffix) rather than the FC-rewritten `convolution1x1(...)` path.
+//
+// Tensor layout:
+//   input  : [1, M, 1, K]  FLOAT32  (N=1, H=M, W=1, C=K)
+//   filter : [N, 1, 1, K]  FLOAT32  (out_channels, kernel_h, kernel_w, in_channels)
+//   bias   : [N]           FLOAT32
+//   output : [1, M, 1, N]  FLOAT32  (N=1, H=M, W=1, C=N)
+//   stride : 1 x 1
+//   pad    : VALID (no padding; K must equal C, which it does)
+//   fused  : NONE
+absl::StatusOr<SingleFcBuildResult> BuildFp32Conv2d1x1(int64_t m, int64_t n,
+                                                        int64_t k) {
+  // Sanity cap: 1 GiB of fp32 weights, same as the single-op FC path.
+  constexpr int64_t kMaxBytes = int64_t{1} << 30;
+  const int64_t weight_bytes = n * k * static_cast<int64_t>(sizeof(float));
+  if (weight_bytes <= 0 || weight_bytes > kMaxBytes) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("BuildFp32Conv2d1x1: weight tensor too large (",
+                     weight_bytes, " bytes > 1 GiB)"));
+  }
+
+  flatbuffers::FlatBufferBuilder fbb(/*initial_size=*/static_cast<size_t>(
+      weight_bytes + 64 * 1024));
+
+  // ---- Buffers ----
+  auto buffer_empty = tflite::CreateBuffer(fbb);
+
+  const std::vector<uint8_t> weight_bytes_vec(static_cast<size_t>(weight_bytes),
+                                                0);
+  auto weights_data_vec = fbb.CreateVector(weight_bytes_vec);
+  auto buffer_weights = tflite::CreateBuffer(fbb, weights_data_vec);
+
+  const std::vector<uint8_t> bias_bytes_vec(
+      static_cast<size_t>(n) * sizeof(float), 0);
+  auto bias_data_vec = fbb.CreateVector(bias_bytes_vec);
+  auto buffer_bias = tflite::CreateBuffer(fbb, bias_data_vec);
+
+  std::vector<flatbuffers::Offset<tflite::Buffer>> buffers_vec = {
+      buffer_empty, buffer_weights, buffer_bias};
+  auto buffers_fb = fbb.CreateVector(buffers_vec);
+
+  // ---- Tensors ----
+  //   0 : input  [1, M, 1, K] fp32
+  //   1 : filter [N, 1, 1, K] fp32 constant
+  //   2 : bias   [N]          fp32 constant
+  //   3 : output [1, M, 1, N] fp32
+  std::vector<flatbuffers::Offset<tflite::Tensor>> tensors_vec;
+  // Tensor 0 : input
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m), 1,
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("x");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  // Tensor 1 : filter
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n), 1, 1,
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("w");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/1, name));
+  }
+  // Tensor 2 : bias
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("b");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/2, name));
+  }
+  // Tensor 3 : output
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m), 1,
+                                          static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("y");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  auto tensors_fb = fbb.CreateVector(tensors_vec);
+
+  // ---- Operator code: CONV_2D version 5 covers the modern Conv2DOptions
+  // (dilation_w_factor / dilation_h_factor) we use below. ----
+  std::vector<flatbuffers::Offset<tflite::OperatorCode>> opcodes_vec;
+  opcodes_vec.push_back(
+      BuildBuiltinOpCode(fbb, tflite::BuiltinOperator_CONV_2D, /*version=*/5));
+  auto opcodes_fb = fbb.CreateVector(opcodes_vec);
+
+  // ---- Operator: CONV_2D(input, filter, bias) -> output ----
+  const std::vector<int32_t> op_inputs_v = {0, 1, 2};
+  const std::vector<int32_t> op_outputs_v = {3};
+  auto op_inputs_fb = fbb.CreateVector(op_inputs_v);
+  auto op_outputs_fb = fbb.CreateVector(op_outputs_v);
+  auto conv_options = tflite::CreateConv2DOptions(
+      fbb, tflite::Padding_VALID,
+      /*stride_w=*/1, /*stride_h=*/1,
+      tflite::ActivationFunctionType_NONE,
+      /*dilation_w_factor=*/1, /*dilation_h_factor=*/1);
+  auto op = tflite::CreateOperator(
+      fbb, /*opcode_index=*/0, op_inputs_fb, op_outputs_fb,
+      tflite::BuiltinOptions_Conv2DOptions, conv_options.Union());
+  std::vector<flatbuffers::Offset<tflite::Operator>> operators_vec = {op};
+  auto operators_fb = fbb.CreateVector(operators_vec);
+
+  // ---- Subgraph + signature + model ----
+  const std::vector<int32_t> sg_inputs_v = {0};
+  const std::vector<int32_t> sg_outputs_v = {3};
+  auto sg_inputs = fbb.CreateVector(sg_inputs_v);
+  auto sg_outputs = fbb.CreateVector(sg_outputs_v);
+  auto sg_name = fbb.CreateString("main");
+  auto subgraph = tflite::CreateSubGraph(fbb, tensors_fb, sg_inputs,
+                                          sg_outputs, operators_fb, sg_name);
+  std::vector<flatbuffers::Offset<tflite::SubGraph>> subgraphs_vec = {subgraph};
+  auto subgraphs_fb = fbb.CreateVector(subgraphs_vec);
+
+  auto sig_key = fbb.CreateString("main");
+  auto sig_in_name = fbb.CreateString("x");
+  auto sig_out_name = fbb.CreateString("y");
+  auto sig_def = BuildSignatureDef(
+      fbb, sig_key, sig_in_name, /*in_tensor_idx=*/0, sig_out_name,
+      /*out_tensor_idx=*/3);
+  std::vector<flatbuffers::Offset<tflite::SignatureDef>> sig_defs_vec = {
+      sig_def};
+  auto sig_defs_fb = fbb.CreateVector(sig_defs_vec);
+
+  auto description = fbb.CreateString(
+      absl::StrCat("matmul_micro_benchmark conv2d_1x1 m=", m, " n=", n,
+                   " k=", k));
   auto model = tflite::CreateModel(
       fbb,
       /*version=*/3,

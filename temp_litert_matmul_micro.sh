@@ -68,25 +68,27 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
-# int8 = wrapped int8 FC. Signature I/O stays FLOAT32 but the model
-# is a 3-op subgraph QUANTIZE -> FC(int8) -> DEQUANTIZE, so the FC
-# sees INT8 input/output, INT8 weights per-channel, and INT32 bias
-# per-channel. This is the schema that triggers the LiteRT GPU CL
-# delegate's `convolution_int8(conv_wave_memory)` kernel -- the
-# dominant matmul path in Gemma4 prefill (~80% of matmul time).
-# (Direct INT8 signature I/O was tried first but hit
-# `Failed to get buffer requirements` warnings and a 2x slowdown.)
+# fp32_conv2d (default) = single CONV_2D op with 1x1 filter (NHWC
+# layout), FLOAT32 throughout. Profile data on Adreno 830 shows
+# this is what triggers the prefill-matching
+# `convolution(conv_wave_memory)` kernel (no `1x1` suffix). The FC
+# variants below get rewritten by the delegate into the
+# FC-flavored `convolution1x1(conv_wave_memory)` entry point, which
+# is ~4x slower per dispatch for matmul shapes.
 #
 # Other valid values:
-#   int8_hybrid : int8 weights + fp32 acts (single FC op, accepted
-#                 by the delegate but NOT lowered to the int8 conv
-#                 kernel -- timings stay close to fp32). Useful for
-#                 understanding why hybrid quant alone isn't enough.
-#   fp32        : everything fp32, GPU compiles fp16 internally.
-#                 Matches the smaller `convolution(conv_wave_memory)`
-#                 rows in prefill (~20%).
+#   int8        : 3-op QUANTIZE -> FC(int8) -> DEQUANTIZE wrapper.
+#                 Signature fp32 so buffer requirements work, but
+#                 the conv compiles as fp16 and the int8
+#                 conv_wave_memory kernel is NOT picked. Kept as
+#                 a comparison point.
+#   int8_hybrid : single FC op, int8 weights + fp32 acts. Same
+#                 outcome as int8: delegate accepts it but doesn't
+#                 hit the int8 conv kernel.
+#   fp32        : single FC op, FLOAT32 throughout. Baseline FC
+#                 path -- gets rewritten to convolution1x1(...).
 #   fp16        : broken (CPU FC reference kernel asserts fp32).
-MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8}"
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-fp32_conv2d}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"
