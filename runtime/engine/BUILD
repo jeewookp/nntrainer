@@ -229,6 +229,69 @@ cc_binary(
     ],
 )
 
+# Standalone matmul micro benchmark. Builds a minimal single-FC-op
+# tflite flatbuffer per (M,N,K) shape, compiles it with LiteRT
+# CompiledModel, and prints per-shape latency stats + a CSV. The
+# purpose is to attribute the bulk of Gemma4 prefill time to specific
+# matmul shapes -- LiteRT's GPU delegate profile table aggregates by
+# fused kernel name, so per-shape cost is invisible from prefill logs
+# alone. Pair this with the matmul roster CSV emitted by
+# runtime/util/matmul_shape_dump (via LITERT_LM_MATMUL_ROSTER_CSV) to
+# benchmark exactly the shapes that Gemma4 uses in prefill.
+cc_binary(
+    name = "matmul_micro_benchmark",
+    srcs = ["matmul_micro_benchmark.cc"],
+    additional_linker_inputs = select({
+        "@platforms//os:windows": [
+            "@litert//litert/c:windows_exported_symbols.def",
+        ],
+        "@platforms//os:linux": [":litert_lm_main.exported_symbols"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@litert//litert:litert_link_capi_so": [],
+        # Export LiteRt* symbols for LiteRt accelerator shlibs (matches
+        # litert_lm_main).
+        "@platforms//os:ios": ["-Wl,-exported_symbol,_LiteRt*"],
+        "@platforms//os:macos": ["-Wl,-exported_symbol,_LiteRt*"],
+        "@platforms//os:windows": [
+            "/DEF:$(location @litert//litert/c:windows_exported_symbols.def)",
+        ],
+        "@platforms//os:linux": ["-Wl,--dynamic-list=$(location :litert_lm_main.exported_symbols)"],
+        "//conditions:default": ["-Wl,--export-dynamic-symbol=LiteRt*"],
+    }) + select({
+        "@platforms//os:android": ["-lEGL", "-lGLESv3"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "@com_google_absl//absl/base:log_severity",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log:globals",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
+        "//runtime/util:single_op_tflite_builder",
+    ] + select({
+        "@litert//litert:litert_link_capi_so": [
+            "@litert//litert/cc:litert_api_with_dynamic_runtime",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc:litert_buffer_ref",
+            "@litert//litert/cc:litert_common",
+            "@litert//litert/cc:litert_compiled_model",
+            "@litert//litert/cc:litert_environment",
+            "@litert//litert/cc:litert_model",
+            "@litert//litert/cc:litert_options",
+            "@litert//litert/cc:litert_tensor_buffer",
+            "@litert//litert/cc/options:litert_gpu_options",
+        ],
+    }),
+)
+
 cc_binary(
     name = "litert_lm_advanced_main",
     srcs = ["litert_lm_advanced_main.cc"],

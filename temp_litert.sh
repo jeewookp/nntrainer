@@ -106,6 +106,13 @@ DECODE_TOKENS="${DECODE_TOKENS:-256}"
 ASYNC="${ASYNC:-false}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 OP_PROFILING="${OP_PROFILING:-true}"
+# Matmul micro benchmark: if true, runs matmul_micro_benchmark after the
+# main prefill/decode run, against the CSV matmul roster emitted by the
+# in-executor shape dumper. Only meaningful when OP_PROFILING=true,
+# since that's when the roster CSV is produced.
+MATMUL_MICRO="${MATMUL_MICRO:-true}"
+MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
+MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 
 # Normalize OP_PROFILING (accept 1/true/yes/on as true).
 case "${OP_PROFILING,,}" in
@@ -205,15 +212,28 @@ echo ""
 #    C symbols statically in the main binary.
 # ----------------------------------------------------------------------------
 echo "[temp_litert.sh] Building //runtime/engine:litert_lm_main ..."
+BAZEL_TARGETS=(//runtime/engine:litert_lm_main)
+if [ "${MATMUL_MICRO}" = "true" ]; then
+  BAZEL_TARGETS+=(//runtime/engine:matmul_micro_benchmark)
+fi
 "${BAZEL}" build \
   --config=android_arm64 \
   --define=litert_link_capi_so=true \
   --define=resolve_symbols_in_exec=false \
-  //runtime/engine:litert_lm_main
+  "${BAZEL_TARGETS[@]}"
 
 BIN=bazel-bin/runtime/engine/litert_lm_main
 if [ ! -x "${BIN}" ] && [ ! -f "${BIN}" ]; then
   echo "[temp_litert.sh] Build succeeded but binary not at expected path ${BIN}"
+  exit 1
+fi
+
+MATMUL_MICRO_BIN=bazel-bin/runtime/engine/matmul_micro_benchmark
+if [ "${MATMUL_MICRO}" = "true" ] && \
+   [ ! -x "${MATMUL_MICRO_BIN}" ] && [ ! -f "${MATMUL_MICRO_BIN}" ]; then
+  echo "[temp_litert.sh] matmul_micro_benchmark binary not found at"
+  echo "    ${MATMUL_MICRO_BIN}"
+  echo "    set MATMUL_MICRO=false to skip"
   exit 1
 fi
 
@@ -276,6 +296,10 @@ echo "[temp_litert.sh] adb push binary + prebuilts + model ..."
 adb shell "mkdir -p ${DEVICE_FOLDER}"
 adb push "${BIN}" "${DEVICE_FOLDER}/litert_lm_main" >/dev/null
 adb push "${LIBLITERT_SO}" "${DEVICE_FOLDER}/libLiteRt.so" >/dev/null
+if [ "${MATMUL_MICRO}" = "true" ]; then
+  adb push "${MATMUL_MICRO_BIN}" "${DEVICE_FOLDER}/matmul_micro_benchmark" \
+    >/dev/null
+fi
 
 for f in "${REQUIRED_PREBUILTS[@]}"; do
   adb push "${PREBUILT_DIR}/${f}" "${DEVICE_FOLDER}/${f}" >/dev/null
@@ -294,6 +318,9 @@ else
 fi
 
 adb shell "chmod +x ${DEVICE_FOLDER}/litert_lm_main"
+if [ "${MATMUL_MICRO}" = "true" ]; then
+  adb shell "chmod +x ${DEVICE_FOLDER}/matmul_micro_benchmark"
+fi
 
 # ----------------------------------------------------------------------------
 # 4. Run with benchmark (and optionally op profiling). Capture stdout AND
@@ -313,10 +340,18 @@ adb shell "chmod +x ${DEVICE_FOLDER}/litert_lm_main"
 #    so the decode output is verifiable.
 # ----------------------------------------------------------------------------
 RUN_LOG=temp_litert_run.log
+MATMUL_ROSTER_CSV_DEVICE=${DEVICE_FOLDER}/matmul_roster.csv
+MATMUL_MICRO_CSV_DEVICE=${DEVICE_FOLDER}/matmul_micro.csv
+MATMUL_MICRO_LOG=temp_litert_matmul_micro.log
 echo ""
 echo "[temp_litert.sh] Running on device (taskset ${TASKSET_MASK}, op_profiling=${OP_PROFILING})..."
+# LITERT_LM_MATMUL_ROSTER_CSV tells runtime/util/matmul_shape_dump.cc
+# (invoked from the executor factory when --enable_op_profiling=true)
+# to also write a machine-readable CSV next to its stderr dump. That
+# CSV is the shape list the micro benchmark will consume in step 6.
 adb shell "cd ${DEVICE_FOLDER}; \
   LD_LIBRARY_PATH=. \
+  LITERT_LM_MATMUL_ROSTER_CSV=${MATMUL_ROSTER_CSV_DEVICE} \
   taskset ${TASKSET_MASK} ./litert_lm_main \
     --backend=gpu \
     --model_path=${DEVICE_FOLDER}/${MODEL_BASENAME} \
@@ -474,6 +509,62 @@ awk '/^input_prompt:/{found=1} found{print; if (/BenchmarkInfo|Prefill Turn|PROF
   "${RUN_LOG}" \
   || echo "(no input_prompt line found; run probably crashed before decode)"
 
+
+# ----------------------------------------------------------------------------
+# 6. Matmul micro benchmark. Reads the matmul_roster.csv emitted by the
+#    in-executor shape dumper (step 4) and runs matmul_micro_benchmark
+#    on the same device, producing per-shape timing that can be placed
+#    next to the Delegate Statistics from the prefill run. Each entry
+#    is (M, N, K) -> min/avg/p50/p95/max us + gflops + tflops throughput.
+#
+#    To skip: MATMUL_MICRO=false
+# ----------------------------------------------------------------------------
+if [ "${MATMUL_MICRO}" = "true" ] && [ "${OP_PROFILING}" = "true" ]; then
+  echo ""
+  echo "=========================================="
+  echo " Matmul micro benchmark"
+  echo "=========================================="
+  # Make sure the roster CSV actually got written on the device.
+  ROSTER_SIZE=$(adb shell "stat -c '%s' ${MATMUL_ROSTER_CSV_DEVICE} 2>/dev/null || echo 0" | tr -d '\r')
+  if [ -z "${ROSTER_SIZE}" ] || [ "${ROSTER_SIZE}" = "0" ]; then
+    echo "[temp_litert.sh] WARNING: matmul roster CSV missing on device at"
+    echo "    ${MATMUL_ROSTER_CSV_DEVICE}"
+    echo "    (was LITERT_LM_MATMUL_ROSTER_CSV honored? check temp_litert_run.log"
+    echo "     for '[PROFILE MATMUL SHAPES] CSV roster written to' line)"
+  else
+    echo "[temp_litert.sh] Running matmul_micro_benchmark against ${MATMUL_ROSTER_CSV_DEVICE} (${ROSTER_SIZE} bytes)..."
+    adb shell "cd ${DEVICE_FOLDER}; \
+      LD_LIBRARY_PATH=. \
+      taskset ${TASKSET_MASK} ./matmul_micro_benchmark \
+        --backend=gpu \
+        --shapes_csv=${MATMUL_ROSTER_CSV_DEVICE} \
+        --warmup=${MATMUL_MICRO_WARMUP} \
+        --iters=${MATMUL_MICRO_ITERS} \
+        --csv_out=${MATMUL_MICRO_CSV_DEVICE}" \
+      2>&1 | tee "${MATMUL_MICRO_LOG}"
+
+    # Pull the per-shape CSV to the host for post-processing.
+    if adb shell "test -f ${MATMUL_MICRO_CSV_DEVICE}"; then
+      adb pull "${MATMUL_MICRO_CSV_DEVICE}" ./matmul_micro.csv >/dev/null 2>&1
+      echo ""
+      echo "--- Matmul micro CSV (pulled to ./matmul_micro.csv) ---"
+      echo "    Compare rows against the prefill Delegate Statistics above:"
+      echo "    the per-(M,N,K) timing here explains which shapes are the"
+      echo "    hot matmul kernels that show up as aggregated"
+      echo "    convolution(conv_wave_memory) / convolution_int8(...) rows"
+      echo "    in the Delegate table."
+      head -n 20 ./matmul_micro.csv || true
+    else
+      echo ""
+      echo "[temp_litert.sh] WARNING: matmul_micro.csv not produced on device."
+    fi
+  fi
+fi
+
 echo ""
 echo "Full log: ${RUN_LOG}"
+if [ "${MATMUL_MICRO}" = "true" ] && [ "${OP_PROFILING}" = "true" ]; then
+  echo "Matmul micro log: ${MATMUL_MICRO_LOG}"
+  echo "Matmul micro CSV (host): ./matmul_micro.csv"
+fi
 echo ""

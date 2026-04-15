@@ -218,6 +218,35 @@ if(_unverified_targets)
   if(ANDROID)
     target_link_libraries(litert_lm_main PRIVATE EGL GLESv3)
   endif()
+
+  # ============================================================================
+  # 7b. Matmul Micro Benchmark
+  #
+  # Standalone binary that builds one single-FC-op tflite flatbuffer per
+  # (M,N,K) shape and runs it through LiteRT CompiledModel on the
+  # requested backend, emitting per-shape latency / throughput stats.
+  # Designed to be run on the same device as litert_lm_main so the
+  # prefill profile table and the micro results can be compared.
+  # ============================================================================
+  add_litertlm_executable(matmul_micro_benchmark
+    matmul_micro_benchmark.cc
+  )
+  target_link_options(matmul_micro_benchmark PRIVATE ${LITERTLM_UNIFIED_LINK_SPEC})
+  target_link_options(matmul_micro_benchmark PRIVATE
+    "LINKER:--export-dynamic-symbol=LiteRt*"
+  )
+  target_include_directories(matmul_micro_benchmark PRIVATE
+    ${LITERTLM_INCLUDE_PATHS}
+    ${LITERT_INCLUDE_PATHS}
+  )
+  target_link_libraries(matmul_micro_benchmark
+    PUBLIC
+      LiteRTLM::Runtime::Util::SingleOpTfliteBuilder
+      LITERTLM_DEPS
+  )
+  if(ANDROID)
+    target_link_libraries(matmul_micro_benchmark PRIVATE EGL GLESv3)
+  endif()
 endif()
 
 

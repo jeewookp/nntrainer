@@ -628,6 +628,25 @@ cc_library(
     ],
 )
 
+# Builds a minimal single-FULLY_CONNECTED tflite flatbuffer at runtime
+# from an (M, N, K) shape. Used by matmul_micro_benchmark to produce one
+# tflite model per shape so each matmul can be compiled + timed in
+# isolation against the LiteRT GPU delegate. The output is a
+# self-contained .tflite buffer ready to feed into
+# litert::Model::CreateFromBuffer.
+cc_library(
+    name = "single_op_tflite_builder",
+    srcs = ["single_op_tflite_builder.cc"],
+    hdrs = ["single_op_tflite_builder.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@flatbuffers//:runtime_cc",
+        "@litert//tflite/schema:schema_fbs",
+    ],
+)
+
 cc_test(
     name = "lora_data_test",
     srcs = ["lora_data_test.cc"],

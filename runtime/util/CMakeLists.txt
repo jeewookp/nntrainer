@@ -453,7 +453,26 @@ target_link_libraries(runtime_util_matmul_shape_dump
 )
 
 # ==============================================================================
-# 20. Folder Facade
+# 20. Single-Op TFLite Builder (matmul micro benchmark helper)
+# ==============================================================================
+add_litertlm_library(runtime_util_single_op_tflite_builder STATIC
+  single_op_tflite_builder.cc
+)
+add_library(LiteRTLM::Runtime::Util::SingleOpTfliteBuilder ALIAS runtime_util_single_op_tflite_builder)
+
+target_include_directories(runtime_util_single_op_tflite_builder
+  PRIVATE
+    ${GENERATED_SRC_DIR}
+    ${LITERTLM_INCLUDE_PATHS}
+)
+
+target_link_libraries(runtime_util_single_op_tflite_builder
+  PUBLIC
+    LITERTLM_DEPS
+)
+
+# ==============================================================================
+# 21. Folder Facade
 # ==============================================================================
 add_library(runtime_util_libs INTERFACE)
 add_library(LiteRTLM::Runtime::Util ALIAS runtime_util_libs)
@@ -473,6 +492,7 @@ target_link_libraries(runtime_util_libs INTERFACE
   LiteRTLM::Runtime::Util::ModelAssetBundleResources
   LiteRTLM::Runtime::Util::ModelTypeUtils
   LiteRTLM::Runtime::Util::ScopedFile
+  LiteRTLM::Runtime::Util::SingleOpTfliteBuilder
   LiteRTLM::Runtime::Util::TensorBufferUtil
   LiteRTLM::Runtime::Util::ZipReadonlyMemFile
   LiteRTLM::Runtime::Util::ZipUtils
