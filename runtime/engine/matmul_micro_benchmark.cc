@@ -108,12 +108,18 @@ ABSL_FLAG(int, max_shapes, 0,
 ABSL_FLAG(std::string, dtype, "int8",
           "Tensor element type for the synthesized FC model. Valid "
           "values:\n"
-          "  'int8' (default): per-channel int8 weights + fp32 input "
-          "/ output + asymmetric_quantize_inputs=true. This matches "
-          "how Gemma4 prefill's matmul ops are lowered -- it dispatches "
-          "the GPU CL delegate's `convolution_int8(conv_wave_memory)` "
-          "kernel, which is ~80%% of the prefill matmul total.\n"
-          "  'fp32': FLOAT32 input/weight/bias/output. The GPU compiles "
+          "  'int8' (default): fully quantized int8 FC. Input and "
+          "output are INT8 (per-tensor symmetric quant), weights are "
+          "INT8 (per-channel symmetric quant), bias is INT32 "
+          "(per-channel quant with scale = input_scale * weight_scale[i]). "
+          "This is the schema the LiteRT GPU CL delegate lowers to its "
+          "`convolution_int8(conv_wave_memory)` kernel, which is what "
+          "Gemma4 prefill uses for ~80%% of its matmul time.\n"
+          "  'int8_hybrid': int8 weights + fp32 input/output + "
+          "asymmetric_quantize_inputs=true. Hybrid path, accepted by the "
+          "delegate but NOT lowered to the int8 conv_wave_memory kernel. "
+          "Kept for comparison.\n"
+          "  'fp32': FLOAT32 input/weight/bias/output. GPU compiles "
           "fp16 reduction kernels internally via "
           "GpuOptions::SetPrecision(kFp16), matching the smaller "
           "`convolution(conv_wave_memory)` rows in prefill (~20%% of "
@@ -338,14 +344,20 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   // propagation in the accumulator.
   //
   // The activation tensor type per dtype mode:
-  //   int8 (hybrid): FLOAT32 input -> dynamic int8 quant inside FC
-  //   fp32         : FLOAT32 input
-  //   fp16         : FLOAT16 input
-  // So fp32 + int8 share the same write path (4 bytes per element);
-  // fp16 needs uint16_t-sized elements.
+  //   int8        : INT8 input
+  //   int8_hybrid : FLOAT32 input -> dynamic int8 quant inside FC
+  //   fp32        : FLOAT32 input
+  //   fp16        : FLOAT16 input
   {
     const size_t num_elements = static_cast<size_t>(shape.m * shape.k);
-    if (dtype == litert::lm::MatmulDtype::kFp16) {
+    if (dtype == litert::lm::MatmulDtype::kInt8) {
+      std::vector<int8_t> zeros(num_elements, 0);
+      auto write_exp =
+          input_buffers[0].Write(absl::MakeConstSpan(zeros));
+      if (!write_exp.HasValue()) {
+        return ExpectedError(write_exp, "input_buffers[0].Write int8");
+      }
+    } else if (dtype == litert::lm::MatmulDtype::kFp16) {
       std::vector<uint16_t> zeros(num_elements, 0);
       auto write_exp =
           input_buffers[0].Write(absl::MakeConstSpan(zeros));
@@ -446,6 +458,8 @@ absl::Status MainBody() {
   }
   litert::lm::MatmulDtype dtype;
   if (dtype_str == "int8") {
+    dtype = litert::lm::MatmulDtype::kInt8;
+  } else if (dtype_str == "int8_hybrid") {
     dtype = litert::lm::MatmulDtype::kInt8WeightFp32Act;
   } else if (dtype_str == "fp32") {
     dtype = litert::lm::MatmulDtype::kFp32;
@@ -453,7 +467,8 @@ absl::Status MainBody() {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
     return absl::InvalidArgumentError(absl::StrCat(
-        "--dtype must be int8, fp32, or fp16, got: ", dtype_str));
+        "--dtype must be int8, int8_hybrid, fp32, or fp16, got: ",
+        dtype_str));
   }
 
   // Gather shapes.

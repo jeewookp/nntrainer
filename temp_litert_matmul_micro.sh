@@ -40,12 +40,17 @@
 # Env var overrides:
 #   DEVICE_FOLDER           where to push on device (default /data/local/tmp/litert_lm)
 #   HOST_MATMUL_ROSTER_CSV  shape source on host (default ./matmul_roster.csv)
-#   MATMUL_MICRO_DTYPE      int8 (default; per-channel int8 weights with
-#                           asymmetric_quantize_inputs=true, matches the
-#                           ~80% int8 share of Gemma4 prefill matmul time
-#                           via convolution_int8(conv_wave_memory)),
+#   MATMUL_MICRO_DTYPE      int8 (default; fully-quantized int8 FC, the
+#                           schema that triggers the LiteRT GPU CL
+#                           delegate's convolution_int8(conv_wave_memory)
+#                           kernel -- matches the ~80% int8 share of
+#                           Gemma4 prefill matmul time),
+#                           int8_hybrid (int8 weights + fp32 acts, accepted
+#                           by the delegate but does NOT trigger the int8
+#                           kernel),
 #                           fp32 (matches the ~20% fp share via
-#                           convolution(conv_wave_memory)), or fp16 (broken)
+#                           convolution(conv_wave_memory)),
+#                           or fp16 (broken)
 #   MATMUL_MICRO_WARMUP     warmup iters per shape (default 5)
 #   MATMUL_MICRO_ITERS      timed iters per shape (default 50)
 #   MATMUL_MICRO_MAX_SHAPES if > 0, only benchmark first N unique shapes
@@ -63,10 +68,21 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
-# int8 = per-channel int8 weights + asymmetric_quantize_inputs=true,
-# matches the dominant `convolution_int8(conv_wave_memory)` path in
-# Gemma4 prefill (~80% of matmul time). Switch to fp32 to compare
-# against the smaller `convolution(conv_wave_memory)` rows (~20%).
+# int8 = fully-quantized int8 FC (input/output INT8, weights INT8
+# per-channel, bias INT32 per-channel). This is the schema that
+# triggers the LiteRT GPU CL delegate's
+# `convolution_int8(conv_wave_memory)` kernel, which is the dominant
+# matmul path in Gemma4 prefill (~80% of matmul time).
+#
+# Other valid values:
+#   int8_hybrid : int8 weights + fp32 acts (accepted but NOT lowered
+#                 to the int8 conv kernel by the delegate -- timings
+#                 stay close to fp32). Useful for understanding why
+#                 hybrid quant alone isn't enough.
+#   fp32        : everything fp32, GPU compiles fp16 internally.
+#                 Matches the smaller `convolution(conv_wave_memory)`
+#                 rows in prefill (~20%).
+#   fp16        : broken (CPU FC reference kernel asserts fp32).
 MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"

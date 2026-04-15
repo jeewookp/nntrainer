@@ -25,35 +25,44 @@ namespace litert::lm {
 
 // Data type selector for the single-op tflite builder.
 //
+// kInt8 (default for matching Gemma4 prefill):
+//   Fully quantized int8 FC. Input is INT8 with per-tensor symmetric
+//   quant {scale=1/127, zero_point=0}, weights are INT8 with
+//   per-output-channel symmetric quant {scale[N]=1/127, zero_point=0,
+//   quantized_dimension=0}, bias is INT32 with per-channel quant
+//   {scale[i]=input_scale*weight_scale[i], zero_point=0,
+//   quantized_dimension=0}, output is INT8 with per-tensor symmetric
+//   quant {scale=1/127, zero_point=0}. asymmetric_quantize_inputs=false.
+//   This is the only schema that consistently triggers the LiteRT CL
+//   delegate's `convolution_int8(conv_wave_memory)` kernel, which is
+//   what Gemma4 prefill uses for ~80% of its matmul cost. The hybrid
+//   path (kInt8WeightFp32Act) below was tried first but produced
+//   timings within ~10% of the fp32 path, indicating the delegate
+//   was NOT lowering it to the int8 conv_wave_memory kernel.
+//
 // kInt8WeightFp32Act:
-//   Hybrid quantization: weights tensor is INT8 with per-output-channel
-//   symmetric quantization (scale[N], zero_point all 0,
-//   quantized_dimension=0), bias is FLOAT32, input/output are FLOAT32,
-//   and FullyConnectedOptions.asymmetric_quantize_inputs=true. This is
-//   the exact pattern Gemma4 prefill uses: the LiteRT CL delegate
-//   recognizes the hybrid quant FC and lowers it to its
-//   `convolution_int8(conv_wave_memory)` kernel, which is what the
-//   prefill profile shows as the dominant matmul cost (~80% of the
-//   matmul total). Use this mode for apples-to-apples comparison
-//   against prefill numbers.
+//   Hybrid quantization. Weights tensor is INT8 with per-output-channel
+//   quant, bias FLOAT32, input/output FLOAT32, and
+//   FullyConnectedOptions.asymmetric_quantize_inputs=true. The LiteRT
+//   GPU delegate accepts this but does NOT pick the
+//   convolution_int8(conv_wave_memory) kernel for it -- timings stay
+//   close to the fp32 path. Kept as a comparison point for understanding
+//   what the delegate accepts vs. what it actually optimizes.
 //
 // kFp32:
 //   FLOAT32 weights and activations. The GPU CL delegate compiles
 //   fp16 reduction kernels internally via GpuOptions::SetPrecision(kFp16),
 //   so what runs on device is the fp16-weight path -- this matches the
-//   `convolution(conv_wave_memory)` rows in prefill (the smaller, ~20%
-//   share of the matmul total). Useful as a baseline / upper bound and
-//   for sanity-checking the schema before touching int8 quantization.
+//   smaller `convolution(conv_wave_memory)` rows in prefill (~20% share
+//   of the matmul total).
 //
 // kFp16:
-//   The model's tensors are FLOAT16. This is broken at the moment
-//   because the CPU FC reference kernel asserts
-//   `input->type != kTfLiteFloat32`, and any time the GPU CL delegate
-//   doesn't claim the FC op the interpreter falls back to the CPU
-//   FC kernel which immediately fails to prepare. Kept as an enum
-//   value for forward compatibility with future LiteRT builds that
-//   add a fp16 CPU FC kernel.
+//   FLOAT16 schema. Currently broken because the CPU FC reference
+//   kernel asserts `input->type == kTfLiteFloat32` during prepare,
+//   and any path that falls back to CPU rejects the model. Kept for
+//   forward compatibility.
 enum class MatmulDtype {
+  kInt8,
   kInt8WeightFp32Act,
   kFp32,
   kFp16,
