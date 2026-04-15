@@ -1,53 +1,65 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 7, done.
-remote: Counting objects: 100% (7/7), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 5.58 KiB | 248.00 KiB/s, done.
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.58 KiB | 539.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   90f67c1d..3d9fb859  litert_lm  -> origin/litert_lm
-Updating 90f67c1d..3d9fb859
+   e7c45443..9602245a  litert_lm  -> origin/litert_lm
+Updating e7c45443..9602245a
 Fast-forward
- .gitignore                |   4 ++++
- bazel-bin                 |   1 -
- bazel-nntrainer_litert_lm |   1 -
- bazel-out                 |   1 -
- bazel-testlogs            |   1 -
- install_android_ndk.sh    | 232 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- temp_litert.sh            |  22 +++++++++++++++++++++-
- 7 files changed, 257 insertions(+), 5 deletions(-)
- delete mode 120000 bazel-bin
- delete mode 120000 bazel-nntrainer_litert_lm
- delete mode 120000 bazel-out
- delete mode 120000 bazel-testlogs
- create mode 100755 install_android_ndk.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./install_android_ndk.sh 
-[install_android_ndk.sh] Target:
-    version : r28b
-    root    : /home/jwhero94/neo
-    out dir : /home/jwhero94/neo/android-ndk-r28b
-    zip     : /home/jwhero94/.cache/litert_lm_ndk/android-ndk-r28b-linux.zip
-    url     : https://dl.google.com/android/repository/android-ndk-r28b-linux.zip
-
-[install_android_ndk.sh] Trying python3 urllib.request ...
-[urllib] starting, content-length=722264879
-  722264879 / 722264879 bytes (100.0%)
-[urllib] wrote 722264879 bytes to /home/jwhero94/.cache/litert_lm_ndk/android-ndk-r28b-linux.zip
-[install_android_ndk.sh] Extracting to /home/jwhero94/neo ...
-
-[install_android_ndk.sh] Installed: /home/jwhero94/neo/android-ndk-r28b
-[install_android_ndk.sh] Pkg.Revision = 28.1.13356709
-
-Next step:
-    export ANDROID_NDK_HOME="/home/jwhero94/neo/android-ndk-r28b"
-    ./temp_litert.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ bazelisk clean --expunge
-bazelisk: command not found
+ temp_litert.sh | 42 ++++++++++++++++++++++++++++++++----------
+ 1 file changed, 32 insertions(+), 10 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+Already up to date.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
-[temp_litert.sh] ANDROID_NDK_HOME looks like NDK < r28: /home/jwhero94/neo/android-ndk-r26d
-[temp_litert.sh] crate_index__cxx-1.0.149 will not compile against this NDK's libc++.
-[temp_litert.sh] Please install r28b or newer and re-export ANDROID_NDK_HOME.
+[temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
+[temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
+[temp_litert.sh]          won't compile). Auto-upgrading to:
+[temp_litert.sh]          /home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh]          To silence this warning permanently, update ~/.bashrc:
+[temp_litert.sh]            export ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh] BAZEL=/usr/local/bin/bazel
+[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
+[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
+[temp_litert.sh] PREFILL_TOKENS=1024
+[temp_litert.sh] DECODE_TOKENS=256
+[temp_litert.sh] ASYNC=false
+[temp_litert.sh] TASKSET_MASK=f0
+
+[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
+INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=1 --terminal_columns=425
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
+INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
+INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
+INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
+DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
+Warning: skipping import of repository 'rules_proto' because it already exists.
+DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
+Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
+DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
+INFO: Analyzed target //runtime/engine:litert_lm_main (4 packages loaded, 9970 targets configured).
+ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/executor/BUILD:382:11: Compiling runtime/executor/llm_litert_compiled_model_executor_factory.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/executor:llm_litert_compiled_model_executor_factory) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 382 arguments skipped)
+In file included from runtime/executor/llm_litert_compiled_model_executor_factory.cc:36:
+./runtime/executor/llm_litert_compiled_model_executor.h:194:13: error: use of undeclared identifier 'LiteRtCompiledModelGetProfiler'
+  194 |       (void)LiteRtCompiledModelGetProfiler(compiled_model_.Get(),
+      |             ^
+1 error generated.
+Target //runtime/engine:litert_lm_main failed to build
+Use --verbose_failures to see the command lines of failed build steps.
+INFO: Elapsed time: 147.864s, Critical Path: 110.81s
+INFO: 2611 processes: 133 internal, 2478 local.
+ERROR: Build did NOT complete successfully
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
 
