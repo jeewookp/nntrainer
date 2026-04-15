@@ -1,79 +1,378 @@
 실행 결과는 아래와 같아
 
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 21, done.
-remote: Counting objects: 100% (21/21), done.
-remote: Compressing objects: 100% (5/5), done.
-remote: Total 13 (delta 8), reused 13 (delta 8), pack-reused 0 (from 0)
-Unpacking objects: 100% (13/13), 18.77 KiB | 1.04 MiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              litert_lm  -> FETCH_HEAD
-   5f2f2515..e9483f44  litert_lm  -> origin/litert_lm
-Updating 5f2f2515..e9483f44
-Fast-forward
- runtime/engine/BUILD                     |  63 ++++++++++++++++++++++++++++++++++++++++++++++
- runtime/engine/CMakeLists.txt            |  29 +++++++++++++++++++++
- runtime/engine/matmul_micro_benchmark.cc | 524 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- runtime/util/BUILD                       |  19 ++++++++++++++
- runtime/util/CMakeLists.txt              |  22 +++++++++++++++-
- runtime/util/single_op_tflite_builder.cc | 276 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- runtime/util/single_op_tflite_builder.h  |  80 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- temp_litert.sh                           |  93 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 8 files changed, 1104 insertions(+), 2 deletions(-)
- create mode 100644 runtime/engine/matmul_micro_benchmark.cc
- create mode 100644 runtime/util/single_op_tflite_builder.cc
- create mode 100644 runtime/util/single_op_tflite_builder.h
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
-[temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
-[temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
-[temp_litert.sh]          won't compile). Auto-upgrading to:
-[temp_litert.sh]          /home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh]          To silence this warning permanently, update ~/.bashrc:
-[temp_litert.sh]            export ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh] BAZEL=/usr/local/bin/bazel
-[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
-[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
-[temp_litert.sh] PREFILL_TOKENS=1024
-[temp_litert.sh] DECODE_TOKENS=256
-[temp_litert.sh] ASYNC=false
-[temp_litert.sh] TASKSET_MASK=f0
-[temp_litert.sh] OP_PROFILING=true
-[temp_litert.sh]   (per-op profile table WILL be emitted. Expect the
-[temp_litert.sh]    decode stream to be <pad> tokens because the 1024-
-[temp_litert.sh]    token synthetic prefill feeds a zero-padded context
-[temp_litert.sh]    to the model. Decoded text is garbage-by-design in
-[temp_litert.sh]    benchmark mode; only Prefill/Decode tokens-per-sec
-[temp_litert.sh]    and the [PROFILE LiteRT CompiledModel per-op]
-[temp_litert.sh]    summary at the bottom matter. DO NOT Ctrl+C --
-[temp_litert.sh]    decode takes roughly 8s and the profile summary
-[temp_litert.sh]    only prints on clean exit.)
 
-[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
-INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
-INFO: Options provided by the client:
-  Inherited 'common' options: --isatty=1 --terminal_columns=425
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
-INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
-INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
-INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
-INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed 2 targets (2 packages loaded, 147 targets configured).
-ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/engine/BUILD:241:10: Compiling runtime/engine/matmul_micro_benchmark.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/engine:matmul_micro_benchmark) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 150 arguments skipped)
-runtime/engine/matmul_micro_benchmark.cc:280:30: error: 'Create' is a protected member of 'litert::CompiledModel'
-  280 |       litert::CompiledModel::Create(env, model.Get(), options);
-      |       ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
-external/litert/litert/cc/litert_compiled_model.h:1132:34: note: declared protected here
- 1132 |   static Expected<CompiledModel> Create(litert::Environment& env,
-      |                                  ^
-1 error generated.
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 1.894s, Critical Path: 1.68s
-INFO: 7 processes: 7 internal.
-ERROR: Build did NOT complete successfully
+BenchmarkInfo:
+
+==========================================
+ Matmul micro benchmark
+==========================================
+[temp_litert.sh] Running matmul_micro_benchmark against /data/local/tmp/litert_lm/matmul_roster.csv (96437 bytes)...
+
+[MATMUL MICRO] backend=gpu unique_shapes=61 warmup=5 iters=50
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074a3219b70, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074a3219630, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+I0000 00:00:1742080366.656839    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.656947    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
+INFO: Loaded OpenCL library with dlopen.
+INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
+INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
+INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=256 k=1536: CompiledModel::Create m=1 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.706842    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.706929    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=512 k=1536: CompiledModel::Create m=1 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.708976    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.709013    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=1536 k=256: CompiledModel::Create m=1 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.724413    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.724451    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=1536 k=2048: CompiledModel::Create m=1 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.749404    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.749440    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=1536 k=4096: CompiledModel::Create m=1 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.784265    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.784303    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=1536 k=6144: CompiledModel::Create m=1 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.851476    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.851514    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=1536 k=12288: CompiledModel::Create m=1 n=1536 k=12288: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.864556    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.864590    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=2048 k=1536: CompiledModel::Create m=1 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.888471    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.888508    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=4096 k=1536: CompiledModel::Create m=1 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.922943    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.922979    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=6144 k=1536: CompiledModel::Create m=1 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080366.972118    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080366.972150    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=8960 k=1536: CompiledModel::Create m=1 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080367.020910    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080367.020937    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=12288 k=1536: CompiledModel::Create m=1 n=12288 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.503609    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.503654    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1 n=262144 k=1536: CompiledModel::Create m=1 n=262144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.531479    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.531514    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=256 k=1536: CompiledModel::Create m=4 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.536201    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.536229    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=512 k=1536: CompiledModel::Create m=4 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.537548    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.537577    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=1536 k=256: CompiledModel::Create m=4 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.549185    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.549215    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=1536 k=2048: CompiledModel::Create m=4 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.567597    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.567630    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=1536 k=4096: CompiledModel::Create m=4 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.593680    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.593709    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=1536 k=6144: CompiledModel::Create m=4 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.643022    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.643052    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=1536 k=12288: CompiledModel::Create m=4 n=1536 k=12288: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.652572    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.652601    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=2048 k=1536: CompiledModel::Create m=4 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.669943    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.669971    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=4096 k=1536: CompiledModel::Create m=4 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.695069    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.695098    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=6144 k=1536: CompiledModel::Create m=4 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.731118    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.731152    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=8960 k=1536: CompiledModel::Create m=4 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080368.779872    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080368.779900    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=12288 k=1536: CompiledModel::Create m=4 n=12288 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.294855    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.294899    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=4 n=262144 k=1536: CompiledModel::Create m=4 n=262144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.322114    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.322151    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=8 n=256 k=256: CompiledModel::Create m=8 n=256 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.323635    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.323670    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=8 n=512 k=512: CompiledModel::Create m=8 n=512 k=512: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+[MATMUL MICRO] SKIP m=8 n=32003 k=32003: BuildSingleFullyConnectedTfliteModel: weight tensor too large (2048384018 bytes > 1 GiB)
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.324287    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.324313    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=32 n=256 k=256: CompiledModel::Create m=32 n=256 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.325426    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.325449    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=32 n=512 k=512: CompiledModel::Create m=32 n=512 k=512: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.327252    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.327276    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=32 n=515 k=515: CompiledModel::Create m=32 n=515 k=515: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+[MATMUL MICRO] SKIP m=32 n=32003 k=32003: BuildSingleFullyConnectedTfliteModel: weight tensor too large (2048384018 bytes > 1 GiB)
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.329728    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.329753    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=256 k=1536: CompiledModel::Create m=128 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.334271    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.334297    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=512 k=1536: CompiledModel::Create m=128 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.335604    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.335627    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=1536 k=256: CompiledModel::Create m=128 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.347208    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.347236    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=1536 k=2048: CompiledModel::Create m=128 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.365500    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.365533    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=1536 k=4096: CompiledModel::Create m=128 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.391051    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.391079    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=1536 k=6144: CompiledModel::Create m=128 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.400809    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.400836    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=2048 k=1536: CompiledModel::Create m=128 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.418139    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.418172    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=4096 k=1536: CompiledModel::Create m=128 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.443178    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.443206    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=6144 k=1536: CompiledModel::Create m=128 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.479856    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.479886    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=128 n=8960 k=1536: CompiledModel::Create m=128 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.480564    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.480589    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=256 k=256: CompiledModel::Create m=1024 n=256 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.481808    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.481832    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=256 k=1536: CompiledModel::Create m=1024 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.482829    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.482855    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=512 k=512: CompiledModel::Create m=1024 n=512 k=512: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.485089    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.485113    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=512 k=1536: CompiledModel::Create m=1024 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.486950    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.486975    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=639 k=639: CompiledModel::Create m=1024 n=639 k=639: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.488272    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.488296    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=1536 k=256: CompiledModel::Create m=1024 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.498059    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.498081    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=1536 k=2048: CompiledModel::Create m=1024 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.515702    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.515735    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=1536 k=4096: CompiledModel::Create m=1024 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.540773    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.540794    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=1536 k=6144: CompiledModel::Create m=1024 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.550497    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.550525    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=2048 k=1536: CompiledModel::Create m=1024 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.567646    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.567678    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=4096 k=1536: CompiledModel::Create m=1024 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.592767    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.592796    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=6144 k=1536: CompiledModel::Create m=1024 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.629114    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.629171    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=1024 n=8960 k=1536: CompiledModel::Create m=1024 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+[MATMUL MICRO] SKIP m=1024 n=32003 k=32003: BuildSingleFullyConnectedTfliteModel: weight tensor too large (2048384018 bytes > 1 GiB)
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.629815    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.629840    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=8192 n=256 k=256: CompiledModel::Create m=8192 n=256 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.630746    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.630769    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=8192 n=512 k=512: CompiledModel::Create m=8192 n=512 k=512: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742080370.637897    2330 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742080370.637923    2330 delegate_opencl.cc:553] options->kernel_batch_size: -1
+ERROR: external/litert/tflite/kernels/fully_connected.cc:307 input->type != kTfLiteFloat32 (FLOAT16 != FLOAT32)
+ERROR: Node number 0 (FULLY_CONNECTED) failed to prepare.
+[MATMUL MICRO] SKIP m=8192 n=1535 k=1535: CompiledModel::Create m=8192 n=1535 k=1535: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+[MATMUL MICRO] SKIP m=8192 n=32003 k=32003: BuildSingleFullyConnectedTfliteModel: weight tensor too large (2048384018 bytes > 1 GiB)
+[MATMUL MICRO] done. 61 / 61 shapes failed.
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000074a3219630, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000074a3219b70, name=LiteRT GPU
+[MATMUL MICRO] FATAL: All shapes failed to benchmark.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
