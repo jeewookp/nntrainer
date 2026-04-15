@@ -77,21 +77,43 @@ if [ -z "${ANDROID_NDK_HOME:-}" ]; then
   echo "    export ANDROID_NDK_HOME=/path/to/AndroidNDK"
   exit 1
 fi
+NDK_FALLBACK_R28B="${HOME}/neo/android-ndk-r28b"
+
+# Auto-upgrade from a stale NDK < r28 when r28b is already installed at the
+# canonical location. This handles the common case where the user has a
+# `export ANDROID_NDK_HOME=.../android-ndk-r26d` line in ~/.bashrc that
+# silently overrides the default set at the top of this script.
+case "${ANDROID_NDK_HOME}" in
+  *android-ndk-r2[0-7]*)
+    if [ -f "${NDK_FALLBACK_R28B}/README.md" ] \
+       && [ -f "${NDK_FALLBACK_R28B}/source.properties" ]; then
+      echo "[temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=${ANDROID_NDK_HOME}"
+      echo "[temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149"
+      echo "[temp_litert.sh]          won't compile). Auto-upgrading to:"
+      echo "[temp_litert.sh]          ${NDK_FALLBACK_R28B}"
+      echo "[temp_litert.sh]          To silence this warning permanently, update ~/.bashrc:"
+      echo "[temp_litert.sh]            export ANDROID_NDK_HOME=${NDK_FALLBACK_R28B}"
+      export ANDROID_NDK_HOME="${NDK_FALLBACK_R28B}"
+    else
+      echo "[temp_litert.sh] ANDROID_NDK_HOME looks like NDK < r28: ${ANDROID_NDK_HOME}"
+      echo "[temp_litert.sh] crate_index__cxx-1.0.149 will not compile against this NDK's libc++."
+      echo "[temp_litert.sh] Install r28b and re-run:"
+      echo "    ./install_android_ndk.sh"
+      echo "    unset ANDROID_NDK_HOME    # or: export ANDROID_NDK_HOME=${NDK_FALLBACK_R28B}"
+      echo "    ./temp_litert.sh"
+      exit 1
+    fi
+    ;;
+esac
+
 if [ ! -d "${ANDROID_NDK_HOME}" ]; then
   echo "[temp_litert.sh] ANDROID_NDK_HOME does not exist: ${ANDROID_NDK_HOME}"
-  echo "[temp_litert.sh] Install NDK r28b or newer from"
+  echo "[temp_litert.sh] Install NDK r28b or newer with:"
+  echo "    ./install_android_ndk.sh"
+  echo "[temp_litert.sh] or from"
   echo "    https://developer.android.com/ndk/downloads#stable-downloads"
   exit 1
 fi
-# Hard fail on NDK < r28. cxx-1.0.149 won't compile against r26/r27 libc++.
-case "${ANDROID_NDK_HOME}" in
-  *android-ndk-r2[0-7]*)
-    echo "[temp_litert.sh] ANDROID_NDK_HOME looks like NDK < r28: ${ANDROID_NDK_HOME}"
-    echo "[temp_litert.sh] crate_index__cxx-1.0.149 will not compile against this NDK's libc++."
-    echo "[temp_litert.sh] Please install r28b or newer and re-export ANDROID_NDK_HOME."
-    exit 1
-    ;;
-esac
 
 BAZEL=$(command -v bazelisk || command -v bazel)
 if [ -z "${BAZEL}" ]; then
