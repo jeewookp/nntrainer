@@ -280,6 +280,8 @@ cc_binary(
             "@litert//litert/cc:litert_api_with_dynamic_runtime",
         ],
         "//conditions:default": [
+            "@litert//litert/c:litert_compiled_model",
+            "@litert//litert/c:litert_profiler",
             "@litert//litert/cc:litert_buffer_ref",
             "@litert//litert/cc:litert_common",
             "@litert//litert/cc:litert_compiled_model",
@@ -288,6 +290,7 @@ cc_binary(
             "@litert//litert/cc:litert_options",
             "@litert//litert/cc:litert_tensor_buffer",
             "@litert//litert/cc/options:litert_gpu_options",
+            "@litert//litert/cc/options:litert_runtime_options",
         ],
     }),
 )

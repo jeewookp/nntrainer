@@ -68,6 +68,8 @@
 #include "absl/types/span.h"  // from @com_google_absl
 #include "absl/time/clock.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
+#include "litert/c/litert_compiled_model.h"  // from @litert
+#include "litert/c/litert_profiler.h"  // from @litert
 #include "litert/cc/litert_buffer_ref.h"  // from @litert
 #include "litert/cc/litert_common.h"  // from @litert
 #include "litert/cc/litert_compiled_model.h"  // from @litert
@@ -76,6 +78,7 @@
 #include "litert/cc/litert_options.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "litert/cc/options/litert_gpu_options.h"  // from @litert
+#include "litert/cc/options/litert_runtime_options.h"  // from @litert
 #include "runtime/util/single_op_tflite_builder.h"
 
 ABSL_FLAG(std::string, backend, "gpu",
@@ -105,6 +108,19 @@ ABSL_FLAG(std::string, csv_out, "",
 ABSL_FLAG(int, max_shapes, 0,
           "If > 0, only benchmark the first N unique shapes from the "
           "input. Useful for smoke-testing on large rosters.");
+ABSL_FLAG(bool, profile, false,
+          "Enable LiteRT op profiling for each shape and dump the "
+          "Delegate Statistics summary at the end. This wires up "
+          "RuntimeOptions::SetEnableProfiling(true) on the GPU "
+          "compilation options, retrieves the profiler handle via "
+          "LiteRtCompiledModelGetProfiler, and brackets each timed "
+          "iteration with LiteRtStartProfiler / LiteRtStopProfiler. "
+          "After the timed loop the LiteRtGetProfileSummary string "
+          "is printed to stderr -- this is what tells you which "
+          "OpenCL kernel the GPU CL delegate actually picked for the "
+          "shape (e.g. `convolution_int8(conv_wave_memory)` vs the "
+          "fp32 fallback). Adds noticeable per-Run overhead so use "
+          "for diagnostics, not steady-state numbers.");
 ABSL_FLAG(std::string, dtype, "int8",
           "Tensor element type for the synthesized FC model. Valid "
           "values:\n"
@@ -263,11 +279,15 @@ absl::Status ExpectedError(const T& exp, absl::string_view ctx) {
 }
 
 // Builds, compiles, and times one matmul shape. Returns the per-iteration
-// latency samples so the caller can compute aggregate stats.
+// latency samples so the caller can compute aggregate stats. When
+// `enable_profile` is true, also enables LiteRT op profiling on the GPU
+// compilation options and prints the Delegate Statistics summary to
+// stderr after the timed loop -- this is the canonical way to see
+// which CL kernel the GPU delegate actually picked for the shape.
 absl::StatusOr<std::vector<double>> BenchmarkOneShape(
     litert::Environment& env, const Shape& shape,
     absl::string_view backend_str, litert::lm::MatmulDtype dtype,
-    int warmup_iters, int timed_iters) {
+    int warmup_iters, int timed_iters, bool enable_profile) {
   auto build_or = litert::lm::BuildSingleFullyConnectedTfliteModel(
       shape.m, shape.n, shape.k, dtype);
   if (!build_or.ok()) return build_or.status();
@@ -316,6 +336,23 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
         absl::StrCat("Unknown --backend: ", backend_str));
   }
 
+  // Op profiling: arms the tflite::Profiler hooks inside the compiled
+  // model. We retrieve the LiteRtProfiler handle below, after
+  // CompiledModel::Create, and Start/Stop it around each timed
+  // iteration. The hooks survive across multiple Run() calls so the
+  // final GetProfileSummary covers all `timed_iters` invocations.
+  if (enable_profile) {
+    auto runtime_opts_exp = options.GetRuntimeOptions();
+    if (!runtime_opts_exp.HasValue()) {
+      return ExpectedError(runtime_opts_exp, "Options::GetRuntimeOptions");
+    }
+    auto& runtime_opts = runtime_opts_exp.Value();
+    auto set_exp = runtime_opts.SetEnableProfiling(true);
+    if (!set_exp.HasValue()) {
+      return ExpectedError(set_exp, "RuntimeOptions::SetEnableProfiling");
+    }
+  }
+
   auto compiled_model_exp =
       CompiledModelAccess::Create(env, model.Get(), options);
   if (!compiled_model_exp.HasValue()) {
@@ -325,6 +362,17 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
                      " k=", shape.k));
   }
   litert::CompiledModel compiled_model = std::move(compiled_model_exp.Value());
+
+  // Grab the LiteRtProfiler handle if op profiling was enabled. The
+  // handle is non-owning -- the compiled model owns the underlying
+  // tflite::Profiler. A nullptr return means profiling wasn't actually
+  // armed (e.g. on a non-GPU backend that ignores the runtime option),
+  // in which case we just skip Start/Stop and the summary dump.
+  LiteRtProfiler profiler_handle = nullptr;
+  if (enable_profile) {
+    (void)LiteRtCompiledModelGetProfiler(compiled_model.Get(),
+                                          &profiler_handle);
+  }
 
   auto input_buffers_exp =
       compiled_model.CreateInputBuffers(built.signature_key);
@@ -402,6 +450,15 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   // a const pointer to the mapped buffer -- so the overhead is
   // negligible compared to the matmul kernel time (hundreds of
   // microseconds and up for Gemma4 prefill shapes).
+  //
+  // If op profiling is enabled, Start/Stop the LiteRtProfiler around
+  // the entire timed loop so the per-op event buffer covers all
+  // `timed_iters` invocations. Doing it once around the whole loop
+  // (instead of per iteration) keeps the start/stop overhead out of
+  // the wall-clock samples below.
+  if (enable_profile && profiler_handle != nullptr) {
+    (void)LiteRtStartProfiler(profiler_handle);
+  }
   std::vector<double> samples_us;
   samples_us.reserve(timed_iters);
   for (int i = 0; i < timed_iters; ++i) {
@@ -439,6 +496,31 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
     const absl::Time t1 = absl::Now();
     samples_us.push_back(absl::ToDoubleMicroseconds(t1 - t0));
   }
+
+  // Stop the profiler and dump the per-op summary so we can see which
+  // CL kernel the GPU delegate actually picked. The summary string is
+  // owned by the caller and must be std::free'd after use.
+  if (enable_profile && profiler_handle != nullptr) {
+    (void)LiteRtStopProfiler(profiler_handle);
+    const char* summary = nullptr;
+    LiteRtStatus status = LiteRtGetProfileSummary(
+        profiler_handle, compiled_model.Get(), &summary);
+    if (status == kLiteRtStatusOk && summary != nullptr) {
+      std::fprintf(stderr,
+                   "\n[MATMUL MICRO PROFILE] m=%lld n=%lld k=%lld\n%s\n",
+                   static_cast<long long>(shape.m),
+                   static_cast<long long>(shape.n),
+                   static_cast<long long>(shape.k), summary);
+      std::free(const_cast<char*>(summary));
+    } else {
+      std::fprintf(stderr,
+                   "\n[MATMUL MICRO PROFILE] m=%lld n=%lld k=%lld: "
+                   "LiteRtGetProfileSummary failed (status=%d)\n",
+                   static_cast<long long>(shape.m),
+                   static_cast<long long>(shape.n),
+                   static_cast<long long>(shape.k), static_cast<int>(status));
+    }
+  }
   return samples_us;
 }
 
@@ -451,6 +533,7 @@ absl::Status MainBody() {
   const std::string csv_out = absl::GetFlag(FLAGS_csv_out);
   const int max_shapes = absl::GetFlag(FLAGS_max_shapes);
   const std::string dtype_str = absl::GetFlag(FLAGS_dtype);
+  const bool enable_profile = absl::GetFlag(FLAGS_profile);
 
   if (warmup < 0 || iters <= 0) {
     return absl::InvalidArgumentError(
@@ -500,9 +583,9 @@ absl::Status MainBody() {
 
   std::fprintf(stderr,
                "\n[MATMUL MICRO] backend=%s dtype=%s unique_shapes=%zu "
-               "warmup=%d iters=%d\n",
+               "warmup=%d iters=%d profile=%d\n",
                backend.c_str(), dtype_str.c_str(), shapes.size(), warmup,
-               iters);
+               iters, enable_profile ? 1 : 0);
 
   // Create one LiteRT environment for the whole run; CompiledModels are
   // built / destroyed per shape so the GPU delegate's internal caches
@@ -535,8 +618,8 @@ absl::Status MainBody() {
 
   int failed = 0;
   for (const auto& s : shapes) {
-    auto samples_or =
-        BenchmarkOneShape(env, s, backend, dtype, warmup, iters);
+    auto samples_or = BenchmarkOneShape(env, s, backend, dtype, warmup,
+                                          iters, enable_profile);
     if (!samples_or.ok()) {
       const std::string err_msg(samples_or.status().message());
       std::fprintf(stderr,

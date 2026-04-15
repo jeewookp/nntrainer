@@ -91,6 +91,14 @@ MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"
 MATMUL_MICRO_SHAPES="${MATMUL_MICRO_SHAPES:-}"
+# Op profiling: when true, enables LiteRT op profiling on each shape and
+# dumps the Delegate Statistics summary to stderr so we can see exactly
+# which CL kernel the GPU delegate picks (e.g.
+# `convolution_int8(conv_wave_memory)` vs the fp32 fallback). Off by
+# default because the summary is verbose; turn on when the absolute
+# timings don't line up with prefill and we need to know whether the
+# right kernel was selected.
+MATMUL_MICRO_PROFILE="${MATMUL_MICRO_PROFILE:-false}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 
 MATMUL_ROSTER_CSV_DEVICE=${DEVICE_FOLDER}/matmul_roster.csv
@@ -134,6 +142,7 @@ echo "[micro.sh] DEVICE_FOLDER=${DEVICE_FOLDER}"
 echo "[micro.sh] DTYPE=${MATMUL_MICRO_DTYPE}"
 echo "[micro.sh] WARMUP=${MATMUL_MICRO_WARMUP}"
 echo "[micro.sh] ITERS=${MATMUL_MICRO_ITERS}"
+echo "[micro.sh] PROFILE=${MATMUL_MICRO_PROFILE}"
 if [ -n "${MATMUL_MICRO_SHAPES}" ]; then
   echo "[micro.sh] SHAPES (inline)=${MATMUL_MICRO_SHAPES}"
 else
@@ -270,6 +279,12 @@ if [ "${MATMUL_MICRO_MAX_SHAPES}" -gt 0 ]; then
   MAX_SHAPES_FLAG="--max_shapes=${MATMUL_MICRO_MAX_SHAPES}"
 fi
 
+PROFILE_FLAG=""
+case "${MATMUL_MICRO_PROFILE,,}" in
+  1|true|yes|on)  PROFILE_FLAG="--profile=true"  ;;
+  *)              PROFILE_FLAG="--profile=false" ;;
+esac
+
 # ----------------------------------------------------------------------------
 # 5. Run on device.
 # ----------------------------------------------------------------------------
@@ -284,6 +299,7 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --warmup=${MATMUL_MICRO_WARMUP} \
     --iters=${MATMUL_MICRO_ITERS} \
     ${MAX_SHAPES_FLAG} \
+    ${PROFILE_FLAG} \
     --csv_out=${MATMUL_MICRO_CSV_DEVICE}" \
   2>&1 | tee "${MATMUL_MICRO_LOG}"
 
