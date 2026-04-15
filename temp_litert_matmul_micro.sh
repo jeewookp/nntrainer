@@ -94,11 +94,13 @@ MATMUL_MICRO_SHAPES="${MATMUL_MICRO_SHAPES:-}"
 # Op profiling: when true, enables LiteRT op profiling on each shape and
 # dumps the Delegate Statistics summary to stderr so we can see exactly
 # which CL kernel the GPU delegate picks (e.g.
-# `convolution_int8(conv_wave_memory)` vs the fp32 fallback). Off by
-# default because the summary is verbose; turn on when the absolute
-# timings don't line up with prefill and we need to know whether the
-# right kernel was selected.
-MATMUL_MICRO_PROFILE="${MATMUL_MICRO_PROFILE:-false}"
+# `convolution_int8(conv_wave_memory)` vs the fp32 fallback). Default
+# is true while we're still chasing the kernel-selection mismatch
+# between the synthetic micro and Gemma4 prefill -- the verbose output
+# is the canonical signal for "is the int8 path being hit?". Turn off
+# (`MATMUL_MICRO_PROFILE=false`) once the timings match prefill and
+# you just want clean steady-state numbers.
+MATMUL_MICRO_PROFILE="${MATMUL_MICRO_PROFILE:-true}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 
 MATMUL_ROSTER_CSV_DEVICE=${DEVICE_FOLDER}/matmul_roster.csv

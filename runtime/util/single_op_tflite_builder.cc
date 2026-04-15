@@ -400,13 +400,21 @@ namespace {
 // quantize_and_dequantize`).
 absl::StatusOr<SingleFcBuildResult> BuildWrappedInt8Fc(int64_t m, int64_t n,
                                                         int64_t k) {
-  // Sanity cap: 1 GiB of weights, same convention as the single-op path.
-  constexpr int64_t kMaxBytes = int64_t{1} << 30;
+  // Sanity cap: 256 MiB of int8 weights. Tighter than the single-op
+  // path's 1 GiB cap because the LiteRT GPU CL delegate appears to
+  // expand int8 weights into a 2x larger internal layout for
+  // SIMD/wave packing -- on the bogus n=k=32003 shapes from the
+  // matmul roster the delegate tries to allocate ~2 GB of device
+  // memory (32003 * 32003 * 2 bytes) and clCreateBuffer fails. Real
+  // Gemma4 matmul shapes top out around vocab_size * hidden_dim
+  // (~49 M weight elements = ~50 MB int8), well under the cap.
+  constexpr int64_t kMaxBytes = int64_t{256} << 20;
   const int64_t weight_bytes = n * k;  // 1 byte per int8
   if (weight_bytes <= 0 || weight_bytes > kMaxBytes) {
     return absl::InvalidArgumentError(absl::StrCat(
         "BuildWrappedInt8Fc: weight tensor too large (", weight_bytes,
-        " bytes > 1 GiB)"));
+        " bytes > 256 MiB; the GPU CL delegate uses ~2x this for an "
+        "internal SIMD layout and clCreateBuffer fails on Adreno)"));
   }
 
   flatbuffers::FlatBufferBuilder fbb(/*initial_size=*/static_cast<size_t>(
