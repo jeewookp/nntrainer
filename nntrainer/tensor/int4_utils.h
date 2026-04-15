@@ -67,12 +67,19 @@ public:
    * @param[in] group_size group size (32 or 64 or 128)
    * @param[in] rows_count number of rows of input matrix
    * @param[in] columns_count number of columns of input matrix
+   * @param[in] convert_with_add8  if true, the returned nibble is the
+   *                               unsigned bias-8 encoding (int4 value v
+   *                               stored as v + 8 in [0, 15]) used by the
+   *                               gpu_int4_gemm_adreno kernel. Defaults to
+   *                               false, which keeps the existing osv32_isv2
+   *                               two's-complement nibble convention.
    * @return
    */
   static uint8_t pack(const float *weights, const float *scales,
                       const size_t row_id, const size_t column_id,
                       const size_t groups_per_row, const size_t group_size,
-                      const size_t rows_count, const size_t columns_count);
+                      const size_t rows_count, const size_t columns_count,
+                      const bool convert_with_add8 = false);
 
   /**
    * @brief Quantize weights float* matrix to OpenVINO layout:
@@ -95,12 +102,54 @@ public:
                                 std::vector<uint16_t> &out_scales);
 
   /**
+   * @brief Quantize a row-major [N][K] weight matrix into the channel-wise
+   *        int4 layout consumed by the gpu_int4_gemm_adreno OpenCL kernel.
+   *
+   * Layout (must match the reader side in
+   * runtime/util/int4_gemm_adreno.cl and
+   * Int4Utils::convertKaiToChannelwise):
+   *   - `out_weights` : ushort[ceilDiv(K, 4) * N]. Each ushort packs 4
+   *                     unsigned bias-8 nibbles for a single output channel
+   *                     `n` at k positions [k..k+3]; bits [0..3] hold k,
+   *                     bits [4..7] hold k+1, [8..11] hold k+2,
+   *                     [12..15] hold k+3.
+   *   - `out_scales`  : fp16[align(N, ROW_BLOCK_SIZE) * ceilDiv(K, group_size)].
+   *                     For channel-wise quant (group_size == K) this is
+   *                     one fp16 scale per output channel.
+   *
+   * Unlike the `quantizeAndRepack` above (which targets the OpenVINO
+   * os_is_yx_osv32_isv2 layout), this routine lays out nibbles by k-group
+   * / output-channel index so the Adreno kernel can vload4 along the
+   * aligned N axis without any additional transposition.
+   *
+   * @param[in] weights     float * input matrix of shape [N][K]
+   * @param[in] N           number of output channels (rows of the matrix)
+   * @param[in] K           input dimension (columns of the matrix)
+   * @param[in] group_size  scale group size (32 or 64 or 128)
+   * @param[out] out_weights packed int4 nibble buffer
+   * @param[out] out_scales  per-channel / per-group fp16 scales
+   */
+  static void quantizeAndRepackSimpleLayout(const float *weights,
+                                            const size_t N, const size_t K,
+                                            const size_t group_size,
+                                            std::vector<uint16_t> &out_weights,
+                                            std::vector<uint16_t> &out_scales);
+
+  /**
    * @brief     Quantize one float value to 4-bits integer
    * @param[in] weight input weight
    * @param[in] scale input scale
+   * @param[in] convert_with_add8  if true, the returned nibble is
+   *                               (quantized + 8) in [0, 15] (unsigned
+   *                               bias-8 encoding used by
+   *                               gpu_int4_gemm_adreno). If false, the
+   *                               returned nibble is (quantized & 0xF),
+   *                               the two's-complement encoding used by
+   *                               the osv32_isv2 layout.
    * @return 4-bit integer
    */
-  static uint8_t quantizeToInt4(const float weight, const float scale);
+  static uint8_t quantizeToInt4(const float weight, const float scale,
+                                const bool convert_with_add8 = false);
 
   /**
    * @brief     Convert 4-bit integer value to 32-bit integer
