@@ -78,12 +78,36 @@ namespace litert::lm {
 //   kernel asserts `input->type == kTfLiteFloat32` during prepare,
 //   and any path that falls back to CPU rejects the model. Kept for
 //   forward compatibility.
+//
+// kInt8Chain:
+//   4-op subgraph: QUANTIZE -> FC1(int8) -> FC2(int8) -> DEQUANTIZE.
+//   Two int8 FullyConnected ops in series share an int8 intermediate
+//   tensor that's read by FC2 and written by FC1 -- the GPU CL
+//   delegate optimizer can NOT collapse the int8 intermediate to fp16
+//   because two real ops depend on it. The hypothesis is that
+//   single-op micros (kInt8 above) get compiled as fp16 conv even
+//   though the FC tensor types are INT8, because the wrapped
+//   QUANTIZE/DEQUANTIZE round-trip leaves no live int8 tensor; in a
+//   chain there's a live int8 tensor between the two FCs and the
+//   delegate has to commit to int8 GEMM. Kernel name should change
+//   from `convolution1x1(conv_wave_memory)` (fp16 1x1 conv) to
+//   `convolution_int8(conv_wave_memory) -> ...` (matching prefill's
+//   int8 row).
+//
+//   Shape semantics: FC1 maps [M, K] -> [M, N], FC2 maps [M, N] ->
+//   [M, K] (so the sub-graph is a closed loop that emits the same
+//   shape it consumed). Both FCs do the same number of MACs as the
+//   user-requested matmul, so the chain's wall time is ~2x a single
+//   conv. matmul_micro_benchmark divides the reported per-Run
+//   samples by 2 in this mode so the CSV stays comparable to
+//   single-op modes and to prefill numbers.
 enum class MatmulDtype {
   kInt8,
   kInt8WeightFp32Act,
   kFp32,
   kFp16,
   kFp32Conv2d,
+  kInt8Chain,
 };
 
 // Pure-data result of BuildSingleFullyConnectedTfliteModel. The caller

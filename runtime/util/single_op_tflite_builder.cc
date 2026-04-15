@@ -114,6 +114,11 @@ absl::StatusOr<SingleFcBuildResult> BuildWrappedInt8Fc(int64_t m, int64_t n,
 absl::StatusOr<SingleFcBuildResult> BuildFp32Conv2d1x1(int64_t m, int64_t n,
                                                         int64_t k);
 
+// Forward declaration of the int8 FC chain (QUANTIZE -> FC1 -> FC2 ->
+// DEQUANTIZE) path.
+absl::StatusOr<SingleFcBuildResult> BuildInt8FcChain(int64_t m, int64_t n,
+                                                      int64_t k);
+
 }  // namespace
 
 absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
@@ -135,11 +140,22 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   }
 
   // CONV_2D 1x1 path. Different op type from FULLY_CONNECTED so the
-  // GPU CL delegate goes through a different lowering pipeline and
-  // (per profile data) hits the faster `convolution(conv_wave_memory)`
-  // entry point instead of the FC-rewritten `convolution1x1(...)`.
+  // GPU CL delegate goes through a different lowering pipeline.
+  // (Empirically: ends up at the same `convolution1x1(conv_wave_memory)`
+  // entry point as FC. The `1x1` suffix turns out to be the filter
+  // size, not the FC-rewrite marker.)
   if (dtype == MatmulDtype::kFp32Conv2d) {
     return BuildFp32Conv2d1x1(m, n, k);
+  }
+
+  // int8 FC chain. Two FullyConnected ops in series share an int8
+  // intermediate tensor that's read by FC2 / written by FC1. The
+  // delegate optimizer can NOT fold the chain because two real ops
+  // depend on the int8 tensor, so it has to commit to int8 GEMM
+  // and pick the `convolution_int8(conv_wave_memory)` kernel
+  // (matching prefill's int8 row).
+  if (dtype == MatmulDtype::kInt8Chain) {
+    return BuildInt8FcChain(m, n, k);
   }
 
   // Per-mode tensor type and element byte width for the SINGLE-OP path.
@@ -201,6 +217,10 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       // Already routed to BuildFp32Conv2d1x1 above.
       return absl::InternalError(
           "kFp32Conv2d should have been dispatched to BuildFp32Conv2d1x1");
+    case MatmulDtype::kInt8Chain:
+      // Already routed to BuildInt8FcChain above.
+      return absl::InternalError(
+          "kInt8Chain should have been dispatched to BuildInt8FcChain");
     default:
       return absl::InvalidArgumentError(
           "BuildSingleFullyConnectedTfliteModel: unknown dtype");
@@ -782,6 +802,305 @@ absl::StatusOr<SingleFcBuildResult> BuildFp32Conv2d1x1(int64_t m, int64_t n,
   auto description = fbb.CreateString(
       absl::StrCat("matmul_micro_benchmark conv2d_1x1 m=", m, " n=", n,
                    " k=", k));
+  auto model = tflite::CreateModel(
+      fbb,
+      /*version=*/3,
+      /*operator_codes=*/opcodes_fb,
+      /*subgraphs=*/subgraphs_fb,
+      /*description=*/description,
+      /*buffers=*/buffers_fb,
+      /*metadata_buffer=*/0,
+      /*metadata=*/0,
+      /*signature_defs=*/sig_defs_fb);
+  tflite::FinishModelBuffer(fbb, model);
+
+  SingleFcBuildResult result;
+  result.flatbuffer.assign(
+      reinterpret_cast<const char*>(fbb.GetBufferPointer()),
+      fbb.GetSize());
+  result.signature_key = "main";
+  result.input_name = "x";
+  result.output_name = "y";
+  return result;
+}
+
+// Builds a 4-op int8 FC chain so that an INT8 intermediate tensor
+// stays live between two FullyConnected ops. Layout:
+//
+//   signature in : "x" FLOAT32 [1, M, K]
+//   ----------------------------------------------------------
+//   QUANTIZE         x        -> x_int8        (per-tensor sym quant)
+//   FULLY_CONNECTED  x_int8, w1_int8 [N,K], b1_int32 [N]
+//                              -> mid_int8 [1, M, N]
+//   FULLY_CONNECTED  mid_int8, w2_int8 [K,N], b2_int32 [K]
+//                              -> y_int8 [1, M, K]
+//   DEQUANTIZE       y_int8   -> y
+//   ----------------------------------------------------------
+//   signature out: "y" FLOAT32 [1, M, K]
+//
+// Notes:
+//  * Both FCs do M*N*K MACs each, so the chain's wall time is ~2x a
+//    single matmul. The benchmark divides per-Run samples by 2 so
+//    the CSV stays per-conv comparable to single-op modes.
+//  * The intermediate `mid_int8` tensor is read by FC2 and written
+//    by FC1 -- two real ops depend on it, so the delegate cannot
+//    fold the int8 representation into fp16 the way it did for the
+//    single-op wrapped int8 mode.
+//  * w1 has shape [N, K] (out=N, in=K) and w2 has shape [K, N]
+//    (out=K, in=N) so the chain is a closed loop ending at the
+//    same shape it started with. This keeps the signature simple
+//    and lets us report per-Run latency / 2 as per-conv latency.
+absl::StatusOr<SingleFcBuildResult> BuildInt8FcChain(int64_t m, int64_t n,
+                                                      int64_t k) {
+  // Sanity caps. We allocate two int8 weight buffers (n*k each) plus
+  // two int32 bias buffers, so total const memory is ~2*n*k bytes.
+  // The 256 MiB cap is per-tensor (matches BuildWrappedInt8Fc).
+  constexpr int64_t kMaxBytes = int64_t{256} << 20;
+  const int64_t weight_bytes_each = n * k;  // int8
+  if (weight_bytes_each <= 0 || weight_bytes_each > kMaxBytes) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "BuildInt8FcChain: weight tensor too large (", weight_bytes_each,
+        " bytes per tensor > 256 MiB)"));
+  }
+
+  flatbuffers::FlatBufferBuilder fbb(/*initial_size=*/static_cast<size_t>(
+      2 * weight_bytes_each + 64 * 1024));
+
+  constexpr float kInputScale = 1.0f / 127.0f;
+  constexpr float kWeightScale = 1.0f / 127.0f;
+  constexpr float kMidScale = 1.0f / 127.0f;
+  constexpr float kOutputScale = 1.0f / 127.0f;
+
+  // ---- Buffers ----
+  //   buffers[0] : empty sentinel (referenced by activation tensors)
+  //   buffers[1] : w1 weights, n*k bytes (int8)
+  //   buffers[2] : b1 bias, n*4 bytes (int32 zeros)
+  //   buffers[3] : w2 weights, k*n bytes (int8)
+  //   buffers[4] : b2 bias, k*4 bytes (int32 zeros)
+  auto buffer_empty = tflite::CreateBuffer(fbb);
+
+  const std::vector<uint8_t> w1_bytes_vec(static_cast<size_t>(weight_bytes_each),
+                                            0);
+  auto w1_data_vec = fbb.CreateVector(w1_bytes_vec);
+  auto buffer_w1 = tflite::CreateBuffer(fbb, w1_data_vec);
+
+  const std::vector<uint8_t> b1_bytes_vec(
+      static_cast<size_t>(n) * sizeof(int32_t), 0);
+  auto b1_data_vec = fbb.CreateVector(b1_bytes_vec);
+  auto buffer_b1 = tflite::CreateBuffer(fbb, b1_data_vec);
+
+  const std::vector<uint8_t> w2_bytes_vec(static_cast<size_t>(weight_bytes_each),
+                                            0);
+  auto w2_data_vec = fbb.CreateVector(w2_bytes_vec);
+  auto buffer_w2 = tflite::CreateBuffer(fbb, w2_data_vec);
+
+  const std::vector<uint8_t> b2_bytes_vec(
+      static_cast<size_t>(k) * sizeof(int32_t), 0);
+  auto b2_data_vec = fbb.CreateVector(b2_bytes_vec);
+  auto buffer_b2 = tflite::CreateBuffer(fbb, b2_data_vec);
+
+  std::vector<flatbuffers::Offset<tflite::Buffer>> buffers_vec = {
+      buffer_empty, buffer_w1, buffer_b1, buffer_w2, buffer_b2};
+  auto buffers_fb = fbb.CreateVector(buffers_vec);
+
+  // ---- Quant params ----
+  auto input_qp = BuildPerTensorSymQuant(fbb, kInputScale);
+  auto w1_qp = BuildPerChannelSymQuant(fbb, n, kWeightScale);
+  auto b1_qp = BuildPerChannelSymQuant(fbb, n, kInputScale * kWeightScale);
+  auto mid_qp = BuildPerTensorSymQuant(fbb, kMidScale);
+  auto w2_qp = BuildPerChannelSymQuant(fbb, k, kWeightScale);
+  auto b2_qp = BuildPerChannelSymQuant(fbb, k, kMidScale * kWeightScale);
+  auto output_qp = BuildPerTensorSymQuant(fbb, kOutputScale);
+
+  // ---- Tensors ----
+  //   0 : input_fp32 [1, M, K]    "x"
+  //   1 : w1_int8    [N, K]       constant, buffer 1
+  //   2 : b1_int32   [N]          constant, buffer 2
+  //   3 : input_int8 [1, M, K]    intermediate (after QUANTIZE)
+  //   4 : mid_int8   [1, M, N]    intermediate (FC1 output / FC2 input)
+  //   5 : w2_int8    [K, N]       constant, buffer 3
+  //   6 : b2_int32   [K]          constant, buffer 4
+  //   7 : y_int8     [1, M, K]    intermediate (FC2 output)
+  //   8 : output_fp32 [1, M, K]   "y"
+  std::vector<flatbuffers::Offset<tflite::Tensor>> tensors_vec;
+  // Tensor 0
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m),
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("x");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  // Tensor 1
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n),
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("w1");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/1, name,
+        /*quantization=*/w1_qp));
+  }
+  // Tensor 2
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("b1");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT32, /*buffer=*/2, name,
+        /*quantization=*/b1_qp));
+  }
+  // Tensor 3
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m),
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("x_int8");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/0, name,
+        /*quantization=*/input_qp));
+  }
+  // Tensor 4
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m),
+                                          static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("mid_int8");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/0, name,
+        /*quantization=*/mid_qp));
+  }
+  // Tensor 5
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(k),
+                                          static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("w2");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/3, name,
+        /*quantization=*/w2_qp));
+  }
+  // Tensor 6
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("b2");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT32, /*buffer=*/4, name,
+        /*quantization=*/b2_qp));
+  }
+  // Tensor 7
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m),
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("y_int8");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/0, name,
+        /*quantization=*/output_qp));
+  }
+  // Tensor 8
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m),
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("y");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  auto tensors_fb = fbb.CreateVector(tensors_vec);
+
+  // ---- Operator codes ----
+  //   index 0 : QUANTIZE
+  //   index 1 : FULLY_CONNECTED
+  //   index 2 : DEQUANTIZE
+  std::vector<flatbuffers::Offset<tflite::OperatorCode>> opcodes_vec;
+  opcodes_vec.push_back(
+      BuildBuiltinOpCode(fbb, tflite::BuiltinOperator_QUANTIZE, /*version=*/2));
+  opcodes_vec.push_back(BuildBuiltinOpCode(
+      fbb, tflite::BuiltinOperator_FULLY_CONNECTED, /*version=*/9));
+  opcodes_vec.push_back(BuildBuiltinOpCode(
+      fbb, tflite::BuiltinOperator_DEQUANTIZE, /*version=*/2));
+  auto opcodes_fb = fbb.CreateVector(opcodes_vec);
+
+  // ---- Operators ----
+  //   QUANTIZE   : 0       -> 3
+  //   FC1        : 3, 1, 2 -> 4
+  //   FC2        : 4, 5, 6 -> 7
+  //   DEQUANTIZE : 7       -> 8
+  std::vector<flatbuffers::Offset<tflite::Operator>> operators_vec;
+  // QUANTIZE
+  {
+    const std::vector<int32_t> ins = {0};
+    const std::vector<int32_t> outs = {3};
+    auto ins_fb = fbb.CreateVector(ins);
+    auto outs_fb = fbb.CreateVector(outs);
+    operators_vec.push_back(tflite::CreateOperator(fbb, /*opcode_index=*/0,
+                                                     ins_fb, outs_fb));
+  }
+  auto fc_options = tflite::CreateFullyConnectedOptions(
+      fbb, tflite::ActivationFunctionType_NONE,
+      tflite::FullyConnectedOptionsWeightsFormat_DEFAULT,
+      /*keep_num_dims=*/true,
+      /*asymmetric_quantize_inputs=*/false);
+  // FC1
+  {
+    const std::vector<int32_t> ins = {3, 1, 2};
+    const std::vector<int32_t> outs = {4};
+    auto ins_fb = fbb.CreateVector(ins);
+    auto outs_fb = fbb.CreateVector(outs);
+    operators_vec.push_back(tflite::CreateOperator(
+        fbb, /*opcode_index=*/1, ins_fb, outs_fb,
+        tflite::BuiltinOptions_FullyConnectedOptions, fc_options.Union()));
+  }
+  // FC2
+  {
+    const std::vector<int32_t> ins = {4, 5, 6};
+    const std::vector<int32_t> outs = {7};
+    auto ins_fb = fbb.CreateVector(ins);
+    auto outs_fb = fbb.CreateVector(outs);
+    // Reuse the same FullyConnectedOptions table -- both FCs have the
+    // same flags. flatbuffers offsets are immutable so this is safe.
+    operators_vec.push_back(tflite::CreateOperator(
+        fbb, /*opcode_index=*/1, ins_fb, outs_fb,
+        tflite::BuiltinOptions_FullyConnectedOptions, fc_options.Union()));
+  }
+  // DEQUANTIZE
+  {
+    const std::vector<int32_t> ins = {7};
+    const std::vector<int32_t> outs = {8};
+    auto ins_fb = fbb.CreateVector(ins);
+    auto outs_fb = fbb.CreateVector(outs);
+    operators_vec.push_back(tflite::CreateOperator(fbb, /*opcode_index=*/2,
+                                                     ins_fb, outs_fb));
+  }
+  auto operators_fb = fbb.CreateVector(operators_vec);
+
+  // ---- Subgraph ----
+  const std::vector<int32_t> sg_inputs_v = {0};
+  const std::vector<int32_t> sg_outputs_v = {8};
+  auto sg_inputs = fbb.CreateVector(sg_inputs_v);
+  auto sg_outputs = fbb.CreateVector(sg_outputs_v);
+  auto sg_name = fbb.CreateString("main");
+  auto subgraph = tflite::CreateSubGraph(fbb, tensors_fb, sg_inputs,
+                                          sg_outputs, operators_fb, sg_name);
+  std::vector<flatbuffers::Offset<tflite::SubGraph>> subgraphs_vec = {subgraph};
+  auto subgraphs_fb = fbb.CreateVector(subgraphs_vec);
+
+  // ---- Signature + Model ----
+  auto sig_key = fbb.CreateString("main");
+  auto sig_in_name = fbb.CreateString("x");
+  auto sig_out_name = fbb.CreateString("y");
+  auto sig_def = BuildSignatureDef(
+      fbb, sig_key, sig_in_name, /*in_tensor_idx=*/0, sig_out_name,
+      /*out_tensor_idx=*/8);
+  std::vector<flatbuffers::Offset<tflite::SignatureDef>> sig_defs_vec = {
+      sig_def};
+  auto sig_defs_fb = fbb.CreateVector(sig_defs_vec);
+
+  auto description = fbb.CreateString(absl::StrCat(
+      "matmul_micro_benchmark int8_chain m=", m, " n=", n, " k=", k));
   auto model = tflite::CreateModel(
       fbb,
       /*version=*/3,

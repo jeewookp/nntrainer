@@ -68,27 +68,31 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
-# fp32_conv2d (default) = single CONV_2D op with 1x1 filter (NHWC
-# layout), FLOAT32 throughout. Profile data on Adreno 830 shows
-# this is what triggers the prefill-matching
-# `convolution(conv_wave_memory)` kernel (no `1x1` suffix). The FC
-# variants below get rewritten by the delegate into the
-# FC-flavored `convolution1x1(conv_wave_memory)` entry point, which
-# is ~4x slower per dispatch for matmul shapes.
+# int8_chain (default) = 4-op subgraph
+#   QUANTIZE -> FC1(int8) -> FC2(int8) -> DEQUANTIZE
+# with FLOAT32 signature I/O. The intermediate INT8 tensor between
+# FC1 and FC2 is read by FC2 and written by FC1, so the delegate
+# optimizer cannot fold it -- this is the only configuration so far
+# where the delegate is forced to commit to int8 GEMM and (we hope)
+# compiles the chain as `convolution_int8(conv_wave_memory)` matching
+# prefill's int8 row. The chain runs 2 FCs per Run so the benchmark
+# divides per-Run samples by 2 before reporting -- the CSV stays
+# per-FC, comparable to single-op modes and to prefill numbers.
 #
 # Other valid values:
-#   int8        : 3-op QUANTIZE -> FC(int8) -> DEQUANTIZE wrapper.
-#                 Signature fp32 so buffer requirements work, but
-#                 the conv compiles as fp16 and the int8
-#                 conv_wave_memory kernel is NOT picked. Kept as
-#                 a comparison point.
-#   int8_hybrid : single FC op, int8 weights + fp32 acts. Same
-#                 outcome as int8: delegate accepts it but doesn't
-#                 hit the int8 conv kernel.
-#   fp32        : single FC op, FLOAT32 throughout. Baseline FC
-#                 path -- gets rewritten to convolution1x1(...).
+#   fp32_conv2d : single CONV_2D op with 1x1 filter, NHWC layout,
+#                 FLOAT32 throughout. Profile-confirmed to land on
+#                 `convolution1x1(conv_wave_memory)` (same entry
+#                 point as the FC modes -- the `1x1` suffix turned
+#                 out to be the filter size, not an FC rewrite tag).
+#   int8        : single-op wrapped int8 FC. Delegate fuses
+#                 QUANTIZE+FC+DEQUANTIZE but compiles the conv as
+#                 fp16 because no live int8 tensor exists.
+#   int8_hybrid : int8 weights + fp32 acts. Single FC. Delegate
+#                 accepts but doesn't lower to int8.
+#   fp32        : single FC op, FLOAT32 throughout. Baseline.
 #   fp16        : broken (CPU FC reference kernel asserts fp32).
-MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-fp32_conv2d}"
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_chain}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"

@@ -121,27 +121,32 @@ ABSL_FLAG(bool, profile, false,
           "shape (e.g. `convolution_int8(conv_wave_memory)` vs the "
           "fp32 fallback). Adds noticeable per-Run overhead so use "
           "for diagnostics, not steady-state numbers.");
-ABSL_FLAG(std::string, dtype, "fp32_conv2d",
+ABSL_FLAG(std::string, dtype, "int8_chain",
           "Tensor element type / op layout for the synthesized model. "
           "Valid values:\n"
-          "  'fp32_conv2d' (default): single CONV_2D op with 1x1 "
-          "filter, NHWC layout (input [1,M,1,K], filter [N,1,1,K], "
-          "output [1,M,1,N]), FLOAT32 throughout. Profile data shows "
-          "Gemma4 prefill's `convolution(conv_wave_memory)` kernel "
-          "comes from native CONV_2D ops in the .litertlm graph, "
-          "while the FC-based modes below get rewritten into a "
-          "slower `convolution1x1(conv_wave_memory)` entry point "
-          "(~4x slower per dispatch on Adreno 830).\n"
-          "  'int8': wrapped FC int8 -- 3-op subgraph QUANTIZE -> "
-          "FULLY_CONNECTED(int8) -> DEQUANTIZE with FLOAT32 signature "
-          "I/O. Buffer requirements work, the delegate fuses the 3 "
-          "ops, but the conv compiles as fp16 (`convolution1x1(...)` "
-          "with quantize_and_dequantize fusion). Doesn't reach the "
-          "int8 conv_wave_memory kernel.\n"
+          "  'int8_chain' (default): 4-op subgraph QUANTIZE -> FC1(int8) "
+          "-> FC2(int8) -> DEQUANTIZE with FLOAT32 signature I/O. The "
+          "intermediate INT8 tensor between FC1 and FC2 is read by FC2 "
+          "and written by FC1, so the delegate optimizer cannot fold "
+          "it into fp16 -- this is the only setup so far where the "
+          "delegate is forced to commit to int8 GEMM and (we hope) "
+          "compiles the chain as `convolution_int8(conv_wave_memory)` "
+          "matching prefill. The chain runs 2 FCs per Run so per-Run "
+          "samples are divided by 2 before reporting; the CSV is "
+          "per-FC, comparable to single-op modes and to prefill.\n"
+          "  'fp32_conv2d': single CONV_2D op with 1x1 filter, NHWC "
+          "layout (input [1,M,1,K], filter [N,1,1,K]), FLOAT32 "
+          "throughout. Profile-confirmed to land on the same "
+          "`convolution1x1(conv_wave_memory)` entry point as the FC "
+          "modes -- the `1x1` suffix is the filter size, not an FC "
+          "rewrite marker.\n"
+          "  'int8': single-op wrapped int8 FC. The delegate fuses "
+          "QUANTIZE+FC+DEQUANTIZE but compiles the conv as fp16 "
+          "(no live int8 tensor). Kept as a comparison point.\n"
           "  'int8_hybrid': single FC op, int8 weights + fp32 "
-          "input/output + asymmetric_quantize_inputs=true. Hybrid "
-          "path, accepted by the delegate but NOT lowered to int8.\n"
-          "  'fp32': FLOAT32 FULLY_CONNECTED. Baseline FC path.\n"
+          "input/output. Hybrid path, accepted but NOT lowered to "
+          "int8.\n"
+          "  'fp32': FLOAT32 single FC op. Baseline.\n"
           "  'fp16': FLOAT16 FC, currently broken (CPU reference "
           "kernel asserts fp32 input during prepare).");
 
@@ -539,6 +544,8 @@ absl::Status MainBody() {
   litert::lm::MatmulDtype dtype;
   if (dtype_str == "int8") {
     dtype = litert::lm::MatmulDtype::kInt8;
+  } else if (dtype_str == "int8_chain") {
+    dtype = litert::lm::MatmulDtype::kInt8Chain;
   } else if (dtype_str == "int8_hybrid") {
     dtype = litert::lm::MatmulDtype::kInt8WeightFp32Act;
   } else if (dtype_str == "fp32") {
@@ -549,10 +556,16 @@ absl::Status MainBody() {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
     return absl::InvalidArgumentError(absl::StrCat(
-        "--dtype must be int8, int8_hybrid, fp32, fp32_conv2d, or fp16, "
-        "got: ",
+        "--dtype must be int8, int8_chain, int8_hybrid, fp32, fp32_conv2d, "
+        "or fp16, got: ",
         dtype_str));
   }
+  // int8_chain mode runs two FCs per Run, so divide the per-Run
+  // wall-clock samples by this number to get per-FC latency that's
+  // comparable to single-op modes and to prefill numbers. Other
+  // modes use 1 (raw per-Run timing).
+  const int chain_divisor =
+      (dtype == litert::lm::MatmulDtype::kInt8Chain) ? 2 : 1;
 
   // Gather shapes.
   std::vector<Shape> shapes;
@@ -628,6 +641,12 @@ absl::Status MainBody() {
                    static_cast<long long>(s.k), err_msg.c_str());
       ++failed;
       continue;
+    }
+    // For chain modes (e.g. int8_chain runs 2 FCs per Run) divide
+    // each per-Run sample so the reported numbers are per-conv,
+    // comparable to single-op modes and to prefill rows.
+    if (chain_divisor > 1) {
+      for (auto& v : *samples_or) v /= static_cast<double>(chain_divisor);
     }
     const Stats st = ComputeStats(*samples_or);
 
