@@ -48,6 +48,8 @@
 #   ASYNC           async prefill flag       (default false, required when benchmark_prefill_tokens>0)
 #   TASKSET_MASK    taskset mask for big core pinning (default f0 = big cluster on SD8E)
 
+export ANDROID_NDK_HOME=~/neo/android-ndk-r26d
+
 set -euo pipefail
 
 # ----------------------------------------------------------------------------

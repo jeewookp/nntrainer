@@ -1,42 +1,18 @@
- * branch              litert_lm  -> FETCH_HEAD
-Already up to date.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./download_gemma.sh 
-[download_gemma.sh] Target:
-    repo : litert-community/gemma-4-E2B-it-litert-lm
-    file : gemma-4-E2B-it.litertlm
-    out  : /home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
+[temp_litert.sh] BAZEL=/usr/local/bin/bazel
+[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
+[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
+[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
+[temp_litert.sh] PREFILL_TOKENS=1024
+[temp_litert.sh] DECODE_TOKENS=256
+[temp_litert.sh] ASYNC=false
+[temp_litert.sh] TASKSET_MASK=f0
 
-[download_gemma.sh] Trying python3 huggingface_hub...
-'[Errno 104] Connection reset by peer' thrown while requesting HEAD https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm
-Retrying in 1s [Retry 1/5].
-[hf_hub_download] FAILED: Cannot send a request, as the client has been closed.
-[download_gemma.sh] python huggingface_hub failed, trying next fallback...
-[download_gemma.sh] Trying python3 urllib.request (streaming)...
-[urllib] FAILED: <urlopen error [Errno 104] Connection reset by peer>
-[download_gemma.sh] python urllib failed, trying next fallback...
-[download_gemma.sh] Trying wget...
---2026-04-14 21:58:46--  https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm
-Resolving huggingface.co (huggingface.co)... 3.168.178.58, 3.168.178.31, 3.168.178.101, ...
-Connecting to huggingface.co (huggingface.co)|3.168.178.58|:443... connected.
-Unable to establish SSL connection.
-[download_gemma.sh] wget failed, trying next fallback...
-[download_gemma.sh] curl is snap-confined. Skipping (observed to
-    fail with 'Recv failure: Connection reset by peer' on HF TLS).
-    Install native curl with:   sudo apt install curl   after
-    removing snap:              sudo snap remove curl
-
-[download_gemma.sh] ALL fallbacks failed. Fastest path forward:
-
-    # Install HF CLI into user site-packages (no sudo needed):
-    pip install --user -U 'huggingface_hub[cli]'
-    export PATH="$HOME/.local/bin:$PATH"
-
-    # Accept license on the web:
-    # https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm
-
-    # Authenticate (paste your READ token when asked):
-    huggingface-cli login
-
-    # Re-run:
-    ./download_gemma.sh
+[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
+2026/04/15 13:46:56 Downloading https://releases.bazel.build/9.0.2/release/bazel-9.0.2-linux-x86_64...
+Downloading: 62 MB out of 62 MB (100%) 
+Extracting Bazel installation...
+Starting local Bazel server (9.0.2) and connecting to it...
+ERROR: Config value 'android_arm64' is not defined in any .rc file
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
