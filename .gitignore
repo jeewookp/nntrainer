@@ -70,3 +70,7 @@ encoder.hpp
 json.hpp
 
 tools/test_android.sh
+
+# Bazel convenience symlinks (point at per-user ~/.cache/bazel paths)
+/bazel-*
+/temp_litert_run.log

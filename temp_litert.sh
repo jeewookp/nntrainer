@@ -48,7 +48,12 @@
 #   ASYNC           async prefill flag       (default false, required when benchmark_prefill_tokens>0)
 #   TASKSET_MASK    taskset mask for big core pinning (default f0 = big cluster on SD8E)
 
-export ANDROID_NDK_HOME=~/neo/android-ndk-r26d
+# NDK r28b or newer is required. r26d fails to compile crate_index__cxx-1.0.149
+# because its libc++ does not satisfy std::ranges::contiguous_range for
+# rust::Slice::iterator (see docs/getting-started/build-and-run.md).
+# Respect the caller's ANDROID_NDK_HOME if already exported; otherwise default
+# to r28b under ~/neo/.
+export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
 
 set -euo pipefail
 
@@ -72,6 +77,21 @@ if [ -z "${ANDROID_NDK_HOME:-}" ]; then
   echo "    export ANDROID_NDK_HOME=/path/to/AndroidNDK"
   exit 1
 fi
+if [ ! -d "${ANDROID_NDK_HOME}" ]; then
+  echo "[temp_litert.sh] ANDROID_NDK_HOME does not exist: ${ANDROID_NDK_HOME}"
+  echo "[temp_litert.sh] Install NDK r28b or newer from"
+  echo "    https://developer.android.com/ndk/downloads#stable-downloads"
+  exit 1
+fi
+# Hard fail on NDK < r28. cxx-1.0.149 won't compile against r26/r27 libc++.
+case "${ANDROID_NDK_HOME}" in
+  *android-ndk-r2[0-7]*)
+    echo "[temp_litert.sh] ANDROID_NDK_HOME looks like NDK < r28: ${ANDROID_NDK_HOME}"
+    echo "[temp_litert.sh] crate_index__cxx-1.0.149 will not compile against this NDK's libc++."
+    echo "[temp_litert.sh] Please install r28b or newer and re-export ANDROID_NDK_HOME."
+    exit 1
+    ;;
+esac
 
 BAZEL=$(command -v bazelisk || command -v bazel)
 if [ -z "${BAZEL}" ]; then
