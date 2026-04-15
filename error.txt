@@ -1,20 +1,33 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.26 KiB | 143.00 KiB/s, done.
+remote: Enumerating objects: 6, done.
+remote: Counting objects: 100% (6/6), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 4.79 KiB | 1.20 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   a35f24d3..841398ed  litert_lm  -> origin/litert_lm
-Updating a35f24d3..841398ed
+   141fbf81..a27bb7f7  litert_lm  -> origin/litert_lm
+Updating 141fbf81..a27bb7f7
 Fast-forward
- runtime/executor/llm_litert_compiled_model_executor.h | 1 +
- 1 file changed, 1 insertion(+)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-From https://github.com/jeewookp/nntrainer
- * branch              litert_lm  -> FETCH_HEAD
-Already up to date.
+ fetch_android_prebuilts.sh | 192 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ temp_litert.sh             |  58 +++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 247 insertions(+), 3 deletions(-)
+ create mode 100755 fetch_android_prebuilts.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./fetch_android_prebuilts.sh 
+[fetch_android_prebuilts.sh] libLiteRtGpuAccelerator.so: already present (8730160 bytes), skip.
+[fetch_android_prebuilts.sh] libLiteRtOpenClAccelerator.so: already present (2663352 bytes), skip.
+[fetch_android_prebuilts.sh] libLiteRtTopKOpenClSampler.so: already present (1250600 bytes), skip.
+[fetch_android_prebuilts.sh] libLiteRtTopKWebGpuSampler.so: already present (1285576 bytes), skip.
+[fetch_android_prebuilts.sh] libLiteRtWebGpuAccelerator.so: already present (8533552 bytes), skip.
+[fetch_android_prebuilts.sh] libGemmaModelConstraintProvider.so: already present (20092072 bytes), skip.
+
+[fetch_android_prebuilts.sh] All 6 prebuilts present in prebuilt/android_arm64
+-rwxrwxr-x 1 jwhero94 jwhero94 20092072  4월 14 20:53 prebuilt/android_arm64/libGemmaModelConstraintProvider.so
+-rwxrwxr-x 1 jwhero94 jwhero94  8730160  4월 14 20:53 prebuilt/android_arm64/libLiteRtGpuAccelerator.so
+-rwxrwxr-x 1 jwhero94 jwhero94  2663352  4월 14 20:53 prebuilt/android_arm64/libLiteRtOpenClAccelerator.so
+-rwxrwxr-x 1 jwhero94 jwhero94  1250600  4월 14 20:53 prebuilt/android_arm64/libLiteRtTopKOpenClSampler.so
+-rwxrwxr-x 1 jwhero94 jwhero94  1285576  4월 14 20:53 prebuilt/android_arm64/libLiteRtTopKWebGpuSampler.so
+-rwxrwxr-x 1 jwhero94 jwhero94  8533552  4월 14 20:53 prebuilt/android_arm64/libLiteRtWebGpuAccelerator.so
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
 [temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
@@ -44,19 +57,91 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/engine:litert_lm_main (122 packages loaded, 3666 targets configured).
+INFO: Analyzed target //runtime/engine:litert_lm_main (3 packages loaded, 8107 targets configured).
 INFO: Found 1 target...
 Target //runtime/engine:litert_lm_main up-to-date:
   bazel-bin/runtime/engine/litert_lm_main
-INFO: Elapsed time: 9.767s, Critical Path: 7.61s
-INFO: 20 processes: 4 internal, 16 local.
-INFO: Build completed successfully, 20 total actions
+INFO: Elapsed time: 1.256s, Critical Path: 0.05s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+[temp_litert.sh] libLiteRt.so : bazel-bin/runtime/engine/litert_lm_main.runfiles/litert/litert/c/libLiteRt.so
 
 [temp_litert.sh] adb push binary + prebuilts + model ...
-[temp_litert.sh] Pushing model (2583085056 bytes) ...
-/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm: 1 file pushed. 32.5 MB/s (2583085056 bytes in 75.890s)
+[temp_litert.sh] Model already on device, size matches (2583085056 bytes). Skipping push.
 
 [temp_litert.sh] Running on device (taskset f0)...
-CANNOT LINK EXECUTABLE "./litert_lm_main": library "libLiteRt.so" not found: needed by main executable
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000079eb579220, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000079eb578f10, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=976, num_signatures=4
+INFO: [magic_number_utils.cc:105]   signature=decode, subgraph_index=0, num_tensors=2703, num_inputs=35, num_outputs=32, num_ops=2068
+INFO: [magic_number_utils.cc:105]   signature=prefill_1024, subgraph_index=1, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+INFO: [magic_number_utils.cc:105]   signature=prefill_128, subgraph_index=2, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
+INFO: [magic_number_utils.cc:105]   signature=verify, subgraph_index=3, num_tensors=2887, num_inputs=35, num_outputs=32, num_ops=2243
+INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [magic_number_utils.cc:425] 439 tensors of signature decode have been updated for magic number  32003 to target number 4096
+INFO: [magic_number_utils.cc:425] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 4096
+INFO: [magic_number_utils.cc:425] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 4096
+INFO: [magic_number_utils.cc:425] 444 tensors of signature verify have been updated for magic number  32003 to target number 4096
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+I0000 00:00:1742064588.770723   32392 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742064588.770829   32392 delegate_opencl.cc:553] options->kernel_batch_size: -1
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+INFO: Loaded OpenCL library with dlopen.
+INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
+INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
+INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+VERBOSE: Replacing 2068 out of 2068 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742064590.574684   32392 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742064590.574886   32392 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 1.
+I0000 00:00:1742064591.983137   32392 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742064591.983232   32392 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 2.
+I0000 00:00:1742064593.471407   32392 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742064593.471470   32392 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+VERBOSE: Replacing 2243 out of 2243 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 3.
+I0000 00:00:1742064594.254493   32392 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
+I0000 00:00:1742064594.254552   32392 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000079eb594730, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000079eb5c0330, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
+INFO: [magic_number_utils.cc:105]   signature=embedder, subgraph_index=0, num_tensors=16, num_inputs=1, num_outputs=1, num_ops=8
+INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 2 out of 8 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
+INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
+INFO: [magic_number_utils.cc:105]   signature=eoi, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
+INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: [compiled_model.cc:1485] Tracked constant output tensor eoi_embedding with locked address
+INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
+INFO: [magic_number_utils.cc:105]   signature=eoa, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
+INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: [compiled_model.cc:1485] Tracked constant output tensor eoa_embedding with locked address
+INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
+INFO: [magic_number_utils.cc:105]   signature=per_layer_embedder, subgraph_index=0, num_tensors=83, num_inputs=1, num_outputs=1, num_ops=42
+INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
+INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=4096, signature_prefix=null
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+input_prompt: What is the tallest building in the world?
+VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
+ Hungaryफ्राФа WakतरहfdaतरहFCO Hungaryफ्रा Hungary लोहाफ्रा Hungaryतरह Hungaryफ्रा Hungaryतरह سیستمfda लोहा设施设施 Rajyaतरह HungarynlpФаkfda设施 Hungary设施设施设施设施 Hungary设施设施设施 черныйЦенаLaptop Hungaryतरह लोहा लोहाोर्ट Hungaryतरह设施 Hungaryfdaतरहतरह रेलवेfda रेलवे Hungaryफ्रा设施设施 между Hungaryतरह Wak लोहा लोहाФаФа रेलवेतरहfdaЦена设施设施 Hungary设施设施设施 Hungary Hungary Hungary绅 Hungary Hungary设施 سیستم绅Laptop 用户fdaोर्ट Hungary रेलवे设施设施fda लोहाfdaहेर HungaryЦенаोर्ट लोहा设施设施 Lions设施设施 Hungary设施 Hungary Hungary绅fda लोहा绅Фа Hungary Hungary Hungary设施设施 Hungary Hungary Hungary Hungaryफ्रा डैशfdaतरह इस् लोहा设施fda लोहा设施绅 Hungary HungaryЦена लोहा लोहा लोहा लोहा绅Фаफ्रा रेलवे绅fda设施设施设施设施绅 HungaryFCO设施绅Фаफ्रा Rajyaतरह रेलवे绅ोर्ट设施设施 इस् लोहा设施绅Ни设施设施绅 междуतरहतरह绅फ्रा设施绅Ми Hungaryतरह设施绅तरह रेलवेतरह लोहाЦена Wak लोहा绅 Hungaryतरह लोहा लोहा लोहाfda लोहा设施Фа绅 Hungary设施ोर्ट Hungaryfdaतरह设施 डैशfda लोहाЦенаFCOЦена Hungary绅Laptop Hungary设施设施绅Фаोर्टतरहfdaतरहfda लोहा Hungary लोहा设施 論फ्रा设施绅 سیستم Hungary绅LaptopФаोर्ट लोहा लोहा लोहातरहोर्ट черныйोर्टोर्टfdaोर्टfda रेलवेfdaोर्ट लोहा设施फ्राFCOfdaतरह लोहा लोहा लोहाФа रेलवे लोहा लोहा लोहा लोहा设施იაFCO लोहा设施 ウォ रेलवेतरह设施绅ोर्टfdaोर्टFCOФа रेलवेतरह绅तरह绅fda लोहाfdafda लोहा Hungary设施绅设施设施 रेलवेФа रेलवेतरह लोहा लोहा लोहा लोहातरह Hungaryfdaोर्टФаЦенаोर्टतरह设施 लोहा लोहा लोहाfda设施FCO设施 Hungary Hungaryfdaतरह设施FCOЦенаfda设施设施फ्राМиोर्ट天使设施设施设施设施设施ФаЦенаМиतरहतरहfda लोहा लोहा लोहा石头Цена猕 लोहाФаЦена Wak लोहा设施 Wak लोहा लोहा लोहा लोहा设施 流तरहfda设施设施फ्रा设施 Wak लोहा लोहा लोहाfdaЦенаोर्ट लोहा रेलवे लोहाФаतरहЦена लोहाfdaЦенаnTतरह इस् लोहा लोहातरहfdaЦена设施फ्रा ウォ绅 लोहा设施फ्रा Wakतरह लोहाЦенаЦена سیستمतरहतरह设施फ्राЦенаМиfda लोहाЦенаfda रेलवे设施设施ेन设施फ्रा इस् लोहा लोहातरह लोहा लोहा लोहा लोहा लोहातरहतरह设施 लोहा Samantha लोहाfdaФаЦенаफ्राोर्ट लोहा लोहा लोहा लोहाФаЦена设施PhonesМиФаЦенаЦенаnTतरहतरह लोहा लोहा लोहा लोहाfdafdafda लोहाФаЦена HungaryЦена लोहातरहतरह设施 سیستم绅Миोर्ट绅Ценаोर्ट लोहा ウォ черныйLaptopМиLaptopISTERफ्राdachFCO设施ФаЦенаफ्राोर्ट लोहातरहФаЦенаPhonesЦенаனெ سیستمतरहfdaЦенаЦенаЦенаЦенаहेरЦена设施FCOЦенаोर्ट लोहा लोहातरहfdaФа^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
-
