@@ -1,98 +1,53 @@
-아무것도 안 건드리고 다시 실행했더니 아래와 같아
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 5.58 KiB | 248.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   90f67c1d..3d9fb859  litert_lm  -> origin/litert_lm
+Updating 90f67c1d..3d9fb859
+Fast-forward
+ .gitignore                |   4 ++++
+ bazel-bin                 |   1 -
+ bazel-nntrainer_litert_lm |   1 -
+ bazel-out                 |   1 -
+ bazel-testlogs            |   1 -
+ install_android_ndk.sh    | 232 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ temp_litert.sh            |  22 +++++++++++++++++++++-
+ 7 files changed, 257 insertions(+), 5 deletions(-)
+ delete mode 120000 bazel-bin
+ delete mode 120000 bazel-nntrainer_litert_lm
+ delete mode 120000 bazel-out
+ delete mode 120000 bazel-testlogs
+ create mode 100755 install_android_ndk.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ^C
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./install_android_ndk.sh 
+[install_android_ndk.sh] Target:
+    version : r28b
+    root    : /home/jwhero94/neo
+    out dir : /home/jwhero94/neo/android-ndk-r28b
+    zip     : /home/jwhero94/.cache/litert_lm_ndk/android-ndk-r28b-linux.zip
+    url     : https://dl.google.com/android/repository/android-ndk-r28b-linux.zip
 
+[install_android_ndk.sh] Trying python3 urllib.request ...
+[urllib] starting, content-length=722264879
+  722264879 / 722264879 bytes (100.0%)
+[urllib] wrote 722264879 bytes to /home/jwhero94/.cache/litert_lm_ndk/android-ndk-r28b-linux.zip
+[install_android_ndk.sh] Extracting to /home/jwhero94/neo ...
+
+[install_android_ndk.sh] Installed: /home/jwhero94/neo/android-ndk-r28b
+[install_android_ndk.sh] Pkg.Revision = 28.1.13356709
+
+Next step:
+    export ANDROID_NDK_HOME="/home/jwhero94/neo/android-ndk-r28b"
+    ./temp_litert.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ bazelisk clean --expunge
+bazelisk: command not found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
-[temp_litert.sh] BAZEL=/usr/local/bin/bazel
-[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
-[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
-[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
-[temp_litert.sh] PREFILL_TOKENS=1024
-[temp_litert.sh] DECODE_TOKENS=256
-[temp_litert.sh] ASYNC=false
-[temp_litert.sh] TASKSET_MASK=f0
-
-[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
-INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
-INFO: Options provided by the client:
-  Inherited 'common' options: --isatty=1 --terminal_columns=425
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
-INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
-INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
-INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
-INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_proto' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
-DEBUG: Rule 'llvm_linux_x86_64' indicated that a canonical reproducible form can be obtained by modifying arguments urls = <attr.string_list>, sha256 = <attr.string>, mirrored_tar_sha256 = <attr.string>, integrity = <attr.string>, netrc = <attr.string>, auth_patterns = <attr.string_dict>, canonical_id = <attr.string>, strip_prefix = <attr.string>, add_prefix = <attr.string>, type = <attr.string>, patches = <attr.label_list>, remote_file_urls = <attr.string_list_dict>, remote_file_integrity = <attr.string_dict>, remote_patches = <attr.string_dict>, remote_patch_strip = <attr.int>, patch_tool = <attr.string>, patch_args = <attr.string_list>, patch_cmds = <attr.string_list>, patch_cmds_win = <attr.string_list>, build_file = <attr.label> and dropping ["name"]
-DEBUG: Repository llvm_linux_x86_64 instantiated at:
-  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:115:18: in <toplevel>
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_ml_toolchain/cc/deps/cc_toolchain_deps.bzl:51:26: in cc_toolchain_deps
-Repository rule llvm_http_archive defined at:
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_ml_toolchain/cc/deps/llvm_http_archive.bzl:407:36: in <toplevel>
-DEBUG: Rule 'cxxbridge_cmd_deps' indicated that a canonical reproducible form can be obtained by modifying arguments lockfile = Label("//cxxbridge_cmd:cargo-bazel-lock.json")
-DEBUG: Repository cxxbridge_cmd_deps instantiated at:
-  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:338:18: in <toplevel>
-Repository rule crates_repository defined at:
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_rust/crate_universe/private/crates_repository.bzl:151:36: in <toplevel>
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
-INFO: Analyzed target //runtime/engine:litert_lm_main (583 packages loaded, 24163 targets configured).
-ERROR: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/crate_index__cxx-1.0.149/BUILD.bazel:112:11: Compiling src/cxx.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target @@crate_index__cxx-1.0.149//:cxx_cc) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 102 arguments skipped)
-In file included from external/crate_index__cxx-1.0.149/src/cxx.cc:1:
-In file included from external/crate_index__cxx-1.0.149/src/../include/cxx.h:2:
-In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/algorithm:1713:
-In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/adjacent_find.h:14:
-In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/iterator_operations.h:13:
-In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/ranges_iterator_concept.h:13:
-In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:34:
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:118:22: error: implicit instantiation of undefined template 'std::__pointer_traits_element_type<rust::Slice<const unsigned char>::iterator, false>'
-    typedef typename __pointer_traits_element_type<pointer>::type    element_type;
-                     ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:182:20: note: in instantiation of template class 'std::pointer_traits<rust::Slice<const unsigned char>::iterator>' requested here
-    decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))
-                   ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:195:59: note: during template argument deduction for class template partial specialization '_HasToAddress<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer &>()))>' [with _Pointer = rust::Slice<const unsigned char>::iterator]
-  static const bool value = _HasArrow<_Pointer>::value || _HasToAddress<_Pointer>::value;
-                                                          ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:195:59: note: in instantiation of template class 'std::_HasToAddress<rust::Slice<const unsigned char>::iterator>' requested here
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__type_traits/conjunction.h:27:32: note: in instantiation of template class 'std::_IsFancyPointer<rust::Slice<const unsigned char>::iterator>' requested here
-__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
-                               ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__type_traits/conjunction.h:38:39: note: while substituting explicitly-specified template arguments into function template '__and_helper' 
-using _And _LIBCPP_NODEBUG = decltype(std::__and_helper<_Pred...>(0));
-                                      ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:200:5: note: (skipping 4 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
-    _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value
-    ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:193:7: note: in instantiation of requirement here
-    { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
-      ^~~~~~~~~~~~~~~~~~~~~~
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__config:655:17: note: expanded from macro '_VSTD'
-#  define _VSTD std
-                ^
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:192:3: note: while substituting template arguments into constraint expression here
-  requires(const _Ip& __i) {
-  ^~~~~~~~~~~~~~~~~~~~~~~~~~
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__ranges/concepts.h:119:5: note: while checking the satisfaction of concept 'contiguous_iterator<rust::Slice<const unsigned char>::iterator>' requested here
-    contiguous_iterator<iterator_t<_Tp>> &&
-    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__ranges/concepts.h:119:5: note: while substituting template arguments into constraint expression here
-    contiguous_iterator<iterator_t<_Tp>> &&
-    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-external/crate_index__cxx-1.0.149/src/../include/cxx.h:274:15: note: while checking the satisfaction of concept 'contiguous_range<rust::Slice<const unsigned char>>' requested here
-static_assert(std::ranges::contiguous_range<rust::Slice<const uint8_t>>);
-              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:38:8: note: template is declared here
-struct __pointer_traits_element_type;
-       ^
-1 error generated.
-Target //runtime/engine:litert_lm_main failed to build
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 119.611s, Critical Path: 32.03s
-INFO: 2478 processes: 856 internal, 1622 local.
-ERROR: Build did NOT complete successfully
+[temp_litert.sh] ANDROID_NDK_HOME looks like NDK < r28: /home/jwhero94/neo/android-ndk-r26d
+[temp_litert.sh] crate_index__cxx-1.0.149 will not compile against this NDK's libc++.
+[temp_litert.sh] Please install r28b or newer and re-export ANDROID_NDK_HOME.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
