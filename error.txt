@@ -1,15 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 3, done.
-remote: Counting objects: 100% (3/3), done.
-remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.58 KiB | 539.00 KiB/s, done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 1.26 KiB | 143.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   e7c45443..9602245a  litert_lm  -> origin/litert_lm
-Updating e7c45443..9602245a
+   a35f24d3..841398ed  litert_lm  -> origin/litert_lm
+Updating a35f24d3..841398ed
 Fast-forward
- temp_litert.sh | 42 ++++++++++++++++++++++++++++++++----------
- 1 file changed, 32 insertions(+), 10 deletions(-)
+ runtime/executor/llm_litert_compiled_model_executor.h | 1 +
+ 1 file changed, 1 insertion(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
@@ -43,23 +44,19 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_proto' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
-INFO: Analyzed target //runtime/engine:litert_lm_main (4 packages loaded, 9970 targets configured).
-ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/executor/BUILD:382:11: Compiling runtime/executor/llm_litert_compiled_model_executor_factory.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/executor:llm_litert_compiled_model_executor_factory) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 382 arguments skipped)
-In file included from runtime/executor/llm_litert_compiled_model_executor_factory.cc:36:
-./runtime/executor/llm_litert_compiled_model_executor.h:194:13: error: use of undeclared identifier 'LiteRtCompiledModelGetProfiler'
-  194 |       (void)LiteRtCompiledModelGetProfiler(compiled_model_.Get(),
-      |             ^
-1 error generated.
-Target //runtime/engine:litert_lm_main failed to build
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 147.864s, Critical Path: 110.81s
-INFO: 2611 processes: 133 internal, 2478 local.
-ERROR: Build did NOT complete successfully
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+INFO: Analyzed target //runtime/engine:litert_lm_main (122 packages loaded, 3666 targets configured).
+INFO: Found 1 target...
+Target //runtime/engine:litert_lm_main up-to-date:
+  bazel-bin/runtime/engine/litert_lm_main
+INFO: Elapsed time: 9.767s, Critical Path: 7.61s
+INFO: 20 processes: 4 internal, 16 local.
+INFO: Build completed successfully, 20 total actions
 
+[temp_litert.sh] adb push binary + prebuilts + model ...
+[temp_litert.sh] Pushing model (2583085056 bytes) ...
+/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm: 1 file pushed. 32.5 MB/s (2583085056 bytes in 75.890s)
+
+[temp_litert.sh] Running on device (taskset f0)...
+CANNOT LINK EXECUTABLE "./litert_lm_main": library "libLiteRt.so" not found: needed by main executable
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
