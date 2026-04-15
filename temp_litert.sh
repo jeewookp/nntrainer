@@ -342,43 +342,100 @@ grep -E "Prefill Speed|Decode Speed|Prefill Turn|Decode Turn|Time to first token
   "${RUN_LOG}" || echo "(no BenchmarkInfo lines found; run probably crashed)"
 
 if [ "${OP_PROFILING}" = "true" ]; then
-  # The full LiteRT per-op summary is a big formatted table (~1100 rows for
-  # prefill_1024, plus init + embedder + decode). The whole block is already
-  # in ${RUN_LOG} because temp_litert.sh tee'd both stdout and stderr from
-  # adb shell into it. The extraction below pulls everything from the
-  # "[PROFILE LiteRT CompiledModel per-op summary]" marker to the end, with
-  # no head cutoff -- we want the full table for offline matmul analysis.
+  # LiteRT prints two profile sections when --enable_op_profiling=true, and
+  # understanding the difference is critical for reading the output:
+  #
+  # (a) The classic tflite::Profiler table ("Run Order" / "Top by Computation
+  #     Time" / "Summary by node type"). On our prefill_1024 run this table
+  #     reports "Number of nodes executed: 0" -- NOT because profiling is
+  #     broken, but because the GPU delegate ate every op in the graph:
+  #     "Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL)".
+  #     From the interpreter's perspective only one node (the delegate)
+  #     ran, and the interpreter's profiler doesn't see anything below it.
+  #
+  # (b) The "Delegate Statistics" table that follows. THIS is the one with
+  #     the real matmul data. The GPU delegate profiles its own per-kernel
+  #     dispatches and dumps them as "Op Name | Count | Avg(us) | Min(us) |
+  #     Max(us) | Total(us)", where op names use the OpenCL kernel fusion
+  #     form, e.g. "convolution_int8(conv_wave_memory) -> dequantize_to_float16
+  #     -> quantize_and_dequantize". Matmul shows up as `convolution(...)`
+  #     because the GPU CL delegate implements matmul as 1x1 conv with a
+  #     GEMM tiling strategy called conv_wave_memory.
   echo ""
   echo "--- LiteRT per-op summary (FULL table, no head limit) ---"
+  echo "(tflite::Profiler section will show 'Number of nodes executed: 0'"
+  echo " because every op is inside a single LITERT_CL delegate partition."
+  echo " Real per-kernel data is in the Delegate Statistics section.)"
   awk '/PROFILE LiteRT CompiledModel per-op summary/{found=1} found{print}' \
     "${RUN_LOG}" \
     || echo "(no per-op summary -- was --enable_op_profiling=true threaded through? Did the build include the @litert//litert/c:litert_profiler dep? Did the destructor actually run, i.e. the process exited cleanly?)"
 
-  # Focused view: just the matmul-unit-ops. These are the rows we actually
-  # care about for "which matmul shape dominates prefill_1024 on Adreno 830".
-  # The LiteRT profile summary uses op type names like FULLY_CONNECTED,
-  # BATCH_MATMUL, MATMUL, CONV_2D (the SCREAMING_SNAKE_CASE variant), and
-  # sometimes also the CamelCase form depending on which formatter runs, so
-  # the regex covers both. Reshape/Transpose/Concat are excluded on purpose:
-  # they are memory-motion ops that do no FLOPs, even though they can eat
-  # wall-clock time on GPU.
+  # Matmul extraction. The GPU CL delegate labels matmul as `convolution`
+  # (lowercase, not Conv2D / CONV_2D) because it uses the 1x1 conv GEMM
+  # path. Cover both `convolution(` (fp16 path) and `convolution_int8(`
+  # (int8 weight path with dequant-requant fusion). Upstream LiteRT may
+  # also still print FULLY_CONNECTED / BATCH_MATMUL names in future
+  # versions or on other backends (WebGPU), so the regex keeps those too.
+  #
+  # Skip the "convert_uint4_to_int8" / "quantize_float16_to_uint8c16" lines
+  # -- those are weight / activation quantization helpers, not the matmul
+  # compute, and pollute the view. Also skip the per-op-type header line
+  # ("Delegate/...") with an exact-match guard on the whitespace+Count
+  # column shape.
   echo ""
-  echo "--- Matmul-unit-op rows (FullyConnected / BatchMatMul / MatMul / Conv2D) ---"
-  awk '/PROFILE LiteRT CompiledModel per-op summary/{found=1} found{print}' \
-    "${RUN_LOG}" \
-    | grep -Ei "FullyConnected|MatMul|BatchMatMul|BATCH_MATMUL|FULLY_CONNECTED|Conv2D|CONV_2D" \
-    || echo "(no matmul-unit-op rows found -- grep this regex manually from the full table above)"
+  echo "--- Matmul-unit-op rows (convolution / FullyConnected / BatchMatMul) ---"
+  awk '/Delegate Statistics/,/^$/' "${RUN_LOG}" \
+    | grep -Ei "Delegate/convolution|Delegate/.*(FullyConnected|BatchMatMul|MatMul|FULLY_CONNECTED|BATCH_MATMUL)" \
+    | grep -v "weights_convert" \
+    || echo "(no matmul-unit-op rows found in Delegate Statistics)"
 
-  # LiteRT also prints rollup lines like "Operator-wise Profiling Info" /
-  # "CONV_2D total: <ms>" / "FULLY_CONNECTED total: <ms>" at the bottom of
-  # the summary. Those give us the per-op-type totals we want for the
-  # matmul-vs-everything-else breakdown, so surface them explicitly too.
+  # Top-10 most expensive GPU kernel dispatches by total time. This is the
+  # single most useful view for "which matmul shape should we optimize
+  # first". Sort by the Total(us) column (the 6th whitespace-delimited
+  # field), descending, and take the first 10.
+  #
+  # The Delegate Statistics block starts at "Delegate Statistics:" and
+  # ends at the first blank line. Within that, rows look like:
+  #   "Delegate/convolution(conv_wave_memory)     28     910.21     801    1563    25486"
+  # Whitespace-separated with a possibly-multi-word op name on the left.
+  # Awk approach: keep only lines starting with "Delegate/", use $NF-3..$NF
+  # for the count/avg/min/max/total columns ($NF is Total(us)).
   echo ""
-  echo "--- Per-op-type rollup (time spent per op type) ---"
-  awk '/Operator-wise Profiling Info|total/{print}' \
-    "${RUN_LOG}" \
-    | grep -vE "Turn [0-9]|tokens/sec|Prefill|Decode" \
+  echo "--- Top 10 GPU kernel dispatches by total time (Delegate/... rows) ---"
+  awk '/Delegate Statistics/,/^$/' "${RUN_LOG}" \
+    | awk '/^Delegate\//{print $NF, $0}' \
+    | sort -k1,1 -n -r \
+    | head -10 \
+    | awk '{$1=""; sub(/^ /, ""); print}' \
     || true
+
+  # Aggregate totals: how much time is matmul vs everything else in the
+  # delegate statistics. Numbers like "matmul_total=<X> us, other=<Y> us,
+  # matmul%=<X/(X+Y)>" are the headline number we care about.
+  echo ""
+  echo "--- Matmul vs. non-matmul aggregate (Delegate Statistics) ---"
+  awk '/Delegate Statistics/,/^$/' "${RUN_LOG}" \
+    | awk '
+      /^Delegate\//{
+        total = $NF
+        if (/convolution\(/ || /convolution_int8\(/) {
+          matmul += total
+        } else {
+          other += total
+        }
+      }
+      END {
+        sum = matmul + other
+        if (sum > 0) {
+          printf "matmul total     = %10.3f ms (%5.1f%% of instrumented)\n",
+                 matmul / 1000.0, 100.0 * matmul / sum
+          printf "non-matmul total = %10.3f ms (%5.1f%% of instrumented)\n",
+                 other / 1000.0, 100.0 * other / sum
+          printf "instrumented sum = %10.3f ms\n", sum / 1000.0
+        } else {
+          print "(no Delegate/ rows found)"
+        }
+      }'
 else
   echo ""
   echo "--- Per-op profile summary: skipped (OP_PROFILING=false) ---"
