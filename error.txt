@@ -1,198 +1,183 @@
-<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh ^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git add .
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git commit -m 'error'
-[litert_lm c067df9b] error
- 1 file changed, 37 insertions(+), 97 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git push origin litert_lm 
-Username for 'https://github.com': jeewook.kim
-Password for 'https://jeewook.kim@github.com': 
-Enumerating objects: 5, done.
-Counting objects: 100% (5/5), done.
-Delta compression using up to 24 threads
-Compressing objects: 100% (3/3), done.
-Writing objects: 100% (3/3), 855 bytes | 855.00 KiB/s, done.
-Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
-remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
-To https://github.com/jeewookp/nntrainer.git
-   0417c063..c067df9b  litert_lm -> litert_lm
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
-[temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
-[temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
-[temp_litert.sh]          won't compile). Auto-upgrading to:
-[temp_litert.sh]          /home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh]          To silence this warning permanently, update ~/.bashrc:
-[temp_litert.sh]            export ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh] BAZEL=/usr/local/bin/bazel
-[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
-[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
-[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
-[temp_litert.sh] PREFILL_TOKENS=1024
-[temp_litert.sh] DECODE_TOKENS=256
-[temp_litert.sh] ASYNC=false
-[temp_litert.sh] TASKSET_MASK=f0
-[temp_litert.sh] OP_PROFILING=false
-[temp_litert.sh]   (per-op profile summary will NOT be emitted this run.
-[temp_litert.sh]    Goal of this run is to verify the decode output is
-[temp_litert.sh]    not garbled. Set OP_PROFILING=true after correctness
-[temp_litert.sh]    is confirmed to collect the matmul per-op table.)
-
-[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
-INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
-INFO: Options provided by the client:
-  Inherited 'common' options: --isatty=1 --terminal_columns=425
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
-INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
-INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
-INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
-INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/engine:litert_lm_main (0 packages loaded, 0 targets configured).
-INFO: Found 1 target...
-Target //runtime/engine:litert_lm_main up-to-date:
-  bazel-bin/runtime/engine/litert_lm_main
-INFO: Elapsed time: 0.148s, Critical Path: 0.00s
-INFO: 1 process: 1 internal.
-INFO: Build completed successfully, 1 total action
-[temp_litert.sh] libLiteRt.so : bazel-bin/runtime/engine/litert_lm_main.runfiles/litert/litert/c/libLiteRt.so
-
-[temp_litert.sh] adb push binary + prebuilts + model ...
-[temp_litert.sh] Model already on device, size matches (2583085056 bytes). Skipping push.
-
-[temp_litert.sh] Running on device (taskset f0, op_profiling=false)...
-INFO: [environment.cc:30] Creating LiteRT environment with options
-WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
-INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000797b759180, name=LiteRT GPU
-INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000797b759810, name=CpuAccelerator
-INFO: [cpu_registry.cc:40] CPU accelerator registered.
-INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=976, num_signatures=4
-INFO: [magic_number_utils.cc:105]   signature=decode, subgraph_index=0, num_tensors=2703, num_inputs=35, num_outputs=32, num_ops=2068
-INFO: [magic_number_utils.cc:105]   signature=prefill_1024, subgraph_index=1, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
-INFO: [magic_number_utils.cc:105]   signature=prefill_128, subgraph_index=2, num_tensors=1454, num_inputs=35, num_outputs=30, num_ops=1107
-INFO: [magic_number_utils.cc:105]   signature=verify, subgraph_index=3, num_tensors=2887, num_inputs=35, num_outputs=32, num_ops=2243
-INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
-INFO: [magic_number_utils.cc:425] 439 tensors of signature decode have been updated for magic number  32003 to target number 1280
-INFO: [magic_number_utils.cc:425] 271 tensors of signature prefill_1024 have been updated for magic number  32003 to target number 1280
-INFO: [magic_number_utils.cc:425] 270 tensors of signature prefill_128 have been updated for magic number  32003 to target number 1280
-INFO: [magic_number_utils.cc:425] 444 tensors of signature verify have been updated for magic number  32003 to target number 1280
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-INFO: Initialized TensorFlow Lite runtime.
-I0000 00:00:1742066599.510286   32612 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742066599.510407   32612 delegate_opencl.cc:553] options->kernel_batch_size: -1
-INFO: [environment.cc:41] Adding options to the existing LiteRT environment
-INFO: Loaded OpenCL library with dlopen.
-INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
-INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
-INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
-INFO: [environment.cc:41] Adding options to the existing LiteRT environment
-VERBOSE: Replacing 2068 out of 2068 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742066601.486838   32612 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742066601.486946   32612 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742066601.560399   32612 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
-VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 1.
-I0000 00:00:1742066601.650373   32612 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742066601.650463   32612 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742066601.733247   32612 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
-VERBOSE: Replacing 1107 out of 1107 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 2.
-I0000 00:00:1742066601.778672   32612 delegate_kernel.cc:282] Total 31 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742066601.778752   32612 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742066601.845395   32612 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
-VERBOSE: Replacing 2243 out of 2243 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 3.
-I0000 00:00:1742066601.870862   32612 delegate_kernel.cc:282] Total 32 external tensors are used for delegate inputs and outputs
-I0000 00:00:1742066601.870920   32612 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742066601.950759   32612 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
-INFO: [environment.cc:30] Creating LiteRT environment with options
-WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
-INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000797b775570, name=LiteRT GPU
-INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000797b7a0760, name=CpuAccelerator
-INFO: [cpu_registry.cc:40] CPU accelerator registered.
-INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
-INFO: [magic_number_utils.cc:105]   signature=embedder, subgraph_index=0, num_tensors=16, num_inputs=1, num_outputs=1, num_ops=8
-INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
-VERBOSE: Replacing 2 out of 8 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
-INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
-INFO: [magic_number_utils.cc:105]   signature=eoa, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
-INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-INFO: [compiled_model.cc:1485] Tracked constant output tensor eoa_embedding with locked address
-INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
-INFO: [magic_number_utils.cc:105]   signature=eoi, subgraph_index=0, num_tensors=1, num_inputs=0, num_outputs=1, num_ops=0
-INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-INFO: [compiled_model.cc:1485] Tracked constant output tensor eoi_embedding with locked address
-INFO: [magic_number_utils.cc:97] Loaded: num_subgraphs=1, num_signatures=1
-INFO: [magic_number_utils.cc:105]   signature=per_layer_embedder, subgraph_index=0, num_tensors=83, num_inputs=1, num_outputs=1, num_ops=42
-INFO: [magic_number_utils.cc:109] Magic number configs: num_configs=1
-INFO: [magic_number_utils.cc:116]   config[0]: magic_number=32003, target_number=1280, signature_prefix=null
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
-input_prompt: What is the tallest building in the world?
-<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>
+실행 결과는 아래와 같아
+답변은 아랍어 같은 문자가 쭉 나열되네
 
 BenchmarkInfo:
   Init Phases (7):
     - Init Conversation: 0.04 ms
-    - Init Executor: 2777.55 ms
-    - Init LLM metadata: 0.06 ms
-    - Init Model assets: 35.52 ms
-    - Init Tokenizer: 92.35 ms
-    - Init Total: 2814.59 ms
+    - Init Executor: 2505.61 ms
+    - Init LLM metadata: 0.07 ms
+    - Init Model assets: 11.58 ms
+    - Init Tokenizer: 93.04 ms
+    - Init Total: 2519.16 ms
 --------------------------------------------------
-  Time to first token: 0.31 s
+  Time to first token: 0.59 s
 --------------------------------------------------
   Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1024 tokens in 279.842187ms duration.
-      Prefill Speed: 3659.21 tokens/sec.
+    Prefill Turn 1: Processed 1024 tokens in 525.569479ms duration.
+      Prefill Speed: 1948.36 tokens/sec.
 --------------------------------------------------
   Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 7.58600906s duration.
-      Decode Speed: 33.75 tokens/sec.
+    Decode Turn 1: Processed 256 tokens in 16.106379837s duration.
+      Decode Speed: 15.89 tokens/sec.
 --------------------------------------------------
   TextToTokenIds Turns (Total 1 turns):
-    Turn 1: 47.969us, 1024 tokens
+    Turn 1: 48.959us, 1024 tokens
 --------------------------------------------------
 --------------------------------------------------
 
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000797b7a0760, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000797b775570, name=LiteRT GPU
+
+[PROFILE LiteRT CompiledModel per-op summary] (generated by GetProfileSummary, --enable_op_profiling=true):
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     238.00        238        238        238
+Delegate/UploadOrBindTensorBuffer                                               1    1532.00       1532       1532       1532
+Delegate/add_values_to_cache                                                   15      27.53         19         51        413
+Delegate/cast                                                                   3      36.33          2         56        109
+Delegate/concat_batch -> cast                                                   2       2.00          2          2          4
+Delegate/concat_channels                                                       29      72.24          8        251       2095
+Delegate/concat_height -> not_equal                                             2     467.50        467        468        935
+Delegate/convolution(conv_wave_memory)                                         28     910.21        801       1563      25486
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     336.04         87       2443      15122
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1037.68         96       1800      58110
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1687.79       1684       1698      23629
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.93         97        100       1371
+Delegate/copy                                                                  14      59.36         52         66        831
+Delegate/cos                                                                    2       5.50          2          9         11
+Delegate/greater_equal                                                          1      19.00         19         19         19
+Delegate/less                                                                   1      19.00         19         19         19
+Delegate/logical_and                                                            1      39.00         39         39         39
+Delegate/mul                                                                   90      45.04          4        603       4054
+Delegate/mul -> add                                                            29      56.10          9        199       1627
+Delegate/mul -> quantize_and_dequantize                                        14     560.86        558        569       7852
+Delegate/quantize_and_dequantize                                               15      73.93         67         99       1109
+Delegate/quantize_float16_to_uint8c16                                         129     135.56         15        487      17487
+Delegate/reduce_maximum -> not_equal                                            2     164.00        164        164        328
+Delegate/reshape                                                               49      25.82          3        315       1265
+Delegate/reshape -> cast                                                        3      38.00          4         62        114
+Delegate/reshape -> quantize_and_dequantize                                    14     546.50        455       1078       7651
+Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.40          9        702       2808
+Delegate/reshape -> transpose                                                  14     132.43        112        244       1854
+Delegate/rms_normalization -> mul                                              44      69.43         14        335       3055
+Delegate/rms_normalization -> mul -> add                                       28     163.89        160        169       4589
+Delegate/rms_normalization -> mul -> add -> mul                                15     233.00        162       1210       3495
+Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.31        103        126       3141
+Delegate/select_v2                                                             14     134.36        105        256       1881
+Delegate/select_v2 -> maximum -> minimum                                       14     790.07        779        808      11061
+Delegate/sin                                                                    2      10.00          8         12         20
+Delegate/softmax (elementwise)                                                 14     635.57        630        646       8898
+Delegate/softmax (reduce)                                                      14     339.43        334        344       4752
+Delegate/split                                                                  1     691.00        691        691        691
+Delegate/strided_slice                                                         60      38.60          3        280       2316
+Delegate/subtract                                                              29      48.76          8        187       1414
+Delegate/transpose -> reshape                                                  14     148.64        125        268       2081
+Delegate/weights_convert_uint4_to_int8                                        100     116.53          7        226      11653
+Delegate/weights_convert_uint8_to_float16                                      28      17.50         13         29        490
+Delegate/weights_convert_uint8_to_int8                                         29      24.76          8        446        718
+
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b80726bc0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b806fbab0, name=LiteRT GPU
 
 ==========================================
- Run summary (temp_litert.sh, OP_PROFILING=false)
+ Run summary (temp_litert.sh, OP_PROFILING=true)
 ==========================================
-
---- input_prompt + decode output (sanity check that text is not garbled) ---
-input_prompt: What is the tallest building in the world?
-<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>
-
-BenchmarkInfo:
 
 --- Benchmark perf summary ---
-  Time to first token: 0.31 s
+  Time to first token: 0.59 s
   Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1024 tokens in 279.842187ms duration.
-      Prefill Speed: 3659.21 tokens/sec.
+    Prefill Turn 1: Processed 1024 tokens in 525.569479ms duration.
+      Prefill Speed: 1948.36 tokens/sec.
   Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 7.58600906s duration.
-      Decode Speed: 33.75 tokens/sec.
+    Decode Turn 1: Processed 256 tokens in 16.106379837s duration.
+      Decode Speed: 15.89 tokens/sec.
 
---- Per-op profile summary: skipped (OP_PROFILING=false) ---
-To collect the matmul per-op table, re-run with:
-    OP_PROFILING=true ./temp_litert.sh
-AFTER confirming that this run produced non-garbled decode output above.
+--- LiteRT per-op summary (FULL table, no head limit) ---
+[PROFILE LiteRT CompiledModel per-op summary] (generated by GetProfileSummary, --enable_op_profiling=true):
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
 
-Full log: temp_litert_run.log
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
 
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     238.00        238        238        238
+Delegate/UploadOrBindTensorBuffer                                               1    1532.00       1532       1532       1532
+Delegate/add_values_to_cache                                                   15      27.53         19         51        413
+Delegate/cast                                                                   3      36.33          2         56        109
+Delegate/concat_batch -> cast                                                   2       2.00          2          2          4
+Delegate/concat_channels                                                       29      72.24          8        251       2095
+Delegate/concat_height -> not_equal                                             2     467.50        467        468        935
+Delegate/convolution(conv_wave_memory)                                         28     910.21        801       1563      25486
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     336.04         87       2443      15122
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1037.68         96       1800      58110
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1687.79       1684       1698      23629
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.93         97        100       1371
+Delegate/copy                                                                  14      59.36         52         66        831
+Delegate/cos                                                                    2       5.50          2          9         11
+Delegate/greater_equal                                                          1      19.00         19         19         19
+Delegate/less                                                                   1      19.00         19         19         19
+Delegate/logical_and                                                            1      39.00         39         39         39
+Delegate/mul                                                                   90      45.04          4        603       4054
+Delegate/mul -> add                                                            29      56.10          9        199       1627
+Delegate/mul -> quantize_and_dequantize                                        14     560.86        558        569       7852
+Delegate/quantize_and_dequantize                                               15      73.93         67         99       1109
+Delegate/quantize_float16_to_uint8c16                                         129     135.56         15        487      17487
+Delegate/reduce_maximum -> not_equal                                            2     164.00        164        164        328
+Delegate/reshape                                                               49      25.82          3        315       1265
+Delegate/reshape -> cast                                                        3      38.00          4         62        114
+Delegate/reshape -> quantize_and_dequantize                                    14     546.50        455       1078       7651
+Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.40          9        702       2808
+Delegate/reshape -> transpose                                                  14     132.43        112        244       1854
+Delegate/rms_normalization -> mul                                              44      69.43         14        335       3055
+Delegate/rms_normalization -> mul -> add                                       28     163.89        160        169       4589
+Delegate/rms_normalization -> mul -> add -> mul                                15     233.00        162       1210       3495
+Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.31        103        126       3141
+Delegate/select_v2                                                             14     134.36        105        256       1881
+Delegate/select_v2 -> maximum -> minimum                                       14     790.07        779        808      11061
+Delegate/sin                                                                    2      10.00          8         12         20
+Delegate/softmax (elementwise)                                                 14     635.57        630        646       8898
+Delegate/softmax (reduce)                                                      14     339.43        334        344       4752
+Delegate/split                                                                  1     691.00        691        691        691
+Delegate/strided_slice                                                         60      38.60          3        280       2316
+Delegate/subtract                                                              29      48.76          8        187       1414
+Delegate/transpose -> reshape                                                  14     148.64        125        268       2081
+Delegate/weights_convert_uint4_to_int8                                        100     116.53          7        226      11653
+Delegate/weights_convert_uint8_to_float16                                      28      17.50         13         29        490
+Delegate/weights_convert_uint8_to_int8                                         29      24.76          8        446        718
+
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b80726bc0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b806fbab0, name=LiteRT GPU
+
+--- Matmul-unit-op rows (FullyConnected / BatchMatMul / MatMul / Conv2D) ---
+(no matmul-unit-op rows found -- grep this regex manually from the full table above)
+
+--- Per-op-type rollup (time spent per op type) ---
+
+--- input_prompt + decode output (eyeball check) ---
+  (OP_PROFILING=true: expect a stream of <pad> tokens, that is
+   normal because benchmark_prefill_tokens=1024 zero-pads the
+   input. The numbers above are the real answer.)
+
+
