@@ -4,21 +4,20 @@
 아직 일치하지 않는 것 같은데 일치하게 해주거나 일치할 수 없는 이유를 분석해줘
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 17, done.
-remote: Counting objects: 100% (17/17), done.
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 9 (delta 8), reused 9 (delta 8), pack-reused 0 (from 0)
-Unpacking objects: 100% (9/9), 7.37 KiB | 943.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 4.11 KiB | 1.03 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   e61826ab..c0c7802b  litert_lm  -> origin/litert_lm
-Updating e61826ab..c0c7802b
+   3990e3be..6ebccfb5  litert_lm  -> origin/litert_lm
+Updating 3990e3be..6ebccfb5
 Fast-forward
- runtime/engine/matmul_micro_benchmark.cc |  44 ++++++++++++++++----------------
- runtime/util/single_op_tflite_builder.cc | 525 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++------------------------------------------------------------------------------------------------------------------
- runtime/util/single_op_tflite_builder.h  |  39 ++++++++++++++--------------
- temp_litert_matmul_micro.sh              |  21 +++++++++-------
- 4 files changed, 420 insertions(+), 209 deletions(-)
+ runtime/engine/BUILD                     |  3 +++
+ runtime/engine/matmul_micro_benchmark.cc | 95 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ temp_litert_matmul_micro.sh              | 16 ++++++++++++++++
+ 3 files changed, 108 insertions(+), 6 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_matmul_micro.sh 
 [micro.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [micro.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
@@ -28,6 +27,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_ma
 [micro.sh] DTYPE=int8
 [micro.sh] WARMUP=5
 [micro.sh] ITERS=50
+[micro.sh] PROFILE=false
 [micro.sh] HOST_MATMUL_ROSTER_CSV=./matmul_roster.csv
 
 [micro.sh] Building //runtime/engine:matmul_micro_benchmark ...
@@ -43,13 +43,13 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/engine:matmul_micro_benchmark (0 packages loaded, 0 targets configured).
+INFO: Analyzed target //runtime/engine:matmul_micro_benchmark (1 packages loaded, 2 targets configured).
 INFO: Found 1 target...
 Target //runtime/engine:matmul_micro_benchmark up-to-date:
   bazel-bin/runtime/engine/matmul_micro_benchmark
-INFO: Elapsed time: 2.597s, Critical Path: 2.46s
-INFO: 4 processes: 1 internal, 3 local.
-INFO: Build completed successfully, 4 total actions
+INFO: Elapsed time: 2.739s, Critical Path: 2.46s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
 [micro.sh] libLiteRt.so : bazel-bin/runtime/engine/matmul_micro_benchmark.runfiles/litert/litert/c/libLiteRt.so
 
 [micro.sh] adb push binary + libLiteRt.so ...
@@ -59,18 +59,18 @@ INFO: Build completed successfully, 4 total actions
 
 [micro.sh] Running matmul_micro_benchmark on device (taskset f0) ...
 
-[MATMUL MICRO] backend=gpu dtype=int8 unique_shapes=61 warmup=5 iters=50
+[MATMUL MICRO] backend=gpu dtype=int8 unique_shapes=61 warmup=5 iters=50 profile=0
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007444ab23c0, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076817e51d0, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007444ab2200, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076817e5780, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Initialized TensorFlow Lite runtime.
-I0000 00:00:1742083166.333028    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.333105    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083721.778732    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083721.778847    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
 INFO: Loaded OpenCL library with dlopen.
@@ -79,200 +79,200 @@ INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
 INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.374244    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      256    1536       103.0    135.0    132.0    159.8    179.2        0.00    0.006
+I0000 00:00:1742083721.828244    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      256    1536       125.5    134.1    131.1    150.2    194.7        0.00    0.006
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083166.506338    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.506391    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083721.948919    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083721.948942    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.507116    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      512    1536       109.7    129.3    126.9    133.9    219.6        0.00    0.012
+I0000 00:00:1742083721.949594    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      512    1536       120.2    132.0    128.0    149.3    202.9        0.00    0.012
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083166.562776    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.562820    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.006761    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.006817    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.563359    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      1536   256        105.9    133.1    133.3    141.9    151.0        0.00    0.006
+I0000 00:00:1742083722.007328    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      1536   256        119.4    129.7    126.9    155.2    173.0        0.00    0.006
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083166.583500    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.583546    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.026869    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.026915    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.586198    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      1536   2048       176.7    185.4    183.3    186.0    265.1        0.01    0.034
+I0000 00:00:1742083722.030176    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      1536   2048       179.6    183.8    182.9    191.0    204.4        0.01    0.034
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083166.660057    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.660115    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.101423    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.101468    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.665070    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      1536   4096       225.8    234.7    229.1    233.9    481.1        0.01    0.054
+I0000 00:00:1742083722.105878    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      1536   4096       227.6    237.3    230.4    253.1    462.5        0.01    0.053
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083166.811658    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083166.811707    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.259714    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.259763    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083166.817402    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      1536   6144       275.0    288.8    278.0    296.5    631.7        0.02    0.065
+I0000 00:00:1742083722.265921    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      1536   6144       270.9    283.6    276.2    288.4    592.6        0.02    0.067
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083167.022035    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083167.022082    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.469798    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.469849    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083167.032538    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      1536   12288      407.5    431.6    414.0    426.4   1221.4        0.04    0.087
+I0000 00:00:1742083722.480362    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      1536   12288      407.8    430.7    414.1    425.1   1192.5        0.04    0.088
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083167.442360    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083167.442404    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.886318    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.886362    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083167.444332    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      2048   1536       165.0    174.2    172.6    175.2    257.2        0.01    0.036
+I0000 00:00:1742083722.888962    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      2048   1536       169.8    175.7    173.8    176.6    229.4        0.01    0.036
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083167.525368    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083167.525406    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083722.966898    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083722.966928    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083167.528375    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      4096   1536       207.5    223.6    217.6    229.7    474.5        0.01    0.056
+I0000 00:00:1742083722.969854    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      4096   1536       209.9    223.4    217.9    233.1    412.7        0.01    0.056
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083167.653831    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083167.653876    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083723.097469    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083723.097499    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083167.659045    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      6144   1536       265.0    276.6    268.8    273.6    634.6        0.02    0.068
+I0000 00:00:1742083723.102118    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      6144   1536       261.9    279.4    268.6    291.1    627.9        0.02    0.068
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083167.807456    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083167.807487    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083723.250225    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083723.250257    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083167.813359    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      8960   1536       331.1    351.0    335.8    360.9    903.4        0.03    0.078
+I0000 00:00:1742083723.256497    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      8960   1536       316.4    341.5    330.4    338.1    881.9        0.03    0.081
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083168.059097    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083168.059137    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083723.509603    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083723.509645    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083168.067085    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      12288  1536       394.8    417.9    400.9    420.1   1168.1        0.04    0.090
+I0000 00:00:1742083723.517282    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      12288  1536       393.3    419.3    401.2    416.8   1164.4        0.04    0.090
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083168.703255    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083168.703333    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083724.170037    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083724.170115    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083168.871364    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1      262144 1536      7224.2   7744.3   7343.3   7440.4  26555.8        0.81    0.104
+I0000 00:00:1742083724.328817    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1      262144 1536      7325.9   7763.8   7360.1   7457.6  27013.8        0.81    0.104
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.163659    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.163690    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083732.685649    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083732.685681    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.164068    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      256    1536       120.1    133.7    132.1    138.6    190.0        0.00    0.024
+I0000 00:00:1742083732.686073    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      256    1536       118.0    138.3    125.2    134.5    445.5        0.00    0.023
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.227097    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.227132    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083732.751283    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083732.751311    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.227632    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      512    1536       115.8    130.8    126.6    132.3    225.8        0.01    0.048
+I0000 00:00:1742083732.751817    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      512    1536       118.3    126.8    125.5    128.4    187.0        0.01    0.050
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.285464    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.285498    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083732.809974    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083732.810002    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.285886    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      1536   256        119.7    128.2    125.8    133.5    208.1        0.00    0.025
+I0000 00:00:1742083732.810379    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      1536   256        112.2    128.4    125.4    147.3    199.0        0.00    0.025
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.303376    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.303435    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083732.830165    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083732.830226    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.306578    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      1536   2048       173.1    180.9    178.0    183.7    299.6        0.03    0.139
+I0000 00:00:1742083732.835135    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      1536   2048       140.2    181.1    178.8    183.1    320.0        0.03    0.139
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.371063    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.371104    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083732.890975    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083732.891009    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.375104    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      1536   4096       212.2    229.3    223.0    242.1    437.6        0.05    0.219
+I0000 00:00:1742083732.894048    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      1536   4096       218.6    235.9    228.7    248.2    457.4        0.05    0.213
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.484395    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.484426    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.002974    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.003002    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.488351    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      1536   6144       267.0    282.5    274.0    283.8    671.6        0.08    0.267
+I0000 00:00:1742083733.007411    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      1536   6144       266.4    284.8    275.6    291.0    659.8        0.08    0.265
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083177.638165    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083177.638209    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.160345    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.160375    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083177.645707    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      1536   12288      411.7    459.3    422.0    497.6   1235.2        0.15    0.329
+I0000 00:00:1742083733.168096    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      1536   12288      409.6    491.4    498.3    533.0   1280.2        0.15    0.307
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083178.023372    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083178.023414    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.562081    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.562158    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083178.025293    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      2048   1536       161.1    179.9    177.8    180.9    276.0        0.03    0.140
+I0000 00:00:1742083733.567049    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      2048   1536       128.4    179.3    175.8    185.2    310.8        0.03    0.140
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083178.129569    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083178.129612    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.671326    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.671356    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083178.132593    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      4096   1536       220.5    253.4    241.5    320.8    491.1        0.05    0.199
+I0000 00:00:1742083733.674663    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      4096   1536       219.0    231.0    225.9    238.4    427.4        0.05    0.218
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083178.282358    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083178.282401    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.820031    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.820062    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083178.287271    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      6144   1536       266.7    283.7    275.3    291.9    642.6        0.08    0.266
+I0000 00:00:1742083733.824660    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      6144   1536       269.2    286.5    276.6    292.3    670.9        0.08    0.264
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083178.439494    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083178.439542    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083733.976213    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083733.976249    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083178.445626    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      8960   1536       330.8    355.6    341.1    354.6    976.6        0.11    0.310
+I0000 00:00:1742083733.982789    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      8960   1536       330.2    372.8    341.4    410.3    983.2        0.11    0.295
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083178.709680    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083178.709719    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083734.257077    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083734.257120    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083178.718079    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      12288  1536       404.5    450.3    415.1    492.4   1232.6        0.15    0.335
+I0000 00:00:1742083734.264815    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      12288  1536       413.4    472.0    420.9    534.1   1208.4        0.15    0.320
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083179.391848    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083179.391880    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083734.966576    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083734.966643    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083179.549909    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-4      262144 1536      6964.3   8558.3   8021.7   8075.2  30011.4        3.22    0.376
+I0000 00:00:1742083735.124569    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+4      262144 1536      7618.6   8624.5   8061.5   8187.8  31119.8        3.22    0.373
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083187.869834    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083187.869874    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083743.532869    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083743.532902    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083187.870196    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8      256    256        121.2    127.4    126.6    129.0    167.1        0.00    0.008
+I0000 00:00:1742083743.533219    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8      256    256        122.2    127.0    125.5    131.0    152.0        0.00    0.008
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083187.952701    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083187.952727    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083743.618899    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083743.618949    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083187.953050    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8      512    512        121.2    127.5    125.9    128.9    182.5        0.00    0.033
+I0000 00:00:1742083743.619363    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8      512    512        117.3    129.0    125.3    153.8    205.6        0.00    0.033
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083189.328836    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083189.328903    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083745.068854    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083745.068905    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083189.731829    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8      32003  32003    18176.2  20614.5  20160.4  20823.9  70159.8       16.39    0.795
+I0000 00:00:1742083745.455856    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8      32003  32003    18124.9  19494.4  18465.8  18618.9  71060.9       16.39    0.841
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083206.204768    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083206.204819    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083761.834681    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083761.834731    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083206.205332    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-32     256    256        122.4    131.4    130.8    136.9    148.9        0.00    0.032
+I0000 00:00:1742083761.835240    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+32     256    256        120.2    128.0    125.4    138.6    148.0        0.00    0.033
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083206.275071    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083206.275115    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083761.905511    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083761.905538    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083206.275599    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-32     512    512        131.6    139.9    139.2    145.9    181.6        0.02    0.120
+I0000 00:00:1742083761.905952    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+32     512    512        133.9    141.5    138.2    155.5    206.9        0.02    0.119
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083206.287204    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083206.287233    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083761.917761    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083761.917805    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083206.287680    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-32     515    515        136.8    178.0    177.8    188.2    235.0        0.02    0.095
+I0000 00:00:1742083761.918227    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+32     515    515        121.8    177.8    177.6    192.0    294.7        0.02    0.095
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083207.763806    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083207.763856    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083763.466938    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083763.466970    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083208.163277    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-E0000 00:00:1742083215.259626    5070 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
+I0000 00:00:1742083763.858584    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+E0000 00:00:1742083770.984774    5572 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
 === Source Location Trace: === 
 third_party/ml_drift/cl/util.cc:199
 third_party/ml_drift/cl/cl_arguments.cc:121
@@ -291,149 +291,149 @@ ERROR: Failed to initialize kernel.
 ERROR: Restored original execution plan after delegate application failure.
 [MATMUL MICRO] SKIP m=32 n=32003 k=32003: CompiledModel::Create m=32 n=32003 k=32003: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.322037    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.322085    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.046566    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.046610    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.322983    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    256    1536       205.8    219.1    213.1    222.5    460.2        0.10    0.459
+I0000 00:00:1742083771.047440    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    256    1536       175.9    218.4    212.2    219.4    474.3        0.10    0.461
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.346856    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.346888    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.071182    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.071208    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.347766    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    512    1536       235.0    254.4    244.9    267.0    646.4        0.20    0.791
+I0000 00:00:1742083771.071848    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    512    1536       227.2    319.3    236.3    478.3   1580.8        0.20    0.631
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.370090    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.370126    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.099931    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.099964    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.370598    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    1536   256        178.1    200.4    187.7    219.0    456.8        0.10    0.502
+I0000 00:00:1742083771.100332    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    1536   256        165.9    199.1    185.9    227.0    424.3        0.10    0.506
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.451768    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.451824    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.165474    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.165512    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.455493    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    1536   2048       349.2    377.8    359.4    378.8   1145.8        0.81    2.132
+I0000 00:00:1742083771.167545    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    1536   2048       345.9    367.6    352.8    357.3   1125.2        0.81    2.191
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.500656    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.500694    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.210121    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.210162    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.503651    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    1536   4096       552.0    605.2    562.7    624.2   1976.4        1.61    2.661
+I0000 00:00:1742083771.213748    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    1536   4096       548.0    606.8    556.4    673.9   1967.8        1.61    2.654
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.576691    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.576733    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.290137    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.290186    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.581142    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    1536   6144       761.2    866.2    833.1    865.3   2830.4        2.42    2.789
+I0000 00:00:1742083771.295376    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    1536   6144       768.6    839.5    778.1    894.7   2818.8        2.42    2.878
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.692016    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.692067    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.410640    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.410686    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.696667    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    2048   1536       349.7    385.9    357.5    412.6   1192.4        0.81    2.087
+I0000 00:00:1742083771.413703    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    2048   1536       353.9    378.9    362.5    368.4   1206.7        0.81    2.125
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.746342    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.746401    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.460219    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.460263    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.749580    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    4096   1536       611.7    747.2    699.1   1115.7   2543.3        1.61    2.156
+I0000 00:00:1742083771.464263    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    4096   1536       601.1    696.5    661.5    710.0   2511.5        1.61    2.313
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.843332    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.843364    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.546299    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.546358    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.847153    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    6144   1536       792.9    971.6    803.9   1282.2   3507.3        2.42    2.486
+I0000 00:00:1742083771.555107    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    6144   1536       795.6    998.9    915.8   1371.7   3504.8        2.42    2.419
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083215.962945    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083215.962979    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.676061    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.676078    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083215.968868    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-128    8960   1536      1082.7   2119.6   2127.7   2233.3   4758.9        3.52    1.662
+I0000 00:00:1742083771.683353    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+128    8960   1536      1065.3   1710.0   1929.1   1999.8   4752.6        3.52    2.060
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.168671    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.168740    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.852445    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.852571    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.169379    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   256    256        202.0    256.7    236.2    254.5    903.3        0.13    0.523
+I0000 00:00:1742083771.853573    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   256    256        207.7    246.7    238.3    257.7    662.5        0.13    0.544
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.188197    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.188225    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.873091    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.873121    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.188565    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   256    1536       550.7    659.5    642.3    764.8   2065.9        0.81    1.221
+I0000 00:00:1742083771.873459    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   256    1536       553.3    631.4    575.5    704.1   2042.1        0.81    1.275
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.240539    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.240624    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.921916    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.922006    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.242014    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   512    512        471.6    544.6    492.8    556.9   2567.6        0.54    0.986
+I0000 00:00:1742083771.922974    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   512    512        441.3    494.7    447.0    513.3   1926.9        0.54    1.085
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.287192    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.287254    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083771.968030    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083771.968091    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.288433    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   512    1536       806.9   1170.1    925.2   1501.2   3346.1        1.61    1.377
+I0000 00:00:1742083771.969161    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   512    1536       776.6   1205.6   1251.5   1495.4   3477.5        1.61    1.336
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.384422    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.384566    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083772.066190    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083772.066348    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.386747    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   639    639        540.4    812.0    754.4   1017.1   2287.0        0.84    1.030
+I0000 00:00:1742083772.067648    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   639    639        567.3    781.8    673.8   1053.6   2235.9        0.84    1.070
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.448558    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.448650    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083772.126634    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083772.126711    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.449746    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   1536   256       1058.9   1521.8   1323.2   1798.9   4129.8        0.81    0.529
+I0000 00:00:1742083772.127761    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   1536   256       1198.5   1374.6   1260.4   1420.2   4490.2        0.81    0.586
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.652018    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.652133    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083772.321867    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083772.321953    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.657594    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   1536   2048      2716.7   3843.7   3744.9   4203.9  10999.1        6.44    1.676
+I0000 00:00:1742083772.326628    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   1536   2048      2615.5   3999.2   3946.8   4240.1  10694.8        6.44    1.611
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083216.927205    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083216.927260    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083772.602100    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083772.602174    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083216.933705    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   1536   4096      5612.7   6584.2   5840.7   8677.1  22626.1       12.88    1.957
+I0000 00:00:1742083772.609292    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   1536   4096      5545.2   6149.3   5922.8   6009.9  22339.2       12.88    2.095
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083217.380761    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083217.380815    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083773.031036    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083773.031083    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083217.387271    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   1536   6144      6957.0   8192.5   7557.9  10207.3  29343.9       19.33    2.359
+I0000 00:00:1742083773.037222    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   1536   6144      7320.8   7960.2   7543.7   7724.7  29007.0       19.33    2.428
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083217.941565    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083217.941616    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083773.572072    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083773.572120    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083217.944003    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   2048   1536      2749.8   4035.0   4120.5   4209.7  11119.5        6.44    1.597
+I0000 00:00:1742083773.574977    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   2048   1536      2659.7   4025.7   4134.6   4224.8  10660.6        6.44    1.600
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083218.210434    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083218.210469    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083773.842018    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083773.842074    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083218.214523    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   4096   1536      6546.0   8202.5   7514.5   9687.0  33234.8       12.88    1.571
+I0000 00:00:1742083773.846169    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   4096   1536      6795.7   8012.5   7509.1   7800.9  33340.9       12.88    1.608
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083218.742654    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083218.742741    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083774.361927    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083774.361984    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083218.750288    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   6144   1536      7541.0  11512.6  10782.9  11134.9  47313.4       19.33    1.679
+I0000 00:00:1742083774.369634    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   6144   1536      6961.1  11285.0  10750.0  11067.7  45802.5       19.33    1.713
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083219.459234    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083219.459276    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083775.072302    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083775.072363    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083219.468227    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   8960   1536      8681.6  15249.1  14713.9  15065.8  57290.9       28.19    1.848
+I0000 00:00:1742083775.082860    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   8960   1536      8825.6  15361.0  14778.0  15053.9  57005.0       28.19    1.835
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083221.912707    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083221.912759    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083777.527463    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083777.527514    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083222.305465    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-E0000 00:00:1742083229.533722    5070 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
+I0000 00:00:1742083777.923928    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+E0000 00:00:1742083785.139916    5572 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
 === Source Location Trace: === 
 third_party/ml_drift/cl/util.cc:199
 third_party/ml_drift/cl/cl_arguments.cc:121
@@ -452,29 +452,29 @@ ERROR: Failed to initialize kernel.
 ERROR: Restored original execution plan after delegate application failure.
 [MATMUL MICRO] SKIP m=1024 n=32003 k=32003: CompiledModel::Create m=1024 n=32003 k=32003: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083229.604105    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083229.604142    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083785.201810    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083785.201854    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083229.604549    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8192   256    256       1393.2   1893.0   1745.3   2210.2   8725.1        1.07    0.567
+I0000 00:00:1742083785.202244    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8192   256    256       1407.1   1989.9   1690.0   2557.6   8575.6        1.07    0.540
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083229.738409    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083229.738520    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083785.344122    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083785.344242    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083229.739600    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8192   512    512       3014.7   5458.5   5834.4   6008.1  12534.5        4.29    0.787
+I0000 00:00:1742083785.345656    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8192   512    512       3010.3   5488.3   5842.9   5909.9  12545.8        4.29    0.783
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083230.080036    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083230.080062    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083785.681528    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083785.681564    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083230.081154    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-8192   1535   1535     13691.8  22786.1  22070.1  23866.0  84192.3       38.60    1.694
+I0000 00:00:1742083785.683169    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+8192   1535   1535     13638.6  23160.2  22374.5  22609.7  82494.4       38.60    1.667
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742083232.864383    5070 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742083232.864423    5070 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742083788.477605    5572 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742083788.477646    5572 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 3 out of 3 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742083233.255187    5070 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-E0000 00:00:1742083240.786974    5070 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
+I0000 00:00:1742083788.867735    5572 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+E0000 00:00:1742083796.372794    5572 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to allocate 2049280128 bytes of device memory (clCreateBuffer): Invalid buffer size
 === Source Location Trace: === 
 third_party/ml_drift/cl/util.cc:199
 third_party/ml_drift/cl/cl_arguments.cc:121
@@ -493,8 +493,8 @@ ERROR: Failed to initialize kernel.
 ERROR: Restored original execution plan after delegate application failure.
 [MATMUL MICRO] SKIP m=8192 n=32003 k=32003: CompiledModel::Create m=8192 n=32003 k=32003: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
 [MATMUL MICRO] done. 3 / 61 shapes failed.
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007444ab2200, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007444ab23c0, name=LiteRT GPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000076817e5780, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000076817e51d0, name=LiteRT GPU
 
 ==========================================
  Matmul micro CSV (host: ./matmul_micro.csv)
@@ -505,35 +505,35 @@ INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007444ab23c0, n
     convolution(conv_wave_memory) / convolution_int8(...) cost.
 
 m,n,k,count,min_us,avg_us,p50_us,p95_us,max_us,gflops,tflops_min,tflops_avg
-1,256,1536,50,102.969,134.994,131.979,159.843,179.166,0.000786432,0.00763756,0.00582569
-1,512,1536,50,109.739,129.302,126.927,133.907,219.635,0.00157286,0.0143328,0.0121643
-1,1536,256,50,105.937,133.104,133.333,141.927,151.042,0.000786432,0.00742358,0.0059084
-1,1536,2048,50,176.666,185.376,183.333,185.989,265.104,0.00629146,0.0356121,0.0339389
-1,1536,4096,50,225.782,234.705,229.062,233.906,481.093,0.0125829,0.0557304,0.0536116
-1,1536,6144,50,275,288.839,278.02,296.458,631.719,0.0188744,0.0686341,0.0653457
-1,1536,12288,50,407.5,431.564,413.959,426.406,1221.41,0.0377487,0.0926349,0.0874697
-1,2048,1536,50,165,174.228,172.553,175.208,257.24,0.00629146,0.03813,0.0361104
-1,4096,1536,50,207.5,223.632,217.604,229.688,474.531,0.0125829,0.0606405,0.0562661
-1,6144,1536,50,265,276.559,268.75,273.594,634.583,0.0188744,0.071224,0.0682471
-1,8960,1536,50,331.145,350.953,335.833,360.885,903.437,0.0275251,0.083121,0.0784296
-1,12288,1536,50,394.791,417.899,400.937,420.104,1168.12,0.0377487,0.095617,0.0903298
-1,262144,1536,50,7224.22,7744.34,7343.28,7440.36,26555.8,0.805306,0.111473,0.103987
-4,256,1536,50,120.052,133.684,132.083,138.594,190,0.00314573,0.026203,0.023531
-4,512,1536,50,115.781,130.767,126.615,132.344,225.781,0.00629146,0.0543393,0.0481121
-4,1536,256,50,119.687,128.17,125.833,133.49,208.125,0.00314573,0.026283,0.0245434
-4,1536,2048,50,173.125,180.907,177.969,183.698,299.636,0.0251658,0.145362,0.139109
-4,1536,4096,50,212.188,229.312,222.969,242.135,437.605,0.0503316,0.237203,0.219489
-4,1536,6144,50,267.032,282.538,274.01,283.75,671.563,0.0754975,0.282728,0.267211
-4,1536,12288,50,411.719,459.311,421.979,497.552,1235.16,0.150995,0.366743,0.328742
-4,2048,1536,50,161.094,179.877,177.812,180.938,276.042,0.0251658,0.156218,0.139906
-4,4096,1536,50,220.52,253.352,241.459,320.781,491.094,0.0503316,0.228241,0.198663
-4,6144,1536,50,266.667,283.735,275.312,291.927,642.605,0.0754975,0.283115,0.266084
-4,8960,1536,50,330.834,355.562,341.094,354.583,976.562,0.1101,0.332797,0.309652
-4,12288,1536,50,404.531,450.253,415.052,492.448,1232.55,0.150995,0.373259,0.335356
-4,262144,1536,50,6964.32,8558.29,8021.72,8075.21,30011.4,3.22123,0.462532,0.376386
-8,256,256,50,121.25,127.356,126.563,129.01,167.136,0.00104858,0.00864805,0.00823341
-8,512,512,50,121.25,127.493,125.886,128.906,182.5,0.0041943,0.0345922,0.0328984
-8,32003,32003,50,18176.2,20614.5,20160.4,20823.9,70159.8,16.3871,0.901565,0.79493
+1,256,1536,50,125.469,134.076,131.146,150.156,194.74,0.000786432,0.00626794,0.00586557
+1,512,1536,50,120.156,132.027,127.969,149.323,202.865,0.00157286,0.0130902,0.0119132
+1,1536,256,50,119.375,129.723,126.875,155.209,172.968,0.000786432,0.00658791,0.0060624
+1,1536,2048,50,179.583,183.831,182.864,190.99,204.375,0.00629146,0.0350337,0.0342241
+1,1536,4096,50,227.552,237.279,230.365,253.125,462.5,0.0125829,0.0552969,0.05303
+1,1536,6144,50,270.938,283.598,276.198,288.437,592.605,0.0188744,0.0696631,0.0665533
+1,1536,12288,50,407.76,430.675,414.063,425.052,1192.5,0.0377487,0.0925759,0.0876502
+1,2048,1536,50,169.792,175.692,173.802,176.562,229.375,0.00629146,0.0370539,0.0358096
+1,4096,1536,50,209.948,223.384,217.865,233.125,412.656,0.0125829,0.0599335,0.0563285
+1,6144,1536,50,261.928,279.399,268.646,291.146,627.865,0.0188744,0.0720594,0.0675535
+1,8960,1536,50,316.406,341.527,330.417,338.125,881.875,0.0275251,0.086993,0.0805942
+1,12288,1536,50,393.282,419.293,401.197,416.771,1164.43,0.0377487,0.0959839,0.0900296
+1,262144,1536,50,7325.89,7763.85,7360.1,7457.55,27013.8,0.805306,0.109926,0.103725
+4,256,1536,50,117.969,138.276,125.156,134.479,445.52,0.00314573,0.0266657,0.0227496
+4,512,1536,50,118.282,126.834,125.521,128.437,187.031,0.00629146,0.0531903,0.0496037
+4,1536,256,50,112.24,128.374,125.365,147.344,199.011,0.00314573,0.0280268,0.0245044
+4,1536,2048,50,140.208,181.067,178.75,183.073,320,0.0251658,0.179489,0.138986
+4,1536,4096,50,218.646,235.925,228.698,248.178,457.396,0.0503316,0.230197,0.213337
+4,1536,6144,50,266.406,284.758,275.573,290.989,659.843,0.0754975,0.283393,0.265128
+4,1536,12288,50,409.583,491.361,498.281,532.969,1280.16,0.150995,0.368655,0.307299
+4,2048,1536,50,128.385,179.269,175.781,185.208,310.781,0.0251658,0.196018,0.14038
+4,4096,1536,50,218.959,231.021,225.938,238.386,427.396,0.0503316,0.229868,0.217866
+4,6144,1536,50,269.218,286.451,276.614,292.292,670.938,0.0754975,0.280432,0.263562
+4,8960,1536,50,330.156,372.816,341.406,410.261,983.177,0.1101,0.33348,0.295322
+4,12288,1536,50,413.438,472.04,420.938,534.063,1208.44,0.150995,0.365218,0.319878
+4,262144,1536,50,7618.59,8624.49,8061.46,8187.81,31119.8,3.22123,0.422811,0.373497
+8,256,256,50,122.188,126.97,125.468,130.99,151.979,0.00104858,0.00858166,0.00825847
+8,512,512,50,117.291,128.961,125.261,153.75,205.573,0.0041943,0.0357598,0.0325237
+8,32003,32003,50,18124.9,19494.4,18465.8,18618.9,71060.9,16.3871,0.90412,0.840602
 
 Full log:    temp_litert_matmul_micro.log
 Full CSV:    ./matmul_micro.csv
