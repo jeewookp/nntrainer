@@ -8,24 +8,24 @@ remote: Enumerating objects: 17, done.
 remote: Counting objects: 100% (17/17), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 9 (delta 8), reused 9 (delta 8), pack-reused 0 (from 0)
-Unpacking objects: 100% (9/9), 5.37 KiB | 916.00 KiB/s, done.
+Unpacking objects: 100% (9/9), 7.09 KiB | 1.01 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   06d651a4..e4c793c5  litert_lm  -> origin/litert_lm
-Updating 06d651a4..e4c793c5
+   62cda19c..f68e3c33  litert_lm  -> origin/litert_lm
+Updating 62cda19c..f68e3c33
 Fast-forward
- runtime/engine/matmul_micro_benchmark.cc |  50 +++++++++++++++++++++++++-------------------------
- runtime/util/single_op_tflite_builder.cc | 175 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- runtime/util/single_op_tflite_builder.h  |  31 ++++++++++++++++++++++++-------
- temp_litert_matmul_micro.sh              |  34 ++++++++++++++++++----------------
- 4 files changed, 242 insertions(+), 48 deletions(-)
+ runtime/engine/matmul_micro_benchmark.cc |  59 +++++++++++++++++++++++++++++++++++++++--------------------
+ runtime/util/single_op_tflite_builder.cc | 325 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ runtime/util/single_op_tflite_builder.h  |  24 ++++++++++++++++++++++++
+ temp_litert_matmul_micro.sh              |  40 ++++++++++++++++++++++------------------
+ 4 files changed, 407 insertions(+), 41 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_matmul_micro.sh 
 [micro.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [micro.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
 [micro.sh] BAZEL=/usr/local/bin/bazel
 [micro.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
 [micro.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
-[micro.sh] DTYPE=fp32_conv2d
+[micro.sh] DTYPE=int8_chain
 [micro.sh] WARMUP=5
 [micro.sh] ITERS=50
 [micro.sh] PROFILE=true
@@ -48,7 +48,7 @@ INFO: Analyzed target //runtime/engine:matmul_micro_benchmark (0 packages loaded
 INFO: Found 1 target...
 Target //runtime/engine:matmul_micro_benchmark up-to-date:
   bazel-bin/runtime/engine/matmul_micro_benchmark
-INFO: Elapsed time: 2.652s, Critical Path: 2.52s
+INFO: Elapsed time: 2.677s, Critical Path: 2.53s
 INFO: 4 processes: 1 internal, 3 local.
 INFO: Build completed successfully, 4 total actions
 [micro.sh] libLiteRt.so : bazel-bin/runtime/engine/matmul_micro_benchmark.runfiles/litert/litert/c/libLiteRt.so
@@ -60,18 +60,18 @@ INFO: Build completed successfully, 4 total actions
 
 [micro.sh] Running matmul_micro_benchmark on device (taskset f0) ...
 
-[MATMUL MICRO] backend=gpu dtype=fp32_conv2d unique_shapes=61 warmup=5 iters=50 profile=1
+[MATMUL MICRO] backend=gpu dtype=int8_chain unique_shapes=61 warmup=5 iters=50 profile=1
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007536747200, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007362c06630, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007536746320, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007362c060f0, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Initialized TensorFlow Lite runtime.
-I0000 00:00:1742084763.181667    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.181781    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742085322.086425    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085322.086544    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
 INFO: Loaded OpenCL library with dlopen.
@@ -79,8 +79,8 @@ INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and
 INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
 INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.224187    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085322.132361    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=256 k=1536
 ============================== Run Order ==============================
@@ -99,16 +99,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      14.56         12         27        728
-Delegate/UploadOrBindTensorBuffer                                              50     110.22        104        143       5511
-Delegate/fully_connected                                                       50      12.80         12         13        640
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      18.82         13         26        941
+Delegate/UploadOrBindTensorBuffer                                              50     126.62        105        180       6331
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50       8.12          8          9        406
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50       8.10          8          9        405
+Delegate/quantize_and_dequantize                                               50       1.90          1          2         95
 
-1      256    1536       578.1    593.7    584.2    643.9    669.8        0.00    0.001
+1      256    1536       311.4    365.3    354.9    453.7    471.5        0.00    0.002
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084763.340315    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.340431    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.345189    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085322.335085    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085322.335186    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085322.337498    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=512 k=1536
 ============================== Run Order ==============================
@@ -127,16 +129,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.70         12         27        885
-Delegate/UploadOrBindTensorBuffer                                              50     121.34         79        152       6067
-Delegate/fully_connected                                                       50      28.58         27         30       1429
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      19.52         14         35        976
+Delegate/UploadOrBindTensorBuffer                                              50     129.28         70        179       6464
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      13.70         13         14        685
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      14.84         13         23        742
+Delegate/quantize_and_dequantize                                               50       1.82          1          2         91
 
-1      512    1536       602.8    718.7    646.6    910.7    937.2        0.00    0.002
+1      512    1536       343.0    402.1    416.3    464.1    471.4        0.00    0.004
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084763.414180    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.414260    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.415745    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085322.461682    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085322.461743    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085322.463265    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=1536 k=256
 ============================== Run Order ==============================
@@ -155,16 +159,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      29.22         23         46       1461
-Delegate/UploadOrBindTensorBuffer                                              50     239.06        145        477      11953
-Delegate/fully_connected                                                       50      17.46         15         25        873
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      15.06         11         20        753
+Delegate/UploadOrBindTensorBuffer                                              50     117.16        104        176       5858
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50       8.22          8          9        411
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50       8.06          8          9        403
+Delegate/quantize_and_dequantize                                               50       1.82          1          2         91
 
-1      1536   256        848.9   1163.1    986.5   1830.1   1976.2        0.00    0.001
+1      1536   256        300.9    342.8    320.5    389.1    429.1        0.00    0.002
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084763.507183    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.507207    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.513408    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085322.580128    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085322.580174    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085322.585518    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=1536 k=2048
 ============================== Run Order ==============================
@@ -183,16 +189,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      19.94         10         44        997
-Delegate/UploadOrBindTensorBuffer                                              50     190.76         86        495       9538
-Delegate/fully_connected                                                       50      94.66         91        107       4733
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      22.56         12         35       1128
+Delegate/UploadOrBindTensorBuffer                                              50     182.76        107        486       9138
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      46.26         45         47       2313
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      46.32         45         48       2316
+Delegate/quantize_and_dequantize                                               50       1.88          1          3         94
 
-1      1536   2048       749.8   1080.2    927.8   1894.6   2092.3        0.01    0.006
+1      1536   2048       387.8    559.2    537.0    953.6    965.2        0.01    0.011
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084763.637484    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.637503    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.647630    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085322.833669    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085322.833717    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085322.841881    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=1536 k=4096
 ============================== Run Order ==============================
@@ -211,16 +219,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      24.92         12         47       1246
-Delegate/UploadOrBindTensorBuffer                                              50     210.84        109        471      10542
-Delegate/fully_connected                                                       50     192.38        180        208       9619
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      33.04         16         52       1652
+Delegate/UploadOrBindTensorBuffer                                              50     300.80        109        491      15040
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      97.06         94         99       4853
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      92.90         91         96       4645
+Delegate/quantize_and_dequantize                                               50       2.68          2          3        134
 
-1      1536   4096       931.5   1507.8   1401.9   2277.8   3469.7        0.01    0.008
+1      1536   4096       512.4    883.4    665.5   1185.1   1438.9        0.01    0.014
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084763.816596    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084763.816649    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084763.830913    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085323.255058    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085323.255108    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085323.266523    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=1536 k=6144
 ============================== Run Order ==============================
@@ -239,16 +249,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      42.28         12         95       2114
-Delegate/UploadOrBindTensorBuffer                                              50     425.98        110        528      21299
-Delegate/fully_connected                                                       50     285.12        278        311      14256
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      36.44         10         48       1822
+Delegate/UploadOrBindTensorBuffer                                              50     359.90        106        594      17995
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     144.04        141        147       7202
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     143.24        137        147       7162
+Delegate/quantize_and_dequantize                                               50       2.68          2          4        134
 
-1      1536   6144      1200.2   3061.0   3377.0   3543.5   4197.4        0.02    0.006
+1      1536   6144       554.0   1080.4   1267.6   1329.9   1492.7        0.02    0.017
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084764.129017    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084764.129065    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084764.159565    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085323.778637    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085323.778668    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085323.793933    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=1536 k=12288
 ============================== Run Order ==============================
@@ -267,16 +279,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      52.76         13        117       2638
-Delegate/UploadOrBindTensorBuffer                                              50     445.80        112        682      22290
-Delegate/fully_connected                                                       50     595.98        549        644      29799
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      38.62         12         50       1931
+Delegate/UploadOrBindTensorBuffer                                              50     406.44        109        549      20322
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     289.38        285        303      14469
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     271.02        268        274      13551
+Delegate/quantize_and_dequantize                                               50       4.54          3          6        227
 
-1      1536   12288     1757.5   3550.7   3474.5   4583.0   5789.6        0.04    0.011
+1      1536   12288      831.4   1416.2   1552.3   1604.9   1780.5        0.04    0.027
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084764.551347    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084764.551398    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084764.557928    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085324.565907    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085324.565950    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085324.570040    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=2048 k=1536
 ============================== Run Order ==============================
@@ -295,16 +309,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      20.40         13         35       1020
-Delegate/UploadOrBindTensorBuffer                                              50     134.98         90        175       6749
-Delegate/fully_connected                                                       50      88.96         87         93       4448
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      12.22          9         15        611
+Delegate/UploadOrBindTensorBuffer                                              50     105.98         99        153       5299
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      45.82         44         48       2291
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      48.94         48         50       2447
+Delegate/quantize_and_dequantize                                               50       1.74          1          2         87
 
-1      2048   1536       757.7    946.6    958.1   1156.4   1488.0        0.01    0.007
+1      2048   1536       349.2    358.5    354.8    374.1    394.1        0.01    0.018
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084764.698400    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084764.698451    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084764.709387    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085324.731709    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085324.731749    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085324.737995    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=4096 k=1536
 ============================== Run Order ==============================
@@ -323,16 +339,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.80         15         47       2040
-Delegate/UploadOrBindTensorBuffer                                              50     425.34        111        504      21267
-Delegate/fully_connected                                                       50     186.66        184        190       9333
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      33.22          8        103       1661
+Delegate/UploadOrBindTensorBuffer                                              50     297.06        100        521      14853
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      91.52         90        100       4576
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     100.02         94        107       5001
+Delegate/quantize_and_dequantize                                               50       1.90          1          2         95
 
-1      4096   1536      1027.3   2150.2   2263.1   2371.9   2471.2        0.01    0.006
+1      4096   1536       438.4    857.2   1032.3   1171.6   1323.4        0.01    0.015
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084764.946466    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084764.946505    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084764.961970    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085325.062000    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085325.062032    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085325.070689    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=6144 k=1536
 ============================== Run Order ==============================
@@ -351,16 +369,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      39.92         12         84       1996
-Delegate/UploadOrBindTensorBuffer                                              50     395.54        109        515      19777
-Delegate/fully_connected                                                       50     272.20        263        300      13610
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      23.00          9         36       1150
+Delegate/UploadOrBindTensorBuffer                                              50     191.12         97        465       9556
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     134.64        131        143       6732
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     143.48        141        148       7174
+Delegate/quantize_and_dequantize                                               50       1.78          1          2         89
 
-1      6144   1536      1115.6   2345.2   2529.8   3358.9   3457.5        0.02    0.008
+1      6144   1536       527.2    749.2    681.8   1141.6   1142.9        0.02    0.025
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084765.218433    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084765.218469    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084765.239948    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085325.443230    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085325.443283    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085325.459300    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=8960 k=1536
 ============================== Run Order ==============================
@@ -379,16 +399,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      36.94         12         70       1847
-Delegate/UploadOrBindTensorBuffer                                              50     376.04        106        583      18802
-Delegate/fully_connected                                                       50     400.00        397        403      20000
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.24          9         72       2162
+Delegate/UploadOrBindTensorBuffer                                              50     449.50        103        538      22475
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     203.00        199        211      10150
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     210.14        205        214      10507
+Delegate/quantize_and_dequantize                                               50       1.80          1          2         90
 
-1      8960   1536      1356.7   2406.4   2676.7   2823.8   3182.7        0.03    0.011
+1      8960   1536       677.4   1363.6   1416.8   1436.9   1461.9        0.03    0.020
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084765.590611    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084765.590662    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084765.622462    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085326.132684    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085326.132717    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085326.147978    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1 n=12288 k=1536
 ============================== Run Order ==============================
@@ -407,17 +429,19 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.62         12        100       2181
-Delegate/UploadOrBindTensorBuffer                                              50     450.28        110        766      22514
-Delegate/fully_connected                                                       50     552.92        542        605      27646
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.20         14         61       2160
+Delegate/UploadOrBindTensorBuffer                                              50     419.18        103        723      20959
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     271.04        268        288      13552
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     285.58        280        295      14279
+Delegate/quantize_and_dequantize                                               50       1.90          1          4         95
 
-1      12288  1536      1746.2   3066.4   3156.7   3318.6   3720.6        0.04    0.012
-[MATMUL MICRO] SKIP m=1 n=262144 k=1536: BuildFp32Conv2d1x1: weight tensor too large (1610612736 bytes > 1 GiB)
+1      12288  1536       813.0   1465.7   1555.1   1624.2   1842.6        0.04    0.026
+[MATMUL MICRO] SKIP m=1 n=262144 k=1536: BuildInt8FcChain: weight tensor too large (402653184 bytes per tensor > 256 MiB)
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084765.964531    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084765.964566    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084765.965154    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085326.875725    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085326.875758    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085326.876328    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=256 k=1536
 ============================== Run Order ==============================
@@ -436,16 +460,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      11.80         11         20        590
-Delegate/UploadOrBindTensorBuffer                                              50     111.68        105        133       5584
-Delegate/fully_connected                                                       50      14.60         14         15        730
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      11.92          8         19        596
+Delegate/UploadOrBindTensorBuffer                                              50     109.20        100        128       5460
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      11.98         11         13        599
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      12.80         12         13        640
+Delegate/quantize_and_dequantize                                               50       1.84          1          2         92
 
-4      256    1536       584.0    597.8    593.9    625.9    662.6        0.00    0.005
+4      256    1536       277.4    312.3    290.3    375.7    384.7        0.00    0.010
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.037470    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.037520    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.039501    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085327.009923    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085327.009980    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085327.011525    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=512 k=1536
 ============================== Run Order ==============================
@@ -464,16 +490,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.08         11         25        654
-Delegate/UploadOrBindTensorBuffer                                              50     113.78        105        123       5689
-Delegate/fully_connected                                                       50      36.02         35         38       1801
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.54          9         20        677
+Delegate/UploadOrBindTensorBuffer                                              50     110.58         59        141       5529
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      17.40         17         19        870
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      17.60         17         19        880
+Delegate/quantize_and_dequantize                                               50       1.86          1          2         93
 
-4      512    1536       623.3    662.0    655.9    703.1    739.5        0.01    0.010
+4      512    1536       290.9    339.7    327.1    435.2    461.6        0.01    0.019
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.114268    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.114308    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.114890    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085327.117500    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085327.117572    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085327.118852    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=1536 k=256
 ============================== Run Order ==============================
@@ -492,16 +520,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      16.76         12         26        838
-Delegate/UploadOrBindTensorBuffer                                              50     122.62         60        147       6131
-Delegate/fully_connected                                                       50      16.20         14         19        810
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.10          9         31        655
+Delegate/UploadOrBindTensorBuffer                                              50     107.06        100        141       5353
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      12.74         12         13        637
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      12.62         12         13        631
+Delegate/quantize_and_dequantize                                               50       1.82          1          2         91
 
-4      1536   256        585.9    711.4    720.0    822.5    839.0        0.00    0.004
+4      1536   256        282.2    299.1    299.3    319.3    329.3        0.00    0.011
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.175201    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.175226    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.179323    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085327.231058    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085327.231094    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085327.236218    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=1536 k=2048
 ============================== Run Order ==============================
@@ -520,16 +550,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.76         12         27        888
-Delegate/UploadOrBindTensorBuffer                                              50     138.66         75        474       6933
-Delegate/fully_connected                                                       50     108.12         99        111       5406
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.56         11         32        878
+Delegate/UploadOrBindTensorBuffer                                              50     119.98        101        174       5999
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      49.08         48         52       2454
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      49.64         48         52       2482
+Delegate/quantize_and_dequantize                                               50       1.92          1          3         96
 
-4      1536   2048       779.1    929.3    859.2   1191.7   1516.9        0.03    0.027
+4      1536   2048       354.9    430.9    438.6    604.0    779.9        0.03    0.058
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.295206    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.295269    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.302677    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085327.432779    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085327.432825    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085327.439179    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=1536 k=4096
 ============================== Run Order ==============================
@@ -548,16 +580,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      36.32         12         77       1816
-Delegate/UploadOrBindTensorBuffer                                              50     365.24        117        556      18262
-Delegate/fully_connected                                                       50     197.56        189        211       9878
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      36.24         10        104       1812
+Delegate/UploadOrBindTensorBuffer                                              50     309.54        101        501      15477
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      99.28         97        108       4964
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      95.32         93        100       4766
+Delegate/quantize_and_dequantize                                               50       2.76          2          3        138
 
-4      1536   4096      1045.1   1944.6   2311.6   2443.6   2722.3        0.05    0.026
+4      1536   4096       452.5    907.7   1171.3   1196.0   1237.9        0.05    0.055
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.503671    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.503718    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.511914    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085327.789838    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085327.789894    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085327.802124    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=1536 k=6144
 ============================== Run Order ==============================
@@ -576,16 +610,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      38.72         14         49       1936
-Delegate/UploadOrBindTensorBuffer                                              50     423.60        117        669      21180
-Delegate/fully_connected                                                       50     310.60        280        323      15530
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      30.22         10         47       1511
+Delegate/UploadOrBindTensorBuffer                                              50     294.72        105        508      14736
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     143.02        140        148       7151
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     139.76        136        145       6988
+Delegate/quantize_and_dequantize                                               50       2.70          2          3        135
 
-4      1536   6144      1176.8   2368.5   2596.2   2897.2   3811.8        0.08    0.032
+4      1536   6144       554.1    938.4    923.4   1269.2   1291.9        0.08    0.080
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084766.785973    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084766.786013    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084766.803365    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085328.297316    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085328.297360    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085328.313214    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=1536 k=12288
 ============================== Run Order ==============================
@@ -604,16 +640,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      52.16         43        118       2608
-Delegate/UploadOrBindTensorBuffer                                              50     512.96        465        674      25648
-Delegate/fully_connected                                                       50     640.24        564        680      32012
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.42          8        103       2171
+Delegate/UploadOrBindTensorBuffer                                              50     443.60        111        518      22180
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     290.68        285        301      14534
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     271.54        269        274      13577
+Delegate/quantize_and_dequantize                                               50       3.62          3          5        181
 
-4      1536   12288     3177.8   3410.7   3313.1   3757.5   4800.5        0.15    0.044
+4      1536   12288      844.3   1540.5   1592.3   1630.3   1826.1        0.15    0.098
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084767.176644    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084767.176695    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084767.180177    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085329.098981    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085329.099029    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085329.103081    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=2048 k=1536
 ============================== Run Order ==============================
@@ -632,16 +670,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      34.88         12         48       1744
-Delegate/UploadOrBindTensorBuffer                                              50     326.82        109        520      16341
-Delegate/fully_connected                                                       50      89.40         88         96       4470
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      14.64          9         25        732
+Delegate/UploadOrBindTensorBuffer                                              50     107.72         97        148       5386
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      49.66         48         52       2483
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      53.70         52         55       2685
+Delegate/quantize_and_dequantize                                               50       1.78          1          2         89
 
-4      2048   1536       752.0   1606.3   2079.5   2145.3   2203.4        0.03    0.016
+4      2048   1536       347.2    389.2    400.3    434.5    451.6        0.03    0.065
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084767.372271    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084767.372308    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084767.378246    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085329.289584    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085329.289635    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085329.296011    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=4096 k=1536
 ============================== Run Order ==============================
@@ -660,16 +700,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      20.66         12         46       1033
-Delegate/UploadOrBindTensorBuffer                                              50     178.50        106        464       8925
-Delegate/fully_connected                                                       50     185.90        182        195       9295
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      21.62          9         68       1081
+Delegate/UploadOrBindTensorBuffer                                              50     184.96        102        557       9248
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      96.12         93        100       4806
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     101.22         97        111       5061
+Delegate/quantize_and_dequantize                                               50       1.72          1          2         86
 
-4      4096   1536       949.6   1247.8    986.1   2109.1   2441.1        0.05    0.040
+4      4096   1536       455.1    655.4    491.4   1188.6   1198.8        0.05    0.077
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084767.576596    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084767.576661    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084767.585205    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085329.625712    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085329.625760    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085329.634685    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=6144 k=1536
 ============================== Run Order ==============================
@@ -688,16 +730,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.58         12         83       2179
-Delegate/UploadOrBindTensorBuffer                                              50     453.72        111        597      22686
-Delegate/fully_connected                                                       50     282.66        276        307      14133
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      37.62          9         93       1881
+Delegate/UploadOrBindTensorBuffer                                              50     337.10         82        500      16855
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     135.82        132        143       6791
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     149.44        143        156       7472
+Delegate/quantize_and_dequantize                                               50       1.90          1          3         95
 
-4      6144   1536      1202.0   2512.2   2626.2   2719.8   3069.1        0.08    0.030
+4      6144   1536       543.5   1038.8   1254.4   1304.8   1495.5        0.08    0.073
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084767.858262    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084767.858280    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084767.870127    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085330.035132    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085330.035183    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085330.051658    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=8960 k=1536
 ============================== Run Order ==============================
@@ -716,16 +760,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.34         12         82       2017
-Delegate/UploadOrBindTensorBuffer                                              50     423.82        110        761      21191
-Delegate/fully_connected                                                       50     402.20        396        412      20110
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.00         10         67       2000
+Delegate/UploadOrBindTensorBuffer                                              50     403.80         99        557      20190
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     201.36        197        216      10068
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     210.84        205        219      10542
+Delegate/quantize_and_dequantize                                               50       1.84          1          3         92
 
-4      8960   1536      1396.2   2656.1   2832.1   3273.7   3915.2        0.11    0.041
+4      8960   1536       662.0   1272.5   1395.3   1455.0   1645.0        0.11    0.087
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.246976    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.247033    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.264621    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085330.718855    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085330.718876    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085330.734737    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=4 n=12288 k=1536
 ============================== Run Order ==============================
@@ -744,17 +790,19 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      44.94         28        118       2247
-Delegate/UploadOrBindTensorBuffer                                              50     465.88        155        681      23294
-Delegate/fully_connected                                                       50     555.22        547        619      27761
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      39.38         10         83       1969
+Delegate/UploadOrBindTensorBuffer                                              50     390.88        103        638      19544
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50     269.38        264        285      13469
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50     287.14        281        301      14357
+Delegate/quantize_and_dequantize                                               50       1.88          1          4         94
 
-4      12288  1536      2145.9   3195.1   3256.2   4073.1   5002.6        0.15    0.047
-[MATMUL MICRO] SKIP m=4 n=262144 k=1536: BuildFp32Conv2d1x1: weight tensor too large (1610612736 bytes > 1 GiB)
+4      12288  1536       811.3   1404.7   1546.9   1623.0   1816.3        0.15    0.107
+[MATMUL MICRO] SKIP m=4 n=262144 k=1536: BuildInt8FcChain: weight tensor too large (402653184 bytes per tensor > 256 MiB)
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.617471    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.617522    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.618253    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085331.463104    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085331.463178    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085331.463931    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=8 n=256 k=256
 ============================== Run Order ==============================
@@ -773,16 +821,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.70         11         19        685
-Delegate/UploadOrBindTensorBuffer                                              50     111.82        105        144       5591
-Delegate/fully_connected                                                       50       6.36          6          7        318
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      12.06          8         33        603
+Delegate/UploadOrBindTensorBuffer                                              50     104.32         97        122       5216
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      10.98         10         11        549
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      11.00         11         11        550
+Delegate/quantize_and_dequantize                                               50       1.84          1          3         92
 
-8      256    256        559.7    597.0    594.8    640.4    681.3        0.00    0.002
+8      256    256        267.1    285.3    285.1    297.7    332.0        0.00    0.004
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.701913    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.701959    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.702472    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085331.641667    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085331.641702    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085331.642288    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=8 n=512 k=512
 ============================== Run Order ==============================
@@ -801,17 +851,19 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.60         11         19        680
-Delegate/UploadOrBindTensorBuffer                                              50     115.98        103        210       5799
-Delegate/fully_connected                                                       50      20.02         19         22       1001
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      10.68          9         16        534
+Delegate/UploadOrBindTensorBuffer                                              50     105.72        101        167       5286
+Delegate/fully_connected_int8 -> quantize_and_dequantize                       50      13.90         13         15        695
+Delegate/fully_connected_int8 -> quantize_and_dequantize -> quantize_and_dequantize         50      14.50         14         15        725
+Delegate/quantize_and_dequantize                                               50       1.84          1          2         92
 
-8      512    512        600.5    633.5    625.0    696.4    748.0        0.00    0.007
-[MATMUL MICRO] SKIP m=8 n=32003 k=32003: BuildFp32Conv2d1x1: weight tensor too large (4096768036 bytes > 1 GiB)
+8      512    512        291.8    298.4    294.1    319.5    359.8        0.00    0.014
+[MATMUL MICRO] SKIP m=8 n=32003 k=32003: BuildInt8FcChain: weight tensor too large (1024192009 bytes per tensor > 256 MiB)
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.785832    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.785875    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.786223    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085331.812418    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085331.812491    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085331.813291    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=32 n=256 k=256
 ============================== Run Order ==============================
@@ -830,16 +882,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      15.18         11         20        759
-Delegate/UploadOrBindTensorBuffer                                              50     117.88        110        148       5894
-Delegate/convolution1x1(conv_wave_memory)                                      50      15.90         15         17        795
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      11.86          8         16        593
+Delegate/UploadOrBindTensorBuffer                                              50     109.22         99        129       5461
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      11.02         11         12        551
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      10.98         10         11        549
+Delegate/quantize_and_dequantize                                               50       1.82          1          2         91
 
-32     256    256        600.4    648.2    643.9    723.3    744.0        0.00    0.006
+32     256    256        271.2    304.8    293.6    338.1    345.2        0.00    0.014
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.872650    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.872708    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.873277    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085331.923103    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085331.923180    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085331.924103    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=32 n=512 k=512
 ============================== Run Order ==============================
@@ -858,16 +912,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      21.38         13         29       1069
-Delegate/UploadOrBindTensorBuffer                                              50     162.80         69        489       8140
-Delegate/convolution1x1(conv_wave_memory)                                      50      83.82         73         91       4191
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      18.16         16         37        908
+Delegate/UploadOrBindTensorBuffer                                              50     131.96        118        147       6598
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      24.26         23         25       1213
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      24.80         24         26       1240
+Delegate/quantize_and_dequantize                                               50       1.74          1          3         87
 
-32     512    512        739.1   1021.8   1035.3   1190.5   1510.3        0.02    0.016
+32     512    512        403.8    425.3    418.3    465.9    471.8        0.02    0.039
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084768.936684    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084768.936794    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084768.938823    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085331.980125    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085331.980193    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085331.981236    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=32 n=515 k=515
 ============================== Run Order ==============================
@@ -886,17 +942,19 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      18.20         12         26        910
-Delegate/UploadOrBindTensorBuffer                                              50     135.56        111        169       6778
-Delegate/convolution1x1(conv_wave_memory)                                      50      38.30         37         39       1915
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.26          9         25        863
+Delegate/UploadOrBindTensorBuffer                                              50     126.34        102        163       6317
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      38.48         38         40       1924
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      38.58         38         40       1929
+Delegate/quantize_and_dequantize                                               50       1.74          1          2         87
 
-32     515    515        648.4    810.8    831.8    974.4    998.8        0.02    0.021
-[MATMUL MICRO] SKIP m=32 n=32003 k=32003: BuildFp32Conv2d1x1: weight tensor too large (4096768036 bytes > 1 GiB)
+32     515    515        349.4    435.1    465.7    529.4    544.0        0.02    0.039
+[MATMUL MICRO] SKIP m=32 n=32003 k=32003: BuildInt8FcChain: weight tensor too large (1024192009 bytes per tensor > 256 MiB)
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084769.046701    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084769.046774    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084769.048104    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085332.116273    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085332.116350    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085332.117668    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=256 k=1536
 ============================== Run Order ==============================
@@ -915,16 +973,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      30.54         15         89       1527
-Delegate/UploadOrBindTensorBuffer                                              50     310.92        135        496      15546
-Delegate/convolution1x1(conv_wave_memory)                                      50      67.46         66         70       3373
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      15.82         11         24        791
+Delegate/UploadOrBindTensorBuffer                                              50     154.50        118        476       7725
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      67.66         66         69       3383
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      26.38         25         27       1319
+Delegate/quantize_and_dequantize                                               50       6.30          6          7        315
 
-128    256    1536       824.5   1435.9   1228.8   2140.0   2156.9        0.10    0.070
+128    256    1536       391.3    482.0    488.8    576.7    798.8        0.10    0.209
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084769.233543    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084769.233663    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084769.236328    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085332.238977    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085332.239040    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085332.241374    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=512 k=1536
 ============================== Run Order ==============================
@@ -943,16 +1003,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      35.82         19         52       1791
-Delegate/UploadOrBindTensorBuffer                                              50     389.58        157        652      19479
-Delegate/convolution1x1(conv_wave_memory)                                      50      90.64         89         94       4532
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      31.36         15         72       1568
+Delegate/UploadOrBindTensorBuffer                                              50     340.70        137        502      17035
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      87.32         86         89       4366
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      48.20         47         50       2410
+Delegate/quantize_and_dequantize                                               50       6.38          6          7        319
 
-128    512    1536      1030.0   1796.6   1920.1   2358.6   2717.5        0.20    0.112
+128    512    1536       535.3    904.4    853.5   1259.9   1355.1        0.20    0.223
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084769.348462    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084769.348608    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084769.350856    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085332.366636    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085332.366789    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085332.369896    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=1536 k=256
 ============================== Run Order ==============================
@@ -971,16 +1033,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      38.38         12         66       1919
-Delegate/UploadOrBindTensorBuffer                                              50     441.60        121        778      22080
-Delegate/convolution1x1(conv_wave_memory)                                      50     184.44        160        199       9222
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.72         19         62       2036
+Delegate/UploadOrBindTensorBuffer                                              50     437.26         68        809      21863
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      25.68         25         27       1284
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      67.06         66         68       3353
+Delegate/quantize_and_dequantize                                               50       2.86          2          5        143
 
-128    1536   256       1013.8   2284.7   2300.0   2600.5   3507.3        0.10    0.044
+128    1536   256        482.1   1036.6   1127.7   1383.7   1467.6        0.10    0.097
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084769.599544    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084769.599592    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084769.602949    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085332.606739    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085332.606834    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085332.614996    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=1536 k=2048
 ============================== Run Order ==============================
@@ -999,16 +1063,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      26.44         12         51       1322
-Delegate/UploadOrBindTensorBuffer                                              50     290.38        131        489      14519
-Delegate/convolution1x1(conv_wave_memory)                                      50     180.10        179        184       9005
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      51.24         46        114       2562
+Delegate/UploadOrBindTensorBuffer                                              50     523.10        484        793      26155
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     181.14        179        183       9057
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     186.08        185        188       9304
+Delegate/quantize_and_dequantize                                               50       8.52          8         11        426
 
-128    1536   2048      1011.2   1568.4   1285.2   2434.7   2652.0        0.81    0.513
+128    1536   2048      1510.2   1634.2   1559.9   2044.3   2276.1        0.81    0.493
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084769.803665    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084769.803715    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084769.809615    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085332.891206    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085332.891258    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085332.899192    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=1536 k=4096
 ============================== Run Order ==============================
@@ -1027,16 +1093,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      48.68         44        111       2434
-Delegate/UploadOrBindTensorBuffer                                              50     561.74        310        820      28087
-Delegate/convolution1x1(conv_wave_memory)                                      50     359.38        357        363      17969
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      61.24         45        118       3062
+Delegate/UploadOrBindTensorBuffer                                              50     551.50        244        876      27575
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     358.00        356        364      17900
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     346.72        345        352      17336
+Delegate/quantize_and_dequantize                                               50      18.56         17         20        928
 
-128    1536   4096      2920.0   3132.7   2968.2   3531.4   4480.5        1.61    0.514
+128    1536   4096      2003.6   2205.9   2047.4   2656.9   3348.0        1.61    0.730
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084770.085569    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084770.085613    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084770.093568    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085333.259796    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085333.259833    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085333.270234    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=1536 k=6144
 ============================== Run Order ==============================
@@ -1055,16 +1123,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      50.54         35        118       2527
-Delegate/UploadOrBindTensorBuffer                                              50     545.40        205        833      27270
-Delegate/convolution1x1(conv_wave_memory)                                      50     539.06        536        550      26953
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     121.62         59        174       6081
+Delegate/UploadOrBindTensorBuffer                                              50     644.62        551        912      32231
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     535.36        532        539      26768
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     455.06        453        458      22753
+Delegate/quantize_and_dequantize                                               50      28.16         26         31       1408
 
-128    1536   6144      2955.8   3400.7   3342.1   3731.4   4648.4        2.42    0.710
+128    1536   6144      2537.6   3145.9   3023.0   3711.1   4530.6        2.42    0.768
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084770.356772    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084770.356839    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084770.360503    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085333.751908    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085333.751954    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085333.756850    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=2048 k=1536
 ============================== Run Order ==============================
@@ -1083,16 +1153,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      22.02         15         44       1101
-Delegate/UploadOrBindTensorBuffer                                              50     232.52        127        488      11626
-Delegate/convolution1x1(conv_wave_memory)                                      50     188.14        187        190       9407
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      46.44         45         67       2322
+Delegate/UploadOrBindTensorBuffer                                              50     504.62        478        677      25231
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     185.62        184        187       9281
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     180.14        178        183       9007
+Delegate/quantize_and_dequantize                                               50       6.50          6          8        325
 
-128    2048   1536      1048.1   1423.1   1149.6   2250.6   2281.4        0.81    0.566
+128    2048   1536      1460.7   1543.0   1500.8   1709.6   1863.3        0.81    0.522
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084770.490533    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084770.490583    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084770.496450    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085334.020946    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085334.020982    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085334.028994    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=4096 k=1536
 ============================== Run Order ==============================
@@ -1111,16 +1183,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      38.30         17         99       1915
-Delegate/UploadOrBindTensorBuffer                                              50     444.70        140        739      22235
-Delegate/convolution1x1(conv_wave_memory)                                      50     348.14        346        350      17407
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      51.82         12        118       2591
+Delegate/UploadOrBindTensorBuffer                                              50     477.38        125        869      23869
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     346.58        345        349      17329
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     355.36        353        363      17768
+Delegate/quantize_and_dequantize                                               50       6.66          6          8        333
 
-128    4096   1536      1560.4   2889.3   3174.7   3666.9   4742.4        1.61    0.557
+128    4096   1536      1036.2   1856.3   1828.7   2525.3   2879.9        1.61    0.868
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084770.725155    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084770.725191    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084770.733527    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085334.347999    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085334.348044    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085334.358493    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=6144 k=1536
 ============================== Run Order ==============================
@@ -1139,16 +1213,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      49.46         13        120       2473
-Delegate/UploadOrBindTensorBuffer                                              50     528.90        223        820      26445
-Delegate/convolution1x1(conv_wave_memory)                                      50     457.46        455        464      22873
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     112.72         49        170       5636
+Delegate/UploadOrBindTensorBuffer                                              50     543.76        498        879      27188
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     454.26        452        456      22713
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     534.14        531        537      26707
+Delegate/quantize_and_dequantize                                               50       6.86          6          9        343
 
-128    6144   1536      3217.3   3831.3   3697.3   4368.8   5572.7        2.42    0.631
+128    6144   1536      2473.0   2735.1   2650.5   3287.1   3396.8        2.42    0.883
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.044368    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.044390    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.055478    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085334.810167    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085334.810212    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085334.826498    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=128 n=8960 k=1536
 ============================== Run Order ==============================
@@ -1167,16 +1243,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      58.20         45        121       2910
-Delegate/UploadOrBindTensorBuffer                                              50     523.96        246        937      26198
-Delegate/convolution1x1(conv_wave_memory)                                      50     668.48        666        681      33424
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     121.16        109        178       6058
+Delegate/UploadOrBindTensorBuffer                                              50     621.74        509        902      31087
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     664.52        663        667      33226
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     774.42        772        780      38721
+Delegate/quantize_and_dequantize                                               50       7.64          6          9        382
 
-128    8960   1536      4381.0   4804.1   4511.6   5854.2   9453.2        3.52    0.733
+128    8960   1536      3180.5   3543.9   3435.5   3999.9   4045.1        3.52    0.994
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.383794    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.383820    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.384420    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085335.397383    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085335.397443    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085335.397935    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=256 k=256
 ============================== Run Order ==============================
@@ -1195,16 +1273,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.00         15         23        850
-Delegate/UploadOrBindTensorBuffer                                              50     143.82        127        368       7191
-Delegate/convolution1x1(conv_wave_memory)                                      50      32.98         32         34       1649
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      17.62         12         28        881
+Delegate/UploadOrBindTensorBuffer                                              50     190.88        128        459       9544
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50      33.84         33         35       1692
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50      33.22         32         34       1661
+Delegate/quantize_and_dequantize                                               50       8.22          8          9        411
 
-1024   256    256        731.2    823.3    828.9    985.6   1017.0        0.13    0.163
+1024   256    256        416.3    497.5    466.6    739.8    742.1        0.13    0.270
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.438356    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.438420    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.439350    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085335.460371    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085335.460410    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085335.462057    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=256 k=1536
 ============================== Run Order ==============================
@@ -1223,16 +1303,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      35.58         17         48       1779
-Delegate/UploadOrBindTensorBuffer                                              50     530.60        263        669      26530
-Delegate/convolution1x1(conv_wave_memory)                                      50     185.50        184        187       9275
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      46.62         28        104       2331
+Delegate/UploadOrBindTensorBuffer                                              50     662.06        560        894      33103
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     184.82        184        187       9241
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     168.76        167        172       8438
+Delegate/quantize_and_dequantize                                               50      70.20         67         75       3510
 
-1024   256    1536      1262.4   2317.3   2444.4   2767.9   2853.2        0.81    0.348
+1024   256    1536      1861.3   2318.4   2264.2   2554.2   3903.0        0.81    0.347
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.589432    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.589545    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.590905    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085335.839853    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085335.839986    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085335.842894    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=512 k=512
 ============================== Run Order ==============================
@@ -1251,16 +1333,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      41.92         20         50       2096
-Delegate/UploadOrBindTensorBuffer                                              50     501.10        240        575      25055
-Delegate/convolution1x1(conv_wave_memory)                                      50     114.44        113        117       5722
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      31.76         12        104       1588
+Delegate/UploadOrBindTensorBuffer                                              50     376.88        151        600      18844
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     113.92        113        115       5696
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     114.44        113        116       5722
+Delegate/quantize_and_dequantize                                               50      17.82         17         19        891
 
-1024   512    512       1548.8   2641.9   2757.9   2863.9   3211.8        0.54    0.203
+1024   512    512        639.3   1141.8   1039.7   1575.7   1826.3        0.54    0.470
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.765000    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.765068    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.766922    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085335.994633    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085335.994752    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085335.998268    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=512 k=1536
 ============================== Run Order ==============================
@@ -1279,16 +1363,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      34.14         12         50       1707
-Delegate/UploadOrBindTensorBuffer                                              50     525.64        257        906      26282
-Delegate/convolution1x1(conv_wave_memory)                                      50     339.26        338        342      16963
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      78.50         13        154       3925
+Delegate/UploadOrBindTensorBuffer                                              50     722.02        427       1186      36101
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     337.82        336        340      16891
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     334.12        332        337      16706
+Delegate/quantize_and_dequantize                                               50      64.94         60         69       3247
 
-1024   512    1536      1582.5   2749.7   2950.3   3460.1   3935.6        1.61    0.586
+1024   512    1536      1495.2   2874.1   3091.5   3519.1   3756.5        1.61    0.560
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084771.942709    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084771.942777    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084771.943724    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085336.343017    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085336.343087    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085336.344368    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=639 k=639
 ============================== Run Order ==============================
@@ -1307,16 +1393,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      29.36         13         48       1468
-Delegate/UploadOrBindTensorBuffer                                              50     408.20        169        640      20410
-Delegate/convolution1x1(conv_wave_memory)                                      50     165.88        165        168       8294
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.14         12         61       2007
+Delegate/UploadOrBindTensorBuffer                                              50     522.06        236        823      26103
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     164.78        163        167       8239
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     165.52        164        167       8276
+Delegate/quantize_and_dequantize                                               50      22.90         21         25       1145
 
-1024   639    639       1158.9   2070.0   2006.8   3051.9   3084.9        0.84    0.404
+1024   639    639        984.8   1584.4   1702.3   1750.9   2000.1        0.84    0.528
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084772.076293    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084772.076444    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084772.078695    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085336.539212    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085336.539368    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085336.542473    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=1536 k=256
 ============================== Run Order ==============================
@@ -1335,16 +1423,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      29.16         12         85       1458
-Delegate/UploadOrBindTensorBuffer                                              50     445.20        308        965      22260
-Delegate/convolution1x1(conv_wave_memory)                                      50     166.96        165        171       8348
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      42.86         13         79       2143
+Delegate/UploadOrBindTensorBuffer                                              50     468.70        130        787      23435
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     167.66        166        171       8383
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     187.08        183        189       9354
+Delegate/quantize_and_dequantize                                               50       8.32          8         11        416
 
-1024   1536   256       1615.6   2631.1   2084.7   4436.5   5467.7        0.81    0.306
+1024   1536   256        706.2   1441.5   1519.7   1594.4   1933.2        0.81    0.559
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084772.341263    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084772.341301    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084772.344723    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085336.826673    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085336.826747    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085336.834685    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=1536 k=2048
 ============================== Run Order ==============================
@@ -1363,16 +1453,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     119.46         63        172       5973
-Delegate/UploadOrBindTensorBuffer                                              50     907.38        732       1385      45369
-Delegate/convolution1x1(conv_wave_memory)                                      50    1258.28       1252       1263      62914
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     134.06        117        261       6703
+Delegate/UploadOrBindTensorBuffer                                              50    1038.78        989       1341      51939
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    1257.26       1252       1263      62863
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    1291.14       1287       1298      64557
+Delegate/quantize_and_dequantize                                               50     103.74        101        108       5187
 
-1024   1536   2048      6373.4   8071.4   7796.2   8894.3  14091.4        6.44    0.798
+1024   1536   2048      5663.7   6108.8   5876.9   7302.4  10157.1        6.44    1.055
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084772.833706    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084772.833751    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084772.839480    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085337.597563    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085337.597613    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085337.606113    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=1536 k=4096
 ============================== Run Order ==============================
@@ -1391,16 +1483,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     110.38         26        169       5519
-Delegate/UploadOrBindTensorBuffer                                              50    1139.18        833       1478      56959
-Delegate/convolution1x1(conv_wave_memory)                                      50    2486.56       2478       2520     124328
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     147.00        117        189       7350
+Delegate/UploadOrBindTensorBuffer                                              50    1535.40       1271       2082      76770
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    2480.38       2475       2491     124019
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    2550.90       2535       2606     127545
+Delegate/quantize_and_dequantize                                               50     230.04        229        233      11502
 
-1024   1536   4096      7207.6  10653.7  10689.4  11410.8  17387.8       12.88    1.209
+1024   1536   4096      9576.0  10572.6  10078.5  11384.5  19282.9       12.88    1.219
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084773.511552    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084773.511590    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084773.519137    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085338.899832    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085338.899871    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085338.911555    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=1536 k=6144
 ============================== Run Order ==============================
@@ -1419,16 +1513,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     119.14        108        159       5957
-Delegate/UploadOrBindTensorBuffer                                              50    1727.02       1478       1919      86351
-Delegate/convolution1x1(conv_wave_memory)                                      50    3745.00       3716       4651     187250
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     163.04         39        259       8152
+Delegate/UploadOrBindTensorBuffer                                              50    2043.80       1533       3123     102190
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    3726.46       3710       3768     186323
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    3700.18       3686       3738     185009
+Delegate/quantize_and_dequantize                                               50     352.88        352        358      17644
 
-1024   1536   6144     13431.7  14455.9  14350.6  14892.1  20421.4       19.33    1.337
+1024   1536   6144     11037.5  15076.0  15131.8  15446.5  27006.2       19.33    1.282
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084774.410982    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084774.411009    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084774.414151    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085340.727136    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085340.727187    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085340.733383    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=2048 k=1536
 ============================== Run Order ==============================
@@ -1447,16 +1543,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     117.22         60        121       5861
-Delegate/UploadOrBindTensorBuffer                                              50     845.78        683       1153      42289
-Delegate/convolution1x1(conv_wave_memory)                                      50    1291.72       1286       1299      64586
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     129.06        105        188       6453
+Delegate/UploadOrBindTensorBuffer                                              50     849.22        666       1175      42461
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    1290.66       1287       1296      64533
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    1260.74       1255       1268      63037
+Delegate/quantize_and_dequantize                                               50      59.74         56         72       2987
 
-1024   2048   1536      6883.4   8642.9   8380.9   9217.0  17134.2        6.44    0.745
+1024   2048   1536      5230.9   5594.0   5419.6   6571.6   8764.7        6.44    1.152
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084774.939835    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084774.939905    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084774.945499    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085341.433310    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085341.433350    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085341.441580    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=4096 k=1536
 ============================== Run Order ==============================
@@ -1475,16 +1573,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     118.40         50        181       5920
-Delegate/UploadOrBindTensorBuffer                                              50     848.66        544       1266      42433
-Delegate/convolution1x1(conv_wave_memory)                                      50    2537.74       2532       2543     126887
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     140.36         52        221       7018
+Delegate/UploadOrBindTensorBuffer                                              50    1103.62        635       1400      55181
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    2543.16       2537       2556     127158
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    2497.58       2483       2550     124879
+Delegate/quantize_and_dequantize                                               50      56.96         54         59       2848
 
-1024   4096   1536      9153.3  13336.5  13245.1  13459.4  28450.7       12.88    0.966
+1024   4096   1536      6961.5   8826.9   8542.6   9929.8  13108.6       12.88    1.460
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084775.757330    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084775.757359    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084775.764937    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085342.533317    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085342.533367    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085342.544763    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=6144 k=1536
 ============================== Run Order ==============================
@@ -1503,16 +1603,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     117.84         51        122       5892
-Delegate/UploadOrBindTensorBuffer                                              50     902.26        650       2000      45113
-Delegate/convolution1x1(conv_wave_memory)                                      50    3685.60       3677       3703     184280
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     153.94         92        189       7697
+Delegate/UploadOrBindTensorBuffer                                              50    1173.40        716       1414      58670
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    3712.72       3688       4400     185636
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    3725.54       3707       3776     186277
+Delegate/quantize_and_dequantize                                               50      58.84         56         71       2942
 
-1024   6144   1536     14359.5  18364.4  18085.3  18265.3  37248.2       19.33    1.052
+1024   6144   1536     10062.6  11656.3  11928.8  13246.5  14025.3       19.33    1.658
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084776.862376    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084776.862423    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084776.874760    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085343.998579    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085343.998631    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085344.014315    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=1024 n=8960 k=1536
 ============================== Run Order ==============================
@@ -1531,17 +1633,19 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     118.78         31        249       5939
-Delegate/UploadOrBindTensorBuffer                                              50     875.44        528       2139      43772
-Delegate/convolution1x1(conv_wave_memory)                                      50    5398.00       5379       5505     269900
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     182.42        122        285       9121
+Delegate/UploadOrBindTensorBuffer                                              50    1299.56       1084       1464      64978
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    5402.36       5387       5441     270118
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    5415.48       5391       5443     270774
+Delegate/quantize_and_dequantize                                               50      56.08         55         58       2804
 
-1024   8960   1536     15703.6  24195.9  23978.0  26534.4  50737.6       28.19    1.165
-[MATMUL MICRO] SKIP m=1024 n=32003 k=32003: BuildFp32Conv2d1x1: weight tensor too large (4096768036 bytes > 1 GiB)
+1024   8960   1536     14400.4  16291.0  16489.9  17058.4  20325.7       28.19    1.730
+[MATMUL MICRO] SKIP m=1024 n=32003 k=32003: BuildInt8FcChain: weight tensor too large (1024192009 bytes per tensor > 256 MiB)
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084778.270848    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084778.270906    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084778.271653    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085345.989446    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085345.989495    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085345.990174    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=8192 n=256 k=256
 ============================== Run Order ==============================
@@ -1560,16 +1664,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      41.24         14         66       2062
-Delegate/UploadOrBindTensorBuffer                                              50     679.96        497       1151      33998
-Delegate/convolution1x1(conv_wave_memory)                                      50     220.46        219        222      11023
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      51.36         20        118       2568
+Delegate/UploadOrBindTensorBuffer                                              50     702.70        544        973      35135
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     219.18        218        221      10959
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     222.06        221        225      11103
+Delegate/quantize_and_dequantize                                               50      99.02         97        102       4951
 
-8192   256    256       2136.7   4449.9   4705.5   5472.7   6334.5        1.07    0.241
+8192   256    256       1653.2   2727.0   2714.1   3301.6   3735.8        1.07    0.394
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084778.540389    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084778.540477    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084778.541900    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085346.310239    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085346.310288    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085346.311522    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=8192 n=512 k=512
 ============================== Run Order ==============================
@@ -1588,16 +1694,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     104.56         44        224       5228
-Delegate/UploadOrBindTensorBuffer                                              50    1035.52        864       1452      51776
-Delegate/convolution1x1(conv_wave_memory)                                      50     829.12        826        834      41456
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     118.26        116        122       5913
+Delegate/UploadOrBindTensorBuffer                                              50    1051.90        996       1530      52595
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50     832.22        830        835      41611
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50     832.18        828        835      41609
+Delegate/quantize_and_dequantize                                               50     236.08        235        239      11804
 
-8192   512    512       7487.3   9128.6   9207.0   9416.0  20109.0        4.29    0.470
+8192   512    512       5865.1   6150.5   5966.5   6128.5  13720.4        4.29    0.698
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742084779.093935    6295 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742084779.093991    6295 delegate_opencl.cc:553] options->kernel_batch_size: -1
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742084779.097646    6295 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+I0000 00:00:1742085347.031368    6727 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742085347.031430    6727 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742085347.036645    6727 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
 
 [MATMUL MICRO PROFILE] m=8192 n=1535 k=1535
 ============================== Run Order ==============================
@@ -1616,15 +1724,17 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     146.72         44        186       7336
-Delegate/UploadOrBindTensorBuffer                                              50    2105.72       1713       3786     105286
-Delegate/convolution1x1(conv_wave_memory)                                      50    7407.66       7373       7454     370383
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     189.78        159        292       9489
+Delegate/UploadOrBindTensorBuffer                                              50    2251.38       1698       3280     112569
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize           50    7459.60       7380       7569     372980
+Delegate/convolution1x1(conv_wave_memory) -> quantize_and_dequantize -> quantize_and_dequantize         50    7383.40       7364       7429     369170
+Delegate/quantize_and_dequantize                                               50     722.58        721        725      36129
 
-8192   1535   1535     23473.2  34617.5  34917.9  37540.9  63416.9       38.60    1.115
-[MATMUL MICRO] SKIP m=8192 n=32003 k=32003: BuildFp32Conv2d1x1: weight tensor too large (4096768036 bytes > 1 GiB)
+8192   1535   1535     25294.9  27267.6  27255.8  27430.8  39049.6       38.60    1.416
+[MATMUL MICRO] SKIP m=8192 n=32003 k=32003: BuildInt8FcChain: weight tensor too large (1024192009 bytes per tensor > 256 MiB)
 [MATMUL MICRO] done. 6 / 61 shapes failed.
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007536746320, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007536747200, name=LiteRT GPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007362c060f0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007362c06630, name=LiteRT GPU
 
 ==========================================
  Matmul micro CSV (host: ./matmul_micro.csv)
@@ -1635,35 +1745,35 @@ INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007536747200, n
     convolution(conv_wave_memory) / convolution_int8(...) cost.
 
 m,n,k,count,min_us,avg_us,p50_us,p95_us,max_us,gflops,tflops_min,tflops_avg
-1,256,1536,50,578.125,593.729,584.219,643.854,669.791,0.000786432,0.00136031,0.00132456
-1,512,1536,50,602.813,718.709,646.562,910.677,937.188,0.00157286,0.00260921,0.00218846
-1,1536,256,50,848.854,1163.1,986.511,1830.05,1976.25,0.000786432,0.000926463,0.000676153
-1,1536,2048,50,749.843,1080.24,927.813,1894.63,2092.34,0.00629146,0.00839036,0.0058241
-1,1536,4096,50,931.51,1507.79,1401.88,2277.76,3469.69,0.0125829,0.0135081,0.00834528
-1,1536,6144,50,1200.16,3060.96,3376.98,3543.49,4197.4,0.0188744,0.0157266,0.00616615
-1,1536,12288,50,1757.5,3550.74,3474.53,4582.97,5789.58,0.0377487,0.0214787,0.0106312
-1,2048,1536,50,757.656,946.565,958.072,1156.41,1487.97,0.00629146,0.00830384,0.00664662
-1,4096,1536,50,1027.29,2150.22,2263.12,2371.88,2471.2,0.0125829,0.0122486,0.00585193
-1,6144,1536,50,1115.62,2345.21,2529.84,3358.85,3457.5,0.0188744,0.0169182,0.00804805
-1,8960,1536,50,1356.72,2406.44,2676.72,2823.75,3182.71,0.0275251,0.020288,0.0114381
-1,12288,1536,50,1746.25,3066.44,3156.67,3318.59,3720.57,0.0377487,0.021617,0.0123103
-4,256,1536,50,583.958,597.773,593.906,625.937,662.552,0.00314573,0.00538691,0.00526241
-4,512,1536,50,623.334,661.995,655.937,703.073,739.479,0.00629146,0.0100932,0.00950378
-4,1536,256,50,585.938,711.427,720,822.5,838.958,0.00314573,0.0053687,0.00442172
-4,1536,2048,50,779.062,929.316,859.219,1191.72,1516.88,0.0251658,0.0323027,0.02708
-4,1536,4096,50,1045.05,1944.59,2311.61,2443.59,2722.34,0.0503316,0.0481619,0.0258829
-4,1536,6144,50,1176.82,2368.46,2596.25,2897.24,3811.77,0.0754975,0.0641536,0.0318762
-4,1536,12288,50,3177.76,3410.66,3313.12,3757.5,4800.47,0.150995,0.0475162,0.0442714
-4,2048,1536,50,752.032,1606.29,2079.53,2145.31,2203.44,0.0251658,0.0334638,0.0156671
-4,4096,1536,50,949.583,1247.78,986.094,2109.11,2441.09,0.0503316,0.0530039,0.0403368
-4,6144,1536,50,1202.03,2512.2,2626.25,2719.79,3069.06,0.0754975,0.0628083,0.0300523
-4,8960,1536,50,1396.25,2656.11,2832.14,3273.7,3915.16,0.1101,0.0788544,0.0414517
-4,12288,1536,50,2145.89,3195.08,3256.2,4073.12,5002.55,0.150995,0.0703649,0.0472586
-8,256,256,50,559.687,597.045,594.844,640.364,681.302,0.00104858,0.0018735,0.00175628
-8,512,512,50,600.468,633.502,625,696.407,748.021,0.0041943,0.00698506,0.00662082
-32,256,256,50,600.364,648.217,643.907,723.282,744.01,0.0041943,0.00698627,0.00647053
-32,512,512,50,739.063,1021.84,1035.31,1190.52,1510.31,0.0167772,0.0227007,0.0164187
-32,515,515,50,648.438,810.792,831.823,974.375,998.75,0.0169744,0.0261774,0.0209356
+1,256,1536,50,311.354,365.268,354.87,453.672,471.485,0.000786432,0.00252585,0.00215303
+1,512,1536,50,343.047,402.137,416.302,464.14,471.406,0.00157286,0.00458498,0.00391126
+1,1536,256,50,300.938,342.777,320.546,389.14,429.14,0.000786432,0.00261327,0.0022943
+1,1536,2048,50,387.786,559.228,536.98,953.593,965.235,0.00629146,0.016224,0.0112502
+1,1536,4096,50,512.422,883.423,665.547,1185.08,1438.85,0.0125829,0.0245558,0.0142434
+1,1536,6144,50,553.985,1080.36,1267.58,1329.95,1492.68,0.0188744,0.0340702,0.0174705
+1,1536,12288,50,831.407,1416.15,1552.27,1604.92,1780.49,0.0377487,0.0454035,0.0266559
+1,2048,1536,50,349.166,358.482,354.844,374.089,394.141,0.00629146,0.0180185,0.0175503
+1,4096,1536,50,438.36,857.162,1032.29,1171.56,1323.39,0.0125829,0.0287045,0.0146797
+1,6144,1536,50,527.188,749.244,681.77,1141.64,1142.89,0.0188744,0.035802,0.0251912
+1,8960,1536,50,677.37,1363.61,1416.85,1436.93,1461.93,0.0275251,0.0406353,0.0201854
+1,12288,1536,50,813.047,1465.7,1555.13,1624.24,1842.63,0.0377487,0.0464288,0.0257547
+4,256,1536,50,277.37,312.331,290.312,375.677,384.688,0.00314573,0.0113413,0.0100718
+4,512,1536,50,290.911,339.686,327.11,435.156,461.615,0.00629146,0.0216267,0.0185214
+4,1536,256,50,282.188,299.142,299.349,319.271,329.271,0.00314573,0.0111477,0.0105158
+4,1536,2048,50,354.922,430.877,438.594,603.985,779.87,0.0251658,0.0709052,0.058406
+4,1536,4096,50,452.5,907.749,1171.33,1196.04,1237.87,0.0503316,0.11123,0.0554466
+4,1536,6144,50,554.062,938.439,923.36,1269.22,1291.88,0.0754975,0.136262,0.0804501
+4,1536,12288,50,844.297,1540.46,1592.32,1630.31,1826.09,0.150995,0.178841,0.0980192
+4,2048,1536,50,347.188,389.18,400.339,434.453,451.641,0.0251658,0.0724848,0.0646637
+4,4096,1536,50,455.104,655.351,491.354,1188.59,1198.75,0.0503316,0.110594,0.0768011
+4,6144,1536,50,543.515,1038.84,1254.38,1304.84,1495.55,0.0754975,0.138906,0.0726751
+4,8960,1536,50,661.953,1272.5,1395.31,1455,1645,0.1101,0.166327,0.0865227
+4,12288,1536,50,811.302,1404.69,1546.88,1622.97,1816.28,0.150995,0.186114,0.107494
+8,256,256,50,267.084,285.32,285.13,297.735,332.031,0.00104858,0.00392602,0.00367509
+8,512,512,50,291.796,298.427,294.062,319.453,359.765,0.0041943,0.0143741,0.0140547
+32,256,256,50,271.25,304.794,293.594,338.099,345.235,0.0041943,0.0154629,0.0137611
+32,512,512,50,403.828,425.341,418.281,465.911,471.771,0.0167772,0.0415455,0.0394442
+32,515,515,50,349.375,435.07,465.677,529.375,544.037,0.0169744,0.048585,0.0390154
 
 Full log:    temp_litert_matmul_micro.log
 Full CSV:    ./matmul_micro.csv
