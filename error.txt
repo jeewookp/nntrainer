@@ -1,206 +1,79 @@
 실행 결과는 아래와 같아
-답변은 아랍어 같은 문자가 쭉 나열되네
-matmul shape 별 실행시간이 궁금해
 
-  1    prefill_1024 FULLY_CONNECTED      op=391            [1,1024,4096]|[1536,4096]|[]        [1,1024,1536]                   1024     1536     4096    
-  1    prefill_1024 FULLY_CONNECTED      op=397            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=399            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=404            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=409            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=414            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=421            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=424            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=427            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=465            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=471            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=473            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=478            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=483            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=488            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=495            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=498            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=501            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=539            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=545            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=547            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=552            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=557            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=562            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=569            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=572            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=575            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=613            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=619            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=621            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=626            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=631            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=636            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=643            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=646            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=649            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=687            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=693            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=695            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=700            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=705            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=710            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=717            [1,1024,1536]|[4096,1536]|[]        [1,1024,4096]                   1024     4096     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=720            [1,1024,1536]|[512,1536]|[]         [1,1024,512]                    1024     512      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=723            [1,1024,1536]|[512,1536]|[]         [1,1024,512]                    1024     512      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=761            [1,1024,4096]|[1536,4096]|[]        [1,1024,1536]                   1024     1536     4096    
-  1    prefill_1024 FULLY_CONNECTED      op=767            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=769            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=774            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=779            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=784            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=791            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=794            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=797            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=835            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=841            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=843            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=848            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=853            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=858            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=865            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=868            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=871            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=909            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=915            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=917            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=922            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=927            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=932            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=939            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=942            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=945            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=983            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-  1    prefill_1024 FULLY_CONNECTED      op=989            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=991            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=996            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
-  1    prefill_1024 FULLY_CONNECTED      op=1001           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=1006           [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
-  1    prefill_1024 FULLY_CONNECTED      op=1013           [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
-  1    prefill_1024 FULLY_CONNECTED      op=1016           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=1019           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
-  1    prefill_1024 FULLY_CONNECTED      op=1057           [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
-BenchmarkInfo:
-  Init Phases (7):
-    - Init Conversation: 0.04 ms
-    - Init Executor: 2520.28 ms
-    - Init LLM metadata: 0.05 ms
-    - Init Model assets: 2.96 ms
-    - Init Tokenizer: 89.72 ms
-    - Init Total: 2524.77 ms
---------------------------------------------------
-  Time to first token: 0.61 s
---------------------------------------------------
-  Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1024 tokens in 541.952552ms duration.
-      Prefill Speed: 1889.46 tokens/sec.
---------------------------------------------------
-  Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 16.252840775s duration.
-      Decode Speed: 15.75 tokens/sec.
---------------------------------------------------
-  TextToTokenIds Turns (Total 1 turns):
-    Turn 1: 45.677us, 1024 tokens
---------------------------------------------------
---------------------------------------------------
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 21, done.
+remote: Counting objects: 100% (21/21), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 13 (delta 8), reused 13 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (13/13), 18.77 KiB | 1.04 MiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   5f2f2515..e9483f44  litert_lm  -> origin/litert_lm
+Updating 5f2f2515..e9483f44
+Fast-forward
+ runtime/engine/BUILD                     |  63 ++++++++++++++++++++++++++++++++++++++++++++++
+ runtime/engine/CMakeLists.txt            |  29 +++++++++++++++++++++
+ runtime/engine/matmul_micro_benchmark.cc | 524 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ runtime/util/BUILD                       |  19 ++++++++++++++
+ runtime/util/CMakeLists.txt              |  22 +++++++++++++++-
+ runtime/util/single_op_tflite_builder.cc | 276 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ runtime/util/single_op_tflite_builder.h  |  80 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ temp_litert.sh                           |  93 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 8 files changed, 1104 insertions(+), 2 deletions(-)
+ create mode 100644 runtime/engine/matmul_micro_benchmark.cc
+ create mode 100644 runtime/util/single_op_tflite_builder.cc
+ create mode 100644 runtime/util/single_op_tflite_builder.h
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
+[temp_litert.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
+[temp_litert.sh]          but that NDK is too old (crate_index__cxx-1.0.149
+[temp_litert.sh]          won't compile). Auto-upgrading to:
+[temp_litert.sh]          /home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh]          To silence this warning permanently, update ~/.bashrc:
+[temp_litert.sh]            export ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh] BAZEL=/usr/local/bin/bazel
+[temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
+[temp_litert.sh] MODEL (host)=/home/jwhero94/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
+[temp_litert.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
+[temp_litert.sh] PREFILL_TOKENS=1024
+[temp_litert.sh] DECODE_TOKENS=256
+[temp_litert.sh] ASYNC=false
+[temp_litert.sh] TASKSET_MASK=f0
+[temp_litert.sh] OP_PROFILING=true
+[temp_litert.sh]   (per-op profile table WILL be emitted. Expect the
+[temp_litert.sh]    decode stream to be <pad> tokens because the 1024-
+[temp_litert.sh]    token synthetic prefill feeds a zero-padded context
+[temp_litert.sh]    to the model. Decoded text is garbage-by-design in
+[temp_litert.sh]    benchmark mode; only Prefill/Decode tokens-per-sec
+[temp_litert.sh]    and the [PROFILE LiteRT CompiledModel per-op]
+[temp_litert.sh]    summary at the bottom matter. DO NOT Ctrl+C --
+[temp_litert.sh]    decode takes roughly 8s and the profile summary
+[temp_litert.sh]    only prints on clean exit.)
 
+[temp_litert.sh] Building //runtime/engine:litert_lm_main ...
+INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=1 --terminal_columns=425
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
+INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
+INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
+INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
+INFO: Analyzed 2 targets (2 packages loaded, 147 targets configured).
+ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/engine/BUILD:241:10: Compiling runtime/engine/matmul_micro_benchmark.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/engine:matmul_micro_benchmark) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 150 arguments skipped)
+runtime/engine/matmul_micro_benchmark.cc:280:30: error: 'Create' is a protected member of 'litert::CompiledModel'
+  280 |       litert::CompiledModel::Create(env, model.Get(), options);
+      |       ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+external/litert/litert/cc/litert_compiled_model.h:1132:34: note: declared protected here
+ 1132 |   static Expected<CompiledModel> Create(litert::Environment& env,
+      |                                  ^
+1 error generated.
+Use --verbose_failures to see the command lines of failed build steps.
+INFO: Elapsed time: 1.894s, Critical Path: 1.68s
+INFO: 7 processes: 7 internal.
+ERROR: Build did NOT complete successfully
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
-[PROFILE LiteRT CompiledModel per-op summary] (generated by GetProfileSummary, --enable_op_profiling=true):
-============================== Run Order ==============================
-                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
-
-============================== Top by Computation Time ==============================
-                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
-
-Number of nodes executed: 0
-============================== Summary by node type ==============================
-                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
-
-Timings (microseconds): count=0 curr=0
-Memory (bytes): count=0
-0 nodes observed
-
-Delegate Statistics:
-Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     246.00        246        246        246
-Delegate/UploadOrBindTensorBuffer                                               1    1585.00       1585       1585       1585
-Delegate/add_values_to_cache                                                   15      26.80         19         50        402
-Delegate/cast                                                                   3      34.33          2         53        103
-Delegate/concat_batch -> cast                                                   2       1.50          1          2          3
-Delegate/concat_channels                                                       29      72.52          8        251       2103
-Delegate/concat_height -> not_equal                                             2     465.00        464        466        930
-Delegate/convolution(conv_wave_memory)                                         28     907.68        796       1563      25415
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     335.76         87       2432      15109
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1035.54         96       1783      57990
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1689.14       1684       1698      23648
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.79         96         99       1369
-Delegate/copy                                                                  14      62.14         52         69        870
-Delegate/cos                                                                    2       6.50          4          9         13
-Delegate/greater_equal                                                          1      18.00         18         18         18
-Delegate/less                                                                   1      20.00         20         20         20
-Delegate/logical_and                                                            1      38.00         38         38         38
-Delegate/mul                                                                   90      44.96          4        622       4046
-Delegate/mul -> add                                                            29      56.03          9        197       1625
-Delegate/mul -> quantize_and_dequantize                                        14     553.07        551        557       7743
-Delegate/quantize_and_dequantize                                               15      75.13         68         98       1127
-Delegate/quantize_float16_to_uint8c16                                         129     134.80         15        477      17389
-Delegate/reduce_maximum -> not_equal                                            2     157.00        157        157        314
-Delegate/reshape                                                               49      25.51          3        314       1250
-Delegate/reshape -> cast                                                        3      40.67          4         73        122
-Delegate/reshape -> quantize_and_dequantize                                    14     541.50        451       1074       7581
-Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.91          9        700       2831
-Delegate/reshape -> transpose                                                  14     130.71        110        240       1830
-Delegate/rms_normalization -> mul                                              44      68.59         14        333       3018
-Delegate/rms_normalization -> mul -> add                                       28     163.14        160        174       4568
-Delegate/rms_normalization -> mul -> add -> mul                                15     232.00        157       1228       3480
-Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.34        103        125       3142
-Delegate/select_v2                                                             14     132.79        105        256       1859
-Delegate/select_v2 -> maximum -> minimum                                       14     784.79        774        804      10987
-Delegate/sin                                                                    2       9.00          6         12         18
-Delegate/softmax (elementwise)                                                 14     632.50        629        643       8855
-Delegate/softmax (reduce)                                                      14     338.43        332        347       4738
-Delegate/split                                                                  1     688.00        688        688        688
-Delegate/strided_slice                                                         60      38.80          2        279       2328
-Delegate/subtract                                                              29      50.21          8        189       1456
-Delegate/transpose -> reshape                                                  14     147.57        123        262       2066
-Delegate/weights_convert_uint4_to_int8                                        100     116.14          7        222      11614
-Delegate/weights_convert_uint8_to_float16                                      28      17.36         13         29        486
-Delegate/weights_convert_uint8_to_int8                                         29      24.69          8        440        716
-
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000072b4a5ea70, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000072b4a34990, name=LiteRT GPU
-
---- Matmul-unit-op rows (convolution / FullyConnected / BatchMatMul) ---
-Delegate/convolution(conv_wave_memory)                                         28     907.68        796       1563      25415
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     335.76         87       2432      15109
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1035.54         96       1783      57990
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1689.14       1684       1698      23648
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.79         96         99       1369
-
---- Top 10 GPU kernel dispatches by total time (Delegate/... rows) ---
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize 56 1035.54 96 1783 57990
-Delegate/convolution(conv_wave_memory) 28 907.68 796 1563 25415
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx 14 1689.14 1684 1698 23648
-Delegate/quantize_float16_to_uint8c16 129 134.80 15 477 17389
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize 45 335.76 87 2432 15109
-Delegate/weights_convert_uint4_to_int8 100 116.14 7 222 11614
-Delegate/select_v2 -> maximum -> minimum 14 784.79 774 804 10987
-Delegate/softmax (elementwise) 14 632.50 629 643 8855
-Delegate/mul -> quantize_and_dequantize 14 553.07 551 557 7743
-Delegate/reshape -> quantize_and_dequantize 14 541.50 451 1074 7581
-
---- Matmul vs. non-matmul aggregate (Delegate Statistics) ---
-matmul total     =    123.531 ms ( 52.4% of instrumented)
-non-matmul total =    112.208 ms ( 47.6% of instrumented)
-instrumented sum =    235.739 ms
-
---- input_prompt + decode output (eyeball check) ---
-  (OP_PROFILING=true: expect a stream of <pad> tokens, that is
-   normal because benchmark_prefill_tokens=1024 zero-pads the
-   input. The numbers above are the real answer.)
-input_prompt: What is the tallest building in the world?
-VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
