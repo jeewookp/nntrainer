@@ -1,3 +1,5 @@
+아무것도 안 건드리고 다시 실행했더니 아래와 같아
+
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
 [temp_litert.sh] BAZEL=/usr/local/bin/bazel
 [temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
@@ -9,8 +11,6 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh
 [temp_litert.sh] TASKSET_MASK=f0
 
 [temp_litert.sh] Building //runtime/engine:litert_lm_main ...
-Extracting Bazel installation...
-Starting local Bazel server and connecting to it...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -24,50 +24,75 @@ INFO: Found applicable config definition build:litert_prefixes in file /home/jwh
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
 DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'bazel_skylib' because it already exists.
+Warning: skipping import of repository 'rules_proto' because it already exists.
 DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'bazel_features' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'platforms' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/xla/third_party/py/python_repo.bzl:94:14: !!!Using pywrap rules instead of directly creating .so objects!!!
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/xla/third_party/py/python_repo.bzl:99:10: 
-=============================
-Hermetic Python configuration:
-Version: "3.13"
-Kind: ""
-Interpreter: "default" (provided by rules_python)
-Requirements_lock label: "@python_version_repo//:requirements_lock_3_13.txt"
-=====================================
-DEBUG: Rule 'python_3_13_x86_64-unknown-linux-gnu' indicated that a canonical reproducible form can be obtained by dropping arguments ["ignore_root_user_error"]
-DEBUG: Repository python_3_13_x86_64-unknown-linux-gnu instantiated at:
-  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:143:23: in <toplevel>
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/xla/third_party/py/python_init_toolchains.bzl:71:35: in python_init_toolchains
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_python/python/private/python_register_toolchains.bzl:133:26: in python_register_toolchains
-Repository rule python_repository defined at:
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_python/python/private/python_repository.bzl:229:36: in <toplevel>
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_rules_apple' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_rules_swift' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_apple_support' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'xctestrunner' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'net_zstd' because it already exists.
-WARNING: Download from https://github.com/bazelbuild/rules_foreign_cc/archive/0.7.1.tar.gz failed: class java.io.IOException Connect timed out
-INFO: Repository rules_foreign_cc instantiated at:
-  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:186:14: in <toplevel>
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/tensorflow/workspace1.bzl:36:19: in workspace
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/com_google_benchmark/bazel/benchmark_deps.bzl:18:21: in benchmark_deps
-Repository rule http_archive defined at:
-  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/bazel_tools/tools/build_defs/repo/http.bzl:387:31: in <toplevel>
-ERROR: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/bazel_tools/tools/build_defs/repo/http.bzl:136:45: An error occurred during the fetch of repository 'rules_foreign_cc':
-   Traceback (most recent call last):
-	File "/home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/bazel_tools/tools/build_defs/repo/http.bzl", line 136, column 45, in _http_archive_impl
-		download_info = ctx.download_and_extract(
-Error in download_and_extract: java.io.IOException: Error downloading [https://github.com/bazelbuild/rules_foreign_cc/archive/0.7.1.tar.gz] to /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_foreign_cc/temp3160467387068822125/0.7.1.tar.gz: Connect timed out
-ERROR: Error computing the main repository mapping: no such package '@@rules_foreign_cc//foreign_cc': java.io.IOException: Error downloading [https://github.com/bazelbuild/rules_foreign_cc/archive/0.7.1.tar.gz] to /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_foreign_cc/temp3160467387068822125/0.7.1.tar.gz: Connect timed out
-Computing main repo mapping: 
+Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
+DEBUG: Rule 'llvm_linux_x86_64' indicated that a canonical reproducible form can be obtained by modifying arguments urls = <attr.string_list>, sha256 = <attr.string>, mirrored_tar_sha256 = <attr.string>, integrity = <attr.string>, netrc = <attr.string>, auth_patterns = <attr.string_dict>, canonical_id = <attr.string>, strip_prefix = <attr.string>, add_prefix = <attr.string>, type = <attr.string>, patches = <attr.label_list>, remote_file_urls = <attr.string_list_dict>, remote_file_integrity = <attr.string_dict>, remote_patches = <attr.string_dict>, remote_patch_strip = <attr.int>, patch_tool = <attr.string>, patch_args = <attr.string_list>, patch_cmds = <attr.string_list>, patch_cmds_win = <attr.string_list>, build_file = <attr.label> and dropping ["name"]
+DEBUG: Repository llvm_linux_x86_64 instantiated at:
+  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:115:18: in <toplevel>
+  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_ml_toolchain/cc/deps/cc_toolchain_deps.bzl:51:26: in cc_toolchain_deps
+Repository rule llvm_http_archive defined at:
+  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_ml_toolchain/cc/deps/llvm_http_archive.bzl:407:36: in <toplevel>
+DEBUG: Rule 'cxxbridge_cmd_deps' indicated that a canonical reproducible form can be obtained by modifying arguments lockfile = Label("//cxxbridge_cmd:cargo-bazel-lock.json")
+DEBUG: Repository cxxbridge_cmd_deps instantiated at:
+  /home/jwhero94/projects/nntrainer_litert_lm/WORKSPACE:338:18: in <toplevel>
+Repository rule crates_repository defined at:
+  /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/rules_rust/crate_universe/private/crates_repository.bzl:151:36: in <toplevel>
+DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
+INFO: Analyzed target //runtime/engine:litert_lm_main (583 packages loaded, 24163 targets configured).
+ERROR: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/crate_index__cxx-1.0.149/BUILD.bazel:112:11: Compiling src/cxx.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target @@crate_index__cxx-1.0.149//:cxx_cc) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 102 arguments skipped)
+In file included from external/crate_index__cxx-1.0.149/src/cxx.cc:1:
+In file included from external/crate_index__cxx-1.0.149/src/../include/cxx.h:2:
+In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/algorithm:1713:
+In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/adjacent_find.h:14:
+In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/iterator_operations.h:13:
+In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__algorithm/ranges_iterator_concept.h:13:
+In file included from external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:34:
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:118:22: error: implicit instantiation of undefined template 'std::__pointer_traits_element_type<rust::Slice<const unsigned char>::iterator, false>'
+    typedef typename __pointer_traits_element_type<pointer>::type    element_type;
+                     ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:182:20: note: in instantiation of template class 'std::pointer_traits<rust::Slice<const unsigned char>::iterator>' requested here
+    decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))
+                   ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:195:59: note: during template argument deduction for class template partial specialization '_HasToAddress<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer &>()))>' [with _Pointer = rust::Slice<const unsigned char>::iterator]
+  static const bool value = _HasArrow<_Pointer>::value || _HasToAddress<_Pointer>::value;
+                                                          ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:195:59: note: in instantiation of template class 'std::_HasToAddress<rust::Slice<const unsigned char>::iterator>' requested here
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__type_traits/conjunction.h:27:32: note: in instantiation of template class 'std::_IsFancyPointer<rust::Slice<const unsigned char>::iterator>' requested here
+__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
+                               ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__type_traits/conjunction.h:38:39: note: while substituting explicitly-specified template arguments into function template '__and_helper' 
+using _And _LIBCPP_NODEBUG = decltype(std::__and_helper<_Pred...>(0));
+                                      ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:200:5: note: (skipping 4 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+    _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value
+    ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:193:7: note: in instantiation of requirement here
+    { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
+      ^~~~~~~~~~~~~~~~~~~~~~
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__config:655:17: note: expanded from macro '_VSTD'
+#  define _VSTD std
+                ^
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__iterator/concepts.h:192:3: note: while substituting template arguments into constraint expression here
+  requires(const _Ip& __i) {
+  ^~~~~~~~~~~~~~~~~~~~~~~~~~
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__ranges/concepts.h:119:5: note: while checking the satisfaction of concept 'contiguous_iterator<rust::Slice<const unsigned char>::iterator>' requested here
+    contiguous_iterator<iterator_t<_Tp>> &&
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__ranges/concepts.h:119:5: note: while substituting template arguments into constraint expression here
+    contiguous_iterator<iterator_t<_Tp>> &&
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/crate_index__cxx-1.0.149/src/../include/cxx.h:274:15: note: while checking the satisfaction of concept 'contiguous_range<rust::Slice<const unsigned char>>' requested here
+static_assert(std::ranges::contiguous_range<rust::Slice<const uint8_t>>);
+              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/include/c++/v1/__memory/pointer_traits.h:38:8: note: template is declared here
+struct __pointer_traits_element_type;
+       ^
+1 error generated.
+Target //runtime/engine:litert_lm_main failed to build
+Use --verbose_failures to see the command lines of failed build steps.
+INFO: Elapsed time: 119.611s, Critical Path: 32.03s
+INFO: 2478 processes: 856 internal, 1622 local.
+ERROR: Build did NOT complete successfully
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
