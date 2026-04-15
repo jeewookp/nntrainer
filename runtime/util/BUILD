@@ -606,6 +606,28 @@ cc_library(
     ],
 )
 
+# Walks a tflite flatbuffer model and dumps / exports all matmul-class ops
+# (FULLY_CONNECTED / BATCH_MATMUL / 1x1 CONV_2D) with their shapes, so the
+# reviewer can correlate the GPU delegate's per-op profile table
+# (labels like `convolution_int8(conv_wave_memory)`) with actual M/N/K
+# dimensions. The llm executor factory calls this when
+# --enable_op_profiling is on, printing a stderr table next to the LiteRT
+# per-op summary. An opt-in CSV export (LITERT_LM_MATMUL_ROSTER_CSV env
+# var) is also available for spreadsheet / grep consumption.
+cc_library(
+    name = "matmul_shape_dump",
+    srcs = ["matmul_shape_dump.cc"],
+    hdrs = ["matmul_shape_dump.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "@flatbuffers//:runtime_cc",
+        "@litert//tflite/schema:schema_fbs",
+    ],
+)
+
 cc_test(
     name = "lora_data_test",
     srcs = ["lora_data_test.cc"],

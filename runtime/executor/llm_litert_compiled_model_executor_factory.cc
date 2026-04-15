@@ -33,7 +33,12 @@
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/executor/llm_executor_settings.h"
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+
 #include "runtime/executor/llm_litert_compiled_model_executor.h"
+#include "runtime/util/matmul_shape_dump.h"
 #include "runtime/util/status_macros.h"
 
 #if !defined(LITERT_DISABLE_NPU)
@@ -133,6 +138,45 @@ CreateCpuOrGpuLlmLiteRtCompiledModelExecutor(
     ModelResources& resources) {
   ASSIGN_OR_RETURN(const litert::Model* litert_model,
                    resources.GetTFLiteModel(ModelType::kTfLitePrefillDecode));
+
+  // When --enable_op_profiling is set we also dump a matmul roster for the
+  // prefill/decode model before creating the compiled model. The LiteRT GPU
+  // delegate's own per-op profile table reports fused kernel names
+  // (e.g. `convolution_int8(conv_wave_memory)`) with no shape info, which
+  // makes it hard to identify which source matmul is the bottleneck. The
+  // roster here lists every FULLY_CONNECTED / BATCH_MATMUL / 1x1 CONV_2D
+  // op in the graph together with its M/N/K, so the reviewer can correlate
+  // the two tables when reading temp_litert_run.log. We only walk the
+  // flatbuffer when profiling is explicitly requested so normal runs don't
+  // pay the cost, and we tolerate failures so a corrupt model never turns
+  // a profile run into a crash.
+  if (executor_settings.GetAdvancedSettings().has_value() &&
+      executor_settings.GetAdvancedSettings()->enable_op_profiling) {
+    auto buffer = resources.GetTFLiteModelBuffer(ModelType::kTfLitePrefillDecode);
+    if (buffer.ok()) {
+      DumpMatmulShapes(*buffer, "prefill-decode", stderr);
+    }
+    // Optional machine-readable CSV export. Off by default; set the env
+    // var LITERT_LM_MATMUL_ROSTER_CSV=/path/to/roster.csv to enable. The
+    // CSV has one row per matmul op and can be consumed by any downstream
+    // tool (grep, spreadsheet, microbench). Failures are non-fatal
+    // (e.g. no write permission on device tmpfs).
+    const char* csv_path = std::getenv("LITERT_LM_MATMUL_ROSTER_CSV");
+    if (csv_path != nullptr && *csv_path != '\0' && buffer.ok()) {
+      auto status = WriteMatmulShapeRosterCsv(*buffer, "prefill-decode",
+                                              csv_path);
+      if (!status.ok()) {
+        const std::string err_msg(status.message());
+        std::fprintf(stderr,
+                     "[PROFILE MATMUL SHAPES] CSV export to %s failed: %s\n",
+                     csv_path, err_msg.c_str());
+      } else {
+        std::fprintf(stderr,
+                     "[PROFILE MATMUL SHAPES] CSV roster written to %s\n",
+                     csv_path);
+      }
+    }
+  }
 
   std::unique_ptr<LlmExecutor> executor;
   ASSIGN_OR_RETURN(bool is_dynamic_model, IsDynamicModel(*litert_model));

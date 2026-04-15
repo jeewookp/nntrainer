@@ -397,6 +397,7 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
         "//runtime/components:model_resources",
         "//runtime/util:litert_status_util",
+        "//runtime/util:matmul_shape_dump",
     ] + select({
         "@litert//litert:litert_link_capi_so": [
             "@litert//litert/cc:litert_api_with_dynamic_runtime",

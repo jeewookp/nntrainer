@@ -434,7 +434,26 @@ target_link_libraries(runtime_util_model_type_utils
 )
 
 # ==============================================================================
-# 19. Folder Facade
+# 19. Matmul Shape Dump (profile helper)
+# ==============================================================================
+add_litertlm_library(runtime_util_matmul_shape_dump STATIC
+  matmul_shape_dump.cc
+)
+add_library(LiteRTLM::Runtime::Util::MatmulShapeDump ALIAS runtime_util_matmul_shape_dump)
+
+target_include_directories(runtime_util_matmul_shape_dump
+  PRIVATE
+    ${GENERATED_SRC_DIR}
+    ${LITERTLM_INCLUDE_PATHS}
+)
+
+target_link_libraries(runtime_util_matmul_shape_dump
+  PUBLIC
+    LITERTLM_DEPS
+)
+
+# ==============================================================================
+# 20. Folder Facade
 # ==============================================================================
 add_library(runtime_util_libs INTERFACE)
 add_library(LiteRTLM::Runtime::Util ALIAS runtime_util_libs)
@@ -448,6 +467,7 @@ target_link_libraries(runtime_util_libs INTERFACE
   LiteRTLM::Runtime::Util::LoggingTensorBuffer
   LiteRTLM::Runtime::Util::LoRAData
   LiteRTLM::Runtime::Util::LoRAUtil
+  LiteRTLM::Runtime::Util::MatmulShapeDump
   LiteRTLM::Runtime::Util::MemoryMappedFile
   LiteRTLM::Runtime::Util::MetadataUtil
   LiteRTLM::Runtime::Util::ModelAssetBundleResources

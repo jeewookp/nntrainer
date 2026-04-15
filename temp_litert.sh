@@ -361,6 +361,22 @@ if [ "${OP_PROFILING}" = "true" ]; then
   #     -> quantize_and_dequantize". Matmul shows up as `convolution(...)`
   #     because the GPU CL delegate implements matmul as 1x1 conv with a
   #     GEMM tiling strategy called conv_wave_memory.
+  # Matmul shape roster: printed at CompiledModel::Create time by
+  # runtime/util/matmul_shape_dump.cc (called from the executor factory
+  # when --enable_op_profiling=true). One line per FULLY_CONNECTED /
+  # BATCH_MATMUL / 1x1 CONV_2D op in the prefill/decode subgraph with the
+  # actual M/N/K. Used to correlate fused kernel names like
+  # `convolution_int8(conv_wave_memory)` against the source matmul
+  # dimensions so we can identify which shape dominates prefill.
+  echo ""
+  echo "--- Matmul shape roster (from [PROFILE MATMUL SHAPES] block) ---"
+  awk '/\[PROFILE MATMUL SHAPES\]/{found=1} found{
+         print;
+         if (/^$/ && printed) {exit}
+         if (/\[PROFILE MATMUL SHAPES\]/) {printed=1}
+       }' "${RUN_LOG}" \
+    || echo "(no matmul shape roster -- did the executor factory run with enable_op_profiling=true? is runtime/util/matmul_shape_dump linked into the build?)"
+
   echo ""
   echo "--- LiteRT per-op summary (FULL table, no head limit) ---"
   echo "(tflite::Profiler section will show 'Number of nodes executed: 0'"
