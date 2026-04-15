@@ -1,3 +1,7 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+Already up to date.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh 
 [temp_litert.sh] BAZEL=/usr/local/bin/bazel
 [temp_litert.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
@@ -9,10 +13,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert.sh
 [temp_litert.sh] TASKSET_MASK=f0
 
 [temp_litert.sh] Building //runtime/engine:litert_lm_main ...
-2026/04/15 13:46:56 Downloading https://releases.bazel.build/9.0.2/release/bazel-9.0.2-linux-x86_64...
-Downloading: 62 MB out of 62 MB (100%) 
-Extracting Bazel installation...
-Starting local Bazel server (9.0.2) and connecting to it...
-ERROR: Config value 'android_arm64' is not defined in any .rc file
+2026/04/15 14:21:58 Downloading https://releases.bazel.build/7.6.1/release/bazel-7.6.1-linux-x86_64...
+Downloading: 54 MB out of 54 MB (100%) 
+FATAL: failed to set timestamp on '/home/jwhero94/.cache/bazel/_bazel_jwhero94/install/5309d864f9edb3a2e8380ffc84e6b95c': (error: 2): No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
-
