@@ -1,27 +1,110 @@
 실행 결과는 아래와 같아
 답변은 아랍어 같은 문자가 쭉 나열되네
+matmul shape 별 실행시간이 궁금해
 
+  1    prefill_1024 FULLY_CONNECTED      op=391            [1,1024,4096]|[1536,4096]|[]        [1,1024,1536]                   1024     1536     4096    
+  1    prefill_1024 FULLY_CONNECTED      op=397            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=399            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=404            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=409            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=414            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=421            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=424            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=427            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=465            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=471            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=473            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=478            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=483            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=488            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=495            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=498            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=501            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=539            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=545            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=547            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=552            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=557            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=562            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=569            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=572            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=575            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=613            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=619            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=621            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=626            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=631            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=636            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=643            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=646            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=649            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=687            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=693            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=695            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=700            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=705            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=710            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=717            [1,1024,1536]|[4096,1536]|[]        [1,1024,4096]                   1024     4096     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=720            [1,1024,1536]|[512,1536]|[]         [1,1024,512]                    1024     512      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=723            [1,1024,1536]|[512,1536]|[]         [1,1024,512]                    1024     512      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=761            [1,1024,4096]|[1536,4096]|[]        [1,1024,1536]                   1024     1536     4096    
+  1    prefill_1024 FULLY_CONNECTED      op=767            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=769            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=774            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=779            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=784            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=791            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=794            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=797            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=835            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=841            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=843            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=848            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=853            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=858            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=865            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=868            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=871            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=909            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=915            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=917            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=922            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=927            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=932            [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=939            [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=942            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=945            [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=983            [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
+  1    prefill_1024 FULLY_CONNECTED      op=989            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=991            [1,1024,1536]|[6144,1536]|[]        [1,1024,6144]                   1024     6144     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=996            [1,1024,6144]|[1536,6144]|[]        [1,1024,1536]                   1024     1536     6144    
+  1    prefill_1024 FULLY_CONNECTED      op=1001           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=1006           [1,1024,256]|[1536,256]|[]          [1,1024,1536]                   1024     1536     256     
+  1    prefill_1024 FULLY_CONNECTED      op=1013           [1,1024,1536]|[2048,1536]|[]        [1,1024,2048]                   1024     2048     1536    
+  1    prefill_1024 FULLY_CONNECTED      op=1016           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=1019           [1,1024,1536]|[256,1536]|[]         [1,1024,256]                    1024     256      1536    
+  1    prefill_1024 FULLY_CONNECTED      op=1057           [1,1024,2048]|[1536,2048]|[]        [1,1024,1536]                   1024     1536     2048    
 BenchmarkInfo:
   Init Phases (7):
     - Init Conversation: 0.04 ms
-    - Init Executor: 2505.61 ms
-    - Init LLM metadata: 0.07 ms
-    - Init Model assets: 11.58 ms
-    - Init Tokenizer: 93.04 ms
-    - Init Total: 2519.16 ms
+    - Init Executor: 2520.28 ms
+    - Init LLM metadata: 0.05 ms
+    - Init Model assets: 2.96 ms
+    - Init Tokenizer: 89.72 ms
+    - Init Total: 2524.77 ms
 --------------------------------------------------
-  Time to first token: 0.59 s
+  Time to first token: 0.61 s
 --------------------------------------------------
   Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1024 tokens in 525.569479ms duration.
-      Prefill Speed: 1948.36 tokens/sec.
+    Prefill Turn 1: Processed 1024 tokens in 541.952552ms duration.
+      Prefill Speed: 1889.46 tokens/sec.
 --------------------------------------------------
   Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 16.106379837s duration.
-      Decode Speed: 15.89 tokens/sec.
+    Decode Turn 1: Processed 256 tokens in 16.252840775s duration.
+      Decode Speed: 15.75 tokens/sec.
 --------------------------------------------------
   TextToTokenIds Turns (Total 1 turns):
-    Turn 1: 48.959us, 1024 tokens
+    Turn 1: 45.677us, 1024 tokens
 --------------------------------------------------
 --------------------------------------------------
 
@@ -43,141 +126,81 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     238.00        238        238        238
-Delegate/UploadOrBindTensorBuffer                                               1    1532.00       1532       1532       1532
-Delegate/add_values_to_cache                                                   15      27.53         19         51        413
-Delegate/cast                                                                   3      36.33          2         56        109
-Delegate/concat_batch -> cast                                                   2       2.00          2          2          4
-Delegate/concat_channels                                                       29      72.24          8        251       2095
-Delegate/concat_height -> not_equal                                             2     467.50        467        468        935
-Delegate/convolution(conv_wave_memory)                                         28     910.21        801       1563      25486
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     336.04         87       2443      15122
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1037.68         96       1800      58110
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1687.79       1684       1698      23629
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.93         97        100       1371
-Delegate/copy                                                                  14      59.36         52         66        831
-Delegate/cos                                                                    2       5.50          2          9         11
-Delegate/greater_equal                                                          1      19.00         19         19         19
-Delegate/less                                                                   1      19.00         19         19         19
-Delegate/logical_and                                                            1      39.00         39         39         39
-Delegate/mul                                                                   90      45.04          4        603       4054
-Delegate/mul -> add                                                            29      56.10          9        199       1627
-Delegate/mul -> quantize_and_dequantize                                        14     560.86        558        569       7852
-Delegate/quantize_and_dequantize                                               15      73.93         67         99       1109
-Delegate/quantize_float16_to_uint8c16                                         129     135.56         15        487      17487
-Delegate/reduce_maximum -> not_equal                                            2     164.00        164        164        328
-Delegate/reshape                                                               49      25.82          3        315       1265
-Delegate/reshape -> cast                                                        3      38.00          4         62        114
-Delegate/reshape -> quantize_and_dequantize                                    14     546.50        455       1078       7651
-Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.40          9        702       2808
-Delegate/reshape -> transpose                                                  14     132.43        112        244       1854
-Delegate/rms_normalization -> mul                                              44      69.43         14        335       3055
-Delegate/rms_normalization -> mul -> add                                       28     163.89        160        169       4589
-Delegate/rms_normalization -> mul -> add -> mul                                15     233.00        162       1210       3495
-Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.31        103        126       3141
-Delegate/select_v2                                                             14     134.36        105        256       1881
-Delegate/select_v2 -> maximum -> minimum                                       14     790.07        779        808      11061
-Delegate/sin                                                                    2      10.00          8         12         20
-Delegate/softmax (elementwise)                                                 14     635.57        630        646       8898
-Delegate/softmax (reduce)                                                      14     339.43        334        344       4752
-Delegate/split                                                                  1     691.00        691        691        691
-Delegate/strided_slice                                                         60      38.60          3        280       2316
-Delegate/subtract                                                              29      48.76          8        187       1414
-Delegate/transpose -> reshape                                                  14     148.64        125        268       2081
-Delegate/weights_convert_uint4_to_int8                                        100     116.53          7        226      11653
-Delegate/weights_convert_uint8_to_float16                                      28      17.50         13         29        490
-Delegate/weights_convert_uint8_to_int8                                         29      24.76          8        446        718
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     246.00        246        246        246
+Delegate/UploadOrBindTensorBuffer                                               1    1585.00       1585       1585       1585
+Delegate/add_values_to_cache                                                   15      26.80         19         50        402
+Delegate/cast                                                                   3      34.33          2         53        103
+Delegate/concat_batch -> cast                                                   2       1.50          1          2          3
+Delegate/concat_channels                                                       29      72.52          8        251       2103
+Delegate/concat_height -> not_equal                                             2     465.00        464        466        930
+Delegate/convolution(conv_wave_memory)                                         28     907.68        796       1563      25415
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     335.76         87       2432      15109
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1035.54         96       1783      57990
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1689.14       1684       1698      23648
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.79         96         99       1369
+Delegate/copy                                                                  14      62.14         52         69        870
+Delegate/cos                                                                    2       6.50          4          9         13
+Delegate/greater_equal                                                          1      18.00         18         18         18
+Delegate/less                                                                   1      20.00         20         20         20
+Delegate/logical_and                                                            1      38.00         38         38         38
+Delegate/mul                                                                   90      44.96          4        622       4046
+Delegate/mul -> add                                                            29      56.03          9        197       1625
+Delegate/mul -> quantize_and_dequantize                                        14     553.07        551        557       7743
+Delegate/quantize_and_dequantize                                               15      75.13         68         98       1127
+Delegate/quantize_float16_to_uint8c16                                         129     134.80         15        477      17389
+Delegate/reduce_maximum -> not_equal                                            2     157.00        157        157        314
+Delegate/reshape                                                               49      25.51          3        314       1250
+Delegate/reshape -> cast                                                        3      40.67          4         73        122
+Delegate/reshape -> quantize_and_dequantize                                    14     541.50        451       1074       7581
+Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.91          9        700       2831
+Delegate/reshape -> transpose                                                  14     130.71        110        240       1830
+Delegate/rms_normalization -> mul                                              44      68.59         14        333       3018
+Delegate/rms_normalization -> mul -> add                                       28     163.14        160        174       4568
+Delegate/rms_normalization -> mul -> add -> mul                                15     232.00        157       1228       3480
+Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.34        103        125       3142
+Delegate/select_v2                                                             14     132.79        105        256       1859
+Delegate/select_v2 -> maximum -> minimum                                       14     784.79        774        804      10987
+Delegate/sin                                                                    2       9.00          6         12         18
+Delegate/softmax (elementwise)                                                 14     632.50        629        643       8855
+Delegate/softmax (reduce)                                                      14     338.43        332        347       4738
+Delegate/split                                                                  1     688.00        688        688        688
+Delegate/strided_slice                                                         60      38.80          2        279       2328
+Delegate/subtract                                                              29      50.21          8        189       1456
+Delegate/transpose -> reshape                                                  14     147.57        123        262       2066
+Delegate/weights_convert_uint4_to_int8                                        100     116.14          7        222      11614
+Delegate/weights_convert_uint8_to_float16                                      28      17.36         13         29        486
+Delegate/weights_convert_uint8_to_int8                                         29      24.69          8        440        716
 
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b80726bc0, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b806fbab0, name=LiteRT GPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000072b4a5ea70, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000072b4a34990, name=LiteRT GPU
 
-==========================================
- Run summary (temp_litert.sh, OP_PROFILING=true)
-==========================================
+--- Matmul-unit-op rows (convolution / FullyConnected / BatchMatMul) ---
+Delegate/convolution(conv_wave_memory)                                         28     907.68        796       1563      25415
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     335.76         87       2432      15109
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1035.54         96       1783      57990
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1689.14       1684       1698      23648
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.79         96         99       1369
 
---- Benchmark perf summary ---
-  Time to first token: 0.59 s
-  Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1024 tokens in 525.569479ms duration.
-      Prefill Speed: 1948.36 tokens/sec.
-  Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 16.106379837s duration.
-      Decode Speed: 15.89 tokens/sec.
+--- Top 10 GPU kernel dispatches by total time (Delegate/... rows) ---
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize 56 1035.54 96 1783 57990
+Delegate/convolution(conv_wave_memory) 28 907.68 796 1563 25415
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx 14 1689.14 1684 1698 23648
+Delegate/quantize_float16_to_uint8c16 129 134.80 15 477 17389
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize 45 335.76 87 2432 15109
+Delegate/weights_convert_uint4_to_int8 100 116.14 7 222 11614
+Delegate/select_v2 -> maximum -> minimum 14 784.79 774 804 10987
+Delegate/softmax (elementwise) 14 632.50 629 643 8855
+Delegate/mul -> quantize_and_dequantize 14 553.07 551 557 7743
+Delegate/reshape -> quantize_and_dequantize 14 541.50 451 1074 7581
 
---- LiteRT per-op summary (FULL table, no head limit) ---
-[PROFILE LiteRT CompiledModel per-op summary] (generated by GetProfileSummary, --enable_op_profiling=true):
-============================== Run Order ==============================
-                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
-
-============================== Top by Computation Time ==============================
-                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
-
-Number of nodes executed: 0
-============================== Summary by node type ==============================
-                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
-
-Timings (microseconds): count=0 curr=0
-Memory (bytes): count=0
-0 nodes observed
-
-Delegate Statistics:
-Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                               1     238.00        238        238        238
-Delegate/UploadOrBindTensorBuffer                                               1    1532.00       1532       1532       1532
-Delegate/add_values_to_cache                                                   15      27.53         19         51        413
-Delegate/cast                                                                   3      36.33          2         56        109
-Delegate/concat_batch -> cast                                                   2       2.00          2          2          4
-Delegate/concat_channels                                                       29      72.24          8        251       2095
-Delegate/concat_height -> not_equal                                             2     467.50        467        468        935
-Delegate/convolution(conv_wave_memory)                                         28     910.21        801       1563      25486
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize         45     336.04         87       2443      15122
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize         56    1037.68         96       1800      58110
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx         14    1687.79       1684       1698      23629
-Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> quantize_and_dequantize -> quantize_and_dequantize -> gelu_tanh_approx -> mul -> quantize_and_dequantize         14      97.93         97        100       1371
-Delegate/copy                                                                  14      59.36         52         66        831
-Delegate/cos                                                                    2       5.50          2          9         11
-Delegate/greater_equal                                                          1      19.00         19         19         19
-Delegate/less                                                                   1      19.00         19         19         19
-Delegate/logical_and                                                            1      39.00         39         39         39
-Delegate/mul                                                                   90      45.04          4        603       4054
-Delegate/mul -> add                                                            29      56.10          9        199       1627
-Delegate/mul -> quantize_and_dequantize                                        14     560.86        558        569       7852
-Delegate/quantize_and_dequantize                                               15      73.93         67         99       1109
-Delegate/quantize_float16_to_uint8c16                                         129     135.56         15        487      17487
-Delegate/reduce_maximum -> not_equal                                            2     164.00        164        164        328
-Delegate/reshape                                                               49      25.82          3        315       1265
-Delegate/reshape -> cast                                                        3      38.00          4         62        114
-Delegate/reshape -> quantize_and_dequantize                                    14     546.50        455       1078       7651
-Delegate/reshape -> quantize_and_dequantize -> quantize_and_dequantize         45      62.40          9        702       2808
-Delegate/reshape -> transpose                                                  14     132.43        112        244       1854
-Delegate/rms_normalization -> mul                                              44      69.43         14        335       3055
-Delegate/rms_normalization -> mul -> add                                       28     163.89        160        169       4589
-Delegate/rms_normalization -> mul -> add -> mul                                15     233.00        162       1210       3495
-Delegate/rms_normalization -> mul -> quantize_and_dequantize                   29     108.31        103        126       3141
-Delegate/select_v2                                                             14     134.36        105        256       1881
-Delegate/select_v2 -> maximum -> minimum                                       14     790.07        779        808      11061
-Delegate/sin                                                                    2      10.00          8         12         20
-Delegate/softmax (elementwise)                                                 14     635.57        630        646       8898
-Delegate/softmax (reduce)                                                      14     339.43        334        344       4752
-Delegate/split                                                                  1     691.00        691        691        691
-Delegate/strided_slice                                                         60      38.60          3        280       2316
-Delegate/subtract                                                              29      48.76          8        187       1414
-Delegate/transpose -> reshape                                                  14     148.64        125        268       2081
-Delegate/weights_convert_uint4_to_int8                                        100     116.53          7        226      11653
-Delegate/weights_convert_uint8_to_float16                                      28      17.50         13         29        490
-Delegate/weights_convert_uint8_to_int8                                         29      24.76          8        446        718
-
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b80726bc0, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007b806fbab0, name=LiteRT GPU
-
---- Matmul-unit-op rows (FullyConnected / BatchMatMul / MatMul / Conv2D) ---
-(no matmul-unit-op rows found -- grep this regex manually from the full table above)
-
---- Per-op-type rollup (time spent per op type) ---
+--- Matmul vs. non-matmul aggregate (Delegate Statistics) ---
+matmul total     =    123.531 ms ( 52.4% of instrumented)
+non-matmul total =    112.208 ms ( 47.6% of instrumented)
+instrumented sum =    235.739 ms
 
 --- input_prompt + decode output (eyeball check) ---
   (OP_PROFILING=true: expect a stream of <pad> tokens, that is
    normal because benchmark_prefill_tokens=1024 zero-pads the
    input. The numbers above are the real answer.)
-
-
+input_prompt: What is the tallest building in the world?
+VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
