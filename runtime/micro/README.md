@@ -33,10 +33,10 @@ tool.
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 1 | BUILD rule, flag surface, environment creation sanity check | **this commit** |
-| 2 | `single_fc_builder` (.tflite flatbuffer for one FC op) | pending |
-| 3 | End-to-end benchmark loop for `--dtype=fp32`, CSV output with kernel name column | pending |
-| 4 | `int8_per_tensor`, `int8_chain`, `fp32_conv2d` dtypes | pending |
+| 1 | BUILD rule, flag surface, environment creation sanity check | done |
+| 2 | Shape + dtype parsing, wire `//runtime/util:single_op_tflite_builder` dep, smoke-test build one flatbuffer per shape | **this commit** |
+| 3 | End-to-end benchmark loop (warmup/iters/stats) for `--dtype=fp32`, CSV output with kernel_name column | pending |
+| 4 | `--runtime_lib_dir` / `--cache_dir` wiring, validate all dtypes route correctly | pending |
 | 5 | `temp_matmul_bench.sh` adb runner, prebuilt shlib push | pending |
 | 6 | `shape_roster` extractor (.tflite → CSV of matmul M/N/K) | pending |
 | 7 | Correctness & determinism gating tests | pending |
@@ -69,21 +69,25 @@ downstream automation can lock in flag names today.
 bazel build --config=android_arm64 //runtime/micro:matmul_bench
 ```
 
-## Run (Android, phase 1 smoke test)
+## Run (Android, phase 2 builder smoke test)
 
-Phase 1 only proves the binary links and creates a LiteRT environment.
-No matmul is actually executed.
+Phase 2 proves the binary links, creates a LiteRT environment, and
+calls the flatbuffer builder once per shape. No matmul is executed.
 
 ```
 adb push bazel-bin/runtime/micro/matmul_bench /data/local/tmp/
-adb shell "cd /data/local/tmp && ./matmul_bench --backend=gpu --iters=10"
+adb shell "cd /data/local/tmp && \
+    ./matmul_bench --backend=gpu --dtype=int8_per_tensor \
+                   --shapes=1024x1536x6144,1x256x1536"
 ```
 
 Expected stderr:
 
 ```
-[matmul_bench] phase=1-scaffolding backend=gpu dtype=int8_per_tensor ...
-[matmul_bench] env ready. benchmark loop not implemented in phase 1 -- exiting 0.
+[matmul_bench] phase=2-builder backend=gpu dtype=int8_per_tensor ...
+[matmul_bench] build OK   m=1024 n=1536 k=6144 dtype=int8_per_tensor flatbuffer_bytes=... signature=matmul ...
+[matmul_bench] build OK   m=1    n=256  k=1536 dtype=int8_per_tensor flatbuffer_bytes=... signature=matmul ...
+[matmul_bench] phase 2 done: 2 ok / 0 failed. Benchmark loop lands in phase 3.
 ```
 
 If the env line is missing and you see a LiteRT error instead, the
