@@ -802,6 +802,78 @@ TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_128_1024_512) {
   run_ab_bench_(128, 1024, 512);
 }
 
+// Dump the OpenCL device extension string once at process start so we can
+// tell whether the DP4A kernel's `cl_khr_integer_dot_product` fast path
+// is actually enabled on this hardware. Prints to stderr (test harness
+// tees stderr into the run log).
+static void DumpClDeviceInfo() {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) {
+    std::fprintf(stderr, "[CL device] ClContext unavailable\n");
+    return;
+  }
+  // Already-initialized ClContext holds a reference to the context
+  // manager; reuse it rather than directly pulling the singleton to keep
+  // this test self-contained against any include-ordering changes.
+  const cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
+  if (!dev) {
+    std::fprintf(stderr, "[CL device] device_id null\n");
+    return;
+  }
+
+  auto get_str = [&](cl_device_info param) -> std::string {
+    size_t len = 0;
+    if (clGetDeviceInfo(dev, param, 0, nullptr, &len) != CL_SUCCESS || len == 0)
+      return "(unavailable)";
+    std::string s(len, '\0');
+    if (clGetDeviceInfo(dev, param, len, &s[0], nullptr) != CL_SUCCESS)
+      return "(query failed)";
+    if (!s.empty() && s.back() == '\0')
+      s.pop_back();
+    return s;
+  };
+
+  const std::string name = get_str(CL_DEVICE_NAME);
+  const std::string ver = get_str(CL_DEVICE_VERSION);
+  const std::string drv = get_str(CL_DRIVER_VERSION);
+  const std::string ext = get_str(CL_DEVICE_EXTENSIONS);
+
+  std::fprintf(stderr, "[CL device] name=%s\n", name.c_str());
+  std::fprintf(stderr, "[CL device] version=%s driver=%s\n", ver.c_str(),
+               drv.c_str());
+
+  // Grep-friendly flags for the extensions we care about.
+  auto has = [&](const char *ext_name) -> bool {
+    return ext.find(ext_name) != std::string::npos;
+  };
+  std::fprintf(stderr,
+               "[CL ext flags]"
+               " khr_fp16=%d"
+               " khr_integer_dot_product=%d"
+               " qcom_dot_product8=%d"
+               " qcom_reqd_sub_group_size=%d"
+               " qcom_subgroup_shuffle=%d\n",
+               (int)has("cl_khr_fp16"),
+               (int)has("cl_khr_integer_dot_product"),
+               (int)has("cl_qcom_dot_product8"),
+               (int)has("cl_qcom_reqd_sub_group_size"),
+               (int)has("cl_qcom_subgroup_shuffle"));
+
+  // Full extension string, one per line, for offline analysis. Truncated
+  // if huge (shouldn't be on Adreno).
+  std::fprintf(stderr, "[CL device] extensions=\n");
+  size_t start = 0;
+  while (start < ext.size()) {
+    size_t sp = ext.find(' ', start);
+    if (sp == std::string::npos)
+      sp = ext.size();
+    if (sp > start)
+      std::fprintf(stderr, "  %.*s\n", (int)(sp - start), ext.c_str() + start);
+    start = sp + 1;
+  }
+}
+
 GTEST_API_ int main(int argc, char **argv) {
   int result = -1;
 
@@ -811,6 +883,8 @@ GTEST_API_ int main(int argc, char **argv) {
     std::cerr << "Error during InitGoogleTest" << std::endl;
     return 0;
   }
+
+  DumpClDeviceInfo();
 
   try {
     result = RUN_ALL_TESTS();

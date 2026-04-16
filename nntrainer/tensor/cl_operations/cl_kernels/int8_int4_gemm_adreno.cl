@@ -35,13 +35,35 @@
 
 // 4-way int8 dot-product + accumulate.
 //
-// Written as explicit char-to-int widening multiply-adds so the Adreno
-// OpenCL compiler can fuse the pattern to the `ssad` (signed saturating
-// accumulating dot-product) hardware op. Clang/LLVM pattern matches the
-// `acc + mad(a, b, mad(a, b, ...))` chain for cl_qcom_dot_product8.
+// First attempt used explicit scalar `(int)a.s0*b.s0 + ...` -- the Adreno
+// compiler did NOT fuse that to the ssad instruction; the unfused kernel
+// ran 2.5x SLOWER than the fp16 path because it emitted 128 scalar
+// imul/iadd ops per WI per iter vs the fp16 path's 4 half8 FMAs.
+//
+// We now use the standardized `cl_khr_integer_dot_product` extension's
+// `dot_acc_sat(char4, char4, int)` intrinsic, which maps directly to the
+// ssad hardware op on Adreno 7xx+ (and on ARM Mali via the same
+// standardized entry point). If the device does not advertise the
+// extension we fall back to a vector-widening form which sometimes
+// pattern-matches on Adreno even when the extension is absent, but that
+// is a correctness path, not a perf path -- treat a "no extension"
+// device as "DP4A path should not be used here".
+#if defined(cl_khr_integer_dot_product)
+#pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
+#define DP4A_HAVE_INTRINSIC 1
+#else
+#define DP4A_HAVE_INTRINSIC 0
+#endif
+
 inline int dot4_i8(char4 a, char4 b, int acc) {
-  return acc + (int)a.s0 * (int)b.s0 + (int)a.s1 * (int)b.s1 +
-         (int)a.s2 * (int)b.s2 + (int)a.s3 * (int)b.s3;
+#if DP4A_HAVE_INTRINSIC
+  // Hardware ssad (signed saturating accumulating dot product).
+  return dot_acc_sat(a, b, acc);
+#else
+  // Vector fallback. Relies on the compiler to recognize the pattern.
+  int4 p = convert_int4(a) * convert_int4(b);
+  return acc + p.s0 + p.s1 + p.s2 + p.s3;
+#endif
 }
 
 // Decode a 16-bit packed-int4 value (4 nibbles with bias-8 encoding) into
