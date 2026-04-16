@@ -486,6 +486,27 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
 #if !defined(__APPLE__)
     gpu_opts.SetPreferTextureWeights(true);
 #endif
+    // Match Gemma4 prefill's GPU compilation options so the CL delegate
+    // picks the same kernels here as it does on the real model. These
+    // are the options runtime/executor/llm_executor_settings_utils.cc
+    // (CreateCompilationOptions) sets for the production Backend::GPU
+    // path; without them the delegate re-lowers the int8 FC/Conv ops
+    // back to fp16 on its own and we get `convolution1x1(conv_wave_memory)`
+    // instead of prefill's `convolution_int8(conv_wave_memory)`.
+    //
+    // Primary knob: EnableAllowSrcQuantizedFcConvOps tells the delegate
+    // to accept the model's source int8 FC/Conv schema end-to-end
+    // instead of converting it. Verified against prefill's code at
+    // llm_executor_settings_utils.cc:201-203.
+    //
+    // The "single delegate" hint and external-tensors/constant-sharing
+    // knobs match the same code and are listed here even though we
+    // don't expect them to change the kernel name -- they do affect
+    // weight layout and upload behavior, and keeping the option set
+    // identical to prefill reduces surprises when comparing numbers.
+    gpu_opts.EnableAllowSrcQuantizedFcConvOps(true);
+    gpu_opts.SetHintFullyDelegatedToSingleDelegate(true);
+    gpu_opts.EnableConstantTensorSharing(true);
     // OpenCL program cache wiring. When --cache_dir is set, tell the
     // GPU compilation options where to serialize compiled programs +
     // external tensor data, and attach a per-(M,N,K,dtype) cache key
