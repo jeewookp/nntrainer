@@ -1806,9 +1806,28 @@ void gemm_int4_adreno_v3_cl(uint16_t *input, uint16_t *input_transposed,
     // (1, 128, 1); v3 = (N/4, 4, ceilDiv(M,8)) with local (32, 4, 1).
     // The y=4 dimension is what lets all 4 K-split WIs land in the
     // same WG so they can share __local memory.
-    const int g_global[3] = {static_cast<int>(N) / 4, 4,
+    //
+    // N/4 is rounded up to a multiple of WG_X (=32) because the kernel
+    // declares __attribute__((qcom_reqd_sub_group_size("full"))), which
+    // on Adreno 8xx requires the WG to be a multiple of the wave size
+    // (64 WIs). For shapes with N/4 < 32 (e.g. N=32 -> N/4=8, N=64 ->
+    // N/4=16) the driver would otherwise either round up to a uniform
+    // WG anyway or produce a non-uniform WG that violates the full-SG
+    // requirement, and the extra OOB lanes along x would silently write
+    // garbage to legitimate output cells (packed_w from an OOB image
+    // read returns 0, and (0 & 0xF) - 8 = -8 still multiplies into a
+    // nonzero dq value that gets vstore4'd to output + n, clobbering a
+    // different lane's tile). Pad the global size to match the WG and
+    // guard the writes via `n >= N` in the kernel so OOB lanes still
+    // hit the barrier but skip the output store.
+    constexpr int WG_X = 32;
+    const int n_tiles_padded =
+      static_cast<int>(ceilDiv(static_cast<unsigned int>(N) / 4u,
+                               static_cast<unsigned int>(WG_X))) *
+      WG_X;
+    const int g_global[3] = {n_tiles_padded, 4,
                              static_cast<int>(ceilDiv(M, 8u))};
-    const int g_local[3] = {32, 4, 1};
+    const int g_local[3] = {WG_X, 4, 1};
     result = blas_cc->command_queue_inst_.DispatchCommand(gemm_kernel, g_global,
                                                           g_local);
     if (!result)

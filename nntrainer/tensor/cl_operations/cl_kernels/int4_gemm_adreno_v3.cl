@@ -146,7 +146,18 @@ gpu_int4_gemm_adreno_v3(__read_only image1d_buffer_t input,
   // follow-up optimization, but keeping them idle here is simpler and
   // the big win is the 4x inner-loop concurrency, not using those
   // lanes in the epilogue.
-  if (ly != 0) {
+  //
+  // We also drop lanes with n >= N here. The host dispatch rounds the
+  // global x-size up to a multiple of WG_X (=32) so that the WG stays
+  // full-wave for qcom_reqd_sub_group_size("full"). Shapes with
+  // N/4 < 32 (e.g. N=32/64) create up to 24 OOB lanes per WG along x;
+  // they participated in the barrier above (can't skip it - that would
+  // deadlock the in-bounds ly==0 lanes) but must NOT write to output,
+  // because their idx = (m<<2)*N + n still falls inside the [0, M*N)
+  // buffer and would clobber legitimate tiles that a different WI is
+  // writing. Before this guard, M=8 K=32 N=32 and M=8 K=64 N=64 tests
+  // produced MSE ~4-5 from exactly this clobber.
+  if (ly != 0 || n >= N) {
     return;
   }
 
