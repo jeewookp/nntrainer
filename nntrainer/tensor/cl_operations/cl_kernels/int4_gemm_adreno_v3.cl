@@ -59,12 +59,19 @@ gpu_int4_gemm_adreno_v3(__read_only image1d_buffer_t input,
   half8 input_reg;
   half4 dq_weights_reg;
   uint4 packed_w;
-  half4 scale;
+
+  // v1/v2 used `if ((k & 0x1F) == 0)` inside the inner loop to load the
+  // scale once at k=0 and keep it (channel-wise -> constant across k).
+  // That breaks under K-split: each ly starts at a different k and can
+  // skip k=0 entirely (e.g. K=32, ly=1 starts at k=8 with 8 & 0x1F != 0),
+  // leaving `scale` uninitialized. Manifested as MSE ~4-5 on 8x32x32
+  // and 8x64x64. Fix: load the scale once, outside the loop, indexed by
+  // the WI's k_start. Only correct when q_group_size >= K_per_split,
+  // which is always true for channel-wise (q_group_size = K).
+  half4 scale =
+    vload4(0, scales + (k_start / quantization_group_size) * align_N + n);
 
   for (int k = k_start; k < k_end; k += 4) {
-    if ((k & 0x1F) == 0) {
-      scale = vload4(0, scales + (k / quantization_group_size) * align_N + n);
-    }
     packed_w = read_imageui(weights, (k >> 2) * N_4 + (n >> 2));
 
     input_reg.s0123 = read_imageh(input, k * M_4 + m);
