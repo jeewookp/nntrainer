@@ -184,13 +184,13 @@ echo " Run summary"
 echo "=========================================="
 echo ""
 echo "--- Per-shape latency / MSE ---"
-grep -E "int4_gemm_adreno M=|int4_gemm_adreno_v2 M=|int8_int4_gemm_adreno M=" \
+grep -E "int4_gemm_adreno M=|int4_gemm_adreno_v2 M=|int4_gemm_adreno_v3 M=|int8_int4_gemm_adreno M=" \
   "${RUN_LOG}" || echo "(no per-shape lines found)"
 
 echo ""
-echo "--- A/B benchmark (fp16 v1 vs fp16 v2 tex vs DP4A) ---"
-grep -E "A/B bench|fp16 v1|fp16 v2 tex|dp4a|v2 MSE|dp4a MSE" "${RUN_LOG}" \
-  || echo "(no A/B bench lines found)"
+echo "--- A/B benchmark (fp16 v1 vs v2 tex vs v3 k-split vs DP4A) ---"
+grep -E "A/B bench|fp16 v1|fp16 v2 tex|fp16 v3 ksplit|dp4a|v2 MSE|v3 MSE|dp4a MSE" \
+  "${RUN_LOG}" || echo "(no A/B bench lines found)"
 
 echo ""
 echo "--- gtest pass/fail tally ---"

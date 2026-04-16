@@ -577,6 +577,138 @@ DECLARE_int4_gemm_adreno_v2_test_M_K_N(64, 512, 256);
 DECLARE_int4_gemm_adreno_v2_test_M_K_N(128, 1024, 512);
 DECLARE_int4_gemm_adreno_v2_test_M_K_N(512, 1024, 1024);
 
+// -------------------------------------------------------------------------
+// Phase 3c step 2 (v3) tests: K-axis split + __local reduction on top of
+// v2's weight texture path. We expect the larger K shapes to dominate
+// the speedup -- v3's win is quadrupling the number of concurrent
+// memory fetches per output element, which only helps if K is big
+// enough to matter.
+// -------------------------------------------------------------------------
+static void run_gemm_int4_adreno_v3_test_(const unsigned int M,
+                                           const unsigned int K,
+                                           const unsigned int N) {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+
+  const unsigned int scale_group_size = K;
+  constexpr int INT4_BLOCK_N_SIZE = 32;
+  const unsigned int alignN = align(N, INT4_BLOCK_N_SIZE);
+  const unsigned int alignK = align(K, scale_group_size);
+
+  std::vector<float> input_orig =
+    generate_random_vector<float, false>(M * K, -1.0f, 1.0f);
+  std::vector<float> weight_fp32 =
+    generate_random_vector<float, false>(N * K, -1.0f, 1.0f);
+
+  std::vector<uint16_t> packed_nibbles;
+  std::vector<uint16_t> packed_scales_fp16;
+  std::vector<float> dequant_weights;
+  PackInt4ChannelwiseAdreno(weight_fp32.data(), N, K, packed_nibbles,
+                             packed_scales_fp16, dequant_weights);
+
+  std::vector<float> ref_dst(static_cast<size_t>(M) * N, 0.0f);
+  nntrainer::sgemm(0, false, true, M, N, K, 1.0f, input_orig.data(), K,
+                   dequant_weights.data(), K, 0.0f, ref_dst.data(), N);
+
+  std::vector<float> input_padded(static_cast<size_t>(M) * alignK, 0.0f);
+  for (unsigned int m = 0; m < M; ++m)
+    for (unsigned int k = 0; k < K; ++k)
+      input_padded[m * alignK + k] = input_orig[m * K + k];
+
+  const size_t input_svm_bytes =
+    static_cast<size_t>(M) * alignK * sizeof(uint16_t);
+  const size_t input_t_svm_bytes =
+    static_cast<size_t>(align(M, 4u)) * alignK * sizeof(uint16_t);
+  const size_t weights_svm_bytes =
+    static_cast<size_t>(alignK / 4u) * N * sizeof(uint16_t);
+  const size_t scales_svm_bytes =
+    static_cast<size_t>(alignN) * sizeof(uint16_t);
+  const size_t output_svm_bytes =
+    static_cast<size_t>(M) * N * sizeof(uint16_t);
+
+  uint16_t *input_ptr = static_cast<uint16_t *>(allocateSVM(input_svm_bytes));
+  uint16_t *input_t_ptr =
+    static_cast<uint16_t *>(allocateSVM(input_t_svm_bytes));
+  uint16_t *weight_ptr =
+    static_cast<uint16_t *>(allocateSVM(weights_svm_bytes));
+  uint16_t *scale_ptr =
+    static_cast<uint16_t *>(allocateSVM(scales_svm_bytes));
+  uint16_t *output_ptr = static_cast<uint16_t *>(allocateSVM(output_svm_bytes));
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(input_ptr, input_svm_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(input_t_ptr, input_t_svm_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(weight_ptr, weights_svm_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(scale_ptr, scales_svm_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(output_ptr, output_svm_bytes,
+                                              false);
+
+  for (size_t i = 0; i < static_cast<size_t>(M) * alignK; ++i)
+    input_ptr[i] = compute_fp32_to_fp16(input_padded[i]);
+  std::memset(input_t_ptr, 0, input_t_svm_bytes);
+  for (size_t i = 0; i < packed_nibbles.size(); ++i)
+    weight_ptr[i] = packed_nibbles[i];
+  std::memset(scale_ptr, 0, scales_svm_bytes);
+  for (size_t n = 0; n < N; ++n)
+    scale_ptr[n] = packed_scales_fp16[n];
+  std::memset(output_ptr, 0, output_svm_bytes);
+
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(input_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(input_t_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(weight_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(scale_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(output_ptr);
+
+  nntrainer::gemm_int4_adreno_v3_cl(input_ptr, input_t_ptr, weight_ptr,
+                                     scale_ptr, output_ptr, M, N, K);
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  nntrainer::gemm_int4_adreno_v3_cl(input_ptr, input_t_ptr, weight_ptr,
+                                     scale_ptr, output_ptr, M, N, K);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  const double gpu_ms =
+    std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+  std::vector<float> gpu_out_fp32(static_cast<size_t>(M) * N, 0.0f);
+  for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
+    gpu_out_fp32[i] = compute_fp16_to_fp32(output_ptr[i]);
+
+  const float mse_err = mse<float>(ref_dst.data(), gpu_out_fp32.data(), M * N);
+  const float mse_tol = GetMseTolerance(M, K, N);
+
+  std::cout << "int4_gemm_adreno_v3 M=" << M << " K=" << K << " N=" << N
+            << " (K-split local-reduce) gpu=" << gpu_ms
+            << " ms  MSE=" << mse_err << " (tol=" << mse_tol << ")"
+            << std::endl;
+
+  EXPECT_LT(mse_err, mse_tol)
+    << "v3 MSE exceeded tol. M=" << M << " K=" << K << " N=" << N;
+
+  freeSVM(output_ptr);
+  freeSVM(scale_ptr);
+  freeSVM(weight_ptr);
+  freeSVM(input_t_ptr);
+  freeSVM(input_ptr);
+}
+
+#define DECLARE_int4_gemm_adreno_v3_test_M_K_N(M, K, N)                        \
+  TEST(nntrainer_opencl_adreno_kernels_int4_v3,                                \
+       int4_gemm_adreno_v3_test_##M##_##K##_##N) {                             \
+    run_gemm_int4_adreno_v3_test_(M, K, N);                                    \
+  }
+
+// v3 requires K % 16 == 0 (K_SPLIT=4 x 4-nibbles/ushort). All current
+// test shapes have K in {32, 64, 128, 256, 512, 1024} which is fine.
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(8, 32, 32);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(8, 64, 64);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(16, 128, 128);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(32, 256, 256);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(64, 512, 256);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(128, 1024, 512);
+DECLARE_int4_gemm_adreno_v3_test_M_K_N(512, 1024, 1024);
+
 // =========================================================================
 // INT8 activation x INT4 weight (DP4A) tests + A/B benchmark.
 //
@@ -866,11 +998,19 @@ static void run_ab_bench_(const unsigned int M, const unsigned int K,
   std::memset(output_v2, 0, output_bytes);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(output_v2);
 
-  // --- Warmup all three paths (compile + first-touch) ---------------
+  // v3 (fp16 + weight texture + K-split + local reduction).
+  uint16_t *output_v3 = static_cast<uint16_t *>(allocateSVM(output_bytes));
+  blas_cc->command_queue_inst_.enqueueSVMMap(output_v3, output_bytes, false);
+  std::memset(output_v3, 0, output_bytes);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(output_v3);
+
+  // --- Warmup all four paths (compile + first-touch) ----------------
   nntrainer::gemm_int4_adreno_cl(fp16_in, fp16_in_t, weight_ptr, w_scale_ptr,
                                    output_fp16, M, N, K);
   nntrainer::gemm_int4_adreno_v2_cl(fp16_in, fp16_in_t, weight_ptr,
                                      w_scale_ptr, output_v2, M, N, K);
+  nntrainer::gemm_int4_adreno_v3_cl(fp16_in, fp16_in_t, weight_ptr,
+                                     w_scale_ptr, output_v3, M, N, K);
   nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
                                        weight_ptr, output_dp4a, M, N, K);
 
@@ -878,6 +1018,7 @@ static void run_ab_bench_(const unsigned int M, const unsigned int K,
   constexpr int N_ITER = 10;
   double fp16_ms_sum = 0.0;
   double v2_ms_sum = 0.0;
+  double v3_ms_sum = 0.0;
   double dp4a_ms_sum = 0.0;
 
   for (int it = 0; it < N_ITER; ++it) {
@@ -898,6 +1039,14 @@ static void run_ab_bench_(const unsigned int M, const unsigned int K,
   }
   for (int it = 0; it < N_ITER; ++it) {
     const auto t0 = std::chrono::high_resolution_clock::now();
+    nntrainer::gemm_int4_adreno_v3_cl(fp16_in, fp16_in_t, weight_ptr,
+                                       w_scale_ptr, output_v3, M, N, K);
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    v3_ms_sum +=
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+  }
+  for (int it = 0; it < N_ITER; ++it) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
     nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
                                          weight_ptr, output_dp4a, M, N, K);
     const auto t1 = std::chrono::high_resolution_clock::now();
@@ -907,18 +1056,25 @@ static void run_ab_bench_(const unsigned int M, const unsigned int K,
 
   const double fp16_ms = fp16_ms_sum / N_ITER;
   const double v2_ms = v2_ms_sum / N_ITER;
+  const double v3_ms = v3_ms_sum / N_ITER;
   const double dp4a_ms = dp4a_ms_sum / N_ITER;
   const double gflops = 2.0 * static_cast<double>(M) * K * N / 1.0e9;
   const double fp16_tflops = gflops / (fp16_ms * 1e-3) / 1000.0;
   const double v2_tflops = gflops / (v2_ms * 1e-3) / 1000.0;
+  const double v3_tflops = gflops / (v3_ms * 1e-3) / 1000.0;
   const double dp4a_tflops = gflops / (dp4a_ms * 1e-3) / 1000.0;
 
-  // Validate v2 and DP4A outputs.
   std::vector<float> v2_out_fp32(static_cast<size_t>(M) * N, 0.0f);
   for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
     v2_out_fp32[i] = compute_fp16_to_fp32(output_v2[i]);
   const float mse_v2 =
     mse<float>(ref_fp16.data(), v2_out_fp32.data(), M * N);
+
+  std::vector<float> v3_out_fp32(static_cast<size_t>(M) * N, 0.0f);
+  for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
+    v3_out_fp32[i] = compute_fp16_to_fp32(output_v3[i]);
+  const float mse_v3 =
+    mse<float>(ref_fp16.data(), v3_out_fp32.data(), M * N);
 
   std::vector<float> dp4a_out_fp32(static_cast<size_t>(M) * N, 0.0f);
   for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
@@ -926,27 +1082,34 @@ static void run_ab_bench_(const unsigned int M, const unsigned int K,
   const float mse_dp4a =
     mse<float>(ref_dp4a.data(), dp4a_out_fp32.data(), M * N);
   const float mse_tol_dp4a = GetMseToleranceDp4a(M, K, N);
-  const float mse_tol_v2 = GetMseTolerance(M, K, N);
+  const float mse_tol_fp16 = GetMseTolerance(M, K, N);
 
   std::cout << "\n======== A/B bench M=" << M << " K=" << K << " N=" << N
             << " ========" << std::endl;
-  std::cout << "  fp16 v1    : " << fp16_ms << " ms / iter  ("
+  std::cout << "  fp16 v1      : " << fp16_ms << " ms / iter  ("
             << fp16_tflops << " TFLOPS)" << std::endl;
-  std::cout << "  fp16 v2 tex: " << v2_ms << " ms / iter  (" << v2_tflops
+  std::cout << "  fp16 v2 tex  : " << v2_ms << " ms / iter  (" << v2_tflops
             << " TFLOPS)  speedup " << (fp16_ms / v2_ms) << "x vs v1"
             << std::endl;
-  std::cout << "  dp4a       : " << dp4a_ms << " ms / iter  ("
+  std::cout << "  fp16 v3 ksplit: " << v3_ms << " ms / iter  (" << v3_tflops
+            << " TFLOPS)  speedup " << (fp16_ms / v3_ms) << "x vs v1"
+            << std::endl;
+  std::cout << "  dp4a         : " << dp4a_ms << " ms / iter  ("
             << dp4a_tflops << " TFLOPS)  speedup " << (fp16_ms / dp4a_ms)
             << "x vs v1" << std::endl;
-  std::cout << "  v2 MSE     : " << mse_v2 << " (tol=" << mse_tol_v2 << ")"
+  std::cout << "  v2 MSE       : " << mse_v2 << " (tol=" << mse_tol_fp16 << ")"
             << std::endl;
-  std::cout << "  dp4a MSE   : " << mse_dp4a << " (tol=" << mse_tol_dp4a
+  std::cout << "  v3 MSE       : " << mse_v3 << " (tol=" << mse_tol_fp16 << ")"
+            << std::endl;
+  std::cout << "  dp4a MSE     : " << mse_dp4a << " (tol=" << mse_tol_dp4a
             << ")" << std::endl;
 
-  EXPECT_LT(mse_v2, mse_tol_v2) << "v2 A/B bench MSE exceeded tolerance";
+  EXPECT_LT(mse_v2, mse_tol_fp16) << "v2 A/B bench MSE exceeded tolerance";
+  EXPECT_LT(mse_v3, mse_tol_fp16) << "v3 A/B bench MSE exceeded tolerance";
   EXPECT_LT(mse_dp4a, mse_tol_dp4a)
     << "DP4A path A/B bench MSE exceeded tolerance";
 
+  freeSVM(output_v3);
   freeSVM(output_v2);
   freeSVM(output_dp4a);
   freeSVM(x_scale_ptr);

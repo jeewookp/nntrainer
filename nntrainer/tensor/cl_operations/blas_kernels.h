@@ -189,6 +189,32 @@ void gemm_int4_adreno_v2_cl(uint16_t *input, uint16_t *input_transposed,
                             unsigned int K);
 
 /**
+ * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v3
+ *        (weight texture + K-axis WG split + __local reduction).
+ *
+ * Builds on v2's weight texture binding but adds LiteRT's main
+ * throughput lever: each output tile is computed by K_SPLIT=4
+ * work-items collaborating along the K dimension. Each of the 4 WIs
+ * does a quarter of the K reduction, writes its partial result to
+ * __local memory, a barrier synchronizes, and the ly==0 lane sums the
+ * 4 quarters and emits the output. Quadruples the number of
+ * concurrent memory fetches per output element.
+ *
+ * Dispatch geometry: local=(32, 4, 1), global=(N/4, 4, ceilDiv(M, 8)).
+ *
+ * Shape constraints:
+ *   - N % 4 == 0 (WI writes 4 cols)
+ *   - K % 16 == 0 (K_SPLIT=4, each split processes multiples of 4)
+ *
+ * Same weight/input/scale/output layout contract as
+ * gemm_int4_adreno_cl and gemm_int4_adreno_v2_cl.
+ */
+void gemm_int4_adreno_v3_cl(uint16_t *input, uint16_t *input_transposed,
+                            uint16_t *weights, uint16_t *scales,
+                            uint16_t *output, unsigned int M, unsigned int N,
+                            unsigned int K);
+
+/**
  * @brief INT4 channel-wise GEMV for Adreno GPUs (M = 1, gpu_int4_gemv_adreno
  *        kernel).
  *
