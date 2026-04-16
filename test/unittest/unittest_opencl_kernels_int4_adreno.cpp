@@ -317,15 +317,15 @@ static void run_gemm_int4_adreno_test_(const unsigned int M,
 
   const float mse_err =
     mse<float>(ref_dst.data(), gpu_out_fp32.data(), M * N);
-  const float tolerance = GetMseTolerance(M, K, N);
+  const float mse_tol = GetMseTolerance(M, K, N);
 
   std::cout << "int4_gemm_adreno M=" << M << " K=" << K << " N=" << N
             << " (channel-wise) gpu=" << gpu_ms << " ms  MSE=" << mse_err
-            << " (tol=" << tolerance << ")" << std::endl;
+            << " (tol=" << mse_tol << ")" << std::endl;
 
-  EXPECT_LT(mse_err, tolerance)
+  EXPECT_LT(mse_err, mse_tol)
     << "MSE exceeded tolerance for gemm_int4_adreno M=" << M << " K=" << K
-    << " N=" << N << " (mse=" << mse_err << " tol=" << tolerance << ")";
+    << " N=" << N << " (mse=" << mse_err << " tol=" << mse_tol << ")";
 
   // Spot-check a handful of output elements against the CPU reference
   // with a per-element relative tolerance. These catch layout bugs where

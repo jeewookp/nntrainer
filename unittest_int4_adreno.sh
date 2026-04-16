@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # unittest_int4_adreno.sh - Build and run the gemm_int4_adreno_cl unit
 #                           test on a connected Android device.
