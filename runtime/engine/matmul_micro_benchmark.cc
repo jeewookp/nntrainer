@@ -564,6 +564,20 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
     // straight burst loop, 2 is also fine -- anything >=1 is an
     // improvement over the default of 0.
     gpu_opts.SetNumStepsOfCommandBufferPreparations(2);
+    // NoExternalTensorsMode: the delegate takes full control of
+    // tensor layout and placement. In ExternalTensorsMode (the
+    // default), input/output TensorBuffers are host-backed by
+    // default and the delegate has to do a host->GPU copy on every
+    // Run() -- that's what the `Delegate/UploadOrBindTensorBuffer`
+    // row in Delegate Statistics was measuring (2 ms per iter for
+    // the 1024x6144x1536 shape). Turning external tensors off lets
+    // the delegate allocate GPU-native input/output buffers and
+    // skip the per-iter upload. Prefill sets this from
+    // `gpu_config.external_tensor_mode` which defaults to false in
+    // runtime/executor/llm_executor_settings_utils.cc:174. Keep
+    // AddExternalTensorPattern "kv_cache_" out of here -- our
+    // single-op graph has no KV cache.
+    gpu_opts.EnableExternalTensorsMode(false);
     // OpenCL program cache wiring. When --cache_dir is set, tell the
     // GPU compilation options where to serialize compiled programs +
     // external tensor data, and attach a per-(M,N,K,dtype) cache key
