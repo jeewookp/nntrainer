@@ -1,20 +1,14 @@
 실행 결과 아래와 같아
 
-Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= jni/../../builddir/jni/arm64-v8a/
-[arm64-v8a] Prebuilt       : libOpenCL.so <= jni/../../builddir/jni/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= jni/../../builddir/jni/arm64-v8a/
-[arm64-v8a] Executable     : unittest_opencl_kernels_int4_adreno
-
 ==========================================
 [Step 3/4] Pushing to device
 ==========================================
 Pushing test/obj/local/arm64-v8a/unittest_opencl_kernels_int4_adreno -> /data/local/tmp/nntr_android_test/
-test/obj/local/arm64-v8a/unittest_opencl_kernels_int4_adreno: 1 file pushed. 33.3 MB/s (5669232 bytes in 0.162s)
-builddir/jni/arm64-v8a/libnntrainer.so: 1 file pushed. 33.1 MB/s (11024424 bytes in 0.318s)
-builddir/jni/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.1 MB/s (129336 bytes in 0.006s)
-builddir/jni/arm64-v8a/libOpenCL.so: 1 file pushed. 22.8 MB/s (163320 bytes in 0.007s)
-builddir/jni/arm64-v8a/libc++_shared.so: 1 file pushed. 30.9 MB/s (1822720 bytes in 0.056s)
+test/obj/local/arm64-v8a/unittest_opencl_kernels_int4_adreno: 1 file pushed. 32.9 MB/s (5773592 bytes in 0.167s)
+builddir/jni/arm64-v8a/libnntrainer.so: 1 file pushed. 32.7 MB/s (11036200 bytes in 0.322s)
+builddir/jni/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.8 MB/s (129336 bytes in 0.006s)
+builddir/jni/arm64-v8a/libOpenCL.so: 1 file pushed. 23.1 MB/s (163320 bytes in 0.007s)
+builddir/jni/arm64-v8a/libc++_shared.so: 1 file pushed. 30.7 MB/s (1822720 bytes in 0.057s)
 [OK] Push complete
 
 ==========================================
@@ -23,7 +17,7 @@ builddir/jni/arm64-v8a/libc++_shared.so: 1 file pushed. 30.9 MB/s (1822720 bytes
 Filter: --gtest_filter=nntrainer_opencl_adreno_kernels_*.*
 
 Note: Google Test filter = nntrainer_opencl_adreno_kernels_*.*
-[==========] Running 16 tests from 3 test suites.
+[==========] Running 23 tests from 4 test suites.
 [----------] Global test environment set-up.
 [----------] 7 tests from nntrainer_opencl_adreno_kernels_int4
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_8_32_32
@@ -90,123 +84,158 @@ Note: Google Test filter = nntrainer_opencl_adreno_kernels_*.*
   cl_qcom_large_buffer
   cl_qcom_ahardwarebuffer_direct_import
   cl_qcom_local_memory_control
-int4_gemm_adreno M=8 K=32 N=32 (channel-wise) gpu=0.529531 ms  MSE=3.87865e-06 (tol=0.004096)
+int4_gemm_adreno M=8 K=32 N=32 (channel-wise) gpu=0.530521 ms  MSE=3.87865e-06 (tol=0.004096)
 [       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_8_32_32 (29 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_8_64_64
-int4_gemm_adreno M=8 K=64 N=64 (channel-wise) gpu=0.119167 ms  MSE=1.77032e-05 (tol=0.016384)
+int4_gemm_adreno M=8 K=64 N=64 (channel-wise) gpu=0.120989 ms  MSE=1.77032e-05 (tol=0.016384)
 [       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_8_64_64 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_16_128_128
-int4_gemm_adreno M=16 K=128 N=128 (channel-wise) gpu=0.288594 ms  MSE=7.84366e-05 (tol=0.065536)
+int4_gemm_adreno M=16 K=128 N=128 (channel-wise) gpu=0.190157 ms  MSE=7.84366e-05 (tol=0.065536)
 [       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_16_128_128 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_32_256_256
-int4_gemm_adreno M=32 K=256 N=256 (channel-wise) gpu=0.24875 ms  MSE=0.000336195 (tol=0.262144)
-[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_32_256_256 (2 ms)
+int4_gemm_adreno M=32 K=256 N=256 (channel-wise) gpu=0.280208 ms  MSE=0.000336195 (tol=0.262144)
+[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_32_256_256 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_64_512_256
-int4_gemm_adreno M=64 K=512 N=256 (channel-wise) gpu=0.369844 ms  MSE=0.00171965 (tol=1.04858)
-[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_64_512_256 (3 ms)
+int4_gemm_adreno M=64 K=512 N=256 (channel-wise) gpu=0.340625 ms  MSE=0.00171965 (tol=1.04858)
+[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_64_512_256 (2 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_128_1024_512
-int4_gemm_adreno M=128 K=1024 N=512 (channel-wise) gpu=0.458385 ms  MSE=0.0169513 (tol=4.1943)
-[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_128_1024_512 (9 ms)
+int4_gemm_adreno M=128 K=1024 N=512 (channel-wise) gpu=0.646719 ms  MSE=0.0169513 (tol=4.1943)
+[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_128_1024_512 (8 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_512_1024_1024
-int4_gemm_adreno M=512 K=1024 N=1024 (channel-wise) gpu=0.770886 ms  MSE=0.00954537 (tol=4.1943)
-[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_512_1024_1024 (26 ms)
-[----------] 7 tests from nntrainer_opencl_adreno_kernels_int4 (73 ms total)
+int4_gemm_adreno M=512 K=1024 N=1024 (channel-wise) gpu=2.17656 ms  MSE=0.00954537 (tol=4.1943)
+[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_512_1024_1024 (24 ms)
+[----------] 7 tests from nntrainer_opencl_adreno_kernels_int4 (69 ms total)
+
+[----------] 7 tests from nntrainer_opencl_adreno_kernels_int4_v2
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_8_32_32
+int4_gemm_adreno_v2 M=8 K=32 N=32 (texture weights) gpu=0.224896 ms  MSE=3.87865e-06 (tol=0.004096)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_8_32_32 (22 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_8_64_64
+int4_gemm_adreno_v2 M=8 K=64 N=64 (texture weights) gpu=0.245625 ms  MSE=1.77032e-05 (tol=0.016384)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_8_64_64 (1 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_16_128_128
+int4_gemm_adreno_v2 M=16 K=128 N=128 (texture weights) gpu=0.244531 ms  MSE=7.84366e-05 (tol=0.065536)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_16_128_128 (1 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_32_256_256
+int4_gemm_adreno_v2 M=32 K=256 N=256 (texture weights) gpu=0.264688 ms  MSE=0.000336195 (tol=0.262144)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_32_256_256 (1 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_64_512_256
+int4_gemm_adreno_v2 M=64 K=512 N=256 (texture weights) gpu=0.314531 ms  MSE=0.00171965 (tol=1.04858)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_64_512_256 (2 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_128_1024_512
+int4_gemm_adreno_v2 M=128 K=1024 N=512 (texture weights) gpu=0.454218 ms  MSE=0.0169513 (tol=4.1943)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_128_1024_512 (7 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_512_1024_1024
+int4_gemm_adreno_v2 M=512 K=1024 N=1024 (texture weights) gpu=0.864479 ms  MSE=0.00954537 (tol=4.1943)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_512_1024_1024 (23 ms)
+[----------] 7 tests from nntrainer_opencl_adreno_kernels_int4_v2 (60 ms total)
 
 [----------] 7 tests from nntrainer_opencl_adreno_kernels_int8_int4
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_32_32
-int8_int4_gemm_adreno M=8 K=32 N=32 (DP4A, channel-wise) gpu=0.240677 ms  MSE=3.39794e-07 (tol=0.009216)
+int8_int4_gemm_adreno M=8 K=32 N=32 (DP4A, channel-wise) gpu=0.235 ms  MSE=3.39794e-07 (tol=0.009216)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_32_32 (65 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_64_64
-int8_int4_gemm_adreno M=8 K=64 N=64 (DP4A, channel-wise) gpu=0.410938 ms  MSE=6.38011e-07 (tol=0.036864)
+int8_int4_gemm_adreno M=8 K=64 N=64 (DP4A, channel-wise) gpu=0.194062 ms  MSE=6.38011e-07 (tol=0.036864)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_64_64 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_16_128_128
-int8_int4_gemm_adreno M=16 K=128 N=128 (DP4A, channel-wise) gpu=0.419792 ms  MSE=1.24043e-06 (tol=0.147456)
+int8_int4_gemm_adreno M=16 K=128 N=128 (DP4A, channel-wise) gpu=0.211407 ms  MSE=1.24043e-06 (tol=0.147456)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_16_128_128 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_32_256_256
-int8_int4_gemm_adreno M=32 K=256 N=256 (DP4A, channel-wise) gpu=0.270521 ms  MSE=2.75854e-06 (tol=0.589824)
+int8_int4_gemm_adreno M=32 K=256 N=256 (DP4A, channel-wise) gpu=0.224427 ms  MSE=2.75854e-06 (tol=0.589824)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_32_256_256 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256
-int8_int4_gemm_adreno M=64 K=512 N=256 (DP4A, channel-wise) gpu=0.290937 ms  MSE=7.68697e-06 (tol=2.3593)
-[       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256 (3 ms)
+int8_int4_gemm_adreno M=64 K=512 N=256 (DP4A, channel-wise) gpu=0.267032 ms  MSE=7.68697e-06 (tol=2.3593)
+[       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256 (2 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_128_1024_512
-int8_int4_gemm_adreno M=128 K=1024 N=512 (DP4A, channel-wise) gpu=0.396927 ms  MSE=1.33647e-05 (tol=9.43718)
+int8_int4_gemm_adreno M=128 K=1024 N=512 (DP4A, channel-wise) gpu=0.609635 ms  MSE=1.33647e-05 (tol=9.43718)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_128_1024_512 (7 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_512_1024_1024
-int8_int4_gemm_adreno M=512 K=1024 N=1024 (DP4A, channel-wise) gpu=0.785781 ms  MSE=9.81844e-06 (tol=9.43718)
+int8_int4_gemm_adreno M=512 K=1024 N=1024 (DP4A, channel-wise) gpu=1.0325 ms  MSE=9.81844e-06 (tol=9.43718)
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_512_1024_1024 (24 ms)
-[----------] 7 tests from nntrainer_opencl_adreno_kernels_int8_int4 (105 ms total)
+[----------] 7 tests from nntrainer_opencl_adreno_kernels_int8_int4 (104 ms total)
 
 [----------] 2 tests from nntrainer_opencl_adreno_kernels_ab
 [ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024
 
 ======== A/B bench M=512 K=1024 N=1024 ========
-  fp16 path : 0.75912 ms / iter  (1.41446 TFLOPS)
-  dp4a path : 0.818885 ms / iter  (1.31122 TFLOPS)
-  speedup   : 0.927016x
-  dp4a MSE  : 9.81844e-06 (tol=9.43718)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024 (50 ms)
+  fp16 v1    : 0.863016 ms / iter  (1.24417 TFLOPS)
+  fp16 v2 tex: 0.947067 ms / iter  (1.13375 TFLOPS)  speedup 0.91125x vs v1
+  dp4a       : 0.801047 ms / iter  (1.34042 TFLOPS)  speedup 1.07736x vs v1
+  v2 MSE     : 0.00954537 (tol=4.1943)
+  dp4a MSE   : 9.81844e-06 (tol=9.43718)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024 (65 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512
 
 ======== A/B bench M=128 K=1024 N=512 ========
-  fp16 path : 0.47501 ms / iter  (0.282557 TFLOPS)
-  dp4a path : 0.334891 ms / iter  (0.400781 TFLOPS)
-  speedup   : 1.4184x
-  dp4a MSE  : 1.33647e-05 (tol=9.43718)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512 (19 ms)
-[----------] 2 tests from nntrainer_opencl_adreno_kernels_ab (69 ms total)
+  fp16 v1    : 0.311703 ms / iter  (0.430595 TFLOPS)
+  fp16 v2 tex: 0.297688 ms / iter  (0.450868 TFLOPS)  speedup 1.04708x vs v1
+  dp4a       : 0.235375 ms / iter  (0.57023 TFLOPS)  speedup 1.32428x vs v1
+  v2 MSE     : 0.0169513 (tol=4.1943)
+  dp4a MSE   : 1.33647e-05 (tol=9.43718)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512 (21 ms)
+[----------] 2 tests from nntrainer_opencl_adreno_kernels_ab (87 ms total)
 
 [----------] Global test environment tear-down
-[==========] 16 tests from 3 test suites ran. (248 ms total)
-[  PASSED  ] 16 tests.
+[==========] 23 tests from 4 test suites ran. (322 ms total)
+[  PASSED  ] 23 tests.
 
-[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=48.96 ms calls=36
-  cl_mem_create    :     0.10 ms (  0.2%)  [2x clCreateBuffer + 2x clCreateImage]
-  xt_setup         :     6.93 ms ( 14.2%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
-  xt_dispatch      :     0.53 ms (  1.1%)  [DispatchCommand(input_transpose) host-side]
-  gemm_setup       :    15.61 ms ( 31.9%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
-  gemm_dispatch    :     0.12 ms (  0.2%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
-  svm_map_sync     :    25.56 ms ( 52.2%)  [enqueueSVMMap(output, blocking=true) host-wait]
+[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=50.14 ms calls=36
+  cl_mem_create    :     0.11 ms (  0.2%)  [2x clCreateBuffer + 2x clCreateImage]
+  xt_setup         :     7.16 ms ( 14.3%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
+  xt_dispatch      :     0.43 ms (  0.9%)  [DispatchCommand(input_transpose) host-side]
+  gemm_setup       :    15.66 ms ( 31.2%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
+  gemm_dispatch    :     0.13 ms (  0.3%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
+  svm_map_sync     :    26.56 ms ( 53.0%)  [enqueueSVMMap(output, blocking=true) host-wait]
   cl_mem_release   :     0.04 ms (  0.1%)  [4x clReleaseMemObject]
-  prof_query       :     0.06 ms (  0.1%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
+  prof_query       :     0.05 ms (  0.1%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
   --- device-side (event profiling, may overlap host stages above) ---
-  xt_gpu           :     0.94 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
-  gemm_gpu         :     8.09 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
-  gpu_sum          :     9.03 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
+  xt_gpu           :     0.97 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
+  gemm_gpu         :     8.11 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
+  gpu_sum          :     9.08 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
 
 ==========================================
  Run summary
 ==========================================
 
 --- Per-shape latency / MSE ---
-int4_gemm_adreno M=8 K=32 N=32 (channel-wise) gpu=0.529531 ms  MSE=3.87865e-06 (tol=0.004096)
-int4_gemm_adreno M=8 K=64 N=64 (channel-wise) gpu=0.119167 ms  MSE=1.77032e-05 (tol=0.016384)
-int4_gemm_adreno M=16 K=128 N=128 (channel-wise) gpu=0.288594 ms  MSE=7.84366e-05 (tol=0.065536)
-int4_gemm_adreno M=32 K=256 N=256 (channel-wise) gpu=0.24875 ms  MSE=0.000336195 (tol=0.262144)
-int4_gemm_adreno M=64 K=512 N=256 (channel-wise) gpu=0.369844 ms  MSE=0.00171965 (tol=1.04858)
-int4_gemm_adreno M=128 K=1024 N=512 (channel-wise) gpu=0.458385 ms  MSE=0.0169513 (tol=4.1943)
-int4_gemm_adreno M=512 K=1024 N=1024 (channel-wise) gpu=0.770886 ms  MSE=0.00954537 (tol=4.1943)
-int8_int4_gemm_adreno M=8 K=32 N=32 (DP4A, channel-wise) gpu=0.240677 ms  MSE=3.39794e-07 (tol=0.009216)
-int8_int4_gemm_adreno M=8 K=64 N=64 (DP4A, channel-wise) gpu=0.410938 ms  MSE=6.38011e-07 (tol=0.036864)
-int8_int4_gemm_adreno M=16 K=128 N=128 (DP4A, channel-wise) gpu=0.419792 ms  MSE=1.24043e-06 (tol=0.147456)
-int8_int4_gemm_adreno M=32 K=256 N=256 (DP4A, channel-wise) gpu=0.270521 ms  MSE=2.75854e-06 (tol=0.589824)
-int8_int4_gemm_adreno M=64 K=512 N=256 (DP4A, channel-wise) gpu=0.290937 ms  MSE=7.68697e-06 (tol=2.3593)
-int8_int4_gemm_adreno M=128 K=1024 N=512 (DP4A, channel-wise) gpu=0.396927 ms  MSE=1.33647e-05 (tol=9.43718)
-int8_int4_gemm_adreno M=512 K=1024 N=1024 (DP4A, channel-wise) gpu=0.785781 ms  MSE=9.81844e-06 (tol=9.43718)
+int4_gemm_adreno M=8 K=32 N=32 (channel-wise) gpu=0.530521 ms  MSE=3.87865e-06 (tol=0.004096)
+int4_gemm_adreno M=8 K=64 N=64 (channel-wise) gpu=0.120989 ms  MSE=1.77032e-05 (tol=0.016384)
+int4_gemm_adreno M=16 K=128 N=128 (channel-wise) gpu=0.190157 ms  MSE=7.84366e-05 (tol=0.065536)
+int4_gemm_adreno M=32 K=256 N=256 (channel-wise) gpu=0.280208 ms  MSE=0.000336195 (tol=0.262144)
+int4_gemm_adreno M=64 K=512 N=256 (channel-wise) gpu=0.340625 ms  MSE=0.00171965 (tol=1.04858)
+int4_gemm_adreno M=128 K=1024 N=512 (channel-wise) gpu=0.646719 ms  MSE=0.0169513 (tol=4.1943)
+int4_gemm_adreno M=512 K=1024 N=1024 (channel-wise) gpu=2.17656 ms  MSE=0.00954537 (tol=4.1943)
+int4_gemm_adreno_v2 M=8 K=32 N=32 (texture weights) gpu=0.224896 ms  MSE=3.87865e-06 (tol=0.004096)
+int4_gemm_adreno_v2 M=8 K=64 N=64 (texture weights) gpu=0.245625 ms  MSE=1.77032e-05 (tol=0.016384)
+int4_gemm_adreno_v2 M=16 K=128 N=128 (texture weights) gpu=0.244531 ms  MSE=7.84366e-05 (tol=0.065536)
+int4_gemm_adreno_v2 M=32 K=256 N=256 (texture weights) gpu=0.264688 ms  MSE=0.000336195 (tol=0.262144)
+int4_gemm_adreno_v2 M=64 K=512 N=256 (texture weights) gpu=0.314531 ms  MSE=0.00171965 (tol=1.04858)
+int4_gemm_adreno_v2 M=128 K=1024 N=512 (texture weights) gpu=0.454218 ms  MSE=0.0169513 (tol=4.1943)
+int4_gemm_adreno_v2 M=512 K=1024 N=1024 (texture weights) gpu=0.864479 ms  MSE=0.00954537 (tol=4.1943)
+int8_int4_gemm_adreno M=8 K=32 N=32 (DP4A, channel-wise) gpu=0.235 ms  MSE=3.39794e-07 (tol=0.009216)
+int8_int4_gemm_adreno M=8 K=64 N=64 (DP4A, channel-wise) gpu=0.194062 ms  MSE=6.38011e-07 (tol=0.036864)
+int8_int4_gemm_adreno M=16 K=128 N=128 (DP4A, channel-wise) gpu=0.211407 ms  MSE=1.24043e-06 (tol=0.147456)
+int8_int4_gemm_adreno M=32 K=256 N=256 (DP4A, channel-wise) gpu=0.224427 ms  MSE=2.75854e-06 (tol=0.589824)
+int8_int4_gemm_adreno M=64 K=512 N=256 (DP4A, channel-wise) gpu=0.267032 ms  MSE=7.68697e-06 (tol=2.3593)
+int8_int4_gemm_adreno M=128 K=1024 N=512 (DP4A, channel-wise) gpu=0.609635 ms  MSE=1.33647e-05 (tol=9.43718)
+int8_int4_gemm_adreno M=512 K=1024 N=1024 (DP4A, channel-wise) gpu=1.0325 ms  MSE=9.81844e-06 (tol=9.43718)
 
---- A/B benchmark (fp16 vs DP4A) ---
+--- A/B benchmark (fp16 v1 vs fp16 v2 tex vs DP4A) ---
 ======== A/B bench M=512 K=1024 N=1024 ========
-  fp16 path : 0.75912 ms / iter  (1.41446 TFLOPS)
-  dp4a path : 0.818885 ms / iter  (1.31122 TFLOPS)
-  speedup   : 0.927016x
-  dp4a MSE  : 9.81844e-06 (tol=9.43718)
+  fp16 v1    : 0.863016 ms / iter  (1.24417 TFLOPS)
+  fp16 v2 tex: 0.947067 ms / iter  (1.13375 TFLOPS)  speedup 0.91125x vs v1
+  dp4a       : 0.801047 ms / iter  (1.34042 TFLOPS)  speedup 1.07736x vs v1
+  v2 MSE     : 0.00954537 (tol=4.1943)
+  dp4a MSE   : 9.81844e-06 (tol=9.43718)
 ======== A/B bench M=128 K=1024 N=512 ========
-  fp16 path : 0.47501 ms / iter  (0.282557 TFLOPS)
-  dp4a path : 0.334891 ms / iter  (0.400781 TFLOPS)
-  speedup   : 1.4184x
-  dp4a MSE  : 1.33647e-05 (tol=9.43718)
+  fp16 v1    : 0.311703 ms / iter  (0.430595 TFLOPS)
+  fp16 v2 tex: 0.297688 ms / iter  (0.450868 TFLOPS)  speedup 1.04708x vs v1
+  dp4a       : 0.235375 ms / iter  (0.57023 TFLOPS)  speedup 1.32428x vs v1
+  v2 MSE     : 0.0169513 (tol=4.1943)
+  dp4a MSE   : 1.33647e-05 (tol=9.43718)
 
 --- gtest pass/fail tally ---
-[       OK ] nntrainer_opencl_adreno_kernels_int4.int4_gemm_adreno_test_512_1024_1024 (26 ms)
+[       OK ] nntrainer_opencl_adreno_kernels_int4_v2.int4_gemm_adreno_v2_test_512_1024_1024 (23 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_32_32
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_32_32 (65 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_8_64_64
@@ -216,17 +245,18 @@ int8_int4_gemm_adreno M=512 K=1024 N=1024 (DP4A, channel-wise) gpu=0.785781 ms  
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_32_256_256
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_32_256_256 (1 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256
-[       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256 (3 ms)
+[       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_64_512_256 (2 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_128_1024_512
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_128_1024_512 (7 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_512_1024_1024
 [       OK ] nntrainer_opencl_adreno_kernels_int8_int4.int8_int4_gemm_adreno_test_512_1024_1024 (24 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024 (50 ms)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_512_1024_1024 (65 ms)
 [ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512 (19 ms)
-[  PASSED  ] 16 tests.
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_128_1024_512 (21 ms)
+[  PASSED  ] 23 tests.
 
 Full log: /home/jwhero94/projects/nntrainer/unittest_int4_adreno_run.log
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
