@@ -1,41 +1,34 @@
 실행 결과 아래와 같아
 
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 6, done.
-remote: Counting objects: 100% (6/6), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 940 bytes | 235.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   21cba2a5..afa2beac  all_gpu    -> upstream/all_gpu
-Updating 21cba2a5..afa2beac
-Fast-forward
- test/unittest/unittest_opencl_kernels_int4_adreno.cpp | 8 ++++----
- unittest_int4_adreno.sh                               | 2 +-
- 2 files changed, 5 insertions(+), 5 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh unittest_int4_adreno.sh 
 ==========================================
-[Step 1/4] Building nntrainer (OpenCL)
+[Step 2/4] Building unittest_opencl_kernels_int4_adreno (ndk-build)
 ==========================================
--Denable-opencl=true
-/home/jwhero94/projects/nntrainer
-~/projects/nntrainer ~/projects/nntrainer
-Using ARM architecture config from: /home/jwhero94/projects/nntrainer/tools/cross/android_armv8-2-a.json
-warning: /home/jwhero94/projects/nntrainer/builddir has already been taken, this script tries to reconfigure and try building
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer
-
-ERROR: No such build data file as "'/home/jwhero94/projects/nntrainer/builddir/meson-private/build.dat'".
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_int4_adreno.sh 
-==========================================
-[Step 1/4] Building nntrainer (OpenCL)
-==========================================
--Denable-opencl=true
-/home/jwhero94/projects/nntrainer
-~/projects/nntrainer ~/projects/nntrainer
-Using ARM architecture config from: /home/jwhero94/projects/nntrainer/tools/cross/android_armv8-2-a.json
-warning: /home/jwhero94/projects/nntrainer/builddir has already been taken, this script tries to reconfigure and try building
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer
-
-ERROR: No such build data file as "'/home/jwhero94/projects/nntrainer/builddir/meson-private/build.dat'".
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libOpenCL.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] StaticLibrary  : libtest_util.a
+[arm64-v8a] StaticLibrary  : libgoogletest_main.a
+[arm64-v8a] Prebuilt       : libnntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Compile++      : unittest_opencl_kernels_int4_adreno <= unittest_opencl_kernels_int4_adreno.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4_adreno.cpp:41:
+In file included from ../include/nntrainer_test_util.h:37:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/models/neuralnet.h:39:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+1 warning generated.
+[arm64-v8a] Executable     : unittest_opencl_kernels_int4_adreno
+ld.lld: error: duplicate symbol: main
+>>> defined at unittest_opencl_kernels_int4_adreno.cpp:380 (../unittest/unittest_opencl_kernels_int4_adreno.cpp:380)
+>>>            /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_opencl_kernels_int4_adreno/__/unittest/unittest_opencl_kernels_int4_adreno.o:(main)
+>>> defined at xgemm.cpp:216 (/home/jwhero94/projects/nntrainer/subprojects/CLBlast/src/tuning/routines/xgemm.cpp:216)
+>>>            xgemm.o:(.text.main+0x0) in archive /home/jwhero94/projects/nntrainer/test/jni/../../builddir/obj/local/arm64-v8a/libclblast.a
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:667: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/unittest_opencl_kernels_int4_adreno] Error 1
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
