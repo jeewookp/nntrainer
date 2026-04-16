@@ -69,6 +69,11 @@ if [ $RUN_ONLY -eq 0 ]; then
   echo "[Step 1/4] Building nntrainer (OpenCL)"
   echo "=========================================="
 
+  # Clean stale builddir (matches temp.sh convention). Without this,
+  # a half-finished prior build leaves behind a builddir/ with missing
+  # meson-private/build.dat and package_android.sh's reconfigure fails.
+  rm -rf builddir
+
   ./tools/package_android.sh \
     -Denable-opencl=true \
     -Denable-fp16=true \
