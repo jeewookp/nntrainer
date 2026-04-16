@@ -153,8 +153,29 @@ ABSL_FLAG(std::string, dtype, "int8_per_tensor",
           "  'fp32': FLOAT32 single FC op. Baseline.\n"
           "  'fp16': FLOAT16 FC, currently broken (CPU reference "
           "kernel asserts fp32 input during prepare).");
-
-namespace {
+ABSL_FLAG(std::string, cache_dir, "",
+          "If non-empty, use this directory as the LiteRT GPU "
+          "OpenCL program cache (via GpuOptions::SetSerializationDir) "
+          "and serialize compiled weights "
+          "(SetSerializeExternalTensors=true). A per-(M,N,K,dtype) "
+          "cache key is derived and passed to SetModelCacheKey so "
+          "entries do not collide across shapes.\n\n"
+          "First run populates the cache: each CompiledModel::Create "
+          "still pays the full OpenCL JIT + weight upload cost, and "
+          "the compiled program + external tensors are written under "
+          "cache_dir. Subsequent runs (same shape, same dtype, same "
+          "GPU) skip the JIT and stream the cached program back in "
+          "-- the 'per-shape CompiledModel::Create' wall-clock "
+          "overhead drops by roughly the JIT cost (commonly tens to "
+          "hundreds of ms per shape on Adreno). Steady-state "
+          "per-iteration latency (min/avg/p50) is unaffected either "
+          "way -- this is purely a warm-start optimization for "
+          "people re-running the same roster over multiple "
+          "iterations.\n\n"
+          "Leave empty to disable (default). Use a persistent path "
+          "like /data/local/tmp/litert_lm/cache so the cache survives "
+          "benchmark-script reruns; a tmpfs path defeats the "
+          "purpose.");
 
 // In recent LiteRT revisions `litert::CompiledModel::Create` is a
 // protected static factory: only subclasses can call it. The same
@@ -293,7 +314,8 @@ absl::Status ExpectedError(const T& exp, absl::string_view ctx) {
 absl::StatusOr<std::vector<double>> BenchmarkOneShape(
     litert::Environment& env, const Shape& shape,
     absl::string_view backend_str, litert::lm::MatmulDtype dtype,
-    int warmup_iters, int timed_iters, bool enable_profile) {
+    int warmup_iters, int timed_iters, bool enable_profile,
+    absl::string_view cache_dir, absl::string_view dtype_str) {
   auto build_or = litert::lm::BuildSingleFullyConnectedTfliteModel(
       shape.m, shape.n, shape.k, dtype);
   if (!build_or.ok()) return build_or.status();
@@ -334,6 +356,29 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
 #if !defined(__APPLE__)
     gpu_opts.SetPreferTextureWeights(true);
 #endif
+    // OpenCL program cache wiring. When --cache_dir is set, tell the
+    // GPU compilation options where to serialize compiled programs +
+    // external tensor data, and attach a per-(M,N,K,dtype) cache key
+    // so entries from different shapes don't collide. Matches the
+    // production LLM path in
+    // runtime/executor/llm_executor_settings_utils.cc:127-146.
+    //
+    // First run: JIT compiles the CL kernel, writes program + tensors
+    // under cache_dir, steady-state numbers are unchanged.
+    // Second run (same shape/dtype/GPU): reads the cached program,
+    // skips JIT, CompiledModel::Create returns in a fraction of the
+    // first-run time. Per-iteration latency in the timed loop is
+    // unaffected either way -- the cache only fixes wall-clock of
+    // CompiledModel::Create, not per-dispatch.
+    if (!cache_dir.empty()) {
+      const std::string cache_dir_str(cache_dir);
+      gpu_opts.SetSerializationDir(cache_dir_str.c_str());
+      gpu_opts.SetSerializeExternalTensors(true);
+      const std::string model_cache_key =
+          absl::StrCat("matmul_bench_m", shape.m, "_n", shape.n, "_k",
+                       shape.k, "_", dtype_str);
+      gpu_opts.SetModelCacheKey(model_cache_key.c_str());
+    }
     options.SetHardwareAccelerators(litert::HwAccelerators::kGpu);
   } else if (backend_str == "cpu") {
     options.SetHardwareAccelerators(litert::HwAccelerators::kCpu);
@@ -540,6 +585,7 @@ absl::Status MainBody() {
   const int max_shapes = absl::GetFlag(FLAGS_max_shapes);
   const std::string dtype_str = absl::GetFlag(FLAGS_dtype);
   const bool enable_profile = absl::GetFlag(FLAGS_profile);
+  const std::string cache_dir = absl::GetFlag(FLAGS_cache_dir);
 
   if (warmup < 0 || iters <= 0) {
     return absl::InvalidArgumentError(
@@ -602,9 +648,10 @@ absl::Status MainBody() {
 
   std::fprintf(stderr,
                "\n[MATMUL MICRO] backend=%s dtype=%s unique_shapes=%zu "
-               "warmup=%d iters=%d profile=%d\n",
+               "warmup=%d iters=%d profile=%d cache_dir=%s\n",
                backend.c_str(), dtype_str.c_str(), shapes.size(), warmup,
-               iters, enable_profile ? 1 : 0);
+               iters, enable_profile ? 1 : 0,
+               cache_dir.empty() ? "(disabled)" : cache_dir.c_str());
 
   // Create one LiteRT environment for the whole run; CompiledModels are
   // built / destroyed per shape so the GPU delegate's internal caches
@@ -638,7 +685,8 @@ absl::Status MainBody() {
   int failed = 0;
   for (const auto& s : shapes) {
     auto samples_or = BenchmarkOneShape(env, s, backend, dtype, warmup,
-                                          iters, enable_profile);
+                                          iters, enable_profile, cache_dir,
+                                          dtype_str);
     if (!samples_or.ok()) {
       const std::string err_msg(samples_or.status().message());
       std::fprintf(stderr,

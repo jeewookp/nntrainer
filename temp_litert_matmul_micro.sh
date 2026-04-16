@@ -57,6 +57,16 @@
 #   MATMUL_MICRO_SHAPES     inline shapes list "1024x6144x1536,..." -- if
 #                           set, used INSTEAD of the roster CSV
 #   TASKSET_MASK            taskset mask for big-core pinning (default f0)
+#   MATMUL_MICRO_CACHE_DIR  device path for the LiteRT OpenCL program
+#                           cache (default ${DEVICE_FOLDER}/cache). On the
+#                           first run each shape still pays full JIT +
+#                           weight upload and writes the compiled program
+#                           under this dir; subsequent runs with the same
+#                           shape + dtype skip the JIT and load from
+#                           cache, cutting the per-shape
+#                           CompiledModel::Create wall-clock by ~10-100x
+#                           on Adreno. Set MATMUL_MICRO_CACHE_DIR="" to
+#                           disable (cold-compile baseline).
 #   ANDROID_NDK_HOME        same as temp_litert.sh
 
 export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
@@ -115,6 +125,21 @@ MATMUL_MICRO_SHAPES="${MATMUL_MICRO_SHAPES:-}"
 MATMUL_MICRO_PROFILE="${MATMUL_MICRO_PROFILE:-true}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 
+# OpenCL program cache. When set, matmul_micro_benchmark passes
+# --cache_dir=<path> through to litert::GpuOptions::SetSerializationDir
+# + SetSerializeExternalTensors(true) + a per-(M,N,K,dtype) model cache
+# key. First run populates the cache (wall-clock unchanged). Subsequent
+# runs with the same shape roster skip OpenCL JIT on CompiledModel::Create
+# -- this is the main knob for closing the "per-shape JIT overhead" gap
+# between the micro benchmark and the one-shot prefill CompiledModel.
+#
+# Default: on, pointing at a persistent on-device path. Set
+# MATMUL_MICRO_CACHE_DIR="" to disable and re-measure cold-compile
+# wall-clock. The cache dir is created lazily on the device before the
+# run; it survives adb wipes of the binary because it sits under
+# DEVICE_FOLDER alongside the prebuilts.
+MATMUL_MICRO_CACHE_DIR="${MATMUL_MICRO_CACHE_DIR:-${DEVICE_FOLDER}/cache}"
+
 MATMUL_ROSTER_CSV_DEVICE=${DEVICE_FOLDER}/matmul_roster.csv
 MATMUL_MICRO_CSV_DEVICE=${DEVICE_FOLDER}/matmul_micro.csv
 MATMUL_MICRO_LOG=temp_litert_matmul_micro.log
@@ -157,6 +182,7 @@ echo "[micro.sh] DTYPE=${MATMUL_MICRO_DTYPE}"
 echo "[micro.sh] WARMUP=${MATMUL_MICRO_WARMUP}"
 echo "[micro.sh] ITERS=${MATMUL_MICRO_ITERS}"
 echo "[micro.sh] PROFILE=${MATMUL_MICRO_PROFILE}"
+echo "[micro.sh] CACHE_DIR=${MATMUL_MICRO_CACHE_DIR:-(disabled)}"
 if [ -n "${MATMUL_MICRO_SHAPES}" ]; then
   echo "[micro.sh] SHAPES (inline)=${MATMUL_MICRO_SHAPES}"
 else
@@ -299,6 +325,15 @@ case "${MATMUL_MICRO_PROFILE,,}" in
   *)              PROFILE_FLAG="--profile=false" ;;
 esac
 
+# Cache dir: when set, pre-create on device and pass --cache_dir to the
+# binary so litert::GpuOptions::SetSerializationDir has a writable
+# target. Leave empty to disable the OpenCL program cache entirely.
+CACHE_DIR_FLAG=""
+if [ -n "${MATMUL_MICRO_CACHE_DIR}" ]; then
+  adb shell "mkdir -p ${MATMUL_MICRO_CACHE_DIR}"
+  CACHE_DIR_FLAG="--cache_dir=${MATMUL_MICRO_CACHE_DIR}"
+fi
+
 # ----------------------------------------------------------------------------
 # 5. Run on device.
 # ----------------------------------------------------------------------------
@@ -314,6 +349,7 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --iters=${MATMUL_MICRO_ITERS} \
     ${MAX_SHAPES_FLAG} \
     ${PROFILE_FLAG} \
+    ${CACHE_DIR_FLAG} \
     --csv_out=${MATMUL_MICRO_CSV_DEVICE}" \
   2>&1 | tee "${MATMUL_MICRO_LOG}"
 
