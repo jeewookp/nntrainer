@@ -1261,13 +1261,58 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
     throw std::runtime_error(
       "gemm_int8_int4_adreno_cl requires N and K to be multiples of 4");
   }
+  // The texture view below treats x_q as a char4 1D image, so the row
+  // stride in texels is K/4. Caller must have zero-padded to align(M, 8).
+  const unsigned int alignM = align(M, 8u);
 
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
 
+  cl_int err = CL_SUCCESS;
+
+  // --- Wrap x_q SVM as cl_mem + image1d_buffer (CL_SIGNED_INT8 / RGBA) ---
+  //
+  // Using the texture path (same memory topology as gpu_int4_gemm_adreno's
+  // fp16 input) so reads go through the dedicated texture cache / fetch
+  // unit rather than the generic L1 port that `__global char *` vloads
+  // would use. First DP4A implementation used a plain global buffer and
+  // came in ~1.6x slower than the fp16 path on M=512 K=1024 N=1024; the
+  // switch to image1d_buffer mirrors the fp16 kernel's access pattern.
+  const size_t x_q_bytes =
+    static_cast<size_t>(alignM) * static_cast<size_t>(K) * sizeof(int8_t);
+  cl_mem x_q_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, x_q_bytes, x_q,
+                   &err);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Failed to create cl_mem for x_q");
+
+  cl_image_format x_q_fmt;
+  x_q_fmt.image_channel_order = CL_RGBA;
+  x_q_fmt.image_channel_data_type = CL_SIGNED_INT8;
+
+  cl_image_desc x_q_desc;
+  std::memset(&x_q_desc, 0, sizeof(x_q_desc));
+  x_q_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  x_q_desc.image_width =
+    static_cast<size_t>(alignM) * static_cast<size_t>(K) / 4u;
+  x_q_desc.buffer = x_q_buf;
+
+  cl_mem x_q_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_ONLY,
+                  &x_q_fmt, &x_q_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(x_q_buf);
+    throw std::runtime_error(
+      "Failed to create image1d_buffer for x_q "
+      "(CL_RGBA/CL_SIGNED_INT8 unsupported?)");
+  }
+
   ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
     int8_int4_gemm_adreno_kernel, "gpu_int8_int4_gemm_adreno");
   if (!kernel_ptr) {
+    clReleaseMemObject(x_q_img);
+    clReleaseMemObject(x_q_buf);
     throw std::runtime_error(
       "Failed to register gpu_int8_int4_gemm_adreno kernel");
   }
@@ -1275,9 +1320,10 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
   bool result = false;
   int arg = 0;
 
-  result = kernel_ptr->SetKernelSVMArguments(arg++, x_q);
+  // arg 0 is now an image (cl_mem), not an SVM pointer.
+  result = kernel_ptr->SetKernelArguments(arg++, &x_q_img, sizeof(cl_mem));
   if (!result)
-    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 0 (x_q)");
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 0 (x_q image)");
 
   result = kernel_ptr->SetKernelSVMArguments(arg++, x_scale);
   if (!result)
@@ -1319,13 +1365,19 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
 
   result = blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g_global,
                                                         g_local);
-  if (!result)
+  if (!result) {
+    clReleaseMemObject(x_q_img);
+    clReleaseMemObject(x_q_buf);
     throw std::runtime_error("Failed to dispatch gpu_int8_int4_gemm_adreno");
+  }
 
   // Sync output back to host (blocking SVMMap, same as fp16 wrapper).
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
     true);
+
+  clReleaseMemObject(x_q_img);
+  clReleaseMemObject(x_q_buf);
 }
 
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,

@@ -5,15 +5,19 @@
 //
 // Complements `gpu_int4_gemm_adreno` (fp16 activation path) -- the
 // difference is the inner MAC: this kernel does signed int8 * int8 -> int32
-// accumulation which Adreno 7xx+ maps to the DP4A (ssad) instruction,
-// reaching roughly 3.6x the fp16 FMA throughput on hardware with the
-// `cl_qcom_dot_product8` extension.
+// accumulation which Adreno 7xx+ maps to the DP4A (ssad) instruction via
+// `cl_khr_integer_dot_product::dot_acc_sat`.
 //
-// Activation quant is done on the host (CPU for now; a GPU
-// `gpu_activation_quantize_int8` pass can replace it later). The wrapper
-// passes:
-//   x_q      : [align(M, 8)][K] signed char, row-major. Rows [M, M_pad)
-//              are zero-padded so vload4 is always in-bounds.
+// Activation is pre-quantized to int8 on the host and exposed to the GPU
+// as `image1d_buffer_t` with CL_RGBA / CL_SIGNED_INT8 format (1 texel =
+// char4). Using the texture path matches the fp16 kernel's memory
+// topology so we get the texture-cache + texture-fetch-unit parallelism
+// that regular `__global const char *` loads do not.
+//
+// The wrapper passes:
+//   x_q      : image1d_buffer_t, [align(M, 8)][K/4] char4 texels,
+//              row-major (texel at (row=m, k-group=g) -> index
+//              m*(K/4) + g). Rows [M, align(M, 8)) are zero-padded.
 //   x_scale  : fp16 [M], per-row max|x|/127 rounded through fp16.
 //   weights  : ushort[(K/4) * N], exactly the same channel-wise int4
 //              layout that `gpu_int4_gemm_adreno` reads. Each ushort packs
@@ -76,7 +80,7 @@ inline char4 unpack_int4x4(ushort p) {
 }
 
 __attribute__((qcom_reqd_sub_group_size("full"))) kernel void
-gpu_int8_int4_gemm_adreno(__global const char *x_q,
+gpu_int8_int4_gemm_adreno(__read_only image1d_buffer_t x_q,
                           __global const half *x_scale,
                           __global const half *w_scale,
                           __global const ushort *weights,
@@ -84,6 +88,8 @@ gpu_int8_int4_gemm_adreno(__global const char *x_q,
                           const int M) {
   const int m = get_global_id(0) * 8;
   const int n = get_global_id(1) * 4;
+  // Row stride in texels: K chars / 4 chars-per-texel.
+  const int K_4 = K >> 2;
 
   // 32 int32 accumulators, organized as [column n+j].[row m+i]:
   //   cj.si = acc for out[m+i, n+j]
@@ -94,15 +100,17 @@ gpu_int8_int4_gemm_adreno(__global const char *x_q,
 
   // K is a multiple of 4 so no residue-loop is needed.
   for (int k = 0; k < K; k += 4) {
-    // Load 4 k-lane char values for each of the 8 rows.
-    char4 x0 = vload4(0, x_q + ((long)(m + 0) * K + k));
-    char4 x1 = vload4(0, x_q + ((long)(m + 1) * K + k));
-    char4 x2 = vload4(0, x_q + ((long)(m + 2) * K + k));
-    char4 x3 = vload4(0, x_q + ((long)(m + 3) * K + k));
-    char4 x4 = vload4(0, x_q + ((long)(m + 4) * K + k));
-    char4 x5 = vload4(0, x_q + ((long)(m + 5) * K + k));
-    char4 x6 = vload4(0, x_q + ((long)(m + 6) * K + k));
-    char4 x7 = vload4(0, x_q + ((long)(m + 7) * K + k));
+    // One texture fetch per row returns 4 sign-extended int8 lanes as
+    // an int4; truncate to char4 for ssad.
+    const int k_4 = k >> 2;
+    char4 x0 = convert_char4(read_imagei(x_q, (m + 0) * K_4 + k_4));
+    char4 x1 = convert_char4(read_imagei(x_q, (m + 1) * K_4 + k_4));
+    char4 x2 = convert_char4(read_imagei(x_q, (m + 2) * K_4 + k_4));
+    char4 x3 = convert_char4(read_imagei(x_q, (m + 3) * K_4 + k_4));
+    char4 x4 = convert_char4(read_imagei(x_q, (m + 4) * K_4 + k_4));
+    char4 x5 = convert_char4(read_imagei(x_q, (m + 5) * K_4 + k_4));
+    char4 x6 = convert_char4(read_imagei(x_q, (m + 6) * K_4 + k_4));
+    char4 x7 = convert_char4(read_imagei(x_q, (m + 7) * K_4 + k_4));
 
     // Load packed int4 weights for 4 channels (k..k+3 per channel).
     ushort4 pw = vload4(0, weights + (k / 4) * N + n);
