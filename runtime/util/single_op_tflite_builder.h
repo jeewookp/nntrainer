@@ -120,6 +120,24 @@ namespace litert::lm {
 //   conv. matmul_micro_benchmark divides the reported per-Run
 //   samples by 2 in this mode so the CSV stays comparable to
 //   single-op modes and to prefill numbers.
+// kInt8Conv2dPerTensor:
+//   Single CONV_2D 1x1 op with INT8 weights using PER-TENSOR symmetric
+//   quantization, FLOAT32 bias, FLOAT32 signature input/output. The
+//   CONV_2D op goes through the delegate's conv_parser (not lstm_parser
+//   / fc parser), but conv_parser's int8 trigger checks the same
+//   condition (weights kTfLiteInt8 + scale->size == 1) because the
+//   CL delegate shares the int8 GEMM kernel selection between FC
+//   rewrites and native CONV_2D. This is the mode expected to fire the
+//   `convolution_int8(conv_wave_memory)` kernel -- the same kernel
+//   name the Gemma4 prefill Delegate Statistics shows -- making this
+//   shape directly comparable to prefill's per-op int8 rows.
+//
+//   Tensor layout (NHWC, standard CONV_2D 1x1):
+//     input  : [1, M, 1, K]  FLOAT32
+//     filter : [N, 1, 1, K]  INT8, per-tensor scale
+//     bias   : [N]           FLOAT32
+//     output : [1, M, 1, N]  FLOAT32
+//   stride 1x1, padding VALID, no fused activation.
 enum class MatmulDtype {
   kInt8,
   kInt8WeightFp32Act,
@@ -128,6 +146,7 @@ enum class MatmulDtype {
   kFp32Conv2d,
   kInt8Chain,
   kInt8PerTensor,
+  kInt8Conv2dPerTensor,
 };
 
 // Pure-data result of BuildSingleFullyConnectedTfliteModel. The caller

@@ -47,6 +47,7 @@
 #include <cstdio>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -152,7 +153,20 @@ ABSL_FLAG(std::string, dtype, "int8_per_tensor",
           "int8.\n"
           "  'fp32': FLOAT32 single FC op. Baseline.\n"
           "  'fp16': FLOAT16 FC, currently broken (CPU reference "
-          "kernel asserts fp32 input during prepare).");
+          "kernel asserts fp32 input during prepare).\n"
+          "  'int8_conv2d_per_tensor': single CONV_2D 1x1 op with INT8 "
+          "per-tensor weights, FLOAT32 bias, FLOAT32 signature I/O. "
+          "Variant of int8_per_tensor that uses BuiltinOperator_CONV_2D "
+          "instead of FULLY_CONNECTED. Native CONV_2D + per-tensor int8 "
+          "weights is the schema that triggers "
+          "`convolution_int8(conv_wave_memory)` on the LiteRT CL "
+          "delegate -- the same kernel name Gemma4 prefill's Delegate "
+          "Statistics shows for its int8 matmul rows. The FC path used "
+          "by int8_per_tensor falls back to `convolution1x1(fp16)` for "
+          "large M because the FC->conv1x1 rewrite drops the int8 "
+          "attribute during lowering. Use this mode when you want "
+          "per-shape numbers that are directly comparable to prefill's "
+          "int8 rows.");
 ABSL_FLAG(std::string, cache_dir, "",
           "If non-empty, use this directory as the LiteRT GPU "
           "OpenCL program cache (via GpuOptions::SetSerializationDir) "
@@ -307,13 +321,127 @@ absl::Status ExpectedError(const T& exp, absl::string_view ctx) {
       absl::StrCat(ctx, ": ", exp.Error().Message()));
 }
 
+// Per-shape kernel profile extracted from LiteRtGetProfileSummary. Holds
+// the name of the matmul GPU kernel the CL delegate actually dispatched
+// (e.g. "convolution_int8(conv_wave_memory)", "fully_connected_int8",
+// "convolution1x1(conv_wave_memory)") and its average per-dispatch
+// latency in microseconds. Populated from the "Delegate Statistics"
+// table printed by LiteRtGetProfileSummary when --profile=true.
+//
+// Used to answer "is the micro bench picking the same kernel prefill
+// picks?" and "does per-kernel latency match prefill's per-op row?"
+// without the host-side wall-clock overhead that inflates the CSV
+// avg_us column.
+struct KernelProfile {
+  std::string name;
+  double avg_us = 0;
+  int count = 0;
+};
+
+// Parse the LiteRtGetProfileSummary output to find the matmul-class
+// Delegate Statistics row and return its name + avg_us.
+//
+// The Delegate Statistics block looks like:
+//
+//   Delegate Statistics:
+//   Op Name                                     Count  Avg(us)  Min(us) ...
+//   Delegate/DownloadGpuMemoryToTensorBufferGpuMemory   50   14.56 ...
+//   Delegate/UploadOrBindTensorBuffer                   50  112.14 ...
+//   Delegate/fully_connected_int8                       50    8.10 ...
+//
+// The matmul kernel is whichever row contains "convolution" or
+// "fully_connected" (case-insensitive). Non-matmul rows (Upload,
+// Download, weights_convert, quantize/dequantize helpers) are filtered
+// out. If multiple matmul rows exist (shouldn't happen with a single-op
+// model, but the CL delegate sometimes emits a wrapped convert around
+// the real conv), the slowest one wins since that's the compute-bound
+// one.
+//
+// Returns nullopt if the summary has no "Delegate Statistics:" block or
+// no matmul-class row in it. The caller writes empty CSV fields in that
+// case.
+std::optional<KernelProfile> ParseDelegateStatsForMatmulKernel(
+    absl::string_view summary) {
+  const size_t stats_pos = summary.find("Delegate Statistics:");
+  if (stats_pos == absl::string_view::npos) return std::nullopt;
+  absl::string_view tail = summary.substr(stats_pos);
+
+  std::optional<KernelProfile> best;
+  for (absl::string_view line : absl::StrSplit(tail, '\n')) {
+    absl::string_view trimmed = absl::StripAsciiWhitespace(line);
+    if (!absl::StartsWith(trimmed, "Delegate/")) continue;
+
+    // Tokenize by whitespace. The last 5 tokens are numeric columns:
+    // Count, Avg(us), Min(us), Max(us), Total(us). Everything before
+    // those is the op name (which may itself contain spaces for fused
+    // kernels like "conv -> dequantize_to_float16").
+    std::vector<absl::string_view> toks =
+        absl::StrSplit(trimmed, ' ', absl::SkipEmpty());
+    if (toks.size() < 6) continue;
+
+    int count_i = 0;
+    double avg_d = 0;
+    if (!absl::SimpleAtoi(toks[toks.size() - 5], &count_i)) continue;
+    if (!absl::SimpleAtod(toks[toks.size() - 4], &avg_d)) continue;
+
+    // Reconstruct the op name from the leading tokens and strip the
+    // "Delegate/" prefix.
+    std::string name;
+    for (size_t i = 0; i + 5 < toks.size(); ++i) {
+      if (i) name.push_back(' ');
+      name.append(std::string(toks[i]));
+    }
+    constexpr absl::string_view kPrefix = "Delegate/";
+    if (absl::StartsWith(name, kPrefix)) {
+      name = name.substr(kPrefix.size());
+    }
+
+    // Skip the well-known non-matmul rows.
+    const std::string lower = absl::AsciiStrToLower(name);
+    if (absl::StrContains(lower, "upload") ||
+        absl::StrContains(lower, "download") ||
+        absl::StrContains(lower, "weights_convert") ||
+        absl::StrContains(lower, "synchronize") ||
+        absl::StrContains(lower, "copy") ||
+        absl::StrContains(lower, "quantize_and_dequantize") ||
+        absl::StrContains(lower, "dequantize_to_float")) {
+      continue;
+    }
+    // Keep only rows whose name looks like a matmul kernel. The CL
+    // delegate uses "convolution" (incl. "convolution_int8" /
+    // "convolution1x1") for FC->conv1x1 rewrites and native CONV_2D,
+    // and "fully_connected" for the non-rewritten int8 FC path.
+    if (!absl::StrContains(lower, "convolution") &&
+        !absl::StrContains(lower, "fully_connected") &&
+        !absl::StrContains(lower, "matmul")) {
+      continue;
+    }
+
+    KernelProfile kp;
+    kp.name = std::move(name);
+    kp.avg_us = avg_d;
+    kp.count = count_i;
+    if (!best || kp.avg_us > best->avg_us) best = std::move(kp);
+  }
+  return best;
+}
+
+// Per-shape benchmark output. Samples drive the wall-clock stats CSV
+// columns; kernel_profile (when set) drives the kernel_name /
+// kernel_avg_us columns that are directly comparable to prefill's
+// Delegate Statistics rows.
+struct ShapeRunResult {
+  std::vector<double> samples_us;
+  std::optional<KernelProfile> kernel_profile;
+};
+
 // Builds, compiles, and times one matmul shape. Returns the per-iteration
 // latency samples so the caller can compute aggregate stats. When
 // `enable_profile` is true, also enables LiteRT op profiling on the GPU
 // compilation options and prints the Delegate Statistics summary to
 // stderr after the timed loop -- this is the canonical way to see
 // which CL kernel the GPU delegate actually picked for the shape.
-absl::StatusOr<std::vector<double>> BenchmarkOneShape(
+absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
     litert::Environment& env, const Shape& shape,
     absl::string_view backend_str, litert::lm::MatmulDtype dtype,
     int warmup_iters, int timed_iters, bool enable_profile,
@@ -553,6 +681,9 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
   // Stop the profiler and dump the per-op summary so we can see which
   // CL kernel the GPU delegate actually picked. The summary string is
   // owned by the caller and must be std::free'd after use.
+  // We also parse the summary to extract the matmul kernel's name +
+  // avg_us for the CSV kernel_name / kernel_avg_us columns.
+  std::optional<KernelProfile> kernel_profile;
   if (enable_profile && profiler_handle != nullptr) {
     (void)LiteRtStopProfiler(profiler_handle);
     const char* summary = nullptr;
@@ -564,6 +695,8 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
                    static_cast<long long>(shape.m),
                    static_cast<long long>(shape.n),
                    static_cast<long long>(shape.k), summary);
+      kernel_profile = ParseDelegateStatsForMatmulKernel(
+          absl::string_view(summary));
       std::free(const_cast<char*>(summary));
     } else {
       std::fprintf(stderr,
@@ -574,7 +707,10 @@ absl::StatusOr<std::vector<double>> BenchmarkOneShape(
                    static_cast<long long>(shape.k), static_cast<int>(status));
     }
   }
-  return samples_us;
+  ShapeRunResult result;
+  result.samples_us = std::move(samples_us);
+  result.kernel_profile = std::move(kernel_profile);
+  return result;
 }
 
 absl::Status MainBody() {
@@ -596,6 +732,8 @@ absl::Status MainBody() {
   litert::lm::MatmulDtype dtype;
   if (dtype_str == "int8_per_tensor") {
     dtype = litert::lm::MatmulDtype::kInt8PerTensor;
+  } else if (dtype_str == "int8_conv2d_per_tensor") {
+    dtype = litert::lm::MatmulDtype::kInt8Conv2dPerTensor;
   } else if (dtype_str == "int8") {
     dtype = litert::lm::MatmulDtype::kInt8;
   } else if (dtype_str == "int8_chain") {
@@ -610,8 +748,8 @@ absl::Status MainBody() {
     dtype = litert::lm::MatmulDtype::kFp16;
   } else {
     return absl::InvalidArgumentError(absl::StrCat(
-        "--dtype must be int8_per_tensor, int8, int8_chain, int8_hybrid, "
-        "fp32, fp32_conv2d, or fp16, got: ",
+        "--dtype must be int8_per_tensor, int8_conv2d_per_tensor, int8, "
+        "int8_chain, int8_hybrid, fp32, fp32_conv2d, or fp16, got: ",
         dtype_str));
   }
   // int8_chain mode runs two FCs per Run, so divide the per-Run
@@ -680,17 +818,25 @@ absl::Status MainBody() {
       return absl::UnavailableError(
           absl::StrCat("Cannot open --csv_out=", csv_out));
     }
+    // kernel_name / kernel_avg_us are the matmul GPU kernel's name and
+    // avg per-dispatch time as reported by the LiteRT Delegate
+    // Statistics block (parsed out of LiteRtGetProfileSummary). They
+    // are blank unless --profile=true. The kernel_avg_us column is
+    // what's directly comparable to prefill's Delegate Statistics
+    // rows; the wall-clock avg_us column also counts upload/download
+    // and host sync and will always be larger.
     (*csv_ofs) << "m,n,k,count,min_us,avg_us,p50_us,p95_us,max_us,"
-                  "gflops,tflops_min,tflops_avg\n";
+                  "gflops,tflops_min,tflops_avg,"
+                  "kernel_name,kernel_avg_us\n";
   }
 
   int failed = 0;
   for (const auto& s : shapes) {
-    auto samples_or = BenchmarkOneShape(env, s, backend, dtype, warmup,
-                                          iters, enable_profile, cache_dir,
-                                          dtype_str);
-    if (!samples_or.ok()) {
-      const std::string err_msg(samples_or.status().message());
+    auto run_or = BenchmarkOneShape(env, s, backend, dtype, warmup,
+                                     iters, enable_profile, cache_dir,
+                                     dtype_str);
+    if (!run_or.ok()) {
+      const std::string err_msg(run_or.status().message());
       std::fprintf(stderr,
                    "[MATMUL MICRO] SKIP m=%lld n=%lld k=%lld: %s\n",
                    static_cast<long long>(s.m), static_cast<long long>(s.n),
@@ -698,13 +844,14 @@ absl::Status MainBody() {
       ++failed;
       continue;
     }
+    ShapeRunResult& run = *run_or;
     // For chain modes (e.g. int8_chain runs 2 FCs per Run) divide
     // each per-Run sample so the reported numbers are per-conv,
     // comparable to single-op modes and to prefill rows.
     if (chain_divisor > 1) {
-      for (auto& v : *samples_or) v /= static_cast<double>(chain_divisor);
+      for (auto& v : run.samples_us) v /= static_cast<double>(chain_divisor);
     }
-    const Stats st = ComputeStats(*samples_or);
+    const Stats st = ComputeStats(run.samples_us);
 
     // Compute matmul flop count (2*M*N*K) and derived throughput.
     const double flops = 2.0 * static_cast<double>(s.m) *
@@ -724,10 +871,35 @@ absl::Status MainBody() {
     std::fflush(stdout);
 
     if (csv_ofs) {
+      // kernel_name is the raw string from Delegate Statistics. It can
+      // contain parentheses, arrows, and spaces (e.g. "convolution_int8
+      // (conv_wave_memory) -> dequantize_to_float16"). We wrap it in
+      // double-quotes and escape any embedded double-quote so the CSV
+      // parses cleanly in spreadsheets / pandas.
+      std::string kernel_name;
+      double kernel_avg = 0;
+      if (run.kernel_profile) {
+        kernel_name = run.kernel_profile->name;
+        kernel_avg = run.kernel_profile->avg_us;
+        // Chain modes share the same comment as the wall-clock: each
+        // kernel dispatch is one of `chain_divisor` FC ops, so divide.
+        if (chain_divisor > 1) {
+          kernel_avg /= static_cast<double>(chain_divisor);
+        }
+      }
+      std::string escaped;
+      escaped.reserve(kernel_name.size() + 2);
+      escaped.push_back('"');
+      for (char c : kernel_name) {
+        if (c == '"') escaped.push_back('"');  // CSV-quote doubling
+        escaped.push_back(c);
+      }
+      escaped.push_back('"');
       (*csv_ofs) << s.m << ',' << s.n << ',' << s.k << ',' << st.count << ','
                  << st.min_us << ',' << st.avg_us << ',' << st.p50_us << ','
                  << st.p95_us << ',' << st.max_us << ',' << gflops << ','
-                 << tflops_min << ',' << tflops_avg << '\n';
+                 << tflops_min << ',' << tflops_avg << ','
+                 << escaped << ',' << kernel_avg << '\n';
     }
   }
 

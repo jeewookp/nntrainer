@@ -40,16 +40,27 @@
 # Env var overrides:
 #   DEVICE_FOLDER           where to push on device (default /data/local/tmp/litert_lm)
 #   HOST_MATMUL_ROSTER_CSV  shape source on host (default ./matmul_roster.csv)
-#   MATMUL_MICRO_DTYPE      int8 (default; fully-quantized int8 FC, the
-#                           schema that triggers the LiteRT GPU CL
-#                           delegate's convolution_int8(conv_wave_memory)
-#                           kernel -- matches the ~80% int8 share of
-#                           Gemma4 prefill matmul time),
-#                           int8_hybrid (int8 weights + fp32 acts, accepted
-#                           by the delegate but does NOT trigger the int8
-#                           kernel),
-#                           fp32 (matches the ~20% fp share via
-#                           convolution(conv_wave_memory)),
+#   MATMUL_MICRO_DTYPE      int8_per_tensor (default; single FC op,
+#                           int8 per-tensor weights. Fires
+#                           `fully_connected_int8` for small M but
+#                           falls back to fp16 convolution1x1 for
+#                           large M.),
+#                           int8_conv2d_per_tensor (single CONV_2D 1x1
+#                           op, int8 per-tensor weights. Native CONV_2D
+#                           trigger hits `convolution_int8(conv_wave_memory)`
+#                           matching prefill's int8 matmul row; use
+#                           this mode to get per-shape numbers that
+#                           are directly comparable to prefill.),
+#                           int8 (wrapped FC int8; delegate compiles
+#                           as fp16 conv1x1),
+#                           int8_chain (2-FC int8 chain; delegate
+#                           compiles as fp16 conv1x1),
+#                           int8_hybrid (int8 weights + fp32 acts;
+#                           delegate accepts but does NOT trigger the
+#                           int8 kernel),
+#                           fp32 (baseline; matches the ~20% fp share
+#                           via convolution(conv_wave_memory)),
+#                           fp32_conv2d (single CONV_2D 1x1 fp32),
 #                           or fp16 (broken)
 #   MATMUL_MICRO_WARMUP     warmup iters per shape (default 5)
 #   MATMUL_MICRO_ITERS      timed iters per shape (default 50)

@@ -119,6 +119,15 @@ absl::StatusOr<SingleFcBuildResult> BuildFp32Conv2d1x1(int64_t m, int64_t n,
 absl::StatusOr<SingleFcBuildResult> BuildInt8FcChain(int64_t m, int64_t n,
                                                       int64_t k);
 
+// Forward declaration of the CONV_2D 1x1 int8-per-tensor path. Variant
+// of BuildFp32Conv2d1x1 with INT8 per-tensor-quant weights. This is the
+// schema that matches Gemma4 prefill's `convolution_int8(conv_wave_memory)`
+// kernel row -- native CONV_2D + int8 per-tensor weights hit the CL
+// delegate's int8 conv kernel selector.
+absl::StatusOr<SingleFcBuildResult> BuildInt8Conv2d1x1PerTensor(int64_t m,
+                                                                 int64_t n,
+                                                                 int64_t k);
+
 }  // namespace
 
 absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
@@ -156,6 +165,14 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
   // (matching prefill's int8 row).
   if (dtype == MatmulDtype::kInt8Chain) {
     return BuildInt8FcChain(m, n, k);
+  }
+
+  // CONV_2D 1x1 with int8 per-tensor weights. Same op family as
+  // kFp32Conv2d but with the int8 weight schema from kInt8PerTensor.
+  // Expected to hit `convolution_int8(conv_wave_memory)` matching
+  // prefill's int8 matmul row.
+  if (dtype == MatmulDtype::kInt8Conv2dPerTensor) {
+    return BuildInt8Conv2d1x1PerTensor(m, n, k);
   }
 
   // Per-mode tensor type and element byte width for the SINGLE-OP path.
@@ -235,6 +252,11 @@ absl::StatusOr<SingleFcBuildResult> BuildSingleFullyConnectedTfliteModel(
       // Already routed to BuildInt8FcChain above.
       return absl::InternalError(
           "kInt8Chain should have been dispatched to BuildInt8FcChain");
+    case MatmulDtype::kInt8Conv2dPerTensor:
+      // Already routed to BuildInt8Conv2d1x1PerTensor above.
+      return absl::InternalError(
+          "kInt8Conv2dPerTensor should have been dispatched to "
+          "BuildInt8Conv2d1x1PerTensor");
     default:
       return absl::InvalidArgumentError(
           "BuildSingleFullyConnectedTfliteModel: unknown dtype");
@@ -1122,6 +1144,184 @@ absl::StatusOr<SingleFcBuildResult> BuildInt8FcChain(int64_t m, int64_t n,
 
   auto description = fbb.CreateString(absl::StrCat(
       "matmul_micro_benchmark int8_chain m=", m, " n=", n, " k=", k));
+  auto model = tflite::CreateModel(
+      fbb,
+      /*version=*/3,
+      /*operator_codes=*/opcodes_fb,
+      /*subgraphs=*/subgraphs_fb,
+      /*description=*/description,
+      /*buffers=*/buffers_fb,
+      /*metadata_buffer=*/0,
+      /*metadata=*/0,
+      /*signature_defs=*/sig_defs_fb);
+  tflite::FinishModelBuffer(fbb, model);
+
+  SingleFcBuildResult result;
+  result.flatbuffer.assign(
+      reinterpret_cast<const char*>(fbb.GetBufferPointer()),
+      fbb.GetSize());
+  result.signature_key = "main";
+  result.input_name = "x";
+  result.output_name = "y";
+  return result;
+}
+
+// Builds a single CONV_2D op with a 1x1 filter, NHWC layout, INT8
+// weights with per-tensor symmetric quantization, and FLOAT32
+// signature I/O. Variant of BuildFp32Conv2d1x1 above -- only the
+// filter tensor dtype + quant params differ.
+//
+// This is the schema that should trigger
+// `convolution_int8(conv_wave_memory)` on the LiteRT CL delegate,
+// matching Gemma4 prefill's int8 matmul rows in Delegate Statistics.
+// Reasoning:
+//   - Native CONV_2D + INT8 per-tensor weights hits conv_parser's
+//     int8 kernel selector (mirror of lstm_parser.cc:62's
+//     `weights->type == kTfLiteInt8 && quant_params->scale->size == 1`).
+//   - The FC->conv1x1 rewrite path used by kInt8PerTensor lands at
+//     `convolution1x1(conv_wave_memory)` in fp16 for large M because
+//     the delegate's FC rewrite doesn't preserve the int8 attr through
+//     to the conv layer. Bypassing the rewrite with a native CONV_2D
+//     keeps the int8 path live end-to-end.
+//
+// Tensor layout:
+//   input  : [1, M, 1, K]  FLOAT32   (NHWC, W=1, channels=K)
+//   filter : [N, 1, 1, K]  INT8      per-tensor scale 1/127, zp=0
+//   bias   : [N]           FLOAT32
+//   output : [1, M, 1, N]  FLOAT32
+//   stride 1x1, padding VALID, no fused activation.
+absl::StatusOr<SingleFcBuildResult> BuildInt8Conv2d1x1PerTensor(int64_t m,
+                                                                 int64_t n,
+                                                                 int64_t k) {
+  if (m <= 0 || n <= 0 || k <= 0) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("BuildInt8Conv2d1x1PerTensor: non-positive M/N/K (m=",
+                     m, " n=", n, " k=", k, ")"));
+  }
+
+  // Sanity cap: 1 GiB of INT8 weights is ~1G weight elements -- far
+  // larger than any Gemma4 matmul.
+  constexpr int64_t kMaxBytes = int64_t{1} << 30;
+  const int64_t weight_bytes = n * k * static_cast<int64_t>(sizeof(int8_t));
+  if (weight_bytes <= 0 || weight_bytes > kMaxBytes) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("BuildInt8Conv2d1x1PerTensor: weight tensor too large (",
+                     weight_bytes, " bytes > 1 GiB)"));
+  }
+
+  flatbuffers::FlatBufferBuilder fbb(/*initial_size=*/static_cast<size_t>(
+      weight_bytes + 64 * 1024));
+
+  // ---- Buffers ----
+  auto buffer_empty = tflite::CreateBuffer(fbb);
+
+  const std::vector<uint8_t> weight_bytes_vec(
+      static_cast<size_t>(weight_bytes), 0);
+  auto weights_data_vec = fbb.CreateVector(weight_bytes_vec);
+  auto buffer_weights = tflite::CreateBuffer(fbb, weights_data_vec);
+
+  const std::vector<uint8_t> bias_bytes_vec(
+      static_cast<size_t>(n) * sizeof(float), 0);
+  auto bias_data_vec = fbb.CreateVector(bias_bytes_vec);
+  auto buffer_bias = tflite::CreateBuffer(fbb, bias_data_vec);
+
+  std::vector<flatbuffers::Offset<tflite::Buffer>> buffers_vec = {
+      buffer_empty, buffer_weights, buffer_bias};
+  auto buffers_fb = fbb.CreateVector(buffers_vec);
+
+  // ---- Per-tensor symmetric quant for the INT8 filter ----
+  constexpr float kWeightScale = 1.0f / 127.0f;
+  auto weight_quant_params = BuildPerTensorSymQuant(fbb, kWeightScale);
+
+  // ---- Tensors ----
+  //   0 : input  [1, M, 1, K] fp32
+  //   1 : filter [N, 1, 1, K] int8 per-tensor quant, constant
+  //   2 : bias   [N]          fp32 constant
+  //   3 : output [1, M, 1, N] fp32
+  std::vector<flatbuffers::Offset<tflite::Tensor>> tensors_vec;
+  // Tensor 0 : input
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m), 1,
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("x");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  // Tensor 1 : filter (INT8 with per-tensor quant)
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n), 1, 1,
+                                          static_cast<int32_t>(k)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("w");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_INT8, /*buffer=*/1, name,
+        /*quantization=*/weight_quant_params));
+  }
+  // Tensor 2 : bias (fp32)
+  {
+    const std::vector<int32_t> shape = {static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("b");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/2, name));
+  }
+  // Tensor 3 : output (fp32)
+  {
+    const std::vector<int32_t> shape = {1, static_cast<int32_t>(m), 1,
+                                          static_cast<int32_t>(n)};
+    auto shape_fb = fbb.CreateVector(shape);
+    auto name = fbb.CreateString("y");
+    tensors_vec.push_back(tflite::CreateTensor(
+        fbb, shape_fb, tflite::TensorType_FLOAT32, /*buffer=*/0, name));
+  }
+  auto tensors_fb = fbb.CreateVector(tensors_vec);
+
+  // ---- Operator: CONV_2D 1x1 ----
+  std::vector<flatbuffers::Offset<tflite::OperatorCode>> opcodes_vec;
+  opcodes_vec.push_back(
+      BuildBuiltinOpCode(fbb, tflite::BuiltinOperator_CONV_2D, /*version=*/5));
+  auto opcodes_fb = fbb.CreateVector(opcodes_vec);
+
+  const std::vector<int32_t> op_inputs_v = {0, 1, 2};
+  const std::vector<int32_t> op_outputs_v = {3};
+  auto op_inputs_fb = fbb.CreateVector(op_inputs_v);
+  auto op_outputs_fb = fbb.CreateVector(op_outputs_v);
+  auto conv_options = tflite::CreateConv2DOptions(
+      fbb, tflite::Padding_VALID,
+      /*stride_w=*/1, /*stride_h=*/1,
+      tflite::ActivationFunctionType_NONE,
+      /*dilation_w_factor=*/1, /*dilation_h_factor=*/1);
+  auto op = tflite::CreateOperator(
+      fbb, /*opcode_index=*/0, op_inputs_fb, op_outputs_fb,
+      tflite::BuiltinOptions_Conv2DOptions, conv_options.Union());
+  std::vector<flatbuffers::Offset<tflite::Operator>> operators_vec = {op};
+  auto operators_fb = fbb.CreateVector(operators_vec);
+
+  // ---- Subgraph + signature + model ----
+  const std::vector<int32_t> sg_inputs_v = {0};
+  const std::vector<int32_t> sg_outputs_v = {3};
+  auto sg_inputs = fbb.CreateVector(sg_inputs_v);
+  auto sg_outputs = fbb.CreateVector(sg_outputs_v);
+  auto sg_name = fbb.CreateString("main");
+  auto subgraph = tflite::CreateSubGraph(fbb, tensors_fb, sg_inputs,
+                                          sg_outputs, operators_fb, sg_name);
+  std::vector<flatbuffers::Offset<tflite::SubGraph>> subgraphs_vec = {subgraph};
+  auto subgraphs_fb = fbb.CreateVector(subgraphs_vec);
+
+  auto sig_key = fbb.CreateString("main");
+  auto sig_in_name = fbb.CreateString("x");
+  auto sig_out_name = fbb.CreateString("y");
+  auto sig_def = BuildSignatureDef(
+      fbb, sig_key, sig_in_name, /*in_tensor_idx=*/0, sig_out_name,
+      /*out_tensor_idx=*/3);
+  std::vector<flatbuffers::Offset<tflite::SignatureDef>> sig_defs_vec = {
+      sig_def};
+  auto sig_defs_fb = fbb.CreateVector(sig_defs_vec);
+
+  auto description = fbb.CreateString(
+      absl::StrCat("matmul_micro_benchmark conv2d_1x1_int8_per_tensor m=", m,
+                   " n=", n, " k=", k));
   auto model = tflite::CreateModel(
       fbb,
       /*version=*/3,
