@@ -119,7 +119,14 @@ HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
 #                 + asymmetric_quantize_inputs=true (failed).
 #   fp32        : single FC op, FLOAT32 throughout. Baseline.
 #   fp16        : broken (CPU FC reference kernel asserts fp32).
-MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_per_tensor}"
+# Default is int8_conv2d_per_tensor because that is the schema
+# expected to trigger `convolution_int8(conv_wave_memory)` on the CL
+# delegate, matching prefill's int8 matmul kernel. The older
+# int8_per_tensor (FULLY_CONNECTED) path falls back to
+# `convolution1x1(conv_wave_memory)` in fp16 for large M and is kept
+# only for comparison. Override to int8_per_tensor etc. when you
+# specifically want the FC rewrite path.
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_conv2d_per_tensor}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"
