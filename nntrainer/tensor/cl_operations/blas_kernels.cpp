@@ -1382,6 +1382,237 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
   clReleaseMemObject(x_q_buf);
 }
 
+// =========================================================================
+// Phase 3c v2: fp16 GEMM with weights routed through a texture sampler.
+//
+// Identical code path to `gemm_int4_adreno_cl` except that the packed
+// int4 weight buffer is additionally wrapped as an `image1d_buffer_t`
+// with CL_RGBA / CL_UNSIGNED_INT16 format (4 ushorts per texel). This
+// matches LiteRT's observation that on Adreno GPUs the texture cache +
+// fetch unit runs in parallel with the generic L1 port, so reading
+// weights + activations via independent texture handles has ~1.5x the
+// effective memory bandwidth of reading one or the other from
+// `__global`.
+// =========================================================================
+void gemm_int4_adreno_v2_cl(uint16_t *input, uint16_t *input_transposed,
+                            uint16_t *weights, uint16_t *scales,
+                            uint16_t *output, unsigned int M, unsigned int N,
+                            unsigned int K) {
+  if (((N % 4) != 0) || ((K % 4) != 0)) {
+    throw std::runtime_error(
+      "gemm_int4_adreno_v2_cl requires N and K to be multiples of 4");
+  }
+
+  const int q_group_size = static_cast<int>(K); // channel-wise
+  const int alignK = static_cast<int>(align(K, q_group_size));
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  cl_int err = CL_SUCCESS;
+
+  // --- input image (fp16 [M][alignK]) ---
+  const size_t input_buf_bytes =
+    static_cast<size_t>(M) * static_cast<size_t>(alignK) * sizeof(uint16_t);
+  cl_mem input_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, input_buf_bytes,
+                   input, &err);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("v2: failed to create input cl_mem buffer");
+
+  cl_image_format img_fmt_half;
+  img_fmt_half.image_channel_order = CL_RGBA;
+  img_fmt_half.image_channel_data_type = CL_HALF_FLOAT;
+
+  cl_image_desc img_desc;
+  std::memset(&img_desc, 0, sizeof(img_desc));
+  img_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  img_desc.image_width =
+    static_cast<size_t>(M) * static_cast<size_t>(alignK) / 4;
+  img_desc.buffer = input_buf;
+
+  cl_mem input_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_ONLY,
+                  &img_fmt_half, &img_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("v2: failed to create input image1d_buffer");
+  }
+
+  // --- input_transposed image ---
+  const size_t input_t_buf_bytes = static_cast<size_t>(align(M, 4)) *
+                                   static_cast<size_t>(alignK) *
+                                   sizeof(uint16_t);
+  cl_mem input_t_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, input_t_buf_bytes,
+                   input_transposed, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("v2: failed to create input_transposed cl_mem");
+  }
+
+  std::memset(&img_desc, 0, sizeof(img_desc));
+  img_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  img_desc.image_width =
+    static_cast<size_t>(align(M, 4)) * static_cast<size_t>(alignK) / 4;
+  img_desc.buffer = input_t_buf;
+
+  cl_mem input_t_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_WRITE,
+                  &img_fmt_half, &img_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error(
+      "v2: failed to create image1d_buffer for input_transposed");
+  }
+
+  // --- weight image (THIS IS THE NEW PIECE) ---
+  //
+  // packed int4 weights: (K/4) * N ushorts; cast 4 ushorts per RGBA texel
+  // so width = K/4 * N / 4 texels. N % 4 == 0 is already asserted.
+  const size_t weight_buf_bytes = static_cast<size_t>(K / 4u) *
+                                  static_cast<size_t>(N) * sizeof(uint16_t);
+  cl_mem weight_buf =
+    clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, weight_buf_bytes,
+                   weights, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("v2: failed to create weight cl_mem buffer");
+  }
+
+  cl_image_format img_fmt_u16;
+  img_fmt_u16.image_channel_order = CL_RGBA;
+  img_fmt_u16.image_channel_data_type = CL_UNSIGNED_INT16;
+
+  std::memset(&img_desc, 0, sizeof(img_desc));
+  img_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  img_desc.image_width =
+    static_cast<size_t>(K / 4u) * static_cast<size_t>(N) / 4u;
+  img_desc.buffer = weight_buf;
+
+  cl_mem weight_img =
+    clCreateImage(blas_cc->context_inst_.GetContext(), CL_MEM_READ_ONLY,
+                  &img_fmt_u16, &img_desc, nullptr, &err);
+  if (err != CL_SUCCESS) {
+    clReleaseMemObject(weight_buf);
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error(
+      "v2: failed to create image1d_buffer for weights "
+      "(CL_RGBA/CL_UNSIGNED_INT16 unsupported?)");
+  }
+
+  // --- step 1: input_transpose kernel (unchanged) ---
+  ClContext::SharedPtrClKernel xt_kernel =
+    blas_cc->registerClKernel(input_transpose_kernel, "input_transpose");
+  if (!xt_kernel) {
+    clReleaseMemObject(weight_img);
+    clReleaseMemObject(weight_buf);
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error("v2: failed to register input_transpose kernel");
+  }
+
+  bool result = false;
+  {
+    int arg = 0;
+    if (!xt_kernel->SetKernelArguments(arg++, &input_img, sizeof(cl_mem)))
+      throw std::runtime_error("v2: input_transpose arg 0");
+    if (!xt_kernel->SetKernelArguments(arg++, &input_t_img, sizeof(cl_mem)))
+      throw std::runtime_error("v2: input_transpose arg 1");
+
+    int alignK_4 = alignK >> 2;
+    if (!xt_kernel->SetKernelArguments(arg++, &alignK_4, sizeof(int)))
+      throw std::runtime_error("v2: input_transpose arg 2");
+    int M_4 = static_cast<int>(ceilDiv(M, 4u));
+    if (!xt_kernel->SetKernelArguments(arg++, &M_4, sizeof(int)))
+      throw std::runtime_error("v2: input_transpose arg 3");
+
+    const int xt_global[3] = {alignK_4, M_4, 1};
+    const int xt_local[3] = {1, 128, 1};
+
+    result = blas_cc->command_queue_inst_.DispatchCommand(xt_kernel, xt_global,
+                                                          xt_local);
+    if (!result)
+      throw std::runtime_error("v2: failed to dispatch input_transpose");
+  }
+
+  // --- step 2: gpu_int4_gemm_adreno_v2 (weight texture) ---
+  ClContext::SharedPtrClKernel gemm_kernel = blas_cc->registerClKernel(
+    int4_gemm_adreno_v2_kernel, "gpu_int4_gemm_adreno_v2");
+  if (!gemm_kernel) {
+    clReleaseMemObject(weight_img);
+    clReleaseMemObject(weight_buf);
+    clReleaseMemObject(input_t_img);
+    clReleaseMemObject(input_t_buf);
+    clReleaseMemObject(input_img);
+    clReleaseMemObject(input_buf);
+    throw std::runtime_error(
+      "v2: failed to register gpu_int4_gemm_adreno_v2 kernel");
+  }
+
+  {
+    int arg = 0;
+    if (!gemm_kernel->SetKernelArguments(arg++, &input_t_img, sizeof(cl_mem)))
+      throw std::runtime_error("v2: gemm arg 0 (input_transposed image)");
+    if (!gemm_kernel->SetKernelSVMArguments(arg++, scales))
+      throw std::runtime_error("v2: gemm arg 1 (scales)");
+    if (!gemm_kernel->SetKernelSVMArguments(arg++, output))
+      throw std::runtime_error("v2: gemm arg 2 (output)");
+    if (!gemm_kernel->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem)))
+      throw std::runtime_error("v2: gemm arg 3 (weights image)");
+
+    int size_k = static_cast<int>(K);
+    int size_n = static_cast<int>(N);
+    int size_m = static_cast<int>(M);
+    int qg = q_group_size;
+
+    if (!gemm_kernel->SetKernelArguments(arg++, &size_k, sizeof(int)))
+      throw std::runtime_error("v2: gemm arg 4 (K)");
+    if (!gemm_kernel->SetKernelArguments(arg++, &size_n, sizeof(int)))
+      throw std::runtime_error("v2: gemm arg 5 (N)");
+    if (!gemm_kernel->SetKernelArguments(arg++, &size_m, sizeof(int)))
+      throw std::runtime_error("v2: gemm arg 6 (M)");
+    if (!gemm_kernel->SetKernelArguments(arg++, &qg, sizeof(int)))
+      throw std::runtime_error("v2: gemm arg 7 (quantization_group_size)");
+
+    const int g_global[3] = {static_cast<int>(ceilDiv(M, 8u)),
+                             static_cast<int>(N) / 4, 1};
+    const int g_local[3] = {1, 128, 1};
+
+    result = blas_cc->command_queue_inst_.DispatchCommand(gemm_kernel, g_global,
+                                                          g_local);
+    if (!result)
+      throw std::runtime_error(
+        "v2: failed to dispatch gpu_int4_gemm_adreno_v2");
+  }
+
+  // Sync output back to host.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
+    true);
+
+  clReleaseMemObject(weight_img);
+  clReleaseMemObject(weight_buf);
+  clReleaseMemObject(input_t_img);
+  clReleaseMemObject(input_t_buf);
+  clReleaseMemObject(input_img);
+  clReleaseMemObject(input_buf);
+}
+
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          uint16_t *output, unsigned int K, unsigned int N) {
   bool result = false;

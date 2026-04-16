@@ -166,6 +166,29 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
                          unsigned int M, unsigned int N, unsigned int K);
 
 /**
+ * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
+ *        read through image texture).
+ *
+ * Same weight / scale layout, same M>1 prefill contract as
+ * `gemm_int4_adreno_cl`. The ONLY functional difference is that the
+ * packed int4 weights are bound to the kernel as an `image1d_buffer_t`
+ * (CL_RGBA/CL_UNSIGNED_INT16) instead of a `__global const ushort *`,
+ * so weight fetches go through the texture cache / fetch unit. This
+ * mirrors LiteRT's int8 FC path, which on Adreno 830 reaches ~18.7
+ * TFLOPS by keeping activation + weight reads on independent memory
+ * pipes.
+ *
+ * All other args (input SVM, input_transposed scratch, scales, output,
+ * M/N/K) behave exactly like `gemm_int4_adreno_cl`.
+ *
+ * Assumes N % 4 == 0, K % 4 == 0. No additional constraints vs v1.
+ */
+void gemm_int4_adreno_v2_cl(uint16_t *input, uint16_t *input_transposed,
+                            uint16_t *weights, uint16_t *scales,
+                            uint16_t *output, unsigned int M, unsigned int N,
+                            unsigned int K);
+
+/**
  * @brief INT4 channel-wise GEMV for Adreno GPUs (M = 1, gpu_int4_gemv_adreno
  *        kernel).
  *
