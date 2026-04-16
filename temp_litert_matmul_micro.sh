@@ -153,17 +153,22 @@ TASKSET_MASK="${TASKSET_MASK:-f0}"
 # OpenCL program cache. When set, matmul_micro_benchmark passes
 # --cache_dir=<path> through to litert::GpuOptions::SetSerializationDir
 # + SetSerializeExternalTensors(true) + a per-(M,N,K,dtype) model cache
-# key. First run populates the cache (wall-clock unchanged). Subsequent
-# runs with the same shape roster skip OpenCL JIT on CompiledModel::Create
-# -- this is the main knob for closing the "per-shape JIT overhead" gap
-# between the micro benchmark and the one-shot prefill CompiledModel.
+# key.
 #
-# Default: on, pointing at a persistent on-device path. Set
-# MATMUL_MICRO_CACHE_DIR="" to disable and re-measure cold-compile
-# wall-clock. The cache dir is created lazily on the device before the
-# run; it survives adb wipes of the binary because it sits under
-# DEVICE_FOLDER alongside the prebuilts.
-MATMUL_MICRO_CACHE_DIR="${MATMUL_MICRO_CACHE_DIR:-${DEVICE_FOLDER}/cache}"
+# DEFAULT: off. Earlier runs populated cache entries with programs that
+# the CL compiler could not rebuild (undeclared-q0/q1 error) because
+# some combination of schema + options we were trying hit a delegate
+# codegen bug. Once those broken entries were serialized, every
+# subsequent run -- even after fixing the schema -- would reload them
+# and fail again, because LiteRT's on-device cache keys off the model
+# flatbuffer content, not SetModelCacheKey (the latter only namespaces
+# the serialization dir). Keeping cache off by default forces a fresh
+# compile every run, which is slower but correct.
+#
+# To enable: MATMUL_MICRO_CACHE_DIR=${DEVICE_FOLDER}/cache ./temp_...
+# Before enabling on a schema that has ever failed to compile, wipe
+# the dir first: `adb shell "rm -rf ${DEVICE_FOLDER}/cache/*"`.
+MATMUL_MICRO_CACHE_DIR="${MATMUL_MICRO_CACHE_DIR:-}"
 
 MATMUL_ROSTER_CSV_DEVICE=${DEVICE_FOLDER}/matmul_roster.csv
 MATMUL_MICRO_CSV_DEVICE=${DEVICE_FOLDER}/matmul_micro.csv

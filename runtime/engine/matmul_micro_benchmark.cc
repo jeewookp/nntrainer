@@ -109,6 +109,15 @@ ABSL_FLAG(std::string, csv_out, "",
 ABSL_FLAG(int, max_shapes, 0,
           "If > 0, only benchmark the first N unique shapes from the "
           "input. Useful for smoke-testing on large rosters.");
+ABSL_FLAG(int, max_tensor_mb, 512,
+          "If > 0, skip shapes where any of weight / input / output "
+          "tensors exceeds this many MiB (bytes counted at FLOAT32 "
+          "size -- INT8 paths allocate less but CL texture conversion "
+          "may still upconvert to fp16/fp32). Default 512 MiB is "
+          "conservative enough to keep the Adreno 830 CL device from "
+          "hitting `Failed to allocate 2049280128 bytes (clCreateBuffer)` "
+          "errors that used to SIGKILL the whole process on the "
+          "32003x32003 vocab-projection shapes.");
 ABSL_FLAG(bool, profile, false,
           "Enable LiteRT op profiling for each shape and dump the "
           "Delegate Statistics summary at the end. This wires up "
@@ -817,6 +826,7 @@ absl::Status MainBody() {
   const int iters = absl::GetFlag(FLAGS_iters);
   const std::string csv_out = absl::GetFlag(FLAGS_csv_out);
   const int max_shapes = absl::GetFlag(FLAGS_max_shapes);
+  const int max_tensor_mb = absl::GetFlag(FLAGS_max_tensor_mb);
   const std::string dtype_str = absl::GetFlag(FLAGS_dtype);
   const bool enable_profile = absl::GetFlag(FLAGS_profile);
   const std::string cache_dir = absl::GetFlag(FLAGS_cache_dir);
@@ -880,6 +890,45 @@ absl::Status MainBody() {
   std::sort(shapes.begin(), shapes.end());
   if (max_shapes > 0 && static_cast<int>(shapes.size()) > max_shapes) {
     shapes.resize(max_shapes);
+  }
+  // Guard against shapes that will trigger the CL delegate's 2 GB
+  // buffer allocation failure (and sometimes SIGKILL the process) --
+  // e.g. 32003x32003 vocab-projection shapes. We count bytes at
+  // FLOAT32 size (4 B/element) as a conservative upper bound: int8
+  // paths allocate less than this, but the delegate may still
+  // upconvert to fp16/fp32 for texture layout on certain precisions.
+  // Any tensor (weight, input, or output) exceeding max_tensor_mb
+  // causes the shape to be skipped with a stderr note; the CSV
+  // simply won't have a row for it.
+  if (max_tensor_mb > 0) {
+    const int64_t max_bytes =
+        static_cast<int64_t>(max_tensor_mb) * 1024 * 1024;
+    std::vector<Shape> kept;
+    kept.reserve(shapes.size());
+    for (const auto& s : shapes) {
+      const int64_t w_bytes = s.n * s.k * 4;          // filter fp32 cap
+      const int64_t in_bytes = s.m * s.k * 4;         // input fp32
+      const int64_t out_bytes = s.m * s.n * 4;        // output fp32
+      const int64_t worst =
+          std::max({w_bytes, in_bytes, out_bytes});
+      if (worst > max_bytes) {
+        std::fprintf(stderr,
+                     "[MATMUL MICRO] SKIP (shape too large for "
+                     "--max_tensor_mb=%d): m=%lld n=%lld k=%lld "
+                     "(worst tensor %.1f MiB)\n",
+                     max_tensor_mb, static_cast<long long>(s.m),
+                     static_cast<long long>(s.n),
+                     static_cast<long long>(s.k),
+                     static_cast<double>(worst) / (1024.0 * 1024.0));
+        continue;
+      }
+      kept.push_back(s);
+    }
+    shapes = std::move(kept);
+  }
+  if (shapes.empty()) {
+    return absl::InvalidArgumentError(
+        "No shapes left after --max_tensor_mb filter.");
   }
 
   std::fprintf(stderr,
