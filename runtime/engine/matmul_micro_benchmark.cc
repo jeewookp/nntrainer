@@ -508,8 +508,53 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
     // tried and failed at for unrelated reasons -- the delegate
     // collapses the wrap back to fp16). Left off until someone does
     // that work.
+    //
+    // The remaining option block below mirrors the prefill defaults
+    // from runtime/engine/shared_flags.cc and the code that consumes
+    // them in runtime/executor/llm_executor_settings_utils.cc. Every
+    // option has been observed (in prefill's Delegate Statistics) to
+    // either move work out of Run() into CompiledModel::Create
+    // (weights convert, command-buffer preparation) or to remove
+    // host-side wait latency (active sync). For the benchmark this
+    // matters a lot: without these options, the previous run showed
+    // `weights_convert_uint8_to_float16` firing 50 times (419us per
+    // call) even though weights are constants, and
+    // `UploadOrBindTensorBuffer` at 2136us per iter even though the
+    // input is written once and never changed. Both come from the
+    // delegate defaulting to "on-demand" behavior, which prefill
+    // turns off via the flags below.
     gpu_opts.SetHintFullyDelegatedToSingleDelegate(true);
     gpu_opts.EnableConstantTensorSharing(true);
+    // Convert int8 weights to fp16 on the GPU once at Create time
+    // (not per Run). Paired with WaitForWeightsConversionComplete
+    // so Create blocks until conversion finishes -- otherwise the
+    // conversion gets deferred to the first Run() calls and shows
+    // up in the benchmark timings.
+    gpu_opts.SetConvertWeightsOnGpu(true);
+    gpu_opts.WaitForWeightsConversionComplete(true);
+    // madvise SEQUENTIAL/WILLNEED on original shared (mmap'd) weight
+    // tensors so the kernel reading them doesn't pay page-fault cost
+    // on the hot path. Harmless for our in-memory synthetic weights,
+    // matches prefill.
+    gpu_opts.SetMadviseOriginalSharedTensors(true);
+    // Active wait (spin) instead of passive wait for GPU completion.
+    // Removes ~100us of host-thread wake-up latency after
+    // clEnqueueNDRangeKernel completes -- important when the burst
+    // submit pattern has 50 enqueues back-to-back. Prefill turns
+    // this on when advanced_settings.is_benchmark is true (which it
+    // is for the production benchmark path); the micro bench is
+    // also a benchmark, so match.
+    gpu_opts.SetSyncExecutionModeWaitType(
+        litert::GpuOptions::SyncExecutionModeWaitType::kActive);
+    // Keep shader optimizations (default in prefill). Passing false
+    // means "don't disable", i.e. optimizations stay on.
+    gpu_opts.DisableShaderOptimization(false);
+    // Pre-prepare command buffers 2 steps ahead so the GPU queue
+    // doesn't stall while LiteRT builds the next dispatch. Prefill
+    // uses 2 because its KV cache swaps every 2 steps; for our
+    // straight burst loop, 2 is also fine -- anything >=1 is an
+    // improvement over the default of 0.
+    gpu_opts.SetNumStepsOfCommandBufferPreparations(2);
     // OpenCL program cache wiring. When --cache_dir is set, tell the
     // GPU compilation options where to serialize compiled programs +
     // external tensor data, and attach a per-(M,N,K,dtype) cache key
@@ -528,8 +573,20 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
       const std::string cache_dir_str(cache_dir);
       gpu_opts.SetSerializationDir(cache_dir_str.c_str());
       gpu_opts.SetSerializeExternalTensors(true);
+      // v2 prefix: previous runs populated this cache dir with
+      // kernel entries from a schema that the delegate's CL code
+      // generator couldn't compile (weight-only int8 + the
+      // EnableAllowSrcQuantizedFcConvOps flag -> undeclared
+      // identifiers q0/q1 in the generated source). Those broken
+      // entries would be reloaded by the old keys on every
+      // subsequent run, even with the flag off, because LiteRT's
+      // cache stores the compiled program bytes and doesn't
+      // re-validate them against the current schema. Bumping the
+      // prefix forces a fresh compile; old v1 entries become
+      // orphaned and can be deleted manually with
+      // `adb shell rm -rf /data/local/tmp/litert_lm/cache/*`.
       const std::string model_cache_key =
-          absl::StrCat("matmul_bench_m", shape.m, "_n", shape.n, "_k",
+          absl::StrCat("matmul_bench_v2_m", shape.m, "_n", shape.n, "_k",
                        shape.k, "_", dtype_str);
       gpu_opts.SetModelCacheKey(model_cache_key.c_str());
     }
