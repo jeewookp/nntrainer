@@ -732,9 +732,12 @@ LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES)
 LOCAL_SHARED_LIBRARIES := nntrainer ccapi-nntrainer
 LOCAL_STATIC_LIBRARIES := googletest_main test_util
 
+# Note: do NOT add clblast here. The test only calls gemm_int4_adreno_cl
+# (which lives inside libnntrainer.so and resolves CLBlast symbols
+# internally). Linking libclblast.a statically pulls in xgemm.o which
+# has its own main() that conflicts with the gtest main() in this binary.
 ifeq ($(MESON_ENABLE_OPENCL), 1)
 LOCAL_SHARED_LIBRARIES += opencl
-LOCAL_STATIC_LIBRARIES += clblast
 endif
 
 include $(BUILD_EXECUTABLE)
