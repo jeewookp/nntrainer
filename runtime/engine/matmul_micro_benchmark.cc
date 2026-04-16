@@ -177,6 +177,8 @@ ABSL_FLAG(std::string, cache_dir, "",
           "benchmark-script reruns; a tmpfs path defeats the "
           "purpose.");
 
+namespace {
+
 // In recent LiteRT revisions `litert::CompiledModel::Create` is a
 // protected static factory: only subclasses can call it. The same
 // pattern that runtime/executor/litert/kv_cache_test.cc uses -- derive
