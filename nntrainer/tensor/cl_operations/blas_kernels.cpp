@@ -1257,9 +1257,13 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
                               uint16_t *w_scale, uint16_t *weights,
                               uint16_t *output, unsigned int M, unsigned int N,
                               unsigned int K) {
-  if (((N % 4) != 0) || ((K % 4) != 0)) {
+  // Phase 3a tile is 8 rows x 8 cols, so N must be a multiple of 8 (not
+  // just 4 as before). K still has the 4-nibbles-per-ushort constraint.
+  // All callers that go through Int4Utils::channelwise_layout_size
+  // already align N to 32, which satisfies this.
+  if (((N % 8) != 0) || ((K % 4) != 0)) {
     throw std::runtime_error(
-      "gemm_int8_int4_adreno_cl requires N and K to be multiples of 4");
+      "gemm_int8_int4_adreno_cl requires N % 8 == 0 and K % 4 == 0");
   }
   // The texture view below treats x_q as a char4 1D image, so the row
   // stride in texels is K/4. Caller must have zero-padded to align(M, 8).
@@ -1355,12 +1359,12 @@ void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
   if (!result)
     throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 7 (M)");
 
-  // Dispatch: tile is 8 rows x 4 columns per WI.
-  //   global = (ceilDiv(M, 8), N/4, 1)
-  //   local  = {1, 128, 1}  (matches gpu_int4_gemm_adreno for a
-  //                          direct fp16-vs-int8 comparison)
+  // Dispatch: Phase 3a tile is 8 rows x 8 columns per WI, so global[1]
+  // is N/8 (vs N/4 for the fp16 kernel).
+  //   global = (ceilDiv(M, 8), N/8, 1)
+  //   local  = {1, 128, 1}
   const int g_global[3] = {static_cast<int>(ceilDiv(M, 8u)),
-                           static_cast<int>(N) / 4, 1};
+                           static_cast<int>(N) / 8, 1};
   const int g_local[3] = {1, 128, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g_global,
