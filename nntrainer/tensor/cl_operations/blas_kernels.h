@@ -184,6 +184,34 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          uint16_t *output, unsigned int K, unsigned int N);
 
 /**
+ * @brief INT8 activation x INT4 weight GEMM for Adreno GPUs
+ *        (gpu_int8_int4_gemm_adreno kernel).
+ *
+ * Activations are pre-quantized to signed int8 on the host; the Adreno
+ * DP4A (ssad) path gives ~3.6x the fp16 FMA throughput on 7xx+ GPUs. The
+ * weight layout is identical to `gemm_int4_adreno_cl` so callers can
+ * reuse the same Int4Utils packed buffers.
+ *
+ * @param[in] x_q      int8 activation buffer of align(M,8) * K bytes.
+ *                     Rows in [M, align(M,8)) must be zero-padded by the
+ *                     caller so the kernel's vload4 is in-bounds. SVM ptr.
+ * @param[in] x_scale  fp16 per-row activation scale, length M (SVM).
+ * @param[in] w_scale  fp16 per-channel weight scale, length align(N,4)
+ *                     (SVM). Tail padding entries are ignored.
+ * @param[in] weights  packed int4 weights ushort[(K/4) * N] (SVM).
+ * @param[out] output  output [M][N] fp16 (SVM).
+ * @param[in] M batch / token count
+ * @param[in] N output dimension
+ * @param[in] K input dimension
+ *
+ * Assumes N % 4 == 0, K % 4 == 0.
+ */
+void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
+                              uint16_t *w_scale, uint16_t *weights,
+                              uint16_t *output, unsigned int M, unsigned int N,
+                              unsigned int K);
+
+/**
  * @brief     Q6_K sgemv computation : Y = A*X
  * @param[in] matAdata void * for Matrix A
  * @param[in] vecXdata float * for Vector X

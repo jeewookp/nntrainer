@@ -165,8 +165,11 @@ $ADB_CMD shell chmod +x "${DEVICE_DIR}/${TEST_BIN_NAME}"
 if [ -n "$FILTER" ]; then
   GTEST_FILTER_ARG="--gtest_filter=${FILTER}"
 else
-  # Default: run the whole int4_gemm_adreno suite.
-  GTEST_FILTER_ARG="--gtest_filter=nntrainer_opencl_adreno_kernels_int4.*"
+  # Default: run every adreno int4 / int8 / A/B suite. `_kernels_*` covers:
+  #   nntrainer_opencl_adreno_kernels_int4          (fp16 activation path)
+  #   nntrainer_opencl_adreno_kernels_int8_int4     (DP4A path)
+  #   nntrainer_opencl_adreno_kernels_ab            (A/B benchmark)
+  GTEST_FILTER_ARG="--gtest_filter=nntrainer_opencl_adreno_kernels_*.*"
 fi
 
 echo "Filter: ${GTEST_FILTER_ARG}"
@@ -181,7 +184,13 @@ echo " Run summary"
 echo "=========================================="
 echo ""
 echo "--- Per-shape latency / MSE ---"
-grep -E "int4_gemm_adreno M=" "${RUN_LOG}" || echo "(no per-shape lines found)"
+grep -E "int4_gemm_adreno M=|int8_int4_gemm_adreno M=" "${RUN_LOG}" \
+  || echo "(no per-shape lines found)"
+
+echo ""
+echo "--- A/B benchmark (fp16 vs DP4A) ---"
+grep -E "A/B bench|fp16 path|dp4a path|speedup|dp4a MSE" "${RUN_LOG}" \
+  || echo "(no A/B bench lines found)"
 
 echo ""
 echo "--- gtest pass/fail tally ---"

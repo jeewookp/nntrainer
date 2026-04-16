@@ -153,6 +153,74 @@ float GetMseTolerance(unsigned int M, unsigned int K, unsigned int N) {
   return per_elem * per_elem * 4.0f;
 }
 
+// Per-row int8 activation quantization (symmetric, range [-127, 127]).
+//
+// Matches what `gpu_int8_int4_gemm_adreno` expects:
+//   x_q[m * K_pad + k]   = round(x[m, k] * 127 / max|x[m, :]|), clamped
+//                          to [-127, 127]
+//   x_scale[m]           = max|x[m, :]| / 127                  (fp16)
+//   out_dequant[m * K + k] = q * scale_rounded                 (fp32)
+//
+// `out_dequant` is the fp32 reference activation the CPU sgemm pass
+// uses, so the A/B comparison measures kernel correctness (including
+// DP4A path) against the same quantized math, not against the full
+// fp32 reference. This keeps the MSE tolerance purely a function of
+// fp16 output rounding + int8 quant error, not two stacked quant
+// errors.
+//
+// K_pad lets the caller zero-pad the flat int8 buffer to a width >= K
+// (needed for align(M,8) row-padding on the DP4A path -- we only pad
+// rows, not columns, but keep the arg for symmetry).
+void QuantizeActivationInt8(const float *x_fp32, unsigned int M,
+                            unsigned int K, unsigned int M_padded,
+                            unsigned int K_padded,
+                            std::vector<int8_t> &out_q,
+                            std::vector<uint16_t> &out_scale_fp16,
+                            std::vector<float> &out_dequant) {
+  out_q.assign(static_cast<size_t>(M_padded) * K_padded, 0);
+  out_scale_fp16.assign(M, 0u);
+  out_dequant.assign(static_cast<size_t>(M) * K, 0.0f);
+
+  for (unsigned int m = 0; m < M; ++m) {
+    float max_abs = 0.0f;
+    for (unsigned int k = 0; k < K; ++k) {
+      const float v = std::fabs(x_fp32[m * K + k]);
+      if (v > max_abs)
+        max_abs = v;
+    }
+    const float scale = (max_abs > 0.0f) ? (max_abs / 127.0f) : 1.0f;
+    out_scale_fp16[m] = compute_fp32_to_fp16(scale);
+
+    const float scale_rounded = compute_fp16_to_fp32(out_scale_fp16[m]);
+    const float inv_scale =
+      (scale_rounded > 0.0f) ? (1.0f / scale_rounded) : 0.0f;
+
+    for (unsigned int k = 0; k < K; ++k) {
+      int q = static_cast<int>(std::nearbyint(x_fp32[m * K + k] * inv_scale));
+      if (q < -127)
+        q = -127;
+      if (q > 127)
+        q = 127;
+      out_q[static_cast<size_t>(m) * K_padded + k] = static_cast<int8_t>(q);
+      out_dequant[m * K + k] = static_cast<float>(q) * scale_rounded;
+    }
+    // Rest of this row's K_padded tail stays zero (set by assign).
+  }
+  // Rows [M, M_padded) already zero-initialized by the assign call.
+}
+
+// MSE tolerance for the DP4A path. The dequantized weights and the
+// dequantized activations are both used as the CPU reference, so the
+// dominant error source is fp16 output rounding over a sum of K int32
+// products. A per-element ~1e-3 * K bound (squared, 4x safety) covers
+// shapes up to K=1024 without being loose enough to hide layout bugs.
+float GetMseToleranceDp4a(unsigned int M, unsigned int K, unsigned int N) {
+  (void)M;
+  (void)N;
+  const float per_elem = static_cast<float>(K) * 1.5e-3f;
+  return per_elem * per_elem * 4.0f;
+}
+
 } // namespace
 
 static void run_gemm_int4_adreno_test_(const unsigned int M,
@@ -376,6 +444,363 @@ DECLARE_int4_gemm_adreno_test_M_K_N(32, 256, 256);
 DECLARE_int4_gemm_adreno_test_M_K_N(64, 512, 256);
 DECLARE_int4_gemm_adreno_test_M_K_N(128, 1024, 512);
 DECLARE_int4_gemm_adreno_test_M_K_N(512, 1024, 1024);
+
+// =========================================================================
+// INT8 activation x INT4 weight (DP4A) tests + A/B benchmark.
+//
+// These use the same weight layout as the fp16 path above; the only
+// difference is per-row int8 activation quant and the
+// `gpu_int8_int4_gemm_adreno` device kernel. Because the CPU reference
+// uses dequantized weights AND dequantized activations, the MSE
+// tolerance only has to cover fp16 rounding of the output (quant error
+// is absorbed by matching the reference to the quantized inputs).
+// =========================================================================
+static void run_gemm_int8_int4_adreno_test_(const unsigned int M,
+                                             const unsigned int K,
+                                             const unsigned int N) {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr)
+    << "GPU ClContext unavailable -- cannot run gemm_int8_int4_adreno test";
+
+  constexpr int INT4_BLOCK_N_SIZE = 32;
+  const unsigned int alignN = align(N, INT4_BLOCK_N_SIZE);
+  // The DP4A kernel reads 8 rows per WI via direct char4 loads, so rows
+  // [M, align(M, 8)) have to be zero-padded by the caller.
+  const unsigned int alignM = align(M, 8u);
+
+  std::vector<float> input_orig =
+    generate_random_vector<float, false>(M * K, -1.0f, 1.0f);
+  std::vector<float> weight_fp32 =
+    generate_random_vector<float, false>(N * K, -1.0f, 1.0f);
+
+  std::vector<uint16_t> packed_nibbles;
+  std::vector<uint16_t> packed_w_scales_fp16;
+  std::vector<float> dequant_weights;
+  PackInt4ChannelwiseAdreno(weight_fp32.data(), N, K, packed_nibbles,
+                             packed_w_scales_fp16, dequant_weights);
+
+  // Per-row int8 activation quant. The padded dims match the SVM layout
+  // we'll hand to the kernel (alignM rows x K columns).
+  std::vector<int8_t> x_q;
+  std::vector<uint16_t> x_scale_fp16;
+  std::vector<float> dequant_x;
+  QuantizeActivationInt8(input_orig.data(), M, K, alignM, K, x_q,
+                          x_scale_fp16, dequant_x);
+
+  // CPU reference: ref = X_deq * W_deq^T (row-major, TransB=true)
+  std::vector<float> ref_dst(static_cast<size_t>(M) * N, 0.0f);
+  nntrainer::sgemm(/*TStorageOrder=*/0, /*TransA=*/false, /*TransB=*/true,
+                   /*M=*/M, /*N=*/N, /*K=*/K, /*alpha=*/1.0f,
+                   dequant_x.data(), /*lda=*/K, dequant_weights.data(),
+                   /*ldb=*/K, /*beta=*/0.0f, ref_dst.data(), /*ldc=*/N);
+
+  // --- SVM buffer allocation ------------------------------------------
+  //   x_q_ptr      : int8 [alignM * K]
+  //   x_scale_ptr  : fp16 [M]
+  //   weight_ptr   : ushort[(K/4) * N]
+  //   w_scale_ptr  : fp16 [alignN]
+  //   output_ptr   : fp16 [M * N]
+  const size_t x_q_bytes =
+    static_cast<size_t>(alignM) * K * sizeof(int8_t);
+  const size_t x_scale_bytes = static_cast<size_t>(M) * sizeof(uint16_t);
+  const size_t weight_bytes =
+    static_cast<size_t>(K / 4) * N * sizeof(uint16_t);
+  const size_t w_scale_bytes =
+    static_cast<size_t>(alignN) * sizeof(uint16_t);
+  const size_t output_bytes =
+    static_cast<size_t>(M) * N * sizeof(uint16_t);
+
+  int8_t *x_q_ptr = static_cast<int8_t *>(allocateSVM(x_q_bytes));
+  uint16_t *x_scale_ptr =
+    static_cast<uint16_t *>(allocateSVM(x_scale_bytes));
+  uint16_t *weight_ptr =
+    static_cast<uint16_t *>(allocateSVM(weight_bytes));
+  uint16_t *w_scale_ptr =
+    static_cast<uint16_t *>(allocateSVM(w_scale_bytes));
+  uint16_t *output_ptr =
+    static_cast<uint16_t *>(allocateSVM(output_bytes));
+
+  blas_cc->command_queue_inst_.enqueueSVMMap(x_q_ptr, x_q_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(x_scale_ptr, x_scale_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(weight_ptr, weight_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(w_scale_ptr, w_scale_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(output_ptr, output_bytes, false);
+
+  std::memcpy(x_q_ptr, x_q.data(), x_q_bytes);
+  for (unsigned int m = 0; m < M; ++m)
+    x_scale_ptr[m] = x_scale_fp16[m];
+  for (size_t i = 0; i < packed_nibbles.size(); ++i)
+    weight_ptr[i] = packed_nibbles[i];
+  std::memset(w_scale_ptr, 0, w_scale_bytes);
+  for (unsigned int n = 0; n < N; ++n)
+    w_scale_ptr[n] = packed_w_scales_fp16[n];
+  std::memset(output_ptr, 0, output_bytes);
+
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(x_q_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(x_scale_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(weight_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(w_scale_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(output_ptr);
+
+  // --- Run ------------------------------------------------------------
+  // Warmup (kernel compile + first-touch SVM) then timed call.
+  nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
+                                       weight_ptr, output_ptr, M, N, K);
+
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
+                                       weight_ptr, output_ptr, M, N, K);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  const double gpu_ms =
+    std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+  std::vector<float> gpu_out_fp32(static_cast<size_t>(M) * N, 0.0f);
+  for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
+    gpu_out_fp32[i] = compute_fp16_to_fp32(output_ptr[i]);
+
+  const float mse_err = mse<float>(ref_dst.data(), gpu_out_fp32.data(), M * N);
+  const float mse_tol = GetMseToleranceDp4a(M, K, N);
+
+  std::cout << "int8_int4_gemm_adreno M=" << M << " K=" << K << " N=" << N
+            << " (DP4A, channel-wise) gpu=" << gpu_ms
+            << " ms  MSE=" << mse_err << " (tol=" << mse_tol << ")"
+            << std::endl;
+
+  EXPECT_LT(mse_err, mse_tol)
+    << "MSE exceeded tolerance for gemm_int8_int4_adreno M=" << M
+    << " K=" << K << " N=" << N << " (mse=" << mse_err
+    << " tol=" << mse_tol << ")";
+
+  const size_t num_spot_checks =
+    std::min<size_t>(16, static_cast<size_t>(M) * N);
+  for (size_t i = 0; i < num_spot_checks; ++i) {
+    const size_t idx = (i * 131u + 17u) % (static_cast<size_t>(M) * N);
+    const float cpu = ref_dst[idx];
+    const float gpu = gpu_out_fp32[idx];
+    const float abs_err = std::fabs(cpu - gpu);
+    const float rel_scale = std::max(std::fabs(cpu), 1.0f);
+    const float abs_floor = static_cast<float>(K) * 0.03f;
+    EXPECT_LT(abs_err, std::max(0.25f * rel_scale, abs_floor))
+      << "Spot check failed (DP4A) at idx=" << idx
+      << " (m=" << (idx / N) << ", n=" << (idx % N) << ") cpu=" << cpu
+      << " gpu=" << gpu;
+  }
+
+  freeSVM(output_ptr);
+  freeSVM(w_scale_ptr);
+  freeSVM(weight_ptr);
+  freeSVM(x_scale_ptr);
+  freeSVM(x_q_ptr);
+}
+
+#define DECLARE_int8_int4_gemm_adreno_test_M_K_N(M, K, N)                      \
+  TEST(nntrainer_opencl_adreno_kernels_int8_int4,                              \
+       int8_int4_gemm_adreno_test_##M##_##K##_##N) {                           \
+    run_gemm_int8_int4_adreno_test_(M, K, N);                                  \
+  }
+
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(8, 32, 32);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(8, 64, 64);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(16, 128, 128);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(32, 256, 256);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(64, 512, 256);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(128, 1024, 512);
+DECLARE_int8_int4_gemm_adreno_test_M_K_N(512, 1024, 1024);
+
+// -------------------------------------------------------------------------
+// A/B benchmark: run both fp16 and DP4A paths on the same input, compare
+// wall-time + TFLOPS + MSE. Uses the largest prefill shape so the GPU
+// compute dominates host overhead (fp16 path is GPU-bound there; the
+// DP4A speedup should show up in the wall-time ratio).
+// -------------------------------------------------------------------------
+static void run_ab_bench_(const unsigned int M, const unsigned int K,
+                           const unsigned int N) {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+
+  constexpr int INT4_BLOCK_N_SIZE = 32;
+  const unsigned int alignN = align(N, INT4_BLOCK_N_SIZE);
+  const unsigned int alignK = K; // channel-wise
+  const unsigned int alignM_fp16 = align(M, 4u);
+  const unsigned int alignM_dp4a = align(M, 8u);
+
+  std::vector<float> input_orig =
+    generate_random_vector<float, false>(M * K, -1.0f, 1.0f);
+  std::vector<float> weight_fp32 =
+    generate_random_vector<float, false>(N * K, -1.0f, 1.0f);
+
+  // Shared weight pack (same layout for both paths).
+  std::vector<uint16_t> packed_nibbles;
+  std::vector<uint16_t> packed_w_scales_fp16;
+  std::vector<float> dequant_weights;
+  PackInt4ChannelwiseAdreno(weight_fp32.data(), N, K, packed_nibbles,
+                             packed_w_scales_fp16, dequant_weights);
+
+  // Per-row int8 activation (DP4A path uses these; fp16 path uses raw
+  // fp16(input_orig)).
+  std::vector<int8_t> x_q;
+  std::vector<uint16_t> x_scale_fp16;
+  std::vector<float> dequant_x;
+  QuantizeActivationInt8(input_orig.data(), M, K, alignM_dp4a, K, x_q,
+                          x_scale_fp16, dequant_x);
+
+  // fp16 reference: input_orig * W_deq^T
+  std::vector<float> ref_fp16(static_cast<size_t>(M) * N, 0.0f);
+  nntrainer::sgemm(0, false, true, M, N, K, 1.0f, input_orig.data(), K,
+                   dequant_weights.data(), K, 0.0f, ref_fp16.data(), N);
+
+  // DP4A reference: dequant_x * W_deq^T
+  std::vector<float> ref_dp4a(static_cast<size_t>(M) * N, 0.0f);
+  nntrainer::sgemm(0, false, true, M, N, K, 1.0f, dequant_x.data(), K,
+                   dequant_weights.data(), K, 0.0f, ref_dp4a.data(), N);
+
+  // --- Allocate FP16 path SVM buffers ---------------------------------
+  const size_t fp16_in_bytes =
+    static_cast<size_t>(M) * alignK * sizeof(uint16_t);
+  const size_t fp16_in_t_bytes =
+    static_cast<size_t>(alignM_fp16) * alignK * sizeof(uint16_t);
+  const size_t weight_bytes =
+    static_cast<size_t>(alignK / 4u) * N * sizeof(uint16_t);
+  const size_t w_scale_bytes =
+    static_cast<size_t>(alignN) * sizeof(uint16_t);
+  const size_t output_bytes =
+    static_cast<size_t>(M) * N * sizeof(uint16_t);
+
+  uint16_t *fp16_in = static_cast<uint16_t *>(allocateSVM(fp16_in_bytes));
+  uint16_t *fp16_in_t =
+    static_cast<uint16_t *>(allocateSVM(fp16_in_t_bytes));
+  uint16_t *weight_ptr =
+    static_cast<uint16_t *>(allocateSVM(weight_bytes));
+  uint16_t *w_scale_ptr =
+    static_cast<uint16_t *>(allocateSVM(w_scale_bytes));
+  uint16_t *output_fp16 =
+    static_cast<uint16_t *>(allocateSVM(output_bytes));
+
+  // --- Allocate DP4A path SVM buffers ---------------------------------
+  const size_t x_q_bytes =
+    static_cast<size_t>(alignM_dp4a) * K * sizeof(int8_t);
+  const size_t x_scale_bytes = static_cast<size_t>(M) * sizeof(uint16_t);
+  int8_t *x_q_ptr = static_cast<int8_t *>(allocateSVM(x_q_bytes));
+  uint16_t *x_scale_ptr =
+    static_cast<uint16_t *>(allocateSVM(x_scale_bytes));
+  uint16_t *output_dp4a =
+    static_cast<uint16_t *>(allocateSVM(output_bytes));
+
+  // --- Fill (fp16 path) -----------------------------------------------
+  blas_cc->command_queue_inst_.enqueueSVMMap(fp16_in, fp16_in_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(fp16_in_t, fp16_in_t_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(weight_ptr, weight_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(w_scale_ptr, w_scale_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(output_fp16, output_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(x_q_ptr, x_q_bytes, false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(x_scale_ptr, x_scale_bytes,
+                                              false);
+  blas_cc->command_queue_inst_.enqueueSVMMap(output_dp4a, output_bytes,
+                                              false);
+
+  for (size_t i = 0; i < static_cast<size_t>(M) * alignK; ++i)
+    fp16_in[i] = compute_fp32_to_fp16(input_orig[i]);
+  std::memset(fp16_in_t, 0, fp16_in_t_bytes);
+  for (size_t i = 0; i < packed_nibbles.size(); ++i)
+    weight_ptr[i] = packed_nibbles[i];
+  std::memset(w_scale_ptr, 0, w_scale_bytes);
+  for (unsigned int n = 0; n < N; ++n)
+    w_scale_ptr[n] = packed_w_scales_fp16[n];
+  std::memset(output_fp16, 0, output_bytes);
+  std::memcpy(x_q_ptr, x_q.data(), x_q_bytes);
+  for (unsigned int m = 0; m < M; ++m)
+    x_scale_ptr[m] = x_scale_fp16[m];
+  std::memset(output_dp4a, 0, output_bytes);
+
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(fp16_in);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(fp16_in_t);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(weight_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(w_scale_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(output_fp16);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(x_q_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(x_scale_ptr);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(output_dp4a);
+
+  // --- Warmup both paths (compile + first-touch) ----------------------
+  nntrainer::gemm_int4_adreno_cl(fp16_in, fp16_in_t, weight_ptr, w_scale_ptr,
+                                   output_fp16, M, N, K);
+  nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
+                                       weight_ptr, output_dp4a, M, N, K);
+
+  // --- Timed: average of N_ITER calls per path ------------------------
+  constexpr int N_ITER = 10;
+  double fp16_ms_sum = 0.0;
+  double dp4a_ms_sum = 0.0;
+
+  for (int it = 0; it < N_ITER; ++it) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    nntrainer::gemm_int4_adreno_cl(fp16_in, fp16_in_t, weight_ptr,
+                                     w_scale_ptr, output_fp16, M, N, K);
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    fp16_ms_sum +=
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+  }
+  for (int it = 0; it < N_ITER; ++it) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    nntrainer::gemm_int8_int4_adreno_cl(x_q_ptr, x_scale_ptr, w_scale_ptr,
+                                         weight_ptr, output_dp4a, M, N, K);
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    dp4a_ms_sum +=
+      std::chrono::duration<double, std::milli>(t1 - t0).count();
+  }
+
+  const double fp16_ms = fp16_ms_sum / N_ITER;
+  const double dp4a_ms = dp4a_ms_sum / N_ITER;
+  const double gflops = 2.0 * static_cast<double>(M) * K * N / 1.0e9;
+  const double fp16_tflops = gflops / (fp16_ms * 1e-3) / 1000.0;
+  const double dp4a_tflops = gflops / (dp4a_ms * 1e-3) / 1000.0;
+  const double speedup = fp16_ms / dp4a_ms;
+
+  // --- Validate DP4A output against its own dequant reference ----------
+  std::vector<float> dp4a_out_fp32(static_cast<size_t>(M) * N, 0.0f);
+  for (size_t i = 0; i < static_cast<size_t>(M) * N; ++i)
+    dp4a_out_fp32[i] = compute_fp16_to_fp32(output_dp4a[i]);
+  const float mse_dp4a =
+    mse<float>(ref_dp4a.data(), dp4a_out_fp32.data(), M * N);
+  const float mse_tol = GetMseToleranceDp4a(M, K, N);
+
+  std::cout << "\n======== A/B bench M=" << M << " K=" << K << " N=" << N
+            << " ========" << std::endl;
+  std::cout << "  fp16 path : " << fp16_ms << " ms / iter  ("
+            << fp16_tflops << " TFLOPS)" << std::endl;
+  std::cout << "  dp4a path : " << dp4a_ms << " ms / iter  ("
+            << dp4a_tflops << " TFLOPS)" << std::endl;
+  std::cout << "  speedup   : " << speedup << "x" << std::endl;
+  std::cout << "  dp4a MSE  : " << mse_dp4a << " (tol=" << mse_tol << ")"
+            << std::endl;
+
+  EXPECT_LT(mse_dp4a, mse_tol)
+    << "DP4A path A/B bench MSE exceeded tolerance";
+
+  freeSVM(output_dp4a);
+  freeSVM(x_scale_ptr);
+  freeSVM(x_q_ptr);
+  freeSVM(output_fp16);
+  freeSVM(w_scale_ptr);
+  freeSVM(weight_ptr);
+  freeSVM(fp16_in_t);
+  freeSVM(fp16_in);
+}
+
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_512_1024_1024) {
+  run_ab_bench_(512, 1024, 1024);
+}
+
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_128_1024_512) {
+  run_ab_bench_(128, 1024, 512);
+}
 
 GTEST_API_ int main(int argc, char **argv) {
   int result = -1;

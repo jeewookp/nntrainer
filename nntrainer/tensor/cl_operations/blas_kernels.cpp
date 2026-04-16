@@ -1242,6 +1242,92 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
   g_int4_gemm_profile.calls++;
 }
 
+// =========================================================================
+// Phase 2 (int8 DP4A) GEMM wrapper.
+//
+// Same weight / scale layout as gemm_int4_adreno_cl (channel-wise int4),
+// but activations are pre-quantized to int8 by the caller and the device
+// kernel uses `dot(char4, char4)` -> ssad for a ~3.6x MAC rate vs fp16.
+//
+// No input_transpose kernel here: the DP4A kernel reads x_q row-major
+// (m-major, k-contiguous char4), which matches the natural activation
+// layout and avoids the xt_gpu stage in the fp16 path.
+// =========================================================================
+void gemm_int8_int4_adreno_cl(int8_t *x_q, uint16_t *x_scale,
+                              uint16_t *w_scale, uint16_t *weights,
+                              uint16_t *output, unsigned int M, unsigned int N,
+                              unsigned int K) {
+  if (((N % 4) != 0) || ((K % 4) != 0)) {
+    throw std::runtime_error(
+      "gemm_int8_int4_adreno_cl requires N and K to be multiples of 4");
+  }
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int8_int4_gemm_adreno_kernel, "gpu_int8_int4_gemm_adreno");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to register gpu_int8_int4_gemm_adreno kernel");
+  }
+
+  bool result = false;
+  int arg = 0;
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, x_q);
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 0 (x_q)");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, x_scale);
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 1 (x_scale)");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, w_scale);
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 2 (w_scale)");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 3 (weights)");
+
+  result = kernel_ptr->SetKernelSVMArguments(arg++, output);
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 4 (output)");
+
+  int size_k = static_cast<int>(K);
+  int size_n = static_cast<int>(N);
+  int size_m = static_cast<int>(M);
+
+  result = kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 5 (K)");
+  result = kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 6 (N)");
+  result = kernel_ptr->SetKernelArguments(arg++, &size_m, sizeof(int));
+  if (!result)
+    throw std::runtime_error("gpu_int8_int4_gemm_adreno arg 7 (M)");
+
+  // Dispatch: tile is 8 rows x 4 columns per WI.
+  //   global = (ceilDiv(M, 8), N/4, 1)
+  //   local  = {1, 128, 1}  (matches gpu_int4_gemm_adreno for a
+  //                          direct fp16-vs-int8 comparison)
+  const int g_global[3] = {static_cast<int>(ceilDiv(M, 8u)),
+                           static_cast<int>(N) / 4, 1};
+  const int g_local[3] = {1, 128, 1};
+
+  result = blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g_global,
+                                                        g_local);
+  if (!result)
+    throw std::runtime_error("Failed to dispatch gpu_int8_int4_gemm_adreno");
+
+  // Sync output back to host (blocking SVMMap, same as fp16 wrapper).
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
+    true);
+}
+
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          uint16_t *output, unsigned int K, unsigned int N) {
   bool result = false;
