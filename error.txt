@@ -1,22 +1,38 @@
 실행 결과 아래와 같아
 
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
 ~/projects/nntrainer ~/projects/nntrainer
 ~/projects/nntrainer
 
 ==========================================
 [Step 2/4] Building unittest_opencl_kernels_int4_adreno (ndk-build)
 ==========================================
-unittest_int4_adreno.sh: 89: pushd: not found
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libOpenCL.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libnntrainer.so <= jni/../../builddir/jni/arm64-v8a/
+[arm64-v8a] Compile++      : unittest_opencl_kernels_int4_adreno <= unittest_opencl_kernels_int4_adreno.cpp
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4_adreno.cpp:41:
+In file included from ../include/nntrainer_test_util.h:37:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/models/neuralnet.h:39:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/test/jni/../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4_adreno.cpp:320:15: error: expected unqualified-id
+  const float tolerance = GetMseTolerance(M, K, N);
+              ^
+../include/nntrainer_test_util.h:45:19: note: expanded from macro 'tolerance'
+#define tolerance 1.0e-4
+                  ^
+1 warning and 1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_opencl_kernels_int4_adreno/__/unittest/unittest_opencl_kernels_int4_adreno.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : test_util <= nntrainer_test_util.cpp
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
