@@ -486,25 +486,28 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
 #if !defined(__APPLE__)
     gpu_opts.SetPreferTextureWeights(true);
 #endif
-    // Match Gemma4 prefill's GPU compilation options so the CL delegate
-    // picks the same kernels here as it does on the real model. These
-    // are the options runtime/executor/llm_executor_settings_utils.cc
-    // (CreateCompilationOptions) sets for the production Backend::GPU
-    // path; without them the delegate re-lowers the int8 FC/Conv ops
-    // back to fp16 on its own and we get `convolution1x1(conv_wave_memory)`
-    // instead of prefill's `convolution_int8(conv_wave_memory)`.
+    // Mirror a subset of Gemma4 prefill's GPU compilation options
+    // (runtime/executor/llm_executor_settings_utils.cc:193-206) to
+    // minimize differences in delegate behavior between the micro
+    // bench and the real model run.
     //
-    // Primary knob: EnableAllowSrcQuantizedFcConvOps tells the delegate
-    // to accept the model's source int8 FC/Conv schema end-to-end
-    // instead of converting it. Verified against prefill's code at
-    // llm_executor_settings_utils.cc:201-203.
-    //
-    // The "single delegate" hint and external-tensors/constant-sharing
-    // knobs match the same code and are listed here even though we
-    // don't expect them to change the kernel name -- they do affect
-    // weight layout and upload behavior, and keeping the option set
-    // identical to prefill reduces surprises when comparing numbers.
-    gpu_opts.EnableAllowSrcQuantizedFcConvOps(true);
+    // NOT enabled: EnableAllowSrcQuantizedFcConvOps(true). That flag
+    // tells the CL delegate to accept the model's source quantized
+    // FC/Conv schema end-to-end. Prefill's converter emits FULLY
+    // quantized ops (int8 input + int8 weight + int32 bias + int8
+    // output, with matching quant params on every tensor), which is
+    // what the delegate's source-quantized kernel path expects. Our
+    // synthetic builder produces WEIGHT-ONLY quant (fp32 input/bias/
+    // output + int8 weight), which doesn't satisfy that path's
+    // requirements -- enabling the flag causes the CL kernel code
+    // generator to emit references to `q0`/`q1` weight quant
+    // constants it never defines, and every CompiledModel::Create
+    // fails with a "BC-src-code:25: use of undeclared identifier
+    // 'q0'" build error. To use that flag we would have to emit a
+    // fully-quantized schema (which the existing kInt8 wrapped path
+    // tried and failed at for unrelated reasons -- the delegate
+    // collapses the wrap back to fp16). Left off until someone does
+    // that work.
     gpu_opts.SetHintFullyDelegatedToSingleDelegate(true);
     gpu_opts.EnableConstantTensorSharing(true);
     // OpenCL program cache wiring. When --cache_dir is set, tell the
@@ -638,66 +641,81 @@ absl::StatusOr<ShapeRunResult> BenchmarkOneShape(
     }
   }
 
-  // Timed runs. Wall-clock covers Run() + a read-mode scoped lock on
-  // the output tensor. The scoped lock serves two purposes:
-  //   1. On GPU, creating a kRead lock forces the LiteRT CL delegate to
-  //      wait for the dispatched kernel to finish and to make the
-  //      output host-accessible. That guarantees the t1 reading is
-  //      taken _after_ the GPU work completes, not just after the
-  //      submit call returns.
-  //   2. It prevents the GPU from overlapping consecutive Run() calls
-  //      across benchmark iterations, which would otherwise inflate
-  //      throughput above the true per-dispatch cost.
-  // The lock itself doesn't copy any data host-side -- it just yields
-  // a const pointer to the mapped buffer -- so the overhead is
-  // negligible compared to the matmul kernel time (hundreds of
-  // microseconds and up for Gemma4 prefill shapes).
+  // Timed runs.
+  //
+  // IMPORTANT: the measurement pattern here is deliberately different
+  // from a per-iteration latency benchmark. Gemma4 prefill -- the
+  // thing this micro bench is supposed to be comparable to -- submits
+  // 1107 ops back-to-back without any host sync between them. The GPU
+  // queue stays full, dispatches overlap with weight reads, and each
+  // op's reported cost in Delegate Statistics is the per-kernel time
+  // under a warm pipeline.
+  //
+  // The previous pattern (Run + TensorBufferScopedLock(kRead) per
+  // iteration) drained the GPU queue every iteration. Wall-clock
+  // samples ended up dominated by sync stall + LiteRT dispatch
+  // overhead rather than kernel execution. For the shapes in
+  // matmul_roster.csv that meant micro-bench numbers 3-15x larger
+  // than prefill's Delegate Statistics for the same kernel.
+  //
+  // New pattern: submit all `timed_iters` Run() calls in a burst,
+  // then issue a single ScopedLock(kRead) at the very end to flush
+  // the GPU queue. Total elapsed time / timed_iters gives the
+  // amortized per-iteration cost that matches prefill-style
+  // pipelining. Individual per-iter variance is NOT measurable in
+  // this mode (all samples are the mean by construction), so the
+  // min/p50/p95 columns in the CSV will all equal avg; that's a
+  // feature, not a bug -- the CSV is meant for comparison against
+  // the Delegate Statistics avg column, not for latency distribution
+  // analysis.
   //
   // If op profiling is enabled, Start/Stop the LiteRtProfiler around
   // the entire timed loop so the per-op event buffer covers all
-  // `timed_iters` invocations. Doing it once around the whole loop
-  // (instead of per iteration) keeps the start/stop overhead out of
-  // the wall-clock samples below.
+  // `timed_iters` invocations. Same accounting as before.
   if (enable_profile && profiler_handle != nullptr) {
     (void)LiteRtStartProfiler(profiler_handle);
   }
-  std::vector<double> samples_us;
-  samples_us.reserve(timed_iters);
+  const absl::Time t_burst_start = absl::Now();
   for (int i = 0; i < timed_iters; ++i) {
-    const absl::Time t0 = absl::Now();
     auto run_exp = compiled_model.Run(built.signature_key, input_buffers,
                                        output_buffers);
     if (!run_exp.HasValue()) {
       return ExpectedError(
           run_exp,
           absl::StrCat("Run() timed m=", shape.m, " n=", shape.n,
-                       " k=", shape.k));
+                       " k=", shape.k, " iter=", i));
     }
-    {
-      auto lock_exp = litert::TensorBufferScopedLock::Create(
-          output_buffers[0], litert::TensorBuffer::LockMode::kRead);
-      if (!lock_exp.HasValue()) {
-        return ExpectedError(
-            lock_exp,
-            absl::StrCat("TensorBufferScopedLock m=", shape.m,
-                         " n=", shape.n, " k=", shape.k));
-      }
-      // `lock_exp.Value()` is a (ScopedLock, void*) pair. We move it
-      // into a named local so the lock stays alive until the end of
-      // this block, then touch the first byte through a volatile
-      // pointer to keep the compiler from optimizing the mapping
-      // (and therefore the GPU -> host sync) away. Cost: one volatile
-      // load.
-      auto lock_and_addr = std::move(lock_exp.Value());
-      volatile uint8_t* mapped =
-          static_cast<volatile uint8_t*>(lock_and_addr.second);
-      if (mapped != nullptr) {
-        (void)mapped[0];
-      }
-    }
-    const absl::Time t1 = absl::Now();
-    samples_us.push_back(absl::ToDoubleMicroseconds(t1 - t0));
   }
+  // Single GPU->host sync at the end. ScopedLock(kRead) forces the CL
+  // delegate to wait for ALL submitted Run()s to complete. The
+  // volatile read below prevents the compiler / LiteRT from
+  // short-circuiting the mapping.
+  {
+    auto lock_exp = litert::TensorBufferScopedLock::Create(
+        output_buffers[0], litert::TensorBuffer::LockMode::kRead);
+    if (!lock_exp.HasValue()) {
+      return ExpectedError(
+          lock_exp,
+          absl::StrCat("TensorBufferScopedLock final m=", shape.m,
+                       " n=", shape.n, " k=", shape.k));
+    }
+    auto lock_and_addr = std::move(lock_exp.Value());
+    volatile uint8_t* mapped =
+        static_cast<volatile uint8_t*>(lock_and_addr.second);
+    if (mapped != nullptr) {
+      (void)mapped[0];
+    }
+  }
+  const absl::Time t_burst_end = absl::Now();
+  const double total_us =
+      absl::ToDoubleMicroseconds(t_burst_end - t_burst_start);
+  const double per_iter_us =
+      timed_iters > 0 ? (total_us / static_cast<double>(timed_iters)) : 0;
+  // Fill the samples vector with the amortized per-iter value so
+  // downstream ComputeStats still emits sensible (if degenerate)
+  // min/p50/p95 columns. The kernel_avg_us CSV column is the more
+  // meaningful per-dispatch number; this is the wall-clock mean.
+  std::vector<double> samples_us(timed_iters, per_iter_us);
 
   // Stop the profiler and dump the per-op summary so we can see which
   // CL kernel the GPU delegate actually picked. The summary string is

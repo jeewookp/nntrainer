@@ -119,14 +119,21 @@ HOST_MATMUL_ROSTER_CSV="${HOST_MATMUL_ROSTER_CSV:-./matmul_roster.csv}"
 #                 + asymmetric_quantize_inputs=true (failed).
 #   fp32        : single FC op, FLOAT32 throughout. Baseline.
 #   fp16        : broken (CPU FC reference kernel asserts fp32).
-# Default is int8_conv2d_per_tensor because that is the schema
-# expected to trigger `convolution_int8(conv_wave_memory)` on the CL
-# delegate, matching prefill's int8 matmul kernel. The older
-# int8_per_tensor (FULLY_CONNECTED) path falls back to
-# `convolution1x1(conv_wave_memory)` in fp16 for large M and is kept
-# only for comparison. Override to int8_per_tensor etc. when you
-# specifically want the FC rewrite path.
-MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_conv2d_per_tensor}"
+# Default back to int8_per_tensor (FULLY_CONNECTED). int8_conv2d_per_tensor
+# was a short-lived attempt to trigger `convolution_int8(conv_wave_memory)`
+# via a native CONV_2D op, but the CL delegate kept picking
+# `convolution1x1(conv_wave_memory)` (fp16) anyway -- the int8 conv
+# kernel path requires fully-quantized tensors (int8 activation + int8
+# weight + int32 bias + int8 output with matching quant params on every
+# tensor), which the weight-only-quant schema our builder emits does
+# not satisfy. Re-enabling the EnableAllowSrcQuantizedFcConvOps option
+# just makes the delegate's CL code generator emit undeclared-identifier
+# kernel source (q0/q1) and fail to compile. int8_per_tensor (FC) does
+# successfully hit `fully_connected_int8` for small M, and for large M
+# it falls back to convolution1x1(fp16); the kernel_avg_us CSV column
+# is still the right number to compare against prefill's Delegate
+# Statistics rows.
+MATMUL_MICRO_DTYPE="${MATMUL_MICRO_DTYPE:-int8_per_tensor}"
 MATMUL_MICRO_WARMUP="${MATMUL_MICRO_WARMUP:-5}"
 MATMUL_MICRO_ITERS="${MATMUL_MICRO_ITERS:-50}"
 MATMUL_MICRO_MAX_SHAPES="${MATMUL_MICRO_MAX_SHAPES:-0}"
