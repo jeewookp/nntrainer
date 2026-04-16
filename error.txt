@@ -1,3 +1,1676 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 8 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 3.19 KiB | 466.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   04456aaa..1a10c91a  litert_lm  -> origin/litert_lm
+Updating 04456aaa..1a10c91a
+Fast-forward
+ runtime/engine/matmul_micro_benchmark.cc | 21 +++++++++++++++++++++
+ temp_litert_matmul_micro.sh              |  9 ++++++++-
+ 2 files changed, 29 insertions(+), 1 deletion(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+Already up to date.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_matmul_micro.sh 
+[micro.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
+[micro.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
+[micro.sh] BAZEL=/usr/local/bin/bazel
+[micro.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
+[micro.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
+[micro.sh] DTYPE=int8_conv2d_per_tensor
+[micro.sh] WARMUP=5
+[micro.sh] ITERS=50
+[micro.sh] PROFILE=true
+[micro.sh] CACHE_DIR=/data/local/tmp/litert_lm/cache
+[micro.sh] HOST_MATMUL_ROSTER_CSV=./matmul_roster.csv
+
+[micro.sh] Building //runtime/engine:matmul_micro_benchmark ...
+INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=1 --terminal_columns=425
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
+INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
+INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
+INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
+INFO: Analyzed target //runtime/engine:matmul_micro_benchmark (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //runtime/engine:matmul_micro_benchmark up-to-date:
+  bazel-bin/runtime/engine/matmul_micro_benchmark
+INFO: Elapsed time: 2.680s, Critical Path: 2.54s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
+[micro.sh] libLiteRt.so : bazel-bin/runtime/engine/matmul_micro_benchmark.runfiles/litert/litert/c/libLiteRt.so
+
+[micro.sh] adb push binary + libLiteRt.so ...
+
+[micro.sh] host ./matmul_roster.csv not found; using device cached
+[micro.sh]   /data/local/tmp/litert_lm/matmul_roster.csv
+
+[micro.sh] Running matmul_micro_benchmark on device (taskset f0) ...
+
+[MATMUL MICRO] backend=gpu dtype=int8_conv2d_per_tensor unique_shapes=61 warmup=5 iters=50 profile=1 cache_dir=/data/local/tmp/litert_lm/cache
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076ec635470, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076ec635940, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+I0000 00:00:1742172015.741601   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172015.741697   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
+INFO: Loaded OpenCL library with dlopen.
+INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
+INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
+INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172015.799161   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172015.819039   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=256 k=1536: CompiledModel::Create m=1 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172015.821149   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172015.821180   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172015.837201   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172015.842725   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=512 k=1536: CompiledModel::Create m=1 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172015.843910   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172015.843950   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172015.851021   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172015.856026   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=1536 k=256: CompiledModel::Create m=1 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172015.865943   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172015.865992   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172015.936866   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172015.943731   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=1536 k=2048: CompiledModel::Create m=1 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172015.954351   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172015.954397   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.094144   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.101058   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=1536 k=4096: CompiledModel::Create m=1 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.113309   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.113347   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.310727   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.318875   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=1536 k=6144: CompiledModel::Create m=1 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.339175   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.339222   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.652548   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.656521   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=1536 k=12288: CompiledModel::Create m=1 n=1536 k=12288: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.662839   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.662874   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.702793   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.707148   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=2048 k=1536: CompiledModel::Create m=1 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.714724   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.714761   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.797399   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.802668   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=4096 k=1536: CompiledModel::Create m=1 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.811527   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.811562   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172016.936688   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172016.943078   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=6144 k=1536: CompiledModel::Create m=1 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172016.954795   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172016.954831   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172017.151023   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172017.159075   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=8960 k=1536: CompiledModel::Create m=1 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172017.174331   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172017.174365   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172017.462318   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172017.468909   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=12288 k=1536: CompiledModel::Create m=1 n=12288 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172017.755566   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172017.755600   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172025.936097   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172025.940203   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:19:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:20:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=262144 k=1536: CompiledModel::Create m=1 n=262144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172025.979029   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172025.979071   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172025.984446   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172025.988746   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=256 k=1536: CompiledModel::Create m=4 n=256 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172025.990311   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172025.990340   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.001307   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.005670   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=512 k=1536: CompiledModel::Create m=4 n=512 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.006495   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.006526   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.011379   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.015619   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=1536 k=256: CompiledModel::Create m=4 n=1536 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.025719   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.025772   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.072409   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.079264   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=1536 k=2048: CompiledModel::Create m=4 n=1536 k=2048: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.086181   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.086213   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.178276   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.184369   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=1536 k=4096: CompiledModel::Create m=4 n=1536 k=4096: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.192992   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.193027   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.318414   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.323596   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=1536 k=6144: CompiledModel::Create m=4 n=1536 k=6144: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.339141   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.339181   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.618899   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.624570   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=1536 k=12288: CompiledModel::Create m=4 n=1536 k=12288: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.630856   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.630895   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.670531   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.676942   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=2048 k=1536: CompiledModel::Create m=4 n=2048 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.684912   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.684944   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.764426   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.770096   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=4096 k=1536: CompiledModel::Create m=4 n=4096 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.778484   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.778522   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172026.898397   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172026.905024   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=6144 k=1536: CompiledModel::Create m=4 n=6144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172026.916276   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172026.916313   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172027.112843   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172027.118667   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=8960 k=1536: CompiledModel::Create m=4 n=8960 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172027.134596   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172027.134632   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172027.414735   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172027.420897   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:28:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:29:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=12288 k=1536: CompiledModel::Create m=4 n=12288 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172027.707706   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172027.707741   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172035.873445   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172035.878404   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:22:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:23:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=4 n=262144 k=1536: CompiledModel::Create m=4 n=262144 k=1536: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172035.916920   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172035.916957   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172035.918259   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172035.923938   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:32:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:33:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=8 n=256 k=256: CompiledModel::Create m=8 n=256 k=256: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172035.924743   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172035.924774   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172035.928435   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172035.932630   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:32:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:33:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=8 n=512 k=512: CompiledModel::Create m=8 n=512 k=512: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172037.325940   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172037.325987   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172053.327041   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+E0000 00:00:1742172053.333646   16508 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:33:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:34:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
+
+=== Source Location Trace: === 
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:652
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:744
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=8 n=32003 k=32003: CompiledModel::Create m=8 n=32003 k=32003: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172053.486548   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172053.486583   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172053.488361   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=32 n=256 k=256
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      13.36          9         19        668
+Delegate/UploadOrBindTensorBuffer                                              50     106.96        100        142       5348
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50       7.28          7          8        364
+Delegate/quantize_float16_to_uint8c16                                          50       5.48          5          6        274
+Delegate/weights_convert_uint8_to_int8                                         50       3.00          2          4        150
+
+32     256    256        527.4    573.8    570.3    608.1    664.4        0.00    0.007
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172053.628931   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172053.628969   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172053.635290   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=32 n=512 k=512
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      14.46         11         17        723
+Delegate/UploadOrBindTensorBuffer                                              50     107.60        102        124       5380
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      14.74         13         15        737
+Delegate/quantize_float16_to_uint8c16                                          50       8.08          8          9        404
+Delegate/weights_convert_uint8_to_int8                                         50       6.38          6          7        319
+
+32     512    512        579.8    619.7    631.5    665.8    704.8        0.02    0.027
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172053.701248   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172053.701283   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172053.709229   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=32 n=515 k=515
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      10.54          8         14        527
+Delegate/UploadOrBindTensorBuffer                                              50     109.76        102        145       5488
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      34.84         34         36       1742
+Delegate/quantize_float16_to_uint8c4                                           50       7.24          7          8        362
+Delegate/weights_convert_uint8_to_int8                                         50       5.98          5          7        299
+
+32     515    515        616.6    664.0    644.2    713.3    729.4        0.02    0.026
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172055.196917   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172055.196961   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172078.014567   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=32 n=32003 k=32003
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      82.04         63        119       4102
+Delegate/UploadOrBindTensorBuffer                                              50     632.26        473        754      31613
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50   21323.54      21299      21352    1066177
+Delegate/quantize_float16_to_uint8c4                                           50     179.54        178        182       8977
+Delegate/weights_convert_uint8_to_int8                                         50   33055.12      33009      33096    1652756
+
+32     32003  32003   111864.3 116360.9 116583.0 116945.3 118013.6       65.55    0.563
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172085.436597   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172085.436644   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172085.448617   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=256 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      19.62          8         36        981
+Delegate/UploadOrBindTensorBuffer                                              50     159.12        114        462       7956
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     153.20        113        198       7660
+Delegate/quantize_float16_to_uint8c16                                          50      37.40         37         38       1870
+Delegate/weights_convert_uint8_to_int8                                         50      11.50         10         12        575
+
+128    256    1536       891.8   1230.0   1135.3   1856.5   2217.7        0.10    0.082
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172085.566290   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172085.566406   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172085.608709   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=512 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      33.14          9         51       1657
+Delegate/UploadOrBindTensorBuffer                                              50     388.36        120        541      19418
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     273.88        259        289      13694
+Delegate/quantize_float16_to_uint8c16                                          50      37.40         37         38       1870
+Delegate/weights_convert_uint8_to_int8                                         50      23.12         22         25       1156
+
+128    512    1536      1237.9   2252.7   2546.7   2814.5   2965.5        0.20    0.089
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172085.737984   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172085.738092   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172085.759749   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=1536 k=256
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      14.32          8         25        716
+Delegate/UploadOrBindTensorBuffer                                              50     198.10        110        501       9905
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      26.34         25         27       1317
+Delegate/quantize_float16_to_uint8c16                                          50      14.58         14         15        729
+Delegate/weights_convert_uint8_to_int8                                         50       7.30          7          8        365
+
+128    1536   256        671.7    902.5    782.2   1425.2   1479.5        0.10    0.112
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172085.858464   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172085.858579   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172085.931479   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=1536 k=2048
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      42.56         11         58       2128
+Delegate/UploadOrBindTensorBuffer                                              50     461.84        130        632      23092
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     435.24        388        477      21762
+Delegate/quantize_float16_to_uint8c16                                          50      48.50         48         51       2425
+Delegate/weights_convert_uint8_to_int8                                         50      90.60         86        101       4530
+
+128    1536   2048      1727.9   3167.9   3351.7   3711.2   3799.1        0.81    0.254
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172086.168185   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172086.168253   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172086.309285   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=1536 k=4096
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      41.66         10         67       2083
+Delegate/UploadOrBindTensorBuffer                                              50     465.60        150        867      23280
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     174.28        172        176       8714
+Delegate/quantize_float16_to_uint8c16                                          50      93.40         93         96       4670
+Delegate/weights_convert_uint8_to_int8                                         50     183.70        182        187       9185
+
+128    1536   4096      1528.8   2887.2   3152.0   3231.8   3785.9        1.61    0.558
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172086.568639   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172086.568678   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172086.839367   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=1536 k=6144
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      51.04         13        121       2552
+Delegate/UploadOrBindTensorBuffer                                              50     546.14        185        854      27307
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     263.30        262        265      13165
+Delegate/quantize_float16_to_uint8c16                                          50     140.12        139        142       7006
+Delegate/weights_convert_uint8_to_int8                                         50     280.02        277        283      14001
+
+128    1536   6144      2334.5   3729.0   3709.7   4245.1   5453.0        2.42    0.648
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172087.123928   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172087.123994   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172087.217258   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=2048 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      48.68         34         94       2434
+Delegate/UploadOrBindTensorBuffer                                              50     533.58        439        811      26679
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     314.50        265        343      15725
+Delegate/quantize_float16_to_uint8c16                                          50      37.80         37         40       1890
+Delegate/weights_convert_uint8_to_int8                                         50      87.90         84         96       4395
+
+128    2048   1536      2827.0   3406.4   3214.0   4143.1   4924.8        0.81    0.236
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172087.434024   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172087.434094   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172087.617349   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=4096 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      67.06         13        191       3353
+Delegate/UploadOrBindTensorBuffer                                              50     528.12        132        988      26406
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     572.84        527        605      28642
+Delegate/quantize_float16_to_uint8c16                                          50      37.86         37         40       1893
+Delegate/weights_convert_uint8_to_int8                                         50     190.02        187        197       9501
+
+128    4096   1536      2385.9   4543.4   4298.0   5953.0   6490.2        1.61    0.354
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172087.902770   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172087.902818   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172088.170790   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=6144 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     100.64         19        122       5032
+Delegate/UploadOrBindTensorBuffer                                              50     536.82        226        968      26841
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     857.84        825        889      42892
+Delegate/quantize_float16_to_uint8c16                                          50      38.06         37         40       1903
+Delegate/weights_convert_uint8_to_int8                                         50     287.06        283        292      14353
+
+128    6144   1536      3647.8   6291.7   6369.6   7272.4   8122.3        2.42    0.384
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172088.551250   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172088.551285   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172088.952629   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=128 n=8960 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      49.56         39        104       2478
+Delegate/UploadOrBindTensorBuffer                                              50     509.78        489        596      25489
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    1275.30       1240       1308      63765
+Delegate/quantize_float16_to_uint8c16                                          50      37.58         37         39       1879
+Delegate/weights_convert_uint8_to_int8                                         50     415.84        408        422      20792
+
+128    8960   1536      6548.5   6722.2   6601.6   6783.9  11213.5        3.52    0.524
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172089.347055   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172089.347111   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172089.351007   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=256 k=256
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      14.76          9         28        738
+Delegate/UploadOrBindTensorBuffer                                              50     176.98        115        499       8849
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      50.16         44         57       2508
+Delegate/quantize_float16_to_uint8c16                                          50      58.50         58         60       2925
+Delegate/weights_convert_uint8_to_int8                                         50       3.52          2          4        176
+
+1024   256    256        798.5   1020.9    929.6   1539.0   1664.1        0.13    0.131
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172089.448982   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172089.449075   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172089.471908   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=256 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.46         10         67       2023
+Delegate/UploadOrBindTensorBuffer                                              50     593.90        246        753      29695
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      88.66         88         90       4433
+Delegate/quantize_float16_to_uint8c16                                          50     249.66        247        253      12483
+Delegate/weights_convert_uint8_to_int8                                         50       9.42          9         11        471
+
+1024   256    1536      1433.9   2882.1   3128.1   3343.1   3576.4        0.81    0.279
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172089.670344   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172089.670513   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172089.692668   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=512 k=512
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      16.12          9         35        806
+Delegate/UploadOrBindTensorBuffer                                              50     270.26        144        523      13513
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      61.04         60         62       3052
+Delegate/quantize_float16_to_uint8c16                                          50      95.38         94         96       4769
+Delegate/weights_convert_uint8_to_int8                                         50       6.44          6          7        322
+
+1024   512    512       1019.5   1379.7   1109.1   1958.3   2543.6        0.54    0.389
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172089.808976   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172089.809063   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172089.835541   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=512 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      43.34         10         96       2167
+Delegate/UploadOrBindTensorBuffer                                              50     597.80        248        908      29890
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     165.76        165        168       8288
+Delegate/quantize_float16_to_uint8c16                                          50     248.84        246        253      12442
+Delegate/weights_convert_uint8_to_int8                                         50      18.64         17         21        932
+
+1024   512    1536      1658.0   3375.3   3552.0   3961.7   5397.3        1.61    0.477
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172090.034577   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172090.034746   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172090.053835   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=639 k=639
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      40.48         16         87       2024
+Delegate/UploadOrBindTensorBuffer                                              50     482.78        172        607      24139
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50      86.78         86         88       4339
+Delegate/quantize_float16_to_uint8c16                                          50     114.14        113        116       5707
+Delegate/weights_convert_uint8_to_int8                                         50       9.06          8         11        453
+
+1024   639    639       1275.8   2735.4   3151.4   3270.4   3342.4        0.84    0.306
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172090.251436   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172090.251549   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172090.274899   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=1536 k=256
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      31.78         15         52       1589
+Delegate/UploadOrBindTensorBuffer                                              50     445.34        332        555      22267
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     133.84        120        151       6692
+Delegate/quantize_float16_to_uint8c16                                          50      58.60         58         59       2930
+Delegate/weights_convert_uint8_to_int8                                         50      16.52         15         18        826
+
+1024   1536   256       1786.1   2912.9   3194.6   3984.6   4074.4        0.81    0.276
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172090.528327   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172090.528427   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172090.625431   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=1536 k=2048
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     118.54         89        122       5927
+Delegate/UploadOrBindTensorBuffer                                              50     933.92        717       1300      46696
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     561.60        556        574      28080
+Delegate/quantize_float16_to_uint8c16                                          50     350.48        336        375      17524
+Delegate/weights_convert_uint8_to_int8                                         50      89.70         88         91       4485
+
+1024   1536   2048      6121.7   7506.0   7237.5   8373.5  11240.4        6.44    0.858
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172091.180884   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172091.180923   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172091.366520   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=1536 k=4096
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     130.24        119        261       6512
+Delegate/UploadOrBindTensorBuffer                                              50    1162.70       1103       1532      58135
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    1149.18       1144       1154      57459
+Delegate/quantize_float16_to_uint8c16                                          50    1084.32        955       1299      54216
+Delegate/weights_convert_uint8_to_int8                                         50     179.36        178        182       8968
+
+1024   1536   4096     10373.1  11100.4  10733.1  13127.7  17703.1       12.88    1.161
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172092.038818   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172092.038861   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172092.311852   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=1536 k=6144
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     145.08         53        225       7254
+Delegate/UploadOrBindTensorBuffer                                              50    1805.76       1247       2025      90288
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    1761.96       1752       1841      88098
+Delegate/quantize_float16_to_uint8c16                                          50    1979.18       1785       2157      98959
+Delegate/weights_convert_uint8_to_int8                                         50     279.82        278        284      13991
+
+1024   1536   6144     12693.0  16063.9  15650.3  18136.5  21760.3       19.33    1.203
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172093.250444   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172093.250493   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172093.340069   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=2048 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     108.16         17        177       5408
+Delegate/UploadOrBindTensorBuffer                                              50     831.88        539       1147      41594
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50     599.10        589        610      29955
+Delegate/quantize_float16_to_uint8c16                                          50     250.82        247        254      12541
+Delegate/weights_convert_uint8_to_int8                                         50      89.16         88         92       4458
+
+1024   2048   1536      5408.1   7610.4   7699.8   8580.8  11196.0        6.44    0.847
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172093.788305   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172093.788350   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172093.963335   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
+[MATMUL MICRO PROFILE] m=1024 n=4096 k=1536
+============================== Run Order ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+============================== Top by Computation Time ==============================
+                   [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     123.54         89        186       6177
+Delegate/UploadOrBindTensorBuffer                                              50     889.40        619       1465      44470
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    1201.16       1197       1206      60058
+Delegate/quantize_float16_to_uint8c16                                          50     251.74        249        254      12587
+Delegate/weights_convert_uint8_to_int8                                         50     181.00        179        184       9050
+
+1024   4096   1536      9490.4  11904.1  11639.3  12117.5  25944.4       12.88    1.082
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172094.646148   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172094.646198   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742172094.921397   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
+
 [MATMUL MICRO PROFILE] m=1024 n=6144 k=1536
 ============================== Run Order ==============================
                    [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
@@ -15,17 +1688,18 @@ Memory (bytes): count=0
 
 Delegate Statistics:
 Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
-Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     102.96         20        187       5148
-Delegate/UploadOrBindTensorBuffer                                              50     810.60        527       2043      40530
-Delegate/convolution1x1(conv_wave_memory)                                      50    3702.82       3670       3927     185141
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50     126.34         51        188       6317
+Delegate/UploadOrBindTensorBuffer                                              50     899.78        641       1954      44989
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    1796.96       1792       1800      89848
+Delegate/quantize_float16_to_uint8c16                                          50     251.50        247        254      12575
+Delegate/weights_convert_uint8_to_int8                                         50     279.88        278        282      13994
 
-1024   6144   1536     10788.8  16708.4  18018.4  20971.3  40493.4       19.33    1.157
+1024   6144   1536      9929.3  15884.3  15443.0  17176.0  38824.5       19.33    1.217
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-I0000 00:00:1742171515.243269   16278 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742171515.243331   16278 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742172095.819340   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172095.819378   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
 VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742171515.255579   16278 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
-I0000 00:00:1742171515.345096   16278 delegate_kernel.cc:641] Initialized InferenceContext from serialized data.
+I0000 00:00:1742172096.208252   16508 delegate_kernel.cc:741] Initializing OpenCL-based API from serialized data.
 
 [MATMUL MICRO PROFILE] m=1024 n=8960 k=1536
 ============================== Run Order ==============================
@@ -33,3 +1707,27 @@ I0000 00:00:1742171515.345096   16278 delegate_kernel.cc:641] Initialized Infere
 
 ============================== Top by Computation Time ==============================
                    [node type]    [first]   [avg ms]        [%]     [cdf%]   [mem KB] [times called]     [Name]
+
+Number of nodes executed: 0
+============================== Summary by node type ==============================
+                   [Node type]    [count]   [avg ms]    [avg %]    [cdf %]   [mem KB] [times called]
+
+Timings (microseconds): count=0 curr=0
+Memory (bytes): count=0
+0 nodes observed
+
+Delegate Statistics:
+Op Name                                                                     Count    Avg(us)    Min(us)    Max(us)  Total(us)
+Delegate/DownloadGpuMemoryToTensorBufferGpuMemory                              50      48.28         15         88       2414
+Delegate/UploadOrBindTensorBuffer                                              50     671.18        519       1513      33559
+Delegate/convolution_int8(conv_wave_memory) -> dequantize_to_float16 -> add         50    2623.54       2617       2644     131177
+Delegate/quantize_float16_to_uint8c16                                          50     249.58        247        253      12479
+Delegate/weights_convert_uint8_to_int8                                         50     411.60        408        416      20580
+
+1024   8960   1536     10037.7  17360.5  17340.1  17637.9  39280.4       28.19    1.624
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1742172098.592720   16508 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742172098.592751   16508 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+
+
