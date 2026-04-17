@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 659 bytes | 659.00 KiB/s, done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 798 bytes | 266.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   4dc62630..a1643129  all_gpu    -> upstream/all_gpu
-Updating 4dc62630..a1643129
+   8ba24ab6..15bc902d  all_gpu    -> upstream/all_gpu
+Updating 8ba24ab6..15bc902d
 Fast-forward
- unittest_delegate_conv_wave.sh | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ test/unittest/unittest_delegate_conv_wave.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
@@ -18,15 +18,21 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_w
 Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
 [arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
 [arm64-v8a] Compile++      : unittest_delegate_conv_wave <= unittest_delegate_conv_wave.cpp
-[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
-[arm64-v8a] StaticLibrary  : libgoogletest_main.a
 [arm64-v8a] Executable     : unittest_delegate_conv_wave
-ld.lld: error: undefined symbol: main
->>> referenced by crtbegin.c
->>>               /home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o:(_start_main)
->>> referenced by crtbegin.c
->>>               /home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/../sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o:(_start_main)
-clang++: error: linker command failed with exit code 1 (use -v to see invocation)
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:667: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/unittest_delegate_conv_wave] Error 1
+[arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
+
+==========================================
+[Step 2] Pushing to device
+==========================================
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.9 MB/s (325544 bytes in 0.010s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 3.7 MB/s (7438 bytes in 0.002s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.5 MB/s (1822720 bytes in 0.055s)
+
+==========================================
+[Step 3] Running on device
+==========================================
+CANNOT LINK EXECUTABLE "./unittest_delegate_conv_wave": cannot locate symbol "SetProcessProfilesCached" referenced by "/system/lib64/libandroid_runtime.so"...
+
+Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
