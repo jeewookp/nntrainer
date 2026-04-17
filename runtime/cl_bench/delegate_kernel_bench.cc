@@ -253,11 +253,16 @@ int main(int argc, char** argv) {
   // shared_int4_2.x = x_stride (1)
   // shared_int4_2.y = y_stride (1)
 
-  // xmem entries per subgroup: 6144 bytes / 12 subgroups / sizeof(half8)=16 = 32
-  int xmem_per_sg = 6144 / 16 / 12;  // = 32 half8 entries per subgroup
-
-  int4 s0 = { 1, dst_slices, M, xmem_per_sg };
-  int4 s1 = { src_slices / 2, 0, 0, src_slices };  // weight_stride factor, offsets, src_slices
+  // Captured from delegate via clSetKernelArg interception (1024x6144x1536):
+  //   s0 = (1, 1536, 1024, 32)
+  //   s1 = (384, 0, 0, 384)
+  //   s2 = (1, 1, 0, 0)
+  // Generalized:
+  //   s0 = (height=1, dst_slices, width=M, xmem_per_sg=32)
+  //   s1 = (src_slices, 0, 0, src_slices)
+  //   s2 = (1, 1, 0, 0)
+  int4 s0 = { 1, dst_slices, M, 32 };
+  int4 s1 = { src_slices, 0, 0, src_slices };
   int4 s2 = { 1, 1, 0, 0 };
 
   // Set kernel args
@@ -270,16 +275,23 @@ int main(int argc, char** argv) {
   p_clSetKernelArg(kernel, 6, sizeof(int4), &s1);
   p_clSetKernelArg(kernel, 7, sizeof(int4), &s2);
 
-  // Work group: kernel uses get_local_size(0/1/2)
-  // From qcom_max_concurrent_subgroups(12) and Adreno wave=64:
-  // Typical: local = (wave_size, 1, 1) or (8, 4, 1)
-  // The kernel maps: X=gid(1)*ls(0)+lid(0), Y=gid(2)*ls(1)+lid(1), Z=gid(0)*ls(2)+lid(2)
-  // So dim0=Z (slice groups), dim1=X (spatial width), dim2=Y (spatial height)
-  size_t local[3] = { 1, 64, 1 };  // Z, X, Y — wave along X
+  // Captured from delegate: global=(6144,8,4) local=(128,1,4)
+  // Kernel mapping: X=gid(1)*ls(0)+lid(0), Y=gid(2)*ls(1)+lid(1), Z=gid(0)*ls(2)+lid(2)
+  //   dim0 → Z (output slice groups), dim1 → X (spatial), dim2 → Y (height)
+  // For 1024x6144x1536: global=(6144,8,4) local=(128,1,4)
+  //   dim0: 6144 = dst_slices*4 = 1536*4, local=128 → 48 groups
+  //   dim1: 8, local=1 → 8 groups (X = gid(1)*128 + lid(0), so 8*128=1024=M)
+  //   dim2: 4, local=4 → 1 group (Y = gid(2)*1 + lid(1))
+  // Generalized:
+  //   global[0] = dst_slices * 4
+  //   global[1] = (M + 127) / 128
+  //   global[2] = 4
+  //   local = (128, 1, 4)
+  size_t local[3] = { 128, 1, 4 };
   size_t global[3] = {
-    (size_t)dst_slice_groups,
-    (size_t)((M + 63) / 64) * 64,
-    1
+    (size_t)dst_slices * 4,
+    (size_t)((M + 127) / 128),
+    4
   };
 
   fprintf(stderr, "[dk_bench] global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
