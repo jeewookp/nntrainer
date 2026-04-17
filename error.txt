@@ -1,17 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.13 KiB | 384.00 KiB/s, done.
+remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 775 bytes | 387.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   0d8a0853..4d370a51  litert_lm  -> origin/litert_lm
-Updating 0d8a0853..4d370a51
+   5c80a942..ecc0daa5  litert_lm  -> origin/litert_lm
+Updating 5c80a942..ecc0daa5
 Fast-forward
- runtime/cl_bench/BUILD                 |  1 +
- runtime/cl_bench/conv_generic_bench.cc | 28 +++++++++++++---------------
- 2 files changed, 14 insertions(+), 15 deletions(-)
+ runtime/cl_bench/BUILD | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
 [conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [conv_bench.sh] === ConvGeneric Matmul Benchmark ===
@@ -32,20 +31,55 @@ INFO: Found applicable config definition build:litert_prefixes in file /home/jwh
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
 INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (1 packages loaded, 2 targets configured).
-ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:38:10: Linking runtime/cl_bench/conv_generic_bench failed: (Exit 1): clang failed: error executing CppLink command (from target //runtime/cl_bench:conv_generic_bench) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang @bazel-out/arm64-v8a-opt/bin/runtime/cl_bench/conv_generic_bench-2.params
-ld.lld: error: undefined symbol: __android_log_print
->>> referenced by opencl_wrapper.cc
->>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
->>> referenced by opencl_wrapper.cc
->>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
->>> referenced by opencl_wrapper.cc
->>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
->>> referenced 1 more times
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
-Target //runtime/cl_bench:conv_generic_bench failed to build
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 2.188s, Critical Path: 2.06s
-INFO: 10 processes: 3 internal, 7 local.
-ERROR: Build did NOT complete successfully
+INFO: Found 1 target...
+Target //runtime/cl_bench:conv_generic_bench up-to-date:
+  bazel-bin/runtime/cl_bench/conv_generic_bench
+INFO: Elapsed time: 0.199s, Critical Path: 0.05s
+INFO: 3 processes: 2 internal, 1 local.
+INFO: Build completed successfully, 3 total actions
+
+[conv_bench.sh] adb push ...
+
+[conv_bench.sh] Running on device (taskset f0) ...
+[conv_bench] TFLite GPU ConvGeneric matmul benchmark
+[conv_bench] precision=fp16 warmup=5 iters=50 shapes=61
+INFO: Loaded OpenCL library with dlopen.
+[conv_bench] GPU: QUALCOMM Adreno(TM) 830 (12 CUs)
+
+[conv_bench] [1/61] M=1 N=256 K=1536 (0.001 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [2/61] M=1 N=512 K=1536 (0.002 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [3/61] M=1 N=1536 K=256 (0.001 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [4/61] M=1 N=1536 K=2048 (0.006 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [5/61] M=1 N=1536 K=4096 (0.013 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [6/61] M=1 N=1536 K=6144 (0.019 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [7/61] M=1 N=1536 K=12288 (0.038 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [8/61] M=1 N=2048 K=1536 (0.006 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [9/61] M=1 N=4096 K=1536 (0.013 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [10/61] M=1 N=6144 K=1536 (0.019 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [11/61] M=1 N=8960 K=1536 (0.028 GFLOPS)
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
+^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
