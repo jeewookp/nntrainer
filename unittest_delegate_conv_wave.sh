@@ -32,6 +32,7 @@ if [ $RUN_ONLY -eq 0 ]; then
   echo "[Step 1] Building ${TEST_BIN_NAME} (ndk-build)"
   echo "=========================================="
   cd test/jni
+  ndk-build clean 2>/dev/null
   ndk-build -j$(nproc) MESON_ENABLE_OPENCL=1 APP_MODULES="${TEST_BIN_NAME} googletest_main" 2>&1
   cd "$SCRIPT_DIR"
 

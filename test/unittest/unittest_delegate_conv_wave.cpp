@@ -536,12 +536,26 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   }
 
   // Create CL buffers
-  // Simple channel-wise int4 layout: weights[(k/4)*N + n]
-  // Kernel reads directly with this layout.
-  size_t w_bytes = packed_weights.size() * sizeof(uint16_t);
+  // Repack weights into delegate-style layout for wave memory:
+  // Sequential blocks of 8 half8 (64 ushorts) per (Z, iteration)
+  int n_z_grps = (dst_slices + 7) / 8;
+  int iters = src_slices / 2;
+  std::vector<uint16_t> repacked(n_z_grps * iters * 64, 0);
+  for (int z = 0; z < n_z_grps; ++z) {
+    int bn = z * 32;
+    for (int it = 0; it < iters; ++it) {
+      int cs = it * 2;
+      size_t off = ((size_t)z * iters + it) * 64;
+      for (int j = 0; j < 32 && bn + j < N; ++j)
+        repacked[off + j] = packed_weights[cs * N + bn + j];
+      for (int j = 0; j < 32 && bn + j < N; ++j)
+        repacked[off + 32 + j] = packed_weights[(cs + 1) * N + bn + j];
+    }
+  }
+  size_t w_bytes = repacked.size() * sizeof(uint16_t);
   cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
   ASSERT_EQ(err, 0);
-  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_weights.data(),
+  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, repacked.data(),
                           0, nullptr, nullptr);
 
   cl_mem xmem = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &err);
@@ -574,20 +588,24 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   ASSERT_EQ(err, 0);
 
   // Kernel args
+  // Delegate-style int4 params
+  int4 s0 = {1, dst_slices, M, 32};
+  int4 s1 = {iters, 0, 0, src_slices};
+  int4 s2 = {1, 1, 0, 0};
   cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_buf);
   cl.clSetKernelArg(kernel, 1, sizeof(cl_mem), &xmem);
   cl.clSetKernelArg(kernel, 2, sizeof(cl_mem), &sc_buf);
   cl.clSetKernelArg(kernel, 3, sizeof(cl_mem), &dst_img);
   cl.clSetKernelArg(kernel, 4, sizeof(cl_mem), &src_img);
-  cl.clSetKernelArg(kernel, 5, sizeof(int), &M);
-  cl.clSetKernelArg(kernel, 6, sizeof(int), &N);
-  cl.clSetKernelArg(kernel, 7, sizeof(int), &K);
+  cl.clSetKernelArg(kernel, 5, sizeof(int4), &s0);
+  cl.clSetKernelArg(kernel, 6, sizeof(int4), &s1);
+  cl.clSetKernelArg(kernel, 7, sizeof(int4), &s2);
 
-  // WG=(64,1,1). dim0=M, dim1=Z groups
-  int n_z_groups_d = (dst_slices + 7) / 8;
-  size_t local[3] = {64, 1, 1};
-  size_t global[3] = {(size_t)((M + 63) / 64) * 64,
-                      (size_t)n_z_groups_d, 1};
+  // Delegate dispatch: global=(6144,8,4) local=(128,1,4) for 1024x6144x1536
+  // Generalized: global[0]=ceil(dst_slices/8/4)*128, global[1]=ceil(M/128), global[2]=4
+  size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
+  size_t local[3] = {128, 1, 4};
+  size_t global[3] = {gz, (size_t)((M + 127) / 128), 4};
 
   fprintf(stderr, "global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
           global[0], global[1], global[2], local[0], local[1], local[2]);
