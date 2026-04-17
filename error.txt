@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
 remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 3.68 KiB | 1.23 MiB/s, done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 866 bytes | 433.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   ae80f84d..043ce6aa  litert_lm  -> origin/litert_lm
-Updating ae80f84d..043ce6aa
+   df5bc0fa..58e25e3e  litert_lm  -> origin/litert_lm
+Updating df5bc0fa..58e25e3e
 Fast-forward
- runtime/cl_bench/cl_intercept.cc | 401 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- 1 file changed, 164 insertions(+), 237 deletions(-)
+ runtime/cl_bench/cl_intercept.cc | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_intercept.sh 
 [intercept.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [intercept.sh] === CL Kernel Source Interceptor ===
@@ -36,136 +36,9 @@ ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:94:10:
 runtime/cl_bench/cl_intercept.cc:26:5: error: use of undeclared identifier '_exit'
    26 |     _exit(1);
       |     ^
-runtime/cl_bench/cl_intercept.cc:128:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, unsigned long, unsigned long, void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  128 | FWD(void*, clCreateBuffer, (void* c, uint64_t f, size_t s, void* p, cl_int* e), (c, f, s, p, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:128:47: note: previous definition is here
-  128 | FWD(void*, clCreateBuffer, (void* c, uint64_t f, size_t s, void* p, cl_int* e), (c, f, s, p, e))
-      |                                               ^
-runtime/cl_bench/cl_intercept.cc:128:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, unsigned long, unsigned long, void *, int *)')
-  128 | FWD(void*, clCreateBuffer, (void* c, uint64_t f, size_t s, void* p, cl_int* e), (c, f, s, p, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:128:81: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  128 | FWD(void*, clCreateBuffer, (void* c, uint64_t f, size_t s, void* p, cl_int* e), (c, f, s, p, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-runtime/cl_bench/cl_intercept.cc:129:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, unsigned long, unsigned int, const void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  129 | FWD(void*, clCreateSubBuffer, (void* m, uint64_t f, cl_uint t, const void* i, cl_int* e), (m, f, t, i, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:129:50: note: previous definition is here
-  129 | FWD(void*, clCreateSubBuffer, (void* m, uint64_t f, cl_uint t, const void* i, cl_int* e), (m, f, t, i, e))
-      |                                                  ^
-runtime/cl_bench/cl_intercept.cc:129:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, unsigned long, unsigned int, const void *, int *)')
-  129 | FWD(void*, clCreateSubBuffer, (void* m, uint64_t f, cl_uint t, const void* i, cl_int* e), (m, f, t, i, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:129:91: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  129 | FWD(void*, clCreateSubBuffer, (void* m, uint64_t f, cl_uint t, const void* i, cl_int* e), (m, f, t, i, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-runtime/cl_bench/cl_intercept.cc:130:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, unsigned long, const void *, const void *, void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  130 | FWD(void*, clCreateImage, (void* c, uint64_t f, const void* fmt, const void* desc, void* p, cl_int* e), (c, f, fmt, desc, p, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:130:46: note: previous definition is here
-  130 | FWD(void*, clCreateImage, (void* c, uint64_t f, const void* fmt, const void* desc, void* p, cl_int* e), (c, f, fmt, desc, p, e))
-      |                                              ^
-runtime/cl_bench/cl_intercept.cc:130:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, unsigned long, const void *, const void *, void *, int *)')
-  130 | FWD(void*, clCreateImage, (void* c, uint64_t f, const void* fmt, const void* desc, void* p, cl_int* e), (c, f, fmt, desc, p, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:130:105: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  130 | FWD(void*, clCreateImage, (void* c, uint64_t f, const void* fmt, const void* desc, void* p, cl_int* e), (c, f, fmt, desc, p, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-runtime/cl_bench/cl_intercept.cc:131:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, unsigned long, const void *, unsigned long, unsigned long, unsigned long, void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  131 | FWD(void*, clCreateImage2D, (void* c, uint64_t f, const void* fmt, size_t w, size_t h, size_t rp, void* p, cl_int* e), (c, f, fmt, w, h, rp, p, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:131:48: note: previous definition is here
-  131 | FWD(void*, clCreateImage2D, (void* c, uint64_t f, const void* fmt, size_t w, size_t h, size_t rp, void* p, cl_int* e), (c, f, fmt, w, h, rp, p, e))
-      |                                                ^
-runtime/cl_bench/cl_intercept.cc:131:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, unsigned long, const void *, unsigned long, unsigned long, unsigned long, void *, int *)')
-  131 | FWD(void*, clCreateImage2D, (void* c, uint64_t f, const void* fmt, size_t w, size_t h, size_t rp, void* p, cl_int* e), (c, f, fmt, w, h, rp, p, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:131:120: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  131 | FWD(void*, clCreateImage2D, (void* c, uint64_t f, const void* fmt, size_t w, size_t h, size_t rp, void* p, cl_int* e), (c, f, fmt, w, h, rp, p, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-runtime/cl_bench/cl_intercept.cc:163:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, void *, unsigned int, unsigned long, unsigned long, unsigned long, unsigned int, const void *, void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  163 | FWD(void*, clEnqueueMapBuffer, (void* q, void* m, cl_uint b, uint64_t f, size_t o, size_t s, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, s, nw, wl, ev, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:163:71: note: previous definition is here
-  163 | FWD(void*, clEnqueueMapBuffer, (void* q, void* m, cl_uint b, uint64_t f, size_t o, size_t s, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, s, nw, wl, ev, e))
-      |                                                                       ^
-runtime/cl_bench/cl_intercept.cc:163:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, void *, unsigned int, unsigned long, unsigned long, unsigned long, unsigned int, const void *, void *, int *)')
-  163 | FWD(void*, clEnqueueMapBuffer, (void* q, void* m, cl_uint b, uint64_t f, size_t o, size_t s, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, s, nw, wl, ev, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:163:144: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  163 | FWD(void*, clEnqueueMapBuffer, (void* q, void* m, cl_uint b, uint64_t f, size_t o, size_t s, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, s, nw, wl, ev, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-runtime/cl_bench/cl_intercept.cc:164:1: error: redefinition of 'f' with a different type: 'F' (aka 'void *(*)(void *, void *, unsigned int, unsigned long, const unsigned long *, const unsigned long *, unsigned long *, unsigned long *, unsigned int, const void *, void *, int *)') vs 'uint64_t' (aka 'unsigned long')
-  164 | FWD(void*, clEnqueueMapImage, (void* q, void* m, cl_uint b, uint64_t f, const size_t* o, const size_t* r, size_t* rp, size_t* sp, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, r, rp, sp, nw, wl, ev, e))
-      | ^
-runtime/cl_bench/cl_intercept.cc:45:14: note: expanded from macro 'FWD'
-   45 |     static F f = nullptr; \
-      |              ^
-runtime/cl_bench/cl_intercept.cc:164:70: note: previous definition is here
-  164 | FWD(void*, clEnqueueMapImage, (void* q, void* m, cl_uint b, uint64_t f, const size_t* o, const size_t* r, size_t* rp, size_t* sp, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, r, rp, sp, nw, wl, ev, e))
-      |                                                                      ^
-runtime/cl_bench/cl_intercept.cc:164:1: error: incompatible pointer to integer conversion assigning to 'uint64_t' (aka 'unsigned long') from 'F' (aka 'void *(*)(void *, void *, unsigned int, unsigned long, const unsigned long *, const unsigned long *, unsigned long *, unsigned long *, unsigned int, const void *, void *, int *)')
-  164 | FWD(void*, clEnqueueMapImage, (void* q, void* m, cl_uint b, uint64_t f, const size_t* o, const size_t* r, size_t* rp, size_t* sp, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, r, rp, sp, nw, wl, ev, e))
-      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:46:17: note: expanded from macro 'FWD'
-   46 |     if (!f) f = (F)sym(#NAME); \
-      |                 ^~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:164:181: error: called object type 'uint64_t' (aka 'unsigned long') is not a function or function pointer
-  164 | FWD(void*, clEnqueueMapImage, (void* q, void* m, cl_uint b, uint64_t f, const size_t* o, const size_t* r, size_t* rp, size_t* sp, cl_uint nw, const void* wl, void* ev, cl_int* e), (q, m, b, f, o, r, rp, sp, nw, wl, ev, e))
-      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/cl_intercept.cc:47:14: note: expanded from macro 'FWD'
-   47 |     return f ARGS; \
-      |            ~ ^
-fatal error: too many errors emitted, stopping now [-ferror-limit=]
-20 errors generated.
+1 error generated.
 Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 0.136s, Critical Path: 0.03s
+INFO: Elapsed time: 0.145s, Critical Path: 0.02s
 INFO: 2 processes: 2 internal.
 ERROR: Build did NOT complete successfully
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
