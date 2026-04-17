@@ -1,21 +1,83 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 4, done.
-remote: Counting objects: 100% (4/4), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.14 KiB | 585.00 KiB/s, done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 1.05 KiB | 358.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   d95987cb..73fc7f86  litert_lm  -> origin/litert_lm
-Updating d95987cb..73fc7f86
+   3dbf5055..00830c79  litert_lm  -> origin/litert_lm
+Updating 3dbf5055..00830c79
 Fast-forward
- temp_litert_strace_cl.sh | 33 +++++++++++++++++++++++++++++++++
- 1 file changed, 33 insertions(+)
- create mode 100755 temp_litert_strace_cl.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_strace_cl.sh 
-[strace.sh] Running matmul_micro_benchmark under strace ...
-/system/bin/sh: strace: inaccessible or not found
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_strace_cl.sh 
-[strace.sh] Running matmul_micro_benchmark under strace ...
-/system/bin/sh: strace: inaccessible or not found
+ runtime/cl_bench/cl_intercept.cc | 22 ++++++++++++++++++----
+ 1 file changed, 18 insertions(+), 4 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_intercept.sh 
+[intercept.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
+[intercept.sh] === CL Kernel Source Interceptor ===
+[intercept.sh] SHAPES=1024x6144x1536
+[intercept.sh] DTYPE=int8_per_tensor
+[intercept.sh] ITERS=2 (just enough to trigger compilation)
+
+[intercept.sh] Building cl_intercept + matmul_micro_benchmark ...
+INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=1 --terminal_columns=425
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
+INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
+INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
+INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
+INFO: Analyzed 2 targets (0 packages loaded, 0 targets configured).
+INFO: Found 2 targets...
+INFO: Elapsed time: 0.193s, Critical Path: 0.10s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
+[intercept.sh] Interceptor: bazel-bin/runtime/cl_bench/libcl_intercept.so.runfiles/litert_lm/runtime/cl_bench/libcl_intercept.so
+
+[intercept.sh] Pushing interceptor + benchmark to device ...
+
+[intercept.sh] Running benchmark with interceptor (shapes: 1024x6144x1536) ...
+[intercept.sh] (Only 2 iters — just need CL compilation, not timing)
+[intercept.sh] Clearing CL caches to force fresh compilation ...
+
+[MATMUL MICRO] backend=gpu dtype=int8_per_tensor unique_shapes=1 warmup=1 iters=2 profile=0 cache_dir=(disabled)
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074caa1bb70, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074caa1b7f0, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+[cl_intercept] Real OpenCL loaded from /system/vendor/lib64/libOpenCL.so
+[cl_intercept] CALL: clGetPlatformIDs
+I0000 00:00:1742238006.398584   23563 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742238006.398722   23563 delegate_opencl.cc:553] options->kernel_batch_size: -1
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
+INFO: Loaded OpenCL library with dlopen.
+INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
+INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
+INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1742238006.506517   23563 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   6144   1536     14865.1  14865.1  14865.1  14865.1  14865.1       19.33    1.300
+[MATMUL MICRO] done. 0 / 1 shapes failed.
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000074caa1b7f0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000074caa1bb70, name=LiteRT GPU
+
+[intercept.sh] Restoring original libOpenCL.so ...
+[intercept.sh] Pulling captured CL sources ...
+[intercept.sh] WARNING: No .cl files captured.
+  The delegate might have used clCreateProgramWithBinary
+  (cached compiled program) instead of source compilation.
+  Try: adb shell 'rm -rf /data/local/tmp/litert_lm/cache/*' and re-run.
+
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
