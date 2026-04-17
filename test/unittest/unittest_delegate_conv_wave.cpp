@@ -539,20 +539,20 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   // Repack weights into delegate-style layout for wave memory:
   // Sequential blocks of 8 half8 (64 ushorts) per (Z, iteration)
   int n_z_grps = (dst_slices + 7) / 8;
-  int iters = src_slices / 2;
-  std::vector<uint16_t> repacked(n_z_grps * iters * 64, 0);
+  int k_iters = src_slices / 2;
+  std::vector<uint16_t> repacked(n_z_grps * k_iters * 64, 0);
   for (int z = 0; z < n_z_grps; ++z) {
     int bn = z * 32;
-    for (int it = 0; it < iters; ++it) {
+    for (int it = 0; it < k_iters; ++it) {
       int cs = it * 2;
-      size_t off = ((size_t)z * iters + it) * 64;
+      size_t off = ((size_t)z * k_iters + it) * 64;
       for (int j = 0; j < 32 && bn + j < N; ++j)
         repacked[off + j] = packed_weights[cs * N + bn + j];
       for (int j = 0; j < 32 && bn + j < N; ++j)
         repacked[off + 32 + j] = packed_weights[(cs + 1) * N + bn + j];
     }
   }
-  size_t w_bytes = repacked.size() * sizeof(uint16_t);
+  size_t w_bytes = repacked.size() * 2;
   cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
   ASSERT_EQ(err, 0);
   cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, repacked.data(),
@@ -590,7 +590,7 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   // Kernel args
   // Delegate-style int4 params
   int4 s0 = {1, dst_slices, M, 32};
-  int4 s1 = {iters, 0, 0, src_slices};
+  int4 s1 = {k_iters, 0, 0, src_slices};
   int4 s2 = {1, 1, 0, 0};
   cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_buf);
   cl.clSetKernelArg(kernel, 1, sizeof(cl_mem), &xmem);
