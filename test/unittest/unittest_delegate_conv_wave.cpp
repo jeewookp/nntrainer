@@ -433,3 +433,8 @@ TEST_F(DelegateConvWaveTest, Matmul_1024x6144x1536_Correctness) {
 }
 
 } // namespace
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
