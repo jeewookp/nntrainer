@@ -1078,11 +1078,24 @@ int main(int argc, char** argv) {
   if (p_clNewRecordingQCOM && p_clEndRecordingQCOM && p_clEnqueueRecordingQCOM) {
     fprintf(stderr, "\n[dk_bench] Qualcomm RecordableQueue test ...\n");
     // Create a recordable queue: CL_QUEUE_RECORDABLE_QCOM = 0x40E6 (from cl_ext_qcom.h)
-    uint64_t rq_props[] = { 0x1093 /*CL_QUEUE_PROPERTIES*/, CL_QUEUE_PROFILING_ENABLE,
-                             0x40E6 /*CL_QUEUE_RECORDABLE_QCOM*/, 1, 0 };
+    // Try multiple property combinations since the exact format is unknown
     cl_command_queue rec_queue = nullptr;
+    // Attempt 1: recordable only (no profiling)
+    uint64_t rq1[] = { 0x40E6, 1, 0 };
     if (p_clCreateCommandQueueWithProperties)
-      rec_queue = p_clCreateCommandQueueWithProperties(ctx, dev, rq_props, &err);
+      rec_queue = p_clCreateCommandQueueWithProperties(ctx, dev, rq1, &err);
+    if (!rec_queue || err) {
+      fprintf(stderr, "  Attempt 1 (0x40E6 only): err=%d\n", err);
+      // Attempt 2: as CL_QUEUE_PROPERTIES bit
+      uint64_t rq2[] = { 0x1093, 0x40E6, 0 };
+      rec_queue = p_clCreateCommandQueueWithProperties(ctx, dev, rq2, &err);
+    }
+    if (!rec_queue || err) {
+      fprintf(stderr, "  Attempt 2 (as PROPERTIES bit): err=%d\n", err);
+      // Attempt 3: plain queue then try recording on it
+      rec_queue = p_clCreateCommandQueue(ctx, dev, 0, &err);
+      fprintf(stderr, "  Attempt 3 (plain queue): err=%d\n", err);
+    }
     if (rec_queue && err == CL_SUCCESS) {
       fprintf(stderr, "  Recordable queue created\n");
       // Record the kernel
