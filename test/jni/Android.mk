@@ -745,9 +745,9 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := unittest_delegate_conv_wave
-LOCAL_CFLAGS := -Igoogletest/include -I../include -I../unittest/layers -pthread -fexceptions -fopenmp -static-openmp -DMIN_CPP_VERSION=201703L -DNNTR_NUM_THREADS=1 -D__LOGGING__=1 -DENABLE_TEST=1 -DENABLE_FP16=1 -DENABLE_OPENCL=1 $(ARM_MARCH_FLAGS) -O3 -frtti -DNDK_BUILD=1
+LOCAL_CFLAGS := -Igoogletest/include -I../include -pthread -fexceptions -DMIN_CPP_VERSION=201703L -DENABLE_TEST=1 $(ARM_MARCH_FLAGS) -O3 -frtti -DNDK_BUILD=1
 LOCAL_CXXFLAGS      += -std=c++17 -frtti -fexceptions
-LOCAL_LDLIBS        := -llog -landroid -ldl -fopenmp -static-openmp
+LOCAL_LDLIBS        := -llog -ldl
 
 LOCAL_SRC_FILES := \
 	 ../unittest/unittest_delegate_conv_wave.cpp
