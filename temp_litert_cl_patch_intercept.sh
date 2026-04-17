@@ -14,8 +14,8 @@ set -euo pipefail
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 INTERCEPT_SHAPES="${INTERCEPT_SHAPES:-1024x6144x1536}"
 INTERCEPT_DTYPE="${INTERCEPT_DTYPE:-int8_per_tensor}"
-INTERCEPT_ITERS="${INTERCEPT_ITERS:-2}"
-INTERCEPT_WARMUP="${INTERCEPT_WARMUP:-1}"
+INTERCEPT_ITERS="${INTERCEPT_ITERS:-5}"
+INTERCEPT_WARMUP="${INTERCEPT_WARMUP:-3}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 HOST_OUT_DIR="runtime/cl_bench/intercepted"
 DEVICE_CL_DIR="${DEVICE_FOLDER}/cl_intercept"
@@ -120,7 +120,13 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --warmup=${INTERCEPT_WARMUP} \
     --iters=${INTERCEPT_ITERS} \
     --profile=false \
-    --max_tensor_mb=512" 2>&1 | tee temp_litert_cl_patch.log | head -200
+    --max_tensor_mb=512" 2>&1 | tee temp_litert_cl_patch.log
+
+echo ""
+echo "[patch.sh] === Dispatch summary (from log) ==="
+grep -c "NDRange" temp_litert_cl_patch.log || true
+echo "Unique dispatch patterns:"
+grep "NDRange" temp_litert_cl_patch.log | sort | uniq -c | sort -rn | head -20
 
 # Step 5: Restore original delegate .so files.
 echo ""
