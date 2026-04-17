@@ -39,7 +39,7 @@ cc_binary(
     name = "conv_generic_bench",
     srcs = ["conv_generic_bench.cc"],
     linkopts = select({
-        "@platforms//os:android": ["-lEGL", "-lGLESv3"],
+        "@platforms//os:android": ["-lEGL", "-lGLESv3", "-llog"],
         "//conditions:default": [],
     }),
     deps = [
