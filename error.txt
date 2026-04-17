@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.69 KiB | 432.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1.18 KiB | 241.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   1e8763eb..abb08db2  litert_lm  -> origin/litert_lm
-Updating 1e8763eb..abb08db2
+   674ebec9..6e934764  litert_lm  -> origin/litert_lm
+Updating 674ebec9..6e934764
 Fast-forward
- runtime/cl_bench/delegate_kernel_bench.cc | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 72 insertions(+)
+ runtime/cl_bench/delegate_kernel_bench.cc | 23 ++++++++++++++---------
+ 1 file changed, 14 insertions(+), 9 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ DK_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -31,7 +31,7 @@ INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loade
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.880s, Critical Path: 0.76s
+INFO: Elapsed time: 0.835s, Critical Path: 0.75s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
@@ -67,27 +67,27 @@ WARN: clReleaseCommandBufferKHR not found
 [dk_bench] global=(6144,8,4) local=(128,1,4)
 [dk_bench] s0=(1,1536,1024,32) s1=(384,0,0,384) s2=(1,1,0,0)
 [dk_bench] Auto-tuning local sizes ...
-  local=(128,1,4) global=(6144,8,4) → 6200.0 us (3.117 TFLOPS)
-  local=(64,1,4) global=(3072,16,4) → 6424.8 us (3.008 TFLOPS)
-  local=(32,1,4) global=(1536,32,4) → 6387.6 us (3.026 TFLOPS)
-  local=(64,2,4) global=(3072,16,4) → 3468.2 us (5.573 TFLOPS)
-  local=(32,2,4) global=(1536,32,4) → 6366.4 us (3.036 TFLOPS)
-  local=(128,1,2) global=(12288,8,2) → 6222.7 us (3.106 TFLOPS)
-  local=(64,1,2) global=(6144,16,2) → 6404.1 us (3.018 TFLOPS)
-  local=(32,1,2) global=(3072,32,2) → 5723.0 us (3.377 TFLOPS)
-  local=(128,1,1) global=(24576,8,1) → 6211.9 us (3.111 TFLOPS)
-  local=(64,1,1) global=(12288,16,1) → 5743.2 us (3.365 TFLOPS)
-  local=(32,1,1) global=(6144,32,1) → 11259.9 us (1.716 TFLOPS)
-  local=(256,1,2) global=(24576,4,2) → 6105.2 us (3.166 TFLOPS)
-  local=(256,1,1) global=(49152,4,1) → 6123.1 us (3.156 TFLOPS)
-[dk_bench] Best: local=(64,2,4) → 3468.2 us (5.573 TFLOPS)
-[dk_bench] global=(3072,16,4) local=(64,2,4)
+  local=(128,1,4) global=(6144,8,4) → 6178.1 us (3.128 TFLOPS)
+  local=(64,1,4) global=(3072,16,4) → 6417.6 us (3.012 TFLOPS)
+  local=(32,1,4) global=(1536,32,4) → 6395.5 us (3.022 TFLOPS)
+  local=(64,2,4) global=(3072,32,4) → 6790.7 us (2.846 TFLOPS)
+  local=(32,2,4) global=(1536,64,4) → 12546.0 us (1.541 TFLOPS)
+  local=(128,1,2) global=(12288,8,2) → 6215.8 us (3.109 TFLOPS)
+  local=(64,1,2) global=(6144,16,2) → 6412.2 us (3.014 TFLOPS)
+  local=(32,1,2) global=(3072,32,2) → 5725.8 us (3.375 TFLOPS)
+  local=(128,1,1) global=(24576,8,1) → 6205.2 us (3.115 TFLOPS)
+  local=(64,1,1) global=(12288,16,1) → 5742.5 us (3.366 TFLOPS)
+  local=(32,1,1) global=(6144,32,1) → 11260.6 us (1.716 TFLOPS)
+  local=(256,1,2) global=(24576,4,2) → 6127.5 us (3.154 TFLOPS)
+  local=(256,1,1) global=(49152,4,1) → 6125.6 us (3.155 TFLOPS)
+[dk_bench] Best: local=(32,1,2) → 5725.8 us (3.375 TFLOPS)
+[dk_bench] global=(3072,32,2) local=(32,1,2)
 [dk_bench] Warmup 50 ...
 [dk_bench] Timed 100 iters (burst) ...
 
 [dk_bench] Results: M=1024 N=6144 K=1536
-  wall: 3362.4 us  TFLOPS=5.748
-  gpu:  3347.8 us  TFLOPS=5.773
+  wall: 5613.5 us  TFLOPS=3.443
+  gpu:  5601.5 us  TFLOPS=3.450
   (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
 
 [dk_bench] Command buffer not available
@@ -99,7 +99,4 @@ WARN: clReleaseCommandBufferKHR not found
     0.010 0.030 -0.060 0.069 0.010 0.030 -0.060 0.069 0.010 0.030 -0.060 0.069 0.010 0.030 -0.060 0.069 
   Expected (if layout correct): ~15.36 per element
   PASS: output is non-trivial (kernel computed something)
-
-
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
