@@ -608,6 +608,78 @@ int main(int argc, char** argv) {
   fprintf(stderr, "[dk_bench] s0=(%d,%d,%d,%d) s1=(%d,%d,%d,%d) s2=(%d,%d,%d,%d)\n",
           s0.x, s0.y, s0.z, s0.w, s1.x, s1.y, s1.z, s1.w, s2.x, s2.y, s2.z, s2.w);
 
+  // ========================================================================
+  // Auto-tuning: try multiple local sizes (same as delegate's tuning pass)
+  // and pick the fastest. Global is recalculated for each local size.
+  // ========================================================================
+  if (!getenv("DK_LOCAL")) {
+    fprintf(stderr, "[dk_bench] Auto-tuning local sizes ...\n");
+    struct TuneConfig { size_t l[3]; };
+    // Candidate local sizes (must divide into global evenly)
+    TuneConfig candidates[] = {
+      {{128, 1, 4}},   // default
+      {{64, 1, 4}},
+      {{32, 1, 4}},
+      {{64, 2, 4}},
+      {{32, 2, 4}},
+      {{128, 1, 2}},
+      {{64, 1, 2}},
+      {{32, 1, 2}},
+      {{128, 1, 1}},
+      {{64, 1, 1}},
+      {{32, 1, 1}},
+      {{256, 1, 2}},
+      {{256, 1, 1}},
+    };
+    double best_us = 1e18;
+    size_t best_local[3] = {128, 1, 4};
+    size_t best_global[3] = {global[0], global[1], global[2]};
+    int tune_iters = 10;
+
+    for (auto& c : candidates) {
+      // Recalculate global for this local
+      // Z = gid(0)*ls(2)+lid(2), need ceil(dst_slices/8) Z values
+      size_t need_z = (dst_slices + 7) / 8;
+      size_t gz = ((need_z + c.l[2] - 1) / c.l[2]) * c.l[0];
+      // X = gid(1)*ls(0)+lid(0), need M X values
+      size_t gx = ((M + (int)c.l[0] - 1) / (int)c.l[0]);
+      // Y = gid(2)*ls(1)+lid(1), need 1 Y value
+      size_t gy = c.l[2];
+      size_t tg[3] = { gz, gx, gy };
+
+      // Quick warmup
+      for (int i = 0; i < 3; ++i)
+        p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, tg, c.l, 0, nullptr, nullptr);
+      p_clFinish(queue);
+
+      // Time
+      auto t0 = std::chrono::high_resolution_clock::now();
+      for (int i = 0; i < tune_iters; ++i)
+        p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, tg, c.l, 0, nullptr, nullptr);
+      p_clFinish(queue);
+      auto t1 = std::chrono::high_resolution_clock::now();
+      double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / tune_iters;
+
+      fprintf(stderr, "  local=(%zu,%zu,%zu) global=(%zu,%zu,%zu) → %.1f us (%.3f TFLOPS)\n",
+              c.l[0], c.l[1], c.l[2], tg[0], tg[1], tg[2],
+              us, (gflops / (us / 1e6)) / 1000.0);
+
+      if (us < best_us) {
+        best_us = us;
+        memcpy(best_local, c.l, sizeof(best_local));
+        memcpy(best_global, tg, sizeof(best_global));
+      }
+    }
+    memcpy(local, best_local, sizeof(local));
+    memcpy(global, best_global, sizeof(global));
+    fprintf(stderr, "[dk_bench] Best: local=(%zu,%zu,%zu) → %.1f us (%.3f TFLOPS)\n",
+            local[0], local[1], local[2], best_us,
+            (gflops / (best_us / 1e6)) / 1000.0);
+  }
+
+  fprintf(stderr, "[dk_bench] global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
+          global[0], global[1], global[2], local[0], local[1], local[2]);
+
   // Warmup
   fprintf(stderr, "[dk_bench] Warmup %d ...\n", warmup);
   for (int i = 0; i < warmup; ++i) {
