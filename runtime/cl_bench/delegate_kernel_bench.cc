@@ -111,6 +111,12 @@ DECL_CL(cl_int, clEnqueueWriteImage, (cl_command_queue, cl_mem, cl_uint, const s
 DECL_CL(cl_int, clEnqueueReadImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
 // Qualcomm performance hint
 DECL_CL(cl_int, clSetPerfHintQCOM, (cl_context, cl_uint))
+// Command buffer KHR
+DECL_CL(void*, clCreateCommandBufferKHR, (cl_uint, const cl_command_queue*, const void*, cl_int*))
+DECL_CL(cl_int, clCommandNDRangeKernelKHR, (void*, void*, const void*, cl_kernel, cl_uint, const size_t*, const size_t*, const size_t*, cl_uint, const void*, void*, void*))
+DECL_CL(cl_int, clFinalizeCommandBufferKHR, (void*))
+DECL_CL(cl_int, clEnqueueCommandBufferKHR, (cl_uint, const cl_command_queue*, void*, cl_uint, const cl_event*, cl_event*))
+DECL_CL(cl_int, clReleaseCommandBufferKHR, (void*))
 
 #define LOAD(h, name) p_##name = (pfn_##name)dlsym(h, #name); \
   if (!p_##name) { fprintf(stderr, "WARN: %s not found\n", #name); }
@@ -135,6 +141,11 @@ static bool LoadCL() {
   LOAD(h, clEnqueueReadBuffer);
   LOAD(h, clEnqueueWriteImage); LOAD(h, clEnqueueReadImage);
   LOAD(h, clSetPerfHintQCOM);
+  LOAD(h, clCreateCommandBufferKHR);
+  LOAD(h, clCommandNDRangeKernelKHR);
+  LOAD(h, clFinalizeCommandBufferKHR);
+  LOAD(h, clEnqueueCommandBufferKHR);
+  LOAD(h, clReleaseCommandBufferKHR);
   return true;
 }
 
@@ -638,6 +649,69 @@ int main(int argc, char** argv) {
   fprintf(stderr, "  wall: %.1f us  TFLOPS=%.3f\n", wall_us, tflops_wall);
   fprintf(stderr, "  gpu:  %.1f us  TFLOPS=%.3f\n", gpu_us, tflops_gpu);
   fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n");
+
+  // ========================================================================
+  // Command buffer timing: matches delegate's clCommandBufferKHR usage.
+  // ========================================================================
+  if (p_clCreateCommandBufferKHR && p_clCommandNDRangeKernelKHR &&
+      p_clFinalizeCommandBufferKHR && p_clEnqueueCommandBufferKHR) {
+    fprintf(stderr, "\n[dk_bench] Command buffer timing ...\n");
+
+    void* cb = p_clCreateCommandBufferKHR(1, &queue, nullptr, &err);
+    if (cb && err == CL_SUCCESS) {
+      err = p_clCommandNDRangeKernelKHR(cb, nullptr, nullptr, kernel, 3,
+                                         nullptr, global, local,
+                                         0, nullptr, nullptr, nullptr);
+      if (err == CL_SUCCESS) {
+        err = p_clFinalizeCommandBufferKHR(cb);
+      }
+      if (err == CL_SUCCESS) {
+        // Warmup
+        for (int i = 0; i < warmup; ++i) {
+          p_clEnqueueCommandBufferKHR(0, nullptr, cb, 0, nullptr, nullptr);
+        }
+        p_clFinish(queue);
+
+        // Burst wall-clock
+        auto cb_t0 = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < iters; ++i) {
+          p_clEnqueueCommandBufferKHR(0, nullptr, cb, 0, nullptr, nullptr);
+        }
+        p_clFinish(queue);
+        auto cb_t1 = std::chrono::high_resolution_clock::now();
+        double cb_wall = std::chrono::duration<double, std::micro>(cb_t1 - cb_t0).count() / iters;
+
+        // Per-dispatch GPU profiling
+        double cb_gpu = 0;
+        {
+          std::vector<double> times;
+          for (int i = 0; i < iters; ++i) {
+            cl_event ev = nullptr;
+            p_clEnqueueCommandBufferKHR(0, nullptr, cb, 0, nullptr, &ev);
+            p_clFinish(queue);
+            cl_ulong ts0 = 0, ts1 = 0;
+            p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(ts0), &ts0, nullptr);
+            p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(ts1), &ts1, nullptr);
+            p_clReleaseEvent(ev);
+            times.push_back((ts1 - ts0) / 1000.0);
+          }
+          cb_gpu = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+        }
+
+        double cb_tflops_wall = (gflops / (cb_wall / 1e6)) / 1000.0;
+        double cb_tflops_gpu = (gflops / (cb_gpu / 1e6)) / 1000.0;
+        fprintf(stderr, "  CB wall: %.1f us  TFLOPS=%.3f\n", cb_wall, cb_tflops_wall);
+        fprintf(stderr, "  CB gpu:  %.1f us  TFLOPS=%.3f\n", cb_gpu, cb_tflops_gpu);
+      } else {
+        fprintf(stderr, "  Command buffer setup failed: %d\n", err);
+      }
+      p_clReleaseCommandBufferKHR(cb);
+    } else {
+      fprintf(stderr, "  clCreateCommandBufferKHR failed: %d\n", err);
+    }
+  } else {
+    fprintf(stderr, "\n[dk_bench] Command buffer not available\n");
+  }
 
   // ========================================================================
   // Correctness verification: read back dst image and check values.
