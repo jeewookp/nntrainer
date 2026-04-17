@@ -182,6 +182,9 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   ConvGeneric conv = CreateConvGeneric(env->GetDevicePtr()->info_, op_def, attr,
                                        &dst_shape);
 
+  // AssembleCode registers tensor arguments and finalizes the CL source.
+  RETURN_IF_ERROR(conv.AssembleCode(env->GetDevicePtr()->info_));
+
   // Create GPU tensors.
   cl::Tensor src_tensor, dst_tensor;
   RETURN_IF_ERROR(
