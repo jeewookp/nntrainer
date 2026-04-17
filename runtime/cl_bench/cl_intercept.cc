@@ -100,6 +100,50 @@ extern "C" cl_program clCreateProgramWithBinary(
 }
 
 // ============================================================================
+// Intercept clCreateProgramWithIL (SPIR-V path, OpenCL 2.1+).
+// The delegate may use SPIR-V instead of CL source text.
+// ============================================================================
+typedef cl_program (*real_cpwil_t)(cl_context, const void*, size_t, cl_int*);
+extern "C" cl_program clCreateProgramWithIL(
+    cl_context ctx, const void* il, size_t length, cl_int* err) {
+  static real_cpwil_t real_fn = nullptr;
+  if (!real_fn) real_fn = (real_cpwil_t)sym("clCreateProgramWithIL");
+
+  int idx = __sync_fetch_and_add(&prog_cnt, 1);
+  char fname[256];
+  snprintf(fname, sizeof(fname), "%s/program_%03d.spv", DUMP_DIR, idx);
+  FILE* fp = fopen(fname, "wb");
+  if (fp) {
+    fwrite(il, 1, length, fp);
+    fclose(fp);
+    fprintf(stderr, "[cl_intercept] #%d: clCreateProgramWithIL → %s (%zu bytes SPIR-V)\n",
+            idx, fname, length);
+  }
+  if (!real_fn) {
+    fprintf(stderr, "[cl_intercept] WARNING: clCreateProgramWithIL not available\n");
+    if (err) *err = -1;
+    return nullptr;
+  }
+  return real_fn(ctx, il, length, err);
+}
+
+// ============================================================================
+// Intercept clCreateProgramWithBuiltInKernels.
+// ============================================================================
+typedef cl_program (*real_cpwbik_t)(cl_context, cl_uint, const void*,
+                                    const char*, cl_int*);
+extern "C" cl_program clCreateProgramWithBuiltInKernels(
+    cl_context ctx, cl_uint nd, const void* dl,
+    const char* names, cl_int* err) {
+  static real_cpwbik_t real_fn = nullptr;
+  if (!real_fn) real_fn = (real_cpwbik_t)sym("clCreateProgramWithBuiltInKernels");
+  int idx = __sync_fetch_and_add(&prog_cnt, 1);
+  fprintf(stderr, "[cl_intercept] #%d: clCreateProgramWithBuiltInKernels names='%s'\n",
+          idx, names ? names : "(null)");
+  return real_fn(ctx, nd, dl, names, err);
+}
+
+// ============================================================================
 // ALL forwarded CL functions. Covers everything TFLite opencl_wrapper loads.
 // Using void* for opaque CL types, size_t for sizes.
 // ============================================================================

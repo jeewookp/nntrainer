@@ -119,6 +119,12 @@ echo ""
 echo "[intercept.sh] Running benchmark with interceptor (shapes: ${INTERCEPT_SHAPES}) ..."
 echo "[intercept.sh] (Only ${INTERCEPT_ITERS} iters — just need CL compilation, not timing)"
 
+# Clear any CL program caches so delegate is forced to compile from source.
+echo "[intercept.sh] Clearing CL caches to force fresh compilation ..."
+adb shell "rm -rf ${DEVICE_FOLDER}/cache/* 2>/dev/null; \
+           rm -rf /data/local/tmp/cl_cache/* 2>/dev/null; \
+           rm -rf /data/data/*/cache/cl_cache/* 2>/dev/null" 2>/dev/null || true
+
 # Also push as libcl_intercept.so for LD_PRELOAD (keep libOpenCL.so copy too)
 adb push "${INTERCEPT_SO}" "${DEVICE_FOLDER}/libcl_intercept.so" >/dev/null
 
@@ -142,9 +148,9 @@ adb shell "if [ -f ${DEVICE_FOLDER}/libOpenCL.so.bak ]; then mv ${DEVICE_FOLDER}
 
 echo "[intercept.sh] Pulling captured CL sources ..."
 mkdir -p "${HOST_OUT_DIR}"
-CL_COUNT=$(adb shell "ls ${DEVICE_CL_DIR}/*.cl 2>/dev/null | wc -l" | tr -d '\r ')
+CL_COUNT=$(adb shell "ls ${DEVICE_CL_DIR}/*.cl ${DEVICE_CL_DIR}/*.spv 2>/dev/null | wc -l" | tr -d '\r ')
 if [ "${CL_COUNT}" -gt 0 ]; then
-  adb shell "ls ${DEVICE_CL_DIR}/*.cl" | while read -r f; do
+  adb shell "ls ${DEVICE_CL_DIR}/*.cl ${DEVICE_CL_DIR}/*.spv 2>/dev/null" | while read -r f; do
     f=$(echo "$f" | tr -d '\r')
     base=$(basename "$f")
     adb pull "$f" "${HOST_OUT_DIR}/${base}" 2>/dev/null
