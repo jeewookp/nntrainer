@@ -453,8 +453,8 @@ static bool BenchmarkShape(
 
   size_t local_work[2] = {16, 16};
   size_t global_work[2] = {
-      ((M + 15) / 16) * 16,
-      ((N + 15) / 16) * 16,
+      static_cast<size_t>(((M + 15) / 16) * 16),
+      static_cast<size_t>(((N + 15) / 16) * 16),
   };
 
   // Warmup
