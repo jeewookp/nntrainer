@@ -1,20 +1,3 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 6.37 KiB | 1.59 MiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              litert_lm  -> FETCH_HEAD
-   8b8dc929..3c90d900  litert_lm  -> origin/litert_lm
-Updating 8b8dc929..3c90d900
-Fast-forward
- runtime/cl_bench/BUILD                    |  10 ++++++++++
- runtime/cl_bench/delegate_kernel_bench.cc | 340 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- temp_litert_dk_bench.sh                   |  61 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 411 insertions(+)
- create mode 100644 runtime/cl_bench/delegate_kernel_bench.cc
- create mode 100755 temp_litert_dk_bench.sh
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -31,14 +14,13 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-WARNING: Build option --define has changed, discarding analysis cache (this can be expensive, see https://bazel.build/advanced/performance/iteration-speed).
-INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (1 packages loaded, 7624 targets configured).
+INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.923s, Critical Path: 0.66s
-INFO: 7 processes: 5 internal, 2 local.
-INFO: Build completed successfully, 7 total actions
+INFO: Elapsed time: 0.827s, Critical Path: 0.68s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
 
 
 [dk_bench.sh] Running (taskset f0) ...
@@ -49,22 +31,7 @@ INFO: Build completed successfully, 7 total actions
 [dk_bench] Loaded 7438 bytes CL source
 [dk_bench] GPU: QUALCOMM Adreno(TM) 830
 BUILD ERROR:
-BC-src-code:8:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_uniform_load'
-#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
-                         ^
-BC-src-code:9:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_constant_load'
-#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
-                         ^
-BC-src-code:13:64: error: 'subgroupuniform' attribute requires cl_qcom_subgroup_constant_load extension
-MAIN_FUNCTION(__constant half8* weights_buffer  __attribute__((sub_group_uniform)),
-                                                               ^
-BC-src-code:12:16: error: attribute 'qcom_max_concurrent_subgroups' requires 'cl_qcom_subgroup_constant_load' extension
-__attribute__((qcom_max_concurrent_subgroups(12)))
-               ^
-BC-src-code:63:9: error: builtin 'sub_group_constant_load' requires 'cl_qcom_subgroup_constant_load' extension
-        qcom_sub_group_constant_load8(xmem_buffer, weights_buffer, c_offset, f_offset >> 1, 32);
-        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-5 diagnostic(s) generated.
+Unsupported OpenCL user option specified: '-cl-qcom-extn-enabled'
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
