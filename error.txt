@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 751 bytes | 250.00 KiB/s, done.
+remote: Enumerating objects: 19, done.
+remote: Counting objects: 100% (19/19), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 10 (delta 8), reused 10 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 3.99 KiB | 681.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   0e88a14b..c496d036  all_gpu    -> upstream/all_gpu
-Updating 0e88a14b..c496d036
+   2b92470b..a759da34  all_gpu    -> upstream/all_gpu
+Updating 2b92470b..a759da34
 Fast-forward
- test/unittest/unittest_delegate_conv_wave.cpp | 12 ++++++------
- 1 file changed, 6 insertions(+), 6 deletions(-)
+ nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 262 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ test/unittest/unittest_delegate_conv_wave.cpp               |  25 +++++++++++++------------
+ 2 files changed, 111 insertions(+), 176 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
@@ -57,10 +58,10 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 29.2 MB/s (338976 bytes in 0.011s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.5 MB/s (7438 bytes in 0.003s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.6 MB/s (11887 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.8 MB/s (1822720 bytes in 0.055s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.8 MB/s (339104 bytes in 0.010s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.0 MB/s (7438 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (8656 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.1 MB/s (1822720 bytes in 0.054s)
 
 ==========================================
 [Step 3] Running on device
@@ -71,8 +72,8 @@ test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.8 MB/s (1822720 bytes in
 [ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
 GPU: QUALCOMM Adreno(TM) 830
 Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 429.6 us/iter = 2.499 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (143 ms)
+Performance: 433.3 us/iter = 2.478 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (142 ms)
 [ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
 GPU: QUALCOMM Adreno(TM) 830
 global=(1024,4,4) local=(128,1,4)
@@ -85,13 +86,7 @@ global=(1024,4,4) local=(128,1,4)
   [m=1,n=2] gpu=0.1538 cpu=0.1541 err=0.2%
   [m=1,n=3] gpu=-0.1141 cpu=-0.1143 err=0.2%
 Correctness: 127/128 pass (max err 26.0%)
-Int4 wave: 160098.3 us = 0.007 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (10124 ms)
-[----------] 2 tests from DelegateConvWaveTest (10267 ms total)
-
-[----------] Global test environment tear-down
-[==========] 2 tests from 1 test suite ran. (10268 ms total)
-[  PASSED  ] 2 tests.
+Killed 
 
 Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
