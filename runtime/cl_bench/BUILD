@@ -31,3 +31,33 @@ cc_binary(
         "//conditions:default": [],
     }),
 )
+
+# Matmul benchmark using TFLite GPU delegate's ConvGeneric kernel.
+# Links the open-source TFLite GPU CL runtime directly — same optimized
+# "convolution(conv_wave_memory)" kernel that achieves 5+ TFLOPS on Adreno.
+cc_binary(
+    name = "conv_generic_bench",
+    srcs = ["conv_generic_bench.cc"],
+    linkopts = select({
+        "@platforms//os:android": ["-lEGL", "-lGLESv3"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/status",
+        "@litert//tflite/delegates/gpu/cl:cl_command_queue",
+        "@litert//tflite/delegates/gpu/cl:cl_operation",
+        "@litert//tflite/delegates/gpu/cl:environment",
+        "@litert//tflite/delegates/gpu/cl:opencl_wrapper",
+        "@litert//tflite/delegates/gpu/cl:tensor",
+        "@litert//tflite/delegates/gpu/common:data_type",
+        "@litert//tflite/delegates/gpu/common:operations",
+        "@litert//tflite/delegates/gpu/common:shape",
+        "@litert//tflite/delegates/gpu/common:status",
+        "@litert//tflite/delegates/gpu/common:tensor",
+        "@litert//tflite/delegates/gpu/common/task:gpu_operation",
+        "@litert//tflite/delegates/gpu/common/task:tensor_desc",
+        "@litert//tflite/delegates/gpu/common/tasks:conv_generic",
+    ],
+)
