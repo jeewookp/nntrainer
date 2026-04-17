@@ -1,34 +1,11 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
-remote: Compressing objects: 100% (5/5), done.
-remote: Total 7 (delta 2), reused 7 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 7.47 KiB | 1.49 MiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              litert_lm  -> FETCH_HEAD
-   d858d1cf..1ac667aa  litert_lm  -> origin/litert_lm
-Updating d858d1cf..1ac667aa
-Fast-forward
- runtime/cl_bench/BUILD                 |  30 ++++++++++++++++++++++++++++++
- runtime/cl_bench/conv_generic_bench.cc | 363 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- temp_litert_conv_bench.sh              | 128 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 521 insertions(+)
- create mode 100644 runtime/cl_bench/conv_generic_bench.cc
- create mode 100755 temp_litert_conv_bench.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_cl_bench.sh 
-[cl_bench.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
-[cl_bench.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
-[cl_bench.sh] === Direct OpenCL Matmul Benchmark ===
-[cl_bench.sh] BAZEL=/usr/local/bin/bazel
-[cl_bench.sh] ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r28b
-[cl_bench.sh] DEVICE_FOLDER=/data/local/tmp/litert_lm
-[cl_bench.sh] DTYPE=fp16
-[cl_bench.sh] WARMUP=5
-[cl_bench.sh] ITERS=50
-[cl_bench.sh] MAX_TENSOR_MB=512
-[cl_bench.sh] HOST_MATMUL_ROSTER_CSV=./matmul_roster.csv
+   1ac667aa..1ebf53b5  litert_lm -> litert_lm
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
+[conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
+[conv_bench.sh] === ConvGeneric Matmul Benchmark ===
+[conv_bench.sh] PRECISION=fp16 WARMUP=5 ITERS=50
+[conv_bench.sh] ROSTER=./matmul_roster.csv
 
-[cl_bench.sh] Building //runtime/cl_bench:matmul_cl_bench ...
+[conv_bench.sh] Building //runtime/cl_bench:conv_generic_bench ...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -41,216 +18,38 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:matmul_cl_bench (1 packages loaded, 2 targets configured).
-INFO: Found 1 target...
-Target //runtime/cl_bench:matmul_cl_bench up-to-date:
-  bazel-bin/runtime/cl_bench/matmul_cl_bench
-INFO: Elapsed time: 0.118s, Critical Path: 0.00s
-INFO: 1 process: 1 internal.
-INFO: Build completed successfully, 1 total action
-
-[cl_bench.sh] adb push binary ...
-
-[cl_bench.sh] host ./matmul_roster.csv not found; using device cached
-[cl_bench.sh]   /data/local/tmp/litert_lm/matmul_roster.csv
-
-[cl_bench.sh] Running matmul_cl_bench on device (taskset f0) ...
-[cl_bench] Direct OpenCL matmul benchmark
-[cl_bench] dtype=fp16 warmup=5 iters=50 max_tensor_mb=512
-[cl_bench] 61 shapes to benchmark
-[cl_bench] Loaded libOpenCL.so
-[cl_bench] Platform: QUALCOMM Snapdragon(TM)
-[cl_bench] Device: QUALCOMM Adreno(TM) 830 (12 CUs, 1 MHz, 5559 MB GMEM)
-[cl_bench] Kernel 'gemm_tiled_fp16' compiled OK
-
-[cl_bench] [1/61] M=1 N=256 K=1536 (0.001 GFLOPS)
-  wall: avg=298.7 us  min=498.2  p50=522.3  p95=550.2  max=876.6
-  gpu:  avg=300.3 us  min=287.0
-  TFLOPS: wall=0.003  gpu=0.003
-
-[cl_bench] [2/61] M=1 N=512 K=1536 (0.002 GFLOPS)
-  wall: avg=470.5 us  min=663.4  p50=671.3  p95=971.0  max=1121.8
-  gpu:  avg=445.5 us  min=442.9
-  TFLOPS: wall=0.003  gpu=0.004
-
-[cl_bench] [3/61] M=1 N=1536 K=256 (0.001 GFLOPS)
-  wall: avg=211.2 us  min=414.1  p50=417.9  p95=449.0  max=776.4
-  gpu:  avg=193.8 us  min=193.0
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [4/61] M=1 N=1536 K=2048 (0.006 GFLOPS)
-  wall: avg=1551.5 us  min=2346.6  p50=2645.8  p95=5059.9  max=5111.4
-  gpu:  avg=1535.6 us  min=1530.1
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [5/61] M=1 N=1536 K=4096 (0.013 GFLOPS)
-  wall: avg=3093.2 us  min=3282.1  p50=4081.9  p95=6656.8  max=6947.7
-  gpu:  avg=3069.8 us  min=3061.0
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [6/61] M=1 N=1536 K=6144 (0.019 GFLOPS)
-  wall: avg=4669.9 us  min=5426.7  p50=5780.3  p95=8316.0  max=8431.7
-  gpu:  avg=4601.7 us  min=4596.0
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [7/61] M=1 N=1536 K=12288 (0.038 GFLOPS)
-  wall: avg=9224.2 us  min=9937.8  p50=12760.6  p95=12905.9  max=12996.6
-  gpu:  avg=9196.2 us  min=9176.8
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [8/61] M=1 N=2048 K=1536 (0.006 GFLOPS)
-  wall: avg=1590.8 us  min=2391.9  p50=2684.9  p95=5106.0  max=5159.3
-  gpu:  avg=1573.6 us  min=1570.8
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [9/61] M=1 N=4096 K=1536 (0.013 GFLOPS)
-  wall: avg=3193.2 us  min=3947.0  p50=4265.8  p95=6716.4  max=6774.7
-  gpu:  avg=3122.4 us  min=3119.9
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [10/61] M=1 N=6144 K=1536 (0.019 GFLOPS)
-  wall: avg=4600.1 us  min=4784.2  p50=5683.6  p95=8176.1  max=8517.8
-  gpu:  avg=4529.8 us  min=4527.1
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [11/61] M=1 N=8960 K=1536 (0.028 GFLOPS)
-  wall: avg=6664.9 us  min=7512.2  p50=9720.9  p95=10235.9  max=11145.4
-  gpu:  avg=6644.7 us  min=6640.9
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
-  wall: avg=9109.8 us  min=10069.3  p50=12587.1  p95=12716.9  max=12767.4
-  gpu:  avg=9038.0 us  min=9034.0
-  TFLOPS: wall=0.004  gpu=0.004
-
-[cl_bench] [13/61] M=1 N=262144 K=1536 (0.805 GFLOPS)
-[cl_bench] SKIP 1x262144x1536: 768MB > 512MB limit
-
-[cl_bench] [14/61] M=4 N=256 K=1536 (0.003 GFLOPS)
-  wall: avg=307.2 us  min=509.2  p50=524.4  p95=1069.0  max=1143.1
-  gpu:  avg=299.7 us  min=286.0
-  TFLOPS: wall=0.010  gpu=0.010
-
-[cl_bench] [15/61] M=4 N=512 K=1536 (0.006 GFLOPS)
-  wall: avg=470.9 us  min=661.7  p50=667.0  p95=1338.4  max=1451.0
-  gpu:  avg=446.5 us  min=444.9
-  TFLOPS: wall=0.013  gpu=0.014
-
-[cl_bench] [16/61] M=4 N=1536 K=256 (0.003 GFLOPS)
-  wall: avg=214.0 us  min=407.8  p50=432.7  p95=839.5  max=1017.6
-  gpu:  avg=194.1 us  min=193.0
-  TFLOPS: wall=0.015  gpu=0.016
-
-[cl_bench] [17/61] M=4 N=1536 K=2048 (0.025 GFLOPS)
-  wall: avg=1554.8 us  min=2433.3  p50=2650.4  p95=5053.8  max=5370.3
-  gpu:  avg=1537.8 us  min=1534.0
-  TFLOPS: wall=0.016  gpu=0.016
-
-[cl_bench] [18/61] M=4 N=1536 K=4096 (0.050 GFLOPS)
-  wall: avg=3141.0 us  min=3885.0  p50=4225.0  p95=6668.6  max=6701.6
-  gpu:  avg=3071.5 us  min=3063.0
-  TFLOPS: wall=0.016  gpu=0.016
-
-[cl_bench] [19/61] M=4 N=1536 K=6144 (0.075 GFLOPS)
-  wall: avg=4671.4 us  min=5502.2  p50=5730.7  p95=8210.8  max=8541.6
-  gpu:  avg=4600.7 us  min=4592.1
-  TFLOPS: wall=0.016  gpu=0.016
-
-[cl_bench] [20/61] M=4 N=1536 K=12288 (0.151 GFLOPS)
-  wall: avg=9271.2 us  min=10059.7  p50=12749.4  p95=12836.7  max=13307.6
-  gpu:  avg=9199.9 us  min=9178.9
-  TFLOPS: wall=0.016  gpu=0.016
-
-[cl_bench] [21/61] M=4 N=2048 K=1536 (0.025 GFLOPS)
-  wall: avg=1643.0 us  min=2395.1  p50=2691.1  p95=5136.8  max=5358.9
-  gpu:  avg=1576.7 us  min=1572.9
-  TFLOPS: wall=0.015  gpu=0.016
-
-[cl_bench] [22/61] M=4 N=4096 K=1536 (0.050 GFLOPS)
-  wall: avg=3195.0 us  min=3979.3  p50=4265.3  p95=6704.2  max=6799.1
-  gpu:  avg=3124.5 us  min=3121.9
-  TFLOPS: wall=0.016  gpu=0.016
-
-[cl_bench] [23/61] M=4 N=6144 K=1536 (0.075 GFLOPS)
-  wall: avg=4603.3 us  min=5396.6  p50=5729.6  p95=8234.3  max=8516.6
-  gpu:  avg=4534.7 us  min=4532.0
-  TFLOPS: wall=0.016  gpu=0.017
-
-[cl_bench] [24/61] M=4 N=8960 K=1536 (0.110 GFLOPS)
-  wall: avg=6719.3 us  min=7511.2  p50=9674.2  p95=10271.8  max=10295.2
-  gpu:  avg=6647.7 us  min=6644.0
-  TFLOPS: wall=0.016  gpu=0.017
-
-[cl_bench] [25/61] M=4 N=12288 K=1536 (0.151 GFLOPS)
-  wall: avg=9110.4 us  min=10088.2  p50=12596.4  p95=12720.7  max=12736.8
-  gpu:  avg=9041.3 us  min=9038.1
-  TFLOPS: wall=0.017  gpu=0.017
-
-[cl_bench] [26/61] M=4 N=262144 K=1536 (3.221 GFLOPS)
-[cl_bench] SKIP 4x262144x1536: 770MB > 512MB limit
-
-[cl_bench] [27/61] M=8 N=256 K=256 (0.001 GFLOPS)
-  wall: avg=60.6 us  min=179.7  p50=183.0  p95=267.3  max=310.1
-  gpu:  avg=50.7 us  min=49.9
-  TFLOPS: wall=0.017  gpu=0.021
-
-[cl_bench] [28/61] M=8 N=512 K=512 (0.004 GFLOPS)
-  wall: avg=169.7 us  min=365.1  p50=371.6  p95=421.5  max=670.6
-  gpu:  avg=150.1 us  min=149.8
-  TFLOPS: wall=0.025  gpu=0.028
-
-[cl_bench] [29/61] M=8 N=32003 K=32003 (16.387 GFLOPS)
-[cl_bench] SKIP 8x32003x32003: 1954MB > 512MB limit
-
-[cl_bench] [30/61] M=32 N=256 K=256 (0.004 GFLOPS)
-  wall: avg=92.1 us  min=292.2  p50=295.9  p95=389.5  max=614.4
-  gpu:  avg=77.1 us  min=76.8
-  TFLOPS: wall=0.046  gpu=0.054
-
-[cl_bench] [31/61] M=32 N=512 K=512 (0.017 GFLOPS)
-  wall: avg=312.8 us  min=508.4  p50=514.1  p95=932.0  max=1067.6
-  gpu:  avg=292.4 us  min=290.0
-  TFLOPS: wall=0.054  gpu=0.057
-
-[cl_bench] [32/61] M=32 N=515 K=515 (0.017 GFLOPS)
-  wall: avg=327.5 us  min=519.7  p50=524.8  p95=1022.8  max=1084.9
-  gpu:  avg=301.0 us  min=299.0
-  TFLOPS: wall=0.052  gpu=0.056
-
-[cl_bench] [33/61] M=32 N=32003 K=32003 (65.548 GFLOPS)
-[cl_bench] SKIP 32x32003x32003: 1957MB > 512MB limit
-
-[cl_bench] [34/61] M=128 N=256 K=1536 (0.101 GFLOPS)
-  wall: avg=1602.7 us  min=2561.5  p50=2690.0  p95=5111.4  max=5155.4
-  gpu:  avg=1576.6 us  min=1573.1
-  TFLOPS: wall=0.063  gpu=0.064
-
-[cl_bench] [35/61] M=128 N=512 K=1536 (0.201 GFLOPS)
-  wall: avg=3203.4 us  min=4044.2  p50=4252.0  p95=6702.3  max=6743.0
-  gpu:  avg=3129.3 us  min=3126.8
-  TFLOPS: wall=0.063  gpu=0.064
-
-[cl_bench] [36/61] M=128 N=1536 K=256 (0.101 GFLOPS)
-  wall: avg=1599.0 us  min=2342.9  p50=2641.4  p95=5072.7  max=5103.1
-  gpu:  avg=1525.2 us  min=1524.0
-  TFLOPS: wall=0.063  gpu=0.066
-
-[cl_bench] [37/61] M=128 N=1536 K=2048 (0.805 GFLOPS)
-  wall: avg=12138.0 us  min=12978.6  p50=15650.8  p95=15770.0  max=16068.1
-  gpu:  avg=12067.6 us  min=12064.0
-  TFLOPS: wall=0.066  gpu=0.067
-
-[cl_bench] [38/61] M=128 N=1536 K=4096 (1.611 GFLOPS)
-  wall: avg=24190.2 us  min=25106.8  p50=27699.3  p95=27800.0  max=28083.0
-  gpu:  avg=24113.8 us  min=24111.1
-  TFLOPS: wall=0.067  gpu=0.067
-
-[cl_bench] [39/61] M=128 N=1536 K=6144 (2.416 GFLOPS)
-  wall: avg=36231.6 us  min=36764.6  p50=39743.6  p95=39876.0  max=39892.7
-  gpu:  avg=36164.9 us  min=36152.1
-  TFLOPS: wall=0.067  gpu=0.067
-
-[cl_bench] [40/61] M=128 N=2048 K=1536 (0.805 GFLOPS)
-^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
-
+INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (43 packages loaded, 1408 targets configured).
+ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:38:10: Compiling runtime/cl_bench/conv_generic_bench.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/cl_bench:conv_generic_bench) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 151 arguments skipped)
+runtime/cl_bench/conv_generic_bench.cc:173:16: error: no member named 'type' in 'tflite::gpu::Tensor<tflite::gpu::StrongShape<tflite::gpu::Layout::OHWI>, tflite::gpu::DataType::FLOAT32>'
+  173 |   attr.weights.type = DataType::FLOAT32;
+      |   ~~~~~~~~~~~~ ^
+runtime/cl_bench/conv_generic_bench.cc:179:13: error: no member named 'type' in 'tflite::gpu::Tensor<tflite::gpu::StrongShape<tflite::gpu::Layout::LINEAR>, tflite::gpu::DataType::FLOAT32>'
+  179 |   attr.bias.type = DataType::FLOAT32;
+      |   ~~~~~~~~~ ^
+runtime/cl_bench/conv_generic_bench.cc:188:3: error: reference to 'Tensor' is ambiguous
+  188 |   Tensor src_tensor, dst_tensor;
+      |   ^
+external/litert/tflite/delegates/gpu/common/tensor.h:83:8: note: candidate found by name lookup is 'tflite::gpu::Tensor'
+   83 | struct Tensor {
+      |        ^
+external/litert/tflite/delegates/gpu/cl/tensor.h:40:7: note: candidate found by name lookup is 'tflite::gpu::cl::Tensor'
+   40 | class Tensor : public GPUObject, public GpuSpatialTensor {
+      |       ^
+runtime/cl_bench/conv_generic_bench.cc:190:47: error: use of undeclared identifier 'src_tensor'
+  190 |       CreateTensor(env->context(), src_desc, &src_tensor));
+      |                                               ^
+runtime/cl_bench/conv_generic_bench.cc:192:47: error: use of undeclared identifier 'dst_tensor'
+  192 |       CreateTensor(env->context(), dst_desc, &dst_tensor));
+      |                                               ^
+runtime/cl_bench/conv_generic_bench.cc:197:42: error: use of undeclared identifier 'src_tensor'
+  197 |   RETURN_IF_ERROR(cl_op.SetSrcTensor(0, &src_tensor));
+      |                                          ^
+runtime/cl_bench/conv_generic_bench.cc:198:42: error: use of undeclared identifier 'dst_tensor'
+  198 |   RETURN_IF_ERROR(cl_op.SetDstTensor(0, &dst_tensor));
+      |                                          ^
+7 errors generated.
+Target //runtime/cl_bench:conv_generic_bench failed to build
+Use --verbose_failures to see the command lines of failed build steps.
+INFO: Elapsed time: 1.940s, Critical Path: 1.44s
+INFO: 19 processes: 12 internal, 7 local.
+ERROR: Build did NOT complete successfully
