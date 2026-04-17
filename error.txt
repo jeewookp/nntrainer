@@ -1,26 +1,21 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 13, done.
-remote: Counting objects: 100% (12/12), done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 13 (delta 8), reused 12 (delta 8), pack-reused 1 (from 1)
-Unpacking objects: 100% (13/13), 8.28 KiB | 1.38 MiB/s, done.
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 612 bytes | 612.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   e3e3cf99..6075954c  all_gpu    -> upstream/all_gpu
-Updating e3e3cf99..6075954c
+   c488e9b6..c00e3563  all_gpu    -> upstream/all_gpu
+Updating c488e9b6..c00e3563
 Fast-forward
- nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl | 183 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- test/jni/Android.mk                                             |  16 +++++++++++++
- test/unittest/unittest_delegate_conv_wave.cpp                   | 435 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- unittest_delegate_conv_wave.sh                                  |  76 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 710 insertions(+)
- create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl
- create mode 100644 test/unittest/unittest_delegate_conv_wave.cpp
- create mode 100755 unittest_delegate_conv_wave.sh
+ unittest_delegate_conv_wave.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
 ==========================================
-unittest_delegate_conv_wave.sh: 34: pushd: not found
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+make: *** No rule to make target 'unittest_delegate_conv_wave'.  Stop.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
