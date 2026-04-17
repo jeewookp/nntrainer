@@ -171,7 +171,19 @@ FWD(cl_int, clGetDeviceIDs, (void* p, uint64_t t, cl_uint n, void* d, cl_uint* n
 FWD(cl_int, clGetDeviceInfo, (void* d, cl_uint i, size_t s, void* v, size_t* r), (d, i, s, v, r))
 
 // Context
-FWD_LOG(void*, clCreateContext, (const intptr_t* pr, cl_uint n, const void* d, void* cb, void* ud, cl_int* e), (pr, n, d, cb, ud, e))
+extern "C" void* clCreateContext(const intptr_t* pr, cl_uint n, const void* d, void* cb, void* ud, cl_int* e) {
+  typedef void* (*F)(const intptr_t*, cl_uint, const void*, void*, void*, cl_int*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clCreateContext");
+  fprintf(stderr, "[cl_intercept] CALL: clCreateContext props=%p\n", (void*)pr);
+  if (pr) {
+    for (int i = 0; pr[i] != 0; i += 2) {
+      fprintf(stderr, "[cl_intercept]   prop 0x%lx = 0x%lx\n",
+              (unsigned long)pr[i], (unsigned long)pr[i+1]);
+    }
+  }
+  return _fwd_fn(pr, n, d, cb, ud, e);
+}
 FWD(cl_int, clReleaseContext, (void* c), (c))
 FWD(cl_int, clRetainContext, (void* c), (c))
 FWD(cl_int, clGetContextInfo, (void* c, cl_uint i, size_t s, void* v, size_t* r), (c, i, s, v, r))
@@ -184,9 +196,29 @@ FWD(cl_int, clFlush, (void* q), (q))
 FWD(cl_int, clFinish, (void* q), (q))
 
 // Memory
-FWD(void*, clCreateBuffer, (void* c, uint64_t f, size_t s, void* p, cl_int* e), (c, f, s, p, e))
+extern "C" void* clCreateBuffer(void* c, uint64_t f, size_t s, void* p, cl_int* e) {
+  typedef void* (*F)(void*, uint64_t, size_t, void*, cl_int*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clCreateBuffer");
+  void* r = _fwd_fn(c, f, s, p, e);
+  fprintf(stderr, "[cl_intercept] CreateBuffer flags=0x%llx size=%zu host_ptr=%p → %p\n",
+          (unsigned long long)f, s, p, r);
+  return r;
+}
 FWD(void*, clCreateSubBuffer, (void* m, uint64_t f, cl_uint t, const void* i, cl_int* e), (m, f, t, i, e))
-FWD(void*, clCreateImage, (void* c, uint64_t f, const void* fmt, const void* desc, void* p, cl_int* e), (c, f, fmt, desc, p, e))
+extern "C" void* clCreateImage(void* c, uint64_t f, const void* fmt_v, const void* desc_v, void* p, cl_int* e) {
+  typedef void* (*F)(void*, uint64_t, const void*, const void*, void*, cl_int*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clCreateImage");
+  void* r = _fwd_fn(c, f, fmt_v, desc_v, p, e);
+  if (desc_v) {
+    const size_t* d = (const size_t*)desc_v;
+    // cl_image_desc: type, width, height, depth, array_size, ...
+    fprintf(stderr, "[cl_intercept] CreateImage flags=0x%llx type=%zu w=%zu h=%zu → %p\n",
+            (unsigned long long)f, d[0], d[1], d[2], r);
+  }
+  return r;
+}
 FWD(void*, clCreateImage2D, (void* c, uint64_t f, const void* fmt, size_t w, size_t h, size_t rp, void* p, cl_int* e), (c, f, fmt, w, h, rp, p, e))
 FWD(cl_int, clReleaseMemObject, (void* m), (m))
 FWD(cl_int, clRetainMemObject, (void* m), (m))
