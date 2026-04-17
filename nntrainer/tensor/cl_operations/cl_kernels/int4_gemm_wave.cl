@@ -80,12 +80,11 @@ MAIN_FUNCTION(
   //   2 packed_rows per iteration (8 k values from 2 src slices)
   //   = 64 ushorts = 128 bytes = 8 half8
 
-  int f_offset = Z * src_slices * 4;  // half8 units: Z * (K/4) * (N/16)...
-  // Actually: weight buffer layout matches packed weights laid out as
-  // sequential ushorts reinterpreted as half8.
-  // For Z output group, iteration i: offset = Z * (src_slices/2) * 8 + i * 8
-  // in half8 units.
-  f_offset = Z * src_slices * 4;
+  // Repacked buffer layout: sequential blocks of 8 half8 (64 ushorts)
+  // per (Z, iteration). Offset in half8 units:
+  //   block = Z * (src_slices/2) + iteration_index
+  //   f_offset = block * 8
+  int f_offset = Z * (src_slices / 2) * 8;
 
   int coord_s = 0;
   do {
@@ -95,9 +94,11 @@ MAIN_FUNCTION(
                              (int2)(X, Y * src_slices + coord_s + 1));
 
     // Load 8 half8 (128 bytes) of packed int4 weights via wave memory
+    // Load 8 half8 (128 bytes of packed int4) from weights_buffer
+    // 4th param: src offset in half8 units
     qcom_sub_group_constant_load8(xmem_buffer, weights_buffer,
-                                   c_offset, f_offset >> 1, 8);
-    f_offset += 16;
+                                   c_offset, f_offset, 8);
+    f_offset += 8;
     qcom_sub_group_sync(QCOM_CLK_CONST_LOAD_SYNC);
 
     // w_ushort[0..63] now contains 64 ushorts:
