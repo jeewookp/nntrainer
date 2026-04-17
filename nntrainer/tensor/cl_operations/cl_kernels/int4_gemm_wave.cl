@@ -7,8 +7,8 @@ __constant sampler_t smp_zero = CLK_NORMALIZED_COORDS_FALSE |
                                  CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
 __kernel void gemm_int4_wave(
-    __global const ushort* restrict weights,
-    __global const ushort* restrict unused,
+    __constant ushort* restrict weights,
+    __constant ushort* restrict unused,
     __global const half* restrict scales,
     __write_only image2d_t dst_image,
     __read_only image2d_t src_image,
