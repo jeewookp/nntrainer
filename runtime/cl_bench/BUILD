@@ -62,3 +62,29 @@ cc_binary(
         "@litert//tflite/delegates/gpu/common/tasks:conv_generic",
     ],
 )
+
+# Dump ConvGeneric CL kernel source to .cl files for inspection/reuse.
+cc_binary(
+    name = "conv_cl_dump",
+    srcs = ["conv_cl_dump.cc"],
+    linkopts = select({
+        "@platforms//os:android": ["-lEGL", "-lGLESv3", "-llog"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/status",
+        "@litert//tflite/delegates/gpu/cl:cl_operation",
+        "@litert//tflite/delegates/gpu/cl:environment",
+        "@litert//tflite/delegates/gpu/cl:opencl_wrapper",
+        "@litert//tflite/delegates/gpu/cl:tensor",
+        "@litert//tflite/delegates/gpu/common:data_type",
+        "@litert//tflite/delegates/gpu/common:operations",
+        "@litert//tflite/delegates/gpu/common:shape",
+        "@litert//tflite/delegates/gpu/common:status",
+        "@litert//tflite/delegates/gpu/common/task:gpu_operation",
+        "@litert//tflite/delegates/gpu/common/task:tensor_desc",
+        "@litert//tflite/delegates/gpu/common/tasks:conv_generic",
+    ],
+)
