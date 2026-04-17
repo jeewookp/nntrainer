@@ -1,7 +1,22 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
-[dk_bench.sh] === Delegate Kernel Direct Benchmark ===
-[dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 1.29 KiB | 329.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   4baa2121..a4f64f8d  litert_lm  -> origin/litert_lm
+Updating 4baa2121..a4f64f8d
+Fast-forward
+ runtime/cl_bench/cl_intercept.cc | 36 ++++++++++++++++++++++++++++++++++--
+ 1 file changed, 34 insertions(+), 2 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_patch_intercept.sh 
+[patch.sh] === Binary-Patched CL Kernel Interceptor ===
+[patch.sh] SHAPES=1024x6144x1536
+[patch.sh] DTYPE=int8_per_tensor
 
+[patch.sh] Building ...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -15,34 +30,100 @@ INFO: Found applicable config definition build:litert_prefixes in file /home/jwh
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
 WARNING: Build option --define has changed, discarding analysis cache (this can be expensive, see https://bazel.build/advanced/performance/iteration-speed).
-INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loaded, 7624 targets configured).
-INFO: Found 1 target...
-Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
-  bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.931s, Critical Path: 0.68s
+INFO: Analyzed 2 targets (0 packages loaded, 15301 targets configured).
+INFO: Found 2 targets...
+INFO: Elapsed time: 0.769s, Critical Path: 0.14s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
+[patch.sh] Patching delegate .so files in /tmp/tmp.KpXzHxzTi7 ...
+  libLiteRtOpenClAccelerator.so: libOpenCL.so→0 remaining, libOpenCX.so→1 patched
+  libLiteRtGpuAccelerator.so: libOpenCL.so→0 remaining, libOpenCX.so→1 patched
 
+[patch.sh] Pushing to device ...
+  Pushed patched libLiteRtOpenClAccelerator.so
+  Pushed patched libLiteRtGpuAccelerator.so
+  Pushed interceptor as libOpenCX.so
 
-[dk_bench.sh] Running (taskset f0) ...
-[dk_bench] Delegate kernel benchmark
-[dk_bench] M=1024 N=6144 K=1536 (19.327 GFLOPS)
-[dk_bench] src_slices=384 dst_slices=1536 dst_groups=192
-[dk_bench] cl_file=cl_intercept/program_002.cl
-[dk_bench] Loaded 7438 bytes CL source
-[dk_bench] GPU: QUALCOMM Adreno(TM) 830
-[dk_bench] Build opts: '-qcom-accelerate-16-bit=true -cl-std=CL2.0'
-[dk_bench] Kernel compiled OK
-[dk_bench] global=(192,1024,1) local=(1,64,1)
-[dk_bench] s0=(1,1536,1024,32) s1=(192,0,0,384) s2=(1,1,0,0)
-[dk_bench] Warmup 5 ...
-[dk_bench] Timed 50 iters (burst) ...
+[patch.sh] Running with patched delegate ...
 
-[dk_bench] Results: M=1024 N=6144 K=1536
-  wall: 5652.5 us  TFLOPS=3.419
-  gpu:  5586.2 us  TFLOPS=3.460
-  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
-
-
+[MATMUL MICRO] backend=gpu dtype=int8_per_tensor unique_shapes=1 warmup=1 iters=2 profile=0 cache_dir=(disabled)
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000071fd152430, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000071fd151a90, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+[cl_intercept] Real OpenCL loaded from /system/vendor/lib64/libOpenCL.so
+[cl_intercept] CALL: clGetPlatformIDs
+I0000 00:00:1742240969.391047   24188 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742240969.391168   24188 delegate_opencl.cc:553] options->kernel_batch_size: -1
+[cl_intercept] CALL: clGetPlatformIDs
+[cl_intercept] CALL: clGetPlatformIDs
+[cl_intercept] CALL: clGetPlatformIDs
+[cl_intercept] CALL: clCreateContext
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
+INFO: Loaded OpenCL library with dlopen.
+INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
+INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
+INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
+INFO: [environment.cc:41] Adding options to the existing LiteRT environment
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+[cl_intercept] #0: /data/local/tmp/litert_lm/cl_intercept/program_000.cl (2946 bytes)
+[cl_intercept] CALL: clBuildProgram opts=''
+[cl_intercept] CALL: clCreateKernel
+[cl_intercept] SetKernelArg[0] size=8 mem=0xb4000072bd168a30
+[cl_intercept] SetKernelArg[1] size=8 mem=0xb4000072bd1662e0
+[cl_intercept] SetKernelArg[2] size=16 int4=(1536,589824,384,1536)
+[cl_intercept] SetKernelArg[3] size=16 int4=(1,6144,1,1)
+[cl_intercept] NDRange dim=3 global=(589824,1,1) local=(1024,1,1)
+I0000 00:00:1742240969.499602   24188 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+[cl_intercept] #1: /data/local/tmp/litert_lm/cl_intercept/program_001.cl (3077 bytes)
+[cl_intercept] CALL: clBuildProgram opts=''
+[cl_intercept] CALL: clCreateKernel
+[cl_intercept] #2: /data/local/tmp/litert_lm/cl_intercept/program_002.cl (7438 bytes)
+[cl_intercept] CALL: clBuildProgram opts=' -qcom-accelerate-16-bit=true -cl-std=CL2.0 '
+[cl_intercept] #3: clCreateProgramWithBinary (binary)
+[cl_intercept] CALL: clBuildProgram opts=''
+[cl_intercept] CALL: clCreateKernel
+[cl_intercept] SetKernelArg[0] size=8 mem=0xb4000072bd171740
+[cl_intercept] SetKernelArg[1] size=8 mem=0xb4000072bd168a30
+[cl_intercept] SetKernelArg[2] size=8 mem=0xb40000733d16a480
+[cl_intercept] SetKernelArg[3] size=8 mem=0xb40000733d16fea0
+[cl_intercept] SetKernelArg[4] size=16 int4=(8,384,1536,1536)
+[cl_intercept] SetKernelArg[5] size=16 int4=(1,1,0,0)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(64,4,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(32,8,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(16,16,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(8,32,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(4,64,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(128,4,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(64,8,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(32,16,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(16,32,1)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(8,64,1)
+[cl_intercept] #4: /data/local/tmp/litert_lm/cl_intercept/program_004.cl (1244 bytes)
+[cl_intercept] CALL: clBuildProgram opts=''
+[cl_intercept] CALL: clCreateKernel
+[cl_intercept] #5: /data/local/tmp/litert_lm/cl_intercept/program_005.cl (1334 bytes)
+[cl_intercept] CALL: clBuildProgram opts=''
+[cl_intercept] CALL: clCreateKernel
+[cl_intercept] SetKernelArg[0] size=8 mem=0xb4000072bd176390
+[cl_intercept] SetKernelArg[1] size=8 mem=0xb40000733d174570
+[cl_intercept] SetKernelArg[2] size=16 int4=(1536,1,384,1024)
+[cl_intercept] NDRange dim=3 global=(1024,1,384) local=(4,1,64)
+[cl_intercept] SetKernelArg[0] size=8 mem=0xb4000072bd171740
+[cl_intercept] SetKernelArg[1] size=8 mem=0xb4000072bd168a30
+[cl_intercept] SetKernelArg[2] size=8 mem=0xb40000733d16a480
+[cl_intercept] SetKernelArg[3] size=8 mem=0xb40000733d16fea0
+[cl_intercept] SetKernelArg[4] size=16 int4=(8,384,1536,1536)
+[cl_intercept] SetKernelArg[5] size=16 int4=(1,1,0,0)
+[cl_intercept] NDRange dim=3 global=(3072,192,1) local=(32,8,1)
+[cl_intercept] SetKernelArg[0] size=8 mem=0xb4000072bd171740
+[cl_intercept] SetKernelArg[1] size=8 mem=0xb4000072bd16f930
+[cl_intercept] SetKernelArg[2] size=8 mem=0xb40000733d169e10
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
