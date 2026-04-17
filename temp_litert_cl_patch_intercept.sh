@@ -120,7 +120,7 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --warmup=${INTERCEPT_WARMUP} \
     --iters=${INTERCEPT_ITERS} \
     --profile=false \
-    --max_tensor_mb=512" 2>&1 | tee temp_litert_cl_patch.log | head -80
+    --max_tensor_mb=512" 2>&1 | tee temp_litert_cl_patch.log | head -200
 
 # Step 5: Restore original delegate .so files.
 echo ""
