@@ -115,10 +115,13 @@ MAIN_FUNCTION(
   r7.w+=src.x*DQ(W_BASE+31,0,sc7.w)+src.y*DQ(W_BASE+31,4,sc7.w)+src.z*DQ(W_BASE+31,8,sc7.w)+src.w*DQ(W_BASE+31,12,sc7.w); \
 }
 
+    // Process first 4 src slices from this load
     DO_SLICE(0, 0)
     DO_SLICE(1, 32)
     DO_SLICE(2, 64)
     DO_SLICE(3, 96)
+
+    // Process next 4 src slices (second half of loaded data)
     DO_SLICE(4, 128)
     DO_SLICE(5, 160)
     DO_SLICE(6, 192)

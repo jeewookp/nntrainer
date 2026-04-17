@@ -652,8 +652,8 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
           max_rel * 100);
   EXPECT_GE(pass, total / 2) << "Int4 wave kernel output doesn't match CPU ref";
 
-  // Benchmark
-  int iters = 50;
+  // Benchmark (fewer iters to avoid GPU timeout kill)
+  int iters = 5;
   auto t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < iters; ++i)
     cl.clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local,
