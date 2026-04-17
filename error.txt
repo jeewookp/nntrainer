@@ -1,23 +1,32 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.23 KiB | 314.00 KiB/s, done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 6.47 KiB | 1.62 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   72044b8b..ff881c0a  litert_lm  -> origin/litert_lm
-Updating 72044b8b..ff881c0a
+   19abd7fa..9c936f32  litert_lm  -> origin/litert_lm
+Updating 19abd7fa..9c936f32
 Fast-forward
- runtime/cl_bench/conv_generic_bench.cc | 13 ++++++++-----
- 1 file changed, 8 insertions(+), 5 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
-[conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
-[conv_bench.sh] === ConvGeneric Matmul Benchmark ===
-[conv_bench.sh] PRECISION=fp16 WARMUP=5 ITERS=50
-[conv_bench.sh] ROSTER=./matmul_roster.csv
+ runtime/cl_bench/BUILD                |  13 +++++++++++--
+ runtime/cl_bench/cl_intercept.cc      | 288 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ runtime/cl_bench/intercepted/.gitkeep |   0
+ temp_litert_cl_intercept.sh           | 163 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 462 insertions(+), 2 deletions(-)
+ create mode 100644 runtime/cl_bench/cl_intercept.cc
+ create mode 100644 runtime/cl_bench/intercepted/.gitkeep
+ create mode 100755 temp_litert_cl_intercept.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_c
+temp_litert_cl_bench.sh      temp_litert_cl_intercept.sh  temp_litert_conv_bench.sh    temp_litert_conv_cl_run.sh   temp_litert_conv_dump.sh     
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_intercept.sh 
+[intercept.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
+[intercept.sh] === CL Kernel Source Interceptor ===
+[intercept.sh] SHAPES=1024x6144x1536
+[intercept.sh] DTYPE=int8_per_tensor
+[intercept.sh] ITERS=2 (just enough to trigger compilation)
 
-[conv_bench.sh] Building //runtime/cl_bench:conv_generic_bench ...
+[intercept.sh] Building cl_intercept + matmul_micro_benchmark ...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -30,223 +39,29 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (0 packages loaded, 0 targets configured).
-INFO: Found 1 target...
-Target //runtime/cl_bench:conv_generic_bench up-to-date:
-  bazel-bin/runtime/cl_bench/conv_generic_bench
-INFO: Elapsed time: 1.800s, Critical Path: 1.70s
-INFO: 3 processes: 1 internal, 2 local.
-INFO: Build completed successfully, 3 total actions
+WARNING: Build option --define has changed, discarding analysis cache (this can be expensive, see https://bazel.build/advanced/performance/iteration-speed).
+INFO: Analyzed 2 targets (98 packages loaded, 15301 targets configured).
+INFO: Found 2 targets...
+INFO: Elapsed time: 1.512s, Critical Path: 0.12s
+INFO: 7 processes: 5 internal, 2 local.
+INFO: Build completed successfully, 7 total actions
+[intercept.sh] Interceptor: bazel-bin/runtime/cl_bench/libcl_intercept.so.runfiles/litert_lm/runtime/cl_bench/libcl_intercept.so
 
-[conv_bench.sh] adb push ...
+[intercept.sh] Pushing interceptor + benchmark to device ...
 
-[conv_bench.sh] Running on device (taskset f0) ...
-[conv_bench] TFLite GPU ConvGeneric matmul benchmark
-[conv_bench] precision=fp16 warmup=5 iters=50 shapes=61
-INFO: Loaded OpenCL library with dlopen.
-[conv_bench] GPU: QUALCOMM Adreno(TM) 830 (12 CUs)
+[intercept.sh] Running benchmark with interceptor (shapes: 1024x6144x1536) ...
+[intercept.sh] (Only 2 iters — just need CL compilation, not timing)
 
-[conv_bench] [1/61] M=1 N=256 K=1536 (0.001 GFLOPS)
-  wall: avg=73.7 us  TFLOPS=0.011
-  gpu:  avg=89.3 us  TFLOPS=0.009
-
-[conv_bench] [2/61] M=1 N=512 K=1536 (0.002 GFLOPS)
-  wall: avg=112.0 us  TFLOPS=0.014
-  gpu:  avg=108.7 us  TFLOPS=0.014
-
-[conv_bench] [3/61] M=1 N=1536 K=256 (0.001 GFLOPS)
-  wall: avg=52.1 us  TFLOPS=0.015
-  gpu:  avg=40.9 us  TFLOPS=0.019
-
-[conv_bench] [4/61] M=1 N=1536 K=2048 (0.006 GFLOPS)
-  wall: avg=316.3 us  TFLOPS=0.020
-  gpu:  avg=303.9 us  TFLOPS=0.021
-
-[conv_bench] [5/61] M=1 N=1536 K=4096 (0.013 GFLOPS)
-  wall: avg=1374.0 us  TFLOPS=0.009
-  gpu:  avg=613.0 us  TFLOPS=0.021
-
-[conv_bench] [6/61] M=1 N=1536 K=6144 (0.019 GFLOPS)
-  wall: avg=2069.2 us  TFLOPS=0.009
-  gpu:  avg=922.3 us  TFLOPS=0.020
-
-[conv_bench] [7/61] M=1 N=1536 K=12288 (0.038 GFLOPS)
-  wall: avg=1869.1 us  TFLOPS=0.020
-  gpu:  avg=1850.0 us  TFLOPS=0.020
-
-[conv_bench] [8/61] M=1 N=2048 K=1536 (0.006 GFLOPS)
-  wall: avg=677.3 us  TFLOPS=0.009
-  gpu:  avg=327.8 us  TFLOPS=0.019
-
-[conv_bench] [9/61] M=1 N=4096 K=1536 (0.013 GFLOPS)
-  wall: avg=1276.0 us  TFLOPS=0.010
-  gpu:  avg=604.8 us  TFLOPS=0.021
-
-[conv_bench] [10/61] M=1 N=6144 K=1536 (0.019 GFLOPS)
-  wall: avg=919.9 us  TFLOPS=0.021
-  gpu:  avg=905.6 us  TFLOPS=0.021
-
-[conv_bench] [11/61] M=1 N=8960 K=1536 (0.028 GFLOPS)
-  wall: avg=1318.4 us  TFLOPS=0.021
-  gpu:  avg=1300.1 us  TFLOPS=0.021
-
-[conv_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
-  wall: avg=2544.6 us  TFLOPS=0.015
-  gpu:  avg=2473.4 us  TFLOPS=0.015
-
-[conv_bench] [13/61] SKIP 1x262144x1536: 768MB > 512MB
-
-[conv_bench] [14/61] M=4 N=256 K=1536 (0.003 GFLOPS)
-  wall: avg=66.3 us  TFLOPS=0.047
-  gpu:  avg=97.5 us  TFLOPS=0.032
-
-[conv_bench] [15/61] M=4 N=512 K=1536 (0.006 GFLOPS)
-  wall: avg=107.5 us  TFLOPS=0.059
-  gpu:  avg=105.6 us  TFLOPS=0.060
-
-[conv_bench] [16/61] M=4 N=1536 K=256 (0.003 GFLOPS)
-  wall: avg=45.7 us  TFLOPS=0.069
-  gpu:  avg=41.1 us  TFLOPS=0.076
-
-[conv_bench] [17/61] M=4 N=1536 K=2048 (0.025 GFLOPS)
-  wall: avg=689.8 us  TFLOPS=0.036
-  gpu:  avg=306.4 us  TFLOPS=0.082
-
-[conv_bench] [18/61] M=4 N=1536 K=4096 (0.050 GFLOPS)
-  wall: avg=1381.3 us  TFLOPS=0.036
-  gpu:  avg=617.8 us  TFLOPS=0.081
-
-[conv_bench] [19/61] M=4 N=1536 K=6144 (0.075 GFLOPS)
-  wall: avg=949.1 us  TFLOPS=0.080
-  gpu:  avg=928.1 us  TFLOPS=0.081
-
-[conv_bench] [20/61] M=4 N=1536 K=12288 (0.151 GFLOPS)
-  wall: avg=1879.1 us  TFLOPS=0.080
-  gpu:  avg=1856.3 us  TFLOPS=0.081
-
-[conv_bench] [21/61] M=4 N=2048 K=1536 (0.025 GFLOPS)
-  wall: avg=340.6 us  TFLOPS=0.074
-  gpu:  avg=336.0 us  TFLOPS=0.075
-
-[conv_bench] [22/61] M=4 N=4096 K=1536 (0.050 GFLOPS)
-  wall: avg=1562.5 us  TFLOPS=0.032
-  gpu:  avg=845.1 us  TFLOPS=0.060
-
-[conv_bench] [23/61] M=4 N=6144 K=1536 (0.075 GFLOPS)
-  wall: avg=980.6 us  TFLOPS=0.077
-  gpu:  avg=957.8 us  TFLOPS=0.079
-
-[conv_bench] [24/61] M=4 N=8960 K=1536 (0.110 GFLOPS)
-  wall: avg=1382.1 us  TFLOPS=0.080
-  gpu:  avg=1364.8 us  TFLOPS=0.081
-
-[conv_bench] [25/61] M=4 N=12288 K=1536 (0.151 GFLOPS)
-  wall: avg=3136.1 us  TFLOPS=0.048
-  gpu:  avg=3116.1 us  TFLOPS=0.048
-
-[conv_bench] [26/61] SKIP 4x262144x1536: 770MB > 512MB
-
-[conv_bench] [27/61] M=8 N=256 K=256 (0.001 GFLOPS)
-  wall: avg=16.9 us  TFLOPS=0.062
-  gpu:  avg=18.0 us  TFLOPS=0.058
-
-[conv_bench] [28/61] M=8 N=512 K=512 (0.004 GFLOPS)
-  wall: avg=35.9 us  TFLOPS=0.117
-  gpu:  avg=36.0 us  TFLOPS=0.117
-
-[conv_bench] [29/61] SKIP 8x32003x32003: 1954MB > 512MB
-
-[conv_bench] [30/61] M=32 N=256 K=256 (0.004 GFLOPS)
-  wall: avg=31.6 us  TFLOPS=0.133
-  gpu:  avg=28.8 us  TFLOPS=0.146
-
-[conv_bench] [31/61] M=32 N=512 K=512 (0.017 GFLOPS)
-  wall: avg=83.3 us  TFLOPS=0.201
-  gpu:  avg=76.7 us  TFLOPS=0.219
-
-[conv_bench] [32/61] M=32 N=515 K=515 (0.017 GFLOPS)
-  wall: avg=86.5 us  TFLOPS=0.196
-  gpu:  avg=80.0 us  TFLOPS=0.212
-
-[conv_bench] [33/61] SKIP 32x32003x32003: 1957MB > 512MB
-
-[conv_bench] [34/61] M=128 N=256 K=1536 (0.101 GFLOPS)
-  wall: avg=382.6 us  TFLOPS=0.263
-  gpu:  avg=394.4 us  TFLOPS=0.255
-
-[conv_bench] [35/61] M=128 N=512 K=1536 (0.201 GFLOPS)
-  wall: avg=1108.7 us  TFLOPS=0.182
-  gpu:  avg=1091.0 us  TFLOPS=0.185
-
-[conv_bench] [36/61] M=128 N=1536 K=256 (0.101 GFLOPS)
-  wall: avg=528.2 us  TFLOPS=0.191
-  gpu:  avg=521.8 us  TFLOPS=0.193
-
-[conv_bench] [37/61] M=128 N=1536 K=2048 (0.805 GFLOPS)
-  wall: avg=4181.8 us  TFLOPS=0.193
-  gpu:  avg=4112.2 us  TFLOPS=0.196
-
-[conv_bench] [38/61] M=128 N=1536 K=4096 (1.611 GFLOPS)
-  wall: avg=8292.7 us  TFLOPS=0.194
-  gpu:  avg=8222.6 us  TFLOPS=0.196
-
-[conv_bench] [39/61] M=128 N=1536 K=6144 (2.416 GFLOPS)
-  wall: avg=12404.8 us  TFLOPS=0.195
-  gpu:  avg=12334.5 us  TFLOPS=0.196
-
-[conv_bench] [40/61] M=128 N=2048 K=1536 (0.805 GFLOPS)
-  wall: avg=4191.0 us  TFLOPS=0.192
-  gpu:  avg=4118.6 us  TFLOPS=0.196
-
-[conv_bench] [41/61] M=128 N=4096 K=1536 (1.611 GFLOPS)
-  wall: avg=8222.7 us  TFLOPS=0.196
-  gpu:  avg=8151.4 us  TFLOPS=0.198
-
-[conv_bench] [42/61] M=128 N=6144 K=1536 (2.416 GFLOPS)
-  wall: avg=12207.4 us  TFLOPS=0.198
-  gpu:  avg=12189.0 us  TFLOPS=0.198
-
-[conv_bench] [43/61] M=128 N=8960 K=1536 (3.523 GFLOPS)
-  wall: avg=17818.8 us  TFLOPS=0.198
-  gpu:  avg=17748.7 us  TFLOPS=0.199
-
-[conv_bench] [44/61] M=1024 N=256 K=256 (0.134 GFLOPS)
-  wall: avg=718.9 us  TFLOPS=0.187
-  gpu:  avg=697.3 us  TFLOPS=0.192
-
-[conv_bench] [45/61] M=1024 N=256 K=1536 (0.805 GFLOPS)
-  wall: avg=4201.8 us  TFLOPS=0.192
-  gpu:  avg=4126.0 us  TFLOPS=0.195
-
-[conv_bench] [46/61] M=1024 N=512 K=512 (0.537 GFLOPS)
-  wall: avg=2808.4 us  TFLOPS=0.191
-  gpu:  avg=2732.4 us  TFLOPS=0.196
-
-[conv_bench] [47/61] M=1024 N=512 K=1536 (1.611 GFLOPS)
-  wall: avg=8230.6 us  TFLOPS=0.196
-  gpu:  avg=8160.5 us  TFLOPS=0.197
-
-[conv_bench] [48/61] M=1024 N=639 K=639 (0.836 GFLOPS)
-  wall: avg=4328.3 us  TFLOPS=0.193
-  gpu:  avg=4258.1 us  TFLOPS=0.196
-
-[conv_bench] [49/61] M=1024 N=1536 K=256 (0.805 GFLOPS)
-  wall: avg=4150.2 us  TFLOPS=0.194
-  gpu:  avg=4109.8 us  TFLOPS=0.196
-
-[conv_bench] [50/61] M=1024 N=1536 K=2048 (6.442 GFLOPS)
-  wall: avg=32503.4 us  TFLOPS=0.198
-  gpu:  avg=32430.7 us  TFLOPS=0.199
-
-[conv_bench] [51/61] M=1024 N=1536 K=4096 (12.885 GFLOPS)
-  wall: avg=69086.9 us  TFLOPS=0.187
-  gpu:  avg=68487.4 us  TFLOPS=0.188
-
-[conv_bench] [52/61] M=1024 N=1536 K=6144 (19.327 GFLOPS)
-  wall: avg=115979.3 us  TFLOPS=0.167
-  gpu:  avg=117288.1 us  TFLOPS=0.165
-
-[conv_bench] [53/61] M=1024 N=2048 K=1536 (6.442 GFLOPS)
-^C
+[MATMUL MICRO] backend=gpu dtype=int8_per_tensor unique_shapes=1 warmup=1 iters=2 profile=0 cache_dir=(disabled)
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007af8505120, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007af85049b0, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+INFO: Initialized TensorFlow Lite runtime.
+Segmentation fault 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 

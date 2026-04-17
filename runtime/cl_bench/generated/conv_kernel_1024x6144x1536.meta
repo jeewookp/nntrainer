@@ -1,0 +1,6 @@
+shape=1024x6144x1536
+precision=fp16
+storage=IMAGE_BUFFER
+work_group=8,2,1
+grid=512,1,768
+cl_source_bytes=5579
