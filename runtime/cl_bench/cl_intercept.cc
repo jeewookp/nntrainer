@@ -212,13 +212,45 @@ FWD(cl_int, clRetainProgram, (void* p), (p))
 
 // Kernel
 FWD_LOG(void*, clCreateKernel, (void* p, const char* n, cl_int* e), (p, n, e))
-FWD(cl_int, clSetKernelArg, (void* k, cl_uint i, size_t s, const void* v), (k, i, s, v))
+// clSetKernelArg: log arg index, size, and value (for int4 args, size=16)
+extern "C" cl_int clSetKernelArg(void* k, cl_uint i, size_t s, const void* v) {
+  typedef cl_int (*F)(void*, cl_uint, size_t, const void*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clSetKernelArg");
+  if (s == 16 && v) {
+    const int32_t* iv = (const int32_t*)v;
+    fprintf(stderr, "[cl_intercept] SetKernelArg[%u] size=%zu int4=(%d,%d,%d,%d)\n",
+            i, s, iv[0], iv[1], iv[2], iv[3]);
+  } else if (s == sizeof(void*) && v) {
+    fprintf(stderr, "[cl_intercept] SetKernelArg[%u] size=%zu mem=%p\n",
+            i, s, *(void**)v);
+  } else {
+    fprintf(stderr, "[cl_intercept] SetKernelArg[%u] size=%zu\n", i, s);
+  }
+  return _fwd_fn(k, i, s, v);
+}
 FWD(cl_int, clReleaseKernel, (void* k), (k))
 FWD(cl_int, clGetKernelInfo, (void* k, cl_uint i, size_t s, void* v, size_t* r), (k, i, s, v, r))
 FWD(cl_int, clGetKernelWorkGroupInfo, (void* k, void* d, cl_uint i, size_t s, void* v, size_t* r), (k, d, i, s, v, r))
 
 // Enqueue
-FWD(cl_int, clEnqueueNDRangeKernel, (void* q, void* k, cl_uint dim, const size_t* go, const size_t* gw, const size_t* lw, cl_uint nw, const void* wl, void* ev), (q, k, dim, go, gw, lw, nw, wl, ev))
+// clEnqueueNDRangeKernel: log dispatch dimensions
+extern "C" cl_int clEnqueueNDRangeKernel(void* q, void* k, cl_uint dim,
+    const size_t* go, const size_t* gw, const size_t* lw,
+    cl_uint nw, const void* wl, void* ev) {
+  typedef cl_int (*F)(void*, void*, cl_uint, const size_t*, const size_t*,
+                      const size_t*, cl_uint, const void*, void*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clEnqueueNDRangeKernel");
+  if (dim == 3 && gw && lw) {
+    fprintf(stderr, "[cl_intercept] NDRange dim=%u global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
+            dim, gw[0], gw[1], gw[2], lw[0], lw[1], lw[2]);
+  } else if (dim > 0 && gw) {
+    fprintf(stderr, "[cl_intercept] NDRange dim=%u global=(%zu,...) local=%s\n",
+            dim, gw[0], lw ? "set" : "NULL");
+  }
+  return _fwd_fn(q, k, dim, go, gw, lw, nw, wl, ev);
+}
 FWD(cl_int, clEnqueueWriteBuffer, (void* q, void* m, cl_uint b, size_t o, size_t s, const void* p, cl_uint nw, const void* wl, void* ev), (q, m, b, o, s, p, nw, wl, ev))
 FWD(cl_int, clEnqueueReadBuffer, (void* q, void* m, cl_uint b, size_t o, size_t s, void* p, cl_uint nw, const void* wl, void* ev), (q, m, b, o, s, p, nw, wl, ev))
 FWD(cl_int, clEnqueueCopyBuffer, (void* q, void* s, void* d, size_t so, size_t do_, size_t sz, cl_uint nw, const void* wl, void* ev), (q, s, d, so, do_, sz, nw, wl, ev))
