@@ -194,7 +194,17 @@ FWD(cl_int, clGetMemObjectInfo, (void* m, cl_uint i, size_t s, void* v, size_t* 
 FWD(cl_int, clGetImageInfo, (void* m, cl_uint i, size_t s, void* v, size_t* r), (m, i, s, v, r))
 
 // Program (except clCreateProgramWithSource/Binary which are intercepted)
-FWD_LOG(cl_int, clBuildProgram, (void* p, cl_uint n, const void* d, const char* o, void* cb, void* ud), (p, n, d, o, cb, ud))
+// clBuildProgram: log the build options string — this reveals what flags
+// the delegate uses to enable Qualcomm extensions.
+extern "C" cl_int clBuildProgram(void* p, cl_uint n, const void* d,
+                                  const char* o, void* cb, void* ud) {
+  typedef cl_int (*F)(void*, cl_uint, const void*, const char*, void*, void*);
+  static F _fwd_fn = nullptr;
+  if (!_fwd_fn) _fwd_fn = (F)sym("clBuildProgram");
+  fprintf(stderr, "[cl_intercept] CALL: clBuildProgram opts='%s'\n",
+          o ? o : "(null)");
+  return _fwd_fn(p, n, d, o, cb, ud);
+}
 FWD(cl_int, clGetProgramInfo, (void* p, cl_uint i, size_t s, void* v, size_t* r), (p, i, s, v, r))
 FWD(cl_int, clGetProgramBuildInfo, (void* p, void* d, cl_uint i, size_t s, void* v, size_t* r), (p, d, i, s, v, r))
 FWD(cl_int, clReleaseProgram, (void* p), (p))
