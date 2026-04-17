@@ -1,23 +1,24 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 4, done.
-remote: Counting objects: 100% (4/4), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 3.00 KiB | 1.50 MiB/s, done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 6.37 KiB | 1.59 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   49d28b05..551a4de6  litert_lm  -> origin/litert_lm
-Updating 49d28b05..551a4de6
+   8b8dc929..3c90d900  litert_lm  -> origin/litert_lm
+Updating 8b8dc929..3c90d900
 Fast-forward
- temp_litert_cl_patch_intercept.sh | 162 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 162 insertions(+)
- create mode 100755 temp_litert_cl_patch_intercept.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_patch_intercept.sh 
-[patch.sh] === Binary-Patched CL Kernel Interceptor ===
-[patch.sh] SHAPES=1024x6144x1536
-[patch.sh] DTYPE=int8_per_tensor
+ runtime/cl_bench/BUILD                    |  10 ++++++++++
+ runtime/cl_bench/delegate_kernel_bench.cc | 340 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ temp_litert_dk_bench.sh                   |  61 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 411 insertions(+)
+ create mode 100644 runtime/cl_bench/delegate_kernel_bench.cc
+ create mode 100755 temp_litert_dk_bench.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
+[dk_bench.sh] === Delegate Kernel Direct Benchmark ===
+[dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
 
-[patch.sh] Building ...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -30,82 +31,40 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed 2 targets (0 packages loaded, 0 targets configured).
-INFO: Found 2 targets...
-INFO: Elapsed time: 0.103s, Critical Path: 0.00s
-INFO: 1 process: 1 internal.
-INFO: Build completed successfully, 1 total action
-[patch.sh] Patching delegate .so files in /tmp/tmp.K6fbbHZ4Iw ...
-  libLiteRtOpenClAccelerator.so: libOpenCL.so→0 remaining, libOpenCX.so→1 patched
-  libLiteRtGpuAccelerator.so: libOpenCL.so→0 remaining, libOpenCX.so→1 patched
+WARNING: Build option --define has changed, discarding analysis cache (this can be expensive, see https://bazel.build/advanced/performance/iteration-speed).
+INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (1 packages loaded, 7624 targets configured).
+INFO: Found 1 target...
+Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
+  bazel-bin/runtime/cl_bench/delegate_kernel_bench
+INFO: Elapsed time: 0.923s, Critical Path: 0.66s
+INFO: 7 processes: 5 internal, 2 local.
+INFO: Build completed successfully, 7 total actions
 
-[patch.sh] Pushing to device ...
-  Pushed patched libLiteRtOpenClAccelerator.so
-  Pushed patched libLiteRtGpuAccelerator.so
-  Pushed interceptor as libOpenCX.so
 
-[patch.sh] Running with patched delegate ...
+[dk_bench.sh] Running (taskset f0) ...
+[dk_bench] Delegate kernel benchmark
+[dk_bench] M=1024 N=6144 K=1536 (19.327 GFLOPS)
+[dk_bench] src_slices=384 dst_slices=1536 dst_groups=192
+[dk_bench] cl_file=cl_intercept/program_002.cl
+[dk_bench] Loaded 7438 bytes CL source
+[dk_bench] GPU: QUALCOMM Adreno(TM) 830
+BUILD ERROR:
+BC-src-code:8:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_uniform_load'
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
+                         ^
+BC-src-code:9:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_constant_load'
+#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
+                         ^
+BC-src-code:13:64: error: 'subgroupuniform' attribute requires cl_qcom_subgroup_constant_load extension
+MAIN_FUNCTION(__constant half8* weights_buffer  __attribute__((sub_group_uniform)),
+                                                               ^
+BC-src-code:12:16: error: attribute 'qcom_max_concurrent_subgroups' requires 'cl_qcom_subgroup_constant_load' extension
+__attribute__((qcom_max_concurrent_subgroups(12)))
+               ^
+BC-src-code:63:9: error: builtin 'sub_group_constant_load' requires 'cl_qcom_subgroup_constant_load' extension
+        qcom_sub_group_constant_load8(xmem_buffer, weights_buffer, c_offset, f_offset >> 1, 32);
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5 diagnostic(s) generated.
 
-[MATMUL MICRO] backend=gpu dtype=int8_per_tensor unique_shapes=1 warmup=1 iters=2 profile=0 cache_dir=(disabled)
-INFO: [environment.cc:30] Creating LiteRT environment with options
-WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
-INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007c23a8f010, name=LiteRT GPU
-INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007c23a8f320, name=CpuAccelerator
-INFO: [cpu_registry.cc:40] CPU accelerator registered.
-INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
-INFO: Initialized TensorFlow Lite runtime.
-[cl_intercept] Real OpenCL loaded from /system/vendor/lib64/libOpenCL.so
-[cl_intercept] CALL: clGetPlatformIDs
-I0000 00:00:1742238331.499946   23612 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742238331.500094   23612 delegate_opencl.cc:553] options->kernel_batch_size: -1
-[cl_intercept] CALL: clGetPlatformIDs
-[cl_intercept] CALL: clGetPlatformIDs
-[cl_intercept] CALL: clGetPlatformIDs
-[cl_intercept] CALL: clCreateContext
-INFO: [environment.cc:41] Adding options to the existing LiteRT environment
-m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
-INFO: Loaded OpenCL library with dlopen.
-INFO: [gpu_environment.cc:217] Created OpenCL device from provided device id and platform id.
-INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
-INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
-INFO: [environment.cc:41] Adding options to the existing LiteRT environment
-VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-[cl_intercept] #0: /data/local/tmp/litert_lm/cl_intercept/program_000.cl (2946 bytes)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] CALL: clCreateKernel
-I0000 00:00:1742238331.612089   23612 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-[cl_intercept] #1: /data/local/tmp/litert_lm/cl_intercept/program_001.cl (3077 bytes)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] CALL: clCreateKernel
-[cl_intercept] #2: /data/local/tmp/litert_lm/cl_intercept/program_002.cl (7438 bytes)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] #3: clCreateProgramWithBinary (binary)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] CALL: clCreateKernel
-[cl_intercept] #4: /data/local/tmp/litert_lm/cl_intercept/program_004.cl (1244 bytes)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] CALL: clCreateKernel
-[cl_intercept] #5: /data/local/tmp/litert_lm/cl_intercept/program_005.cl (1334 bytes)
-[cl_intercept] CALL: clBuildProgram
-[cl_intercept] CALL: clCreateKernel
-1024   6144   1536     11370.8  11370.8  11370.8  11370.8  11370.8       19.33    1.700
-[MATMUL MICRO] done. 0 / 1 shapes failed.
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007c23a8f320, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007c23a8f010, name=LiteRT GPU
-
-[patch.sh] Restoring original delegate .so files ...
-[patch.sh] Pulling captured CL sources ...
-/data/local/tmp/litert_lm/cl_intercept/program_000.cl: 1 file pulled. 1.8 MB/s (2946 bytes in 0.002s)
-  runtime/cl_bench/intercepted/program_000.cl (2946 bytes)
-/data/local/tmp/litert_lm/cl_intercept/program_001.cl: 1 file pulled. 2.0 MB/s (3077 bytes in 0.001s)
-  runtime/cl_bench/intercepted/program_001.cl (3077 bytes)
-/data/local/tmp/litert_lm/cl_intercept/program_002.cl: 1 file pulled. 4.0 MB/s (7438 bytes in 0.002s)
-  runtime/cl_bench/intercepted/program_002.cl (7438 bytes)
-/data/local/tmp/litert_lm/cl_intercept/program_004.cl: 1 file pulled. 0.7 MB/s (1244 bytes in 0.002s)
-  runtime/cl_bench/intercepted/program_004.cl (1244 bytes)
-/data/local/tmp/litert_lm/cl_intercept/program_005.cl: 1 file pulled. 0.0 MB/s (1334 bytes in 0.042s)
-  runtime/cl_bench/intercepted/program_005.cl (1334 bytes)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
