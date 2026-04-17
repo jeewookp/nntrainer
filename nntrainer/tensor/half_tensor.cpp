@@ -948,8 +948,14 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       svm_in[i] = in_u16[i];
     }
     const uint64_t t1 = now_ns();
-    gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
-                        N, K);
+    static const bool use_delegate = (std::getenv("NNTR_DELEGATE_FP16") != nullptr);
+    if (use_delegate) {
+      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
+                            M, N, K);
+    } else {
+      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
+                          N, K);
+    }
     const uint64_t t2 = now_ns();
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];
