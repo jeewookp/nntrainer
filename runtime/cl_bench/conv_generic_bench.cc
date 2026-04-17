@@ -182,28 +182,30 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   ConvGeneric conv = CreateConvGeneric(env->GetDevicePtr()->info_, op_def, attr,
                                        &dst_shape);
 
-  // AssembleCode registers tensor arguments and finalizes the CL source.
-  RETURN_IF_ERROR(conv.AssembleCode(env->GetDevicePtr()->info_));
-
   // Create GPU tensors.
   cl::Tensor src_tensor, dst_tensor;
+  TensorDescriptor dst_desc_with_shape = dst_desc;
+  dst_desc_with_shape.SetBHWCShape(dst_shape);
   RETURN_IF_ERROR(
-      cl::CreateTensor(env->context(), src_desc, &src_tensor));
+      src_tensor.CreateFromDescriptor(src_desc, &env->context()));
   RETURN_IF_ERROR(
-      cl::CreateTensor(env->context(), dst_desc, &dst_tensor));
+      cl::CreateTensor(env->context(), dst_desc_with_shape, &dst_tensor));
 
-  // Set up ClOperation.
+  // Bind tensors to the operation BEFORE wrapping in ClOperation.
+  conv.SetSrc(&src_tensor, 0);
+  conv.SetDst(&dst_tensor, 0);
+
+  // Set up ClOperation: Init → Compile → UpdateParams.
   cl::ClOperation cl_op;
   cl_op.Init(std::make_unique<ConvGeneric>(std::move(conv)));
-  RETURN_IF_ERROR(cl_op.SetSrcTensor(0, &src_tensor));
-  RETURN_IF_ERROR(cl_op.SetDstTensor(0, &dst_tensor));
-
-  cl::CreationContext creation_context;
-  creation_context.device = env->GetDevicePtr();
-  creation_context.context = &env->context();
-  creation_context.queue = env->queue();
-  creation_context.cache = env->program_cache();
-  RETURN_IF_ERROR(cl_op.Compile(creation_context));
+  {
+    cl::CreationContext creation_context;
+    creation_context.device = env->GetDevicePtr();
+    creation_context.context = &env->context();
+    creation_context.queue = env->queue();
+    creation_context.cache = env->program_cache();
+    RETURN_IF_ERROR(cl_op.Compile(creation_context));
+  }
   RETURN_IF_ERROR(cl_op.UpdateParams());
 
   // Warmup.
