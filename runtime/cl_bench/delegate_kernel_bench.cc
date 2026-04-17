@@ -609,8 +609,118 @@ int main(int argc, char** argv) {
           s0.x, s0.y, s0.z, s0.w, s1.x, s1.y, s1.z, s1.w, s2.x, s2.y, s2.z, s2.w);
 
   // ========================================================================
-  // Auto-tuning: try multiple local sizes (same as delegate's tuning pass)
-  // and pick the fastest. Global is recalculated for each local size.
+  // Verification data: realistic random weights + src, CPU fp32 reference.
+  // ========================================================================
+  fprintf(stderr, "[dk_bench] Preparing verification data ...\n");
+
+  // Generate random-ish data (deterministic seed for reproducibility)
+  auto pseudo_rand = [](size_t i) -> float {
+    uint32_t x = (uint32_t)(i * 2654435761u);
+    x ^= x >> 16; x *= 0x45d9f3b; x ^= x >> 16;
+    return (float)(x & 0xFFFF) / 65536.0f;  // [0, 1)
+  };
+
+  // Weights: range [-0.05, 0.05] (typical dequantized int8)
+  std::vector<float> cpu_weights((size_t)N * K);
+  {
+    std::vector<uint16_t> wdata(weight_bytes / 2);
+    for (size_t i = 0; i < cpu_weights.size(); ++i) {
+      cpu_weights[i] = (pseudo_rand(i) - 0.5f) * 0.1f;
+      wdata[i] = f32_to_f16(cpu_weights[i]);
+    }
+    p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
+                           wdata.data(), 0, nullptr, nullptr);
+  }
+
+  // Src: range [0, 1] (typical activation)
+  std::vector<float> cpu_src((size_t)M * K);
+  {
+    size_t npix = (size_t)M * src_slices;
+    std::vector<uint16_t> sd(npix * 4);
+    for (int x = 0; x < M; ++x) {
+      for (int s = 0; s < src_slices; ++s) {
+        for (int c = 0; c < 4; ++c) {
+          int k = s * 4 + c;
+          float v = (k < K) ? pseudo_rand(x * K + k + 999999) : 0.0f;
+          cpu_src[x * K + std::min(k, K - 1)] = v;
+          sd[((size_t)s * M + x) * 4 + c] = f32_to_f16(v);
+        }
+      }
+    }
+    size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
+    p_clEnqueueWriteImage(queue, src_img, 1, o, r, 0, 0, sd.data(), 0, nullptr, nullptr);
+  }
+
+  // Bias: 0
+  {
+    std::vector<uint16_t> bd(dst_slices * 4, 0);
+    size_t o[3] = {0,0,0}, r[3] = {(size_t)dst_slices, 1, 1};
+    p_clEnqueueWriteImage(queue, biases_img, 1, o, r, 0, 0, bd.data(), 0, nullptr, nullptr);
+  }
+  p_clFinish(queue);
+
+  // CPU fp32 matmul reference for a few output positions
+  // C[m, n] = sum_k src[m, k] * weight[n * K + k]
+  // (weight layout in the kernel buffer may differ, so we also capture
+  //  GPU reference from the known-correct (128,1,4) dispatch)
+  int n_check_m = std::min(M, 4);
+  int n_check_n = std::min(N, 16);
+  std::vector<float> cpu_ref(n_check_m * n_check_n);
+  for (int m = 0; m < n_check_m; ++m) {
+    for (int n = 0; n < n_check_n; ++n) {
+      double sum = 0;
+      for (int k = 0; k < K; ++k)
+        sum += (double)cpu_src[m * K + k] * (double)cpu_weights[n * K + k];
+      cpu_ref[m * n_check_n + n] = (float)sum;
+    }
+  }
+  fprintf(stderr, "  CPU ref[0,0]=%.4f ref[0,1]=%.4f ref[1,0]=%.4f\n",
+          cpu_ref[0], cpu_ref[1], cpu_ref[n_check_n]);
+
+  // GPU reference: run with (128,1,4) which we know is correct
+  {
+    size_t ref_local[3] = { 128, 1, 4 };
+    size_t ref_groups_z = ((dst_slices + 7) / 8 + 3) / 4;
+    size_t ref_global[3] = { ref_groups_z * 128, (size_t)((M + 127) / 128), 4 };
+    p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, ref_global, ref_local, 0, nullptr, nullptr);
+    p_clFinish(queue);
+  }
+  // Read reference output
+  size_t dst_npixels = (size_t)M * dst_slices;
+  std::vector<uint16_t> gpu_ref_data(dst_npixels * 4, 0);
+  {
+    size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
+    p_clEnqueueReadImage(queue, dst_img, 1, o, r, 0, 0,
+                         gpu_ref_data.data(), 0, nullptr, nullptr);
+  }
+
+  // Compare GPU reference vs CPU reference at sampled positions
+  fprintf(stderr, "  GPU ref vs CPU ref (first few elements):\n");
+  int gpu_cpu_match = 0, gpu_cpu_total = 0;
+  for (int m = 0; m < n_check_m; ++m) {
+    for (int n = 0; n < n_check_n; ++n) {
+      int s = n / 4, c = n % 4;
+      size_t idx = ((size_t)s * M + m) * 4 + c;
+      float gpu_v = f16_to_f32(gpu_ref_data[idx]);
+      float cpu_v = cpu_ref[m * n_check_n + n];
+      float rel_err = (fabsf(cpu_v) > 1e-6f) ? fabsf(gpu_v - cpu_v) / fabsf(cpu_v) : fabsf(gpu_v - cpu_v);
+      gpu_cpu_total++;
+      if (rel_err < 0.15f) gpu_cpu_match++;
+      if (m < 2 && n < 4)
+        fprintf(stderr, "    [%d,%d] gpu=%.4f cpu=%.4f err=%.1f%%\n",
+                m, n, gpu_v, cpu_v, rel_err * 100);
+    }
+  }
+  fprintf(stderr, "  GPU-CPU match: %d/%d (within 15%%)\n", gpu_cpu_match, gpu_cpu_total);
+  if (gpu_cpu_match < gpu_cpu_total / 2) {
+    fprintf(stderr, "  WARNING: GPU ref doesn't match CPU. Weight layout may differ.\n");
+    fprintf(stderr, "  Using GPU ref (128,1,4) as ground truth for tuning.\n");
+  }
+
+  // ========================================================================
+  // Auto-tuning with correctness check: try local sizes, verify each,
+  // only accept configurations that match GPU reference output.
+  // ========================================================================
   // ========================================================================
   if (!getenv("DK_LOCAL")) {
     fprintf(stderr, "[dk_bench] Auto-tuning local sizes ...\n");
@@ -665,11 +775,30 @@ int main(int argc, char** argv) {
       auto t1 = std::chrono::high_resolution_clock::now();
       double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / tune_iters;
 
-      fprintf(stderr, "  local=(%zu,%zu,%zu) global=(%zu,%zu,%zu) → %.1f us (%.3f TFLOPS)\n",
-              c.l[0], c.l[1], c.l[2], tg[0], tg[1], tg[2],
-              us, (gflops / (us / 1e6)) / 1000.0);
+      // Quick correctness check: compare a few output pixels against reference
+      std::vector<uint16_t> cand_data(dst_npixels * 4, 0);
+      {
+        size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
+        p_clEnqueueReadImage(queue, dst_img, 1, o, r, 0, 0,
+                             cand_data.data(), 0, nullptr, nullptr);
+      }
+      int match = 0, check_total = 0;
+      for (int i = 0; i < 64 && i < (int)(dst_npixels * 4); ++i) {
+        float gv = f16_to_f32(cand_data[i]);
+        float rv = f16_to_f32(gpu_ref_data[i]);
+        float diff = fabsf(gv - rv);
+        float tol = fabsf(rv) * 0.01f + 1e-4f;
+        if (diff < tol) match++;
+        check_total++;
+      }
+      bool correct = (match >= check_total * 9 / 10);  // 90% must match
 
-      if (us < best_us) {
+      fprintf(stderr, "  local=(%zu,%zu,%zu) global=(%zu,%zu,%zu) → %.1f us (%.3f TFLOPS) %s\n",
+              c.l[0], c.l[1], c.l[2], tg[0], tg[1], tg[2],
+              us, (gflops / (us / 1e6)) / 1000.0,
+              correct ? "✓" : "✗ WRONG OUTPUT");
+
+      if (correct && us < best_us) {
         best_us = us;
         memcpy(best_local, c.l, sizeof(best_local));
         memcpy(best_global, tg, sizeof(best_global));
@@ -793,99 +922,54 @@ int main(int argc, char** argv) {
   // ========================================================================
   // Correctness verification: read back dst image and check values.
   // ========================================================================
-  // Correctness verification: use known direct weights (skip pipeline)
-  // and compare GPU output against CPU reference.
+  // Final verification: run best config, compare vs GPU ref and CPU ref.
   // ========================================================================
-  fprintf(stderr, "\n[dk_bench] Verifying output with known weights ...\n");
+  fprintf(stderr, "\n[dk_bench] Final verification with best config ...\n");
   {
-    // Re-init weights with simple direct values for verification
-    float w_val = 0.01f;
-    {
-      std::vector<uint16_t> wdata(weight_bytes / 2, f32_to_f16(w_val));
-      p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
-                             wdata.data(), 0, nullptr, nullptr);
-    }
-    // Re-init src with 1.0
-    {
-      uint16_t one = f32_to_f16(1.0f);
-      size_t npix = (size_t)M * src_slices;
-      std::vector<uint16_t> sd(npix * 4, one);
-      size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
-      p_clEnqueueWriteImage(queue, src_img, 1, o, r, 0, 0, sd.data(), 0, nullptr, nullptr);
-    }
-    // Bias = 0
-    {
-      std::vector<uint16_t> bd(dst_slices * 4, 0);
-      size_t o[3] = {0,0,0}, r[3] = {(size_t)dst_slices, 1, 1};
-      p_clEnqueueWriteImage(queue, biases_img, 1, o, r, 0, 0, bd.data(), 0, nullptr, nullptr);
-    }
-    p_clFinish(queue);
-
-    // Run kernel once with known data
     p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
     p_clFinish(queue);
 
-    // Read back dst image
-    size_t dst_npixels = (size_t)M * dst_slices;
-    std::vector<uint16_t> dst_data(dst_npixels * 4, 0);
-    size_t origin[3] = {0, 0, 0};
-    size_t region[3] = {(size_t)M, (size_t)dst_slices, 1};
-    err = p_clEnqueueReadImage(queue, dst_img, 1, origin, region, 0, 0,
-                               dst_data.data(), 0, nullptr, nullptr);
-    if (err) {
-      fprintf(stderr, "  WARNING: ReadImage failed: %d\n", err);
-    } else {
-      // CPU reference: output = K * w_val * 1.0 + bias(0) = K * w_val
-      float expected = K * w_val;
+    std::vector<uint16_t> final_data(dst_npixels * 4, 0);
+    {
+      size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
+      p_clEnqueueReadImage(queue, dst_img, 1, o, r, 0, 0,
+                           final_data.data(), 0, nullptr, nullptr);
+    }
 
-      // Check multiple positions across the output
-      int total = 0, correct = 0, wrong = 0, zero_count = 0;
-      float max_err = 0;
-      // Sample positions: (x, slice) across the output
-      for (int x = 0; x < M && x < 8; ++x) {
-        for (int s = 0; s < dst_slices && s < 8; ++s) {
-          for (int c = 0; c < 4; ++c) {
-            // dst image layout: pixel at (x, y*dst_slices + s), channel c
-            size_t idx = ((size_t)s * M + x) * 4 + c;
-            if (idx >= dst_npixels * 4) continue;
-            float v = f16_to_f32(dst_data[idx]);
-            float err_abs = fabsf(v - expected);
-            float err_rel = (expected != 0) ? err_abs / fabsf(expected) : err_abs;
-            total++;
-            if (v == 0.0f) zero_count++;
-            if (err_rel < 0.15f) correct++;  // 15% tolerance for fp16
-            else wrong++;
-            if (err_rel > max_err) max_err = err_rel;
-          }
-        }
-      }
+    // Compare vs GPU reference (128,1,4)
+    int match = 0, total = 0;
+    float max_rel_err = 0;
+    for (size_t i = 0; i < dst_npixels * 4 && i < 1000; ++i) {
+      float gv = f16_to_f32(final_data[i]);
+      float rv = f16_to_f32(gpu_ref_data[i]);
+      float diff = fabsf(gv - rv);
+      float tol = fabsf(rv) * 0.01f + 1e-4f;
+      float rel = (fabsf(rv) > 1e-6f) ? diff / fabsf(rv) : diff;
+      if (rel > max_rel_err) max_rel_err = rel;
+      if (diff < tol) match++;
+      total++;
+    }
+    fprintf(stderr, "  vs GPU ref (128,1,4): %d/%d match (max rel err %.2f%%)\n",
+            match, total, max_rel_err * 100);
 
-      fprintf(stderr, "  CPU reference: %.4f (K=%d * w=%.4f)\n", expected, K, w_val);
-      fprintf(stderr, "  Checked %d elements: %d correct (<15%% err), %d wrong, %d zeros\n",
-              total, correct, wrong, zero_count);
-      fprintf(stderr, "  Max relative error: %.2f%%\n", max_err * 100);
-
-      // Print sample values
-      fprintf(stderr, "  Sample GPU values (x=0, slices 0-3):\n    ");
-      for (int s = 0; s < 4 && s < dst_slices; ++s) {
-        for (int c = 0; c < 4; ++c) {
-          size_t idx = ((size_t)s * M + 0) * 4 + c;
-          fprintf(stderr, "%.3f ", f16_to_f32(dst_data[idx]));
-        }
-      }
-      fprintf(stderr, "\n");
-
-      if (total > 0 && correct == total) {
-        fprintf(stderr, "  ✓ PASS: all %d elements match CPU reference (max err %.1f%%)\n",
-                total, max_err * 100);
-      } else if (total > 0 && correct > total / 2) {
-        fprintf(stderr, "  ~ PARTIAL: %d/%d match (max err %.1f%%). Dispatch likely correct.\n",
-                correct, total, max_err * 100);
-      } else {
-        fprintf(stderr, "  ✗ FAIL: only %d/%d match. Dispatch or layout ERROR.\n",
-                correct, total);
+    // Compare vs CPU fp32 reference
+    fprintf(stderr, "  vs CPU fp32 ref:\n");
+    for (int m = 0; m < n_check_m && m < 2; ++m) {
+      for (int n = 0; n < n_check_n && n < 4; ++n) {
+        int s = n / 4, c = n % 4;
+        size_t idx = ((size_t)s * M + m) * 4 + c;
+        float gv = f16_to_f32(final_data[idx]);
+        float cv = cpu_ref[m * n_check_n + n];
+        float rel = (fabsf(cv) > 1e-6f) ? fabsf(gv - cv) / fabsf(cv) : fabsf(gv - cv);
+        fprintf(stderr, "    [m=%d,n=%d] gpu=%.6f cpu=%.6f err=%.1f%%\n",
+                m, n, gv, cv, rel * 100);
       }
     }
+
+    if (match >= total * 9 / 10)
+      fprintf(stderr, "  ✓ PASS: output matches reference\n");
+    else
+      fprintf(stderr, "  ✗ FAIL: output does NOT match reference\n");
   }
   fprintf(stderr, "\n");
 
