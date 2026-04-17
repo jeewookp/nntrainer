@@ -150,12 +150,15 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   OperationDef op_def;
   op_def.precision = precision;
 
-  // Use BUFFER storage for maximum compatibility on Adreno.
+  // Use the fastest storage type for this GPU (TEXTURE_ARRAY or TEXTURE_2D
+  // on Adreno, not BUFFER which is ~100x slower).
+  TensorStorageType storage = cl::GetFastestStorageType(
+      env->GetDevicePtr()->info_);
   TensorDescriptor src_desc =
-      TensorDescriptor(data_type, TensorStorageType::BUFFER, Layout::HWC);
+      TensorDescriptor(data_type, storage, Layout::HWC);
   src_desc.SetBHWCShape(BHWC(1, M, 1, K));
   TensorDescriptor dst_desc =
-      TensorDescriptor(data_type, TensorStorageType::BUFFER, Layout::HWC);
+      TensorDescriptor(data_type, storage, Layout::HWC);
   dst_desc.SetBHWCShape(BHWC(1, M, 1, N));
 
   op_def.src_tensors.push_back(src_desc);
