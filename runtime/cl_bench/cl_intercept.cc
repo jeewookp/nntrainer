@@ -144,12 +144,26 @@ extern "C" cl_program clCreateProgramWithBuiltInKernels(
 }
 
 // ============================================================================
+// Logging macro: wraps key CL functions with a log line.
+// If clBuildProgram/clCreateKernel show up → delegate uses our wrapper.
+// If NOT → delegate bypasses us entirely (linker namespace isolation).
+// ============================================================================
+#define FWD_LOG(RET, NAME, PARAMS, ARGS) \
+  extern "C" RET NAME PARAMS { \
+    typedef RET (*_fwd_fn_t) PARAMS; \
+    static _fwd_fn_t _fwd_fn = nullptr; \
+    if (!_fwd_fn) _fwd_fn = (_fwd_fn_t)sym(#NAME); \
+    fprintf(stderr, "[cl_intercept] CALL: %s\n", #NAME); \
+    return _fwd_fn ARGS; \
+  }
+
+// ============================================================================
 // ALL forwarded CL functions. Covers everything TFLite opencl_wrapper loads.
 // Using void* for opaque CL types, size_t for sizes.
 // ============================================================================
 
 // Platform
-FWD(cl_int, clGetPlatformIDs, (cl_uint n, void* p, cl_uint* num), (n, p, num))
+FWD_LOG(cl_int, clGetPlatformIDs, (cl_uint n, void* p, cl_uint* num), (n, p, num))
 FWD(cl_int, clGetPlatformInfo, (void* p, cl_uint i, size_t s, void* v, size_t* r), (p, i, s, v, r))
 
 // Device
@@ -157,7 +171,7 @@ FWD(cl_int, clGetDeviceIDs, (void* p, uint64_t t, cl_uint n, void* d, cl_uint* n
 FWD(cl_int, clGetDeviceInfo, (void* d, cl_uint i, size_t s, void* v, size_t* r), (d, i, s, v, r))
 
 // Context
-FWD(void*, clCreateContext, (const intptr_t* pr, cl_uint n, const void* d, void* cb, void* ud, cl_int* e), (pr, n, d, cb, ud, e))
+FWD_LOG(void*, clCreateContext, (const intptr_t* pr, cl_uint n, const void* d, void* cb, void* ud, cl_int* e), (pr, n, d, cb, ud, e))
 FWD(cl_int, clReleaseContext, (void* c), (c))
 FWD(cl_int, clRetainContext, (void* c), (c))
 FWD(cl_int, clGetContextInfo, (void* c, cl_uint i, size_t s, void* v, size_t* r), (c, i, s, v, r))
@@ -180,14 +194,14 @@ FWD(cl_int, clGetMemObjectInfo, (void* m, cl_uint i, size_t s, void* v, size_t* 
 FWD(cl_int, clGetImageInfo, (void* m, cl_uint i, size_t s, void* v, size_t* r), (m, i, s, v, r))
 
 // Program (except clCreateProgramWithSource/Binary which are intercepted)
-FWD(cl_int, clBuildProgram, (void* p, cl_uint n, const void* d, const char* o, void* cb, void* ud), (p, n, d, o, cb, ud))
+FWD_LOG(cl_int, clBuildProgram, (void* p, cl_uint n, const void* d, const char* o, void* cb, void* ud), (p, n, d, o, cb, ud))
 FWD(cl_int, clGetProgramInfo, (void* p, cl_uint i, size_t s, void* v, size_t* r), (p, i, s, v, r))
 FWD(cl_int, clGetProgramBuildInfo, (void* p, void* d, cl_uint i, size_t s, void* v, size_t* r), (p, d, i, s, v, r))
 FWD(cl_int, clReleaseProgram, (void* p), (p))
 FWD(cl_int, clRetainProgram, (void* p), (p))
 
 // Kernel
-FWD(void*, clCreateKernel, (void* p, const char* n, cl_int* e), (p, n, e))
+FWD_LOG(void*, clCreateKernel, (void* p, const char* n, cl_int* e), (p, n, e))
 FWD(cl_int, clSetKernelArg, (void* k, cl_uint i, size_t s, const void* v), (k, i, s, v))
 FWD(cl_int, clReleaseKernel, (void* k), (k))
 FWD(cl_int, clGetKernelInfo, (void* k, cl_uint i, size_t s, void* v, size_t* r), (k, i, s, v, r))
