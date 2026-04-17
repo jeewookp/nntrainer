@@ -287,17 +287,23 @@ int main(int argc, char** argv) {
   //   global[1] = (M + 127) / 128
   //   global[2] = 4
   //   local = (128, 1, 4)
-  // Delegate tries multiple local sizes then picks the fastest.
-  // From interception log, the tuning candidates were:
-  //   (64,4,1) (32,8,1) (16,16,1) (8,32,1) (4,64,1)
-  //   (128,4,1) (64,8,1) (32,16,1) (16,32,1) (8,64,1)
-  // Then actual execution used (64,8,1) with global=(3072,192,1).
-  // Env DK_LOCAL overrides: "64,8,1"
-  size_t local[3] = { 64, 8, 1 };
+  // Correct dispatch for program_002 (conv kernel):
+  //   global=(6144,8,4) local=(128,1,4) for 1024x6144x1536
+  // Kernel mapping: X=gid(1)*ls(0)+lid(0), Y=gid(2)*ls(1)+lid(1), Z=gid(0)*ls(2)+lid(2)
+  //   Z = gid(0)*4+lid(2), covers 0..191 → Z*8 covers all 1536 dst_slices
+  //   X = gid(1)*128+lid(0), covers 0..1023 = M
+  //   Y = 0 (height=1 for matmul)
+  // Generalized:
+  //   local = (128, 1, 4)
+  //   global[0] = ceil(dst_slices/8 / 4) * 128  (48 groups * 128 = 6144)
+  //   global[1] = ceil(M / 128)                  (8 groups)
+  //   global[2] = 4
+  size_t local[3] = { 128, 1, 4 };
+  size_t groups_z = ((dst_slices + 7) / 8 + 3) / 4;  // ceil(dst_slices/8/4)
   size_t global[3] = {
-    (size_t)((dst_slices / 8 + 7) / 8) * 64,  // 3072 for dst_slices=1536
-    (size_t)dst_slices / 8,                      // 192 for dst_slices=1536
-    1
+    groups_z * 128,
+    (size_t)((M + 127) / 128),
+    4
   };
   const char* local_env = getenv("DK_LOCAL");
   if (local_env) {
