@@ -188,7 +188,8 @@ int main(int argc, char** argv) {
   cl_program prog = p_clCreateProgramWithSource(ctx, 1, &src_ptr, &src_len, &err);
   if (err != CL_SUCCESS) { fprintf(stderr, "ERROR: CreateProgram: %d\n", err); return 1; }
 
-  err = p_clBuildProgram(prog, 1, &dev, "-cl-fast-relaxed-math", nullptr, nullptr);
+  err = p_clBuildProgram(prog, 1, &dev,
+      "-cl-fast-relaxed-math -cl-qcom-extn-enabled", nullptr, nullptr);
   if (err != CL_SUCCESS) {
     size_t log_sz = 0;
     p_clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_sz);
