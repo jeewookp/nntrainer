@@ -79,3 +79,232 @@ INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007d6061d780, n
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 4, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.09 KiB | 1.09 MiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   c0ce3095..7987fa7d  litert_lm  -> origin/litert_lm
+Updating c0ce3095..7987fa7d
+Fast-forward
+ temp_litert_check_delegate.sh | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+ create mode 100755 temp_litert_check_delegate.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_check_delegate.sh 
+=== Dynamic dependencies ===
+
+--- libLiteRtGpuAccelerator.so ---
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libGLESv2.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+
+--- libLiteRtOpenClAccelerator.so ---
+ 0x0000000000000001 (NEEDED)             Shared library: [libGLESv3.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+
+=== clCreate* symbols in OpenCL accelerator ===
+(no clCreate symbols found)
+
+=== dlopen/dlsym references ===
+    45: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND dlopen
+    46: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND dlsym
+    22: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND dlopen
+    23: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND dlsym
+
+=== strings: OpenCL library paths ===
+libLiteRtOpenClAccelerator.so
+blaze-out/arm64-v8a-opt/bin/third_party/odml/litert/litert/runtime/accelerators/gpu/libLiteRtOpenClAccelerator.so
+    // Known to be flaky on some devices / backends (e.g. non-OpenCL on Mali)
+#pragma OPENCL EXTENSION ucl_wave_matrix: enable
+#pragma OPENCL EXTENSION cl_qcom_inline_asm : enable
+#pragma OPENCL EXTENSION cl_intel_subgroups : enable
+libOpenCL-car.so
+Failed to get OpenCL memory from device buffer
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
+No supported OpenCL platform.
+[%s:%d] Waiting for %zu OpenCL events
+Missing OpenCL object.
+OpenCL 2.0 QUALCOMM build: commit #7daed58 changeid #I7ece6fe30d Date: 10/19/16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+Can not find OpenCL library on this device
+Attaching EGLSyncFence event to TensorBuffer is not needed. GL-CL event synchronization is handled internally within LiteRT OpenCL backend.
+Unknown OpenCL error code - 
+third_party/odml/litert/ml_drift/delegate/delegate_opencl.cc
+delegate_opencl.cc
+OpenCL driver changed, cache invalid, should be regenerated
+libOpenCL.so
+#pragma OPENCL EXTENSION ucl_wave_memory: enable
+GPU OpenCL
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : enable
+OpenCL 2.0 QUALCOMM build: commit #7ff4f54 changeid #I4460aa6217 Date: 12/30/18
+Adreno 8xx with compiler E031.47.12.xxx is not well supported in MLDrift OpenCL backend. Various kernel compilation errors and incorrect results. Update your driver to a newer version.
+OpenCL
+#pragma OPENCL EXTENSION cl_intel_required_subgroup_size: enable
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc
+gpu_backend_opencl_litert.cc
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl.cc
+Failed to open OpenCL library: 
+#pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
+#pragma OPENCL EXTENSION cl_khr_subgroup_extended_types : enable
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+Image2DArray with layer = 1 works incorrect on some Adreno in OpenCL. Can not be created.
+libOpenCL-pixel.so
+Failed to get or create delegate OpenCL environment: 
+Weights preparation on Gpu is disabled for PowerVR GPU and non-OpenCL/WebGPU/Metal backends.
+for OpenCL and Metal.
+#pragma OPENCL EXTENSION ucl_wave_memory: enable
+Can not open OpenCL library(
+enableOpenCL
+third_party/ml_drift/cl/opencl_wrapper.cc
+#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
+No OpenCL platforms found.
+#pragma OPENCL EXTENSION cl_intel_subgroup_matrix_multiply_accumulate : enable
+loadOpenCLPointer
+OpenCL driver changed, model respresentation invalid, must be regenerated.
+#pragma OPENCL EXTENSION cl_qcom_dot_product8 : enable
+MLDrift OpenCL Tensor 
+#pragma OPENCL EXTENSION ucl_wave_matrix: enable
+Release data callback is not currently supported on OpenCL.
+NSt6__ndk120__shared_ptr_emplaceIN6litert8ml_drift22GpuBackendOpenClLitertENS_9allocatorIS3_EEEE
+N6litert8ml_drift22GpuBackendOpenClLitertE
+N6litert8ml_drift31GpuInferenceContextOpenClLitertE
+N6litert8ml_drift16GpuBackendOpenClE
+N6litert8ml_drift25GpuInferenceContextOpenClE
+N6litert8ml_drift17GpuIOBufferOpenClE
+N6litert8ml_drift28Tensor2BufferConverterOpenClE
+N6litert8ml_drift28Buffer2TensorConverterOpenClE
+N6litert8ml_drift22GpuTensorWrapperOpenClE
+N8ml_drift2cl19OpenClConverterImplE
+OpenClImageBufferFp16
+    // Known to be flaky on some devices / backends (e.g. non-OpenCL on Mali)
+OpenCL.DebugInfo.100
+#pragma OPENCL EXTENSION ucl_wave_matrix: enable
+#pragma OPENCL EXTENSION cl_qcom_inline_asm : enable
+#pragma OPENCL EXTENSION cl_intel_subgroups : enable
+libOpenCL-car.so
+Failed to get OpenCL memory from device buffer
+No supported OpenCL platform.
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
+OpenClBuffer
+ is not allowed by OpenCL 1.2 
+, but must be Function, Workgroup, CrossWorkGroup or Generic in the OpenCL environment.
+[%s:%d] Waiting for %zu OpenCL events
+Missing OpenCL object.
+OpenCL 2.0 QUALCOMM build: commit #7daed58 changeid #I7ece6fe30d Date: 10/19/16
+Storage class cannot be Generic in OpenCL 1.2 environment
+Sampled Type must be OpTypeVoid in the OpenCL environment.
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+Can not find OpenCL library on this device
+Attaching EGLSyncFence event to TensorBuffer is not needed. GL-CL event synchronization is handled internally within LiteRT OpenCL backend.
+Unknown OpenCL error code - 
+ is not allowed by OpenCL 2.0/2.1 
+Optional Image Operands are not allowed in the OpenCL 
+third_party/odml/litert/ml_drift/delegate/delegate_opencl.cc
+delegate_opencl.cc
+OpenCL driver changed, cache invalid, should be regenerated
+libOpenCL.so
+In the OpenCL environment, Arrayed may only be set to 1 
+#pragma OPENCL EXTENSION ucl_wave_memory: enable
+in the OpenCL environment.
+#pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : enable
+OpenClTextureFp16
+OpenCL 2.0 QUALCOMM build: commit #7ff4f54 changeid #I4460aa6217 Date: 12/30/18
+Adreno 8xx with compiler E031.47.12.xxx is not well supported in MLDrift OpenCL backend. Various kernel compilation errors and incorrect results. Update your driver to a newer version.
+In the OpenCL environment, the optional Access Qualifier
+OpenCL
+#pragma OPENCL EXTENSION cl_intel_required_subgroup_size: enable
+[%s:%d] OpenCL not supported on this platform. Using WebGPU instead.
+OpenClTexture
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
+MS must be 0 in the OpenCL environment.
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc
+gpu_backend_opencl_litert.cc
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl.cc
+ is not allowed by OpenCL 2.2 
+Failed to open OpenCL library: 
+#pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
+#pragma OPENCL EXTENSION cl_khr_subgroup_extended_types : enable
+Sampled must be 0 in the OpenCL environment.
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+libOpenCL-pixel.so
+Image2DArray with layer = 1 works incorrect on some Adreno in OpenCL. Can not be created.
+OpenCL.std
+Failed to get or create delegate OpenCL environment: 
+Can not open OpenCL library(
+enableOpenCL
+Weights preparation on Gpu is disabled for PowerVR GPU and non-OpenCL/WebGPU/Metal backends.
+for OpenCL and Metal.
+#pragma OPENCL EXTENSION ucl_wave_memory: enable
+OpenClImageBuffer
+third_party/ml_drift/cl/opencl_wrapper.cc
+No OpenCL platforms found.
+#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
+loadOpenCLPointer
+#pragma OPENCL EXTENSION cl_intel_subgroup_matrix_multiply_accumulate : enable
+Memory model must be OpenCL in the OpenCL environment.
+OpenClBufferFp16
+OpenClBufferPacked
+OpenCL driver changed, model respresentation invalid, must be regenerated.
+MLDrift OpenCL Tensor 
+#pragma OPENCL EXTENSION cl_qcom_dot_product8 : enable
+#pragma OPENCL EXTENSION ucl_wave_matrix: enable
+Release data callback is not currently supported on OpenCL.
+NSt6__ndk120__shared_ptr_emplaceIN6litert8ml_drift22GpuBackendOpenClLitertENS_9allocatorIS3_EEEE
+N6litert8ml_drift22GpuBackendOpenClLitertE
+N6litert8ml_drift31GpuInferenceContextOpenClLitertE
+N6litert8ml_drift16GpuBackendOpenClE
+N6litert8ml_drift25GpuInferenceContextOpenClE
+N6litert8ml_drift17GpuIOBufferOpenClE
+N6litert8ml_drift28Tensor2BufferConverterOpenClE
+N6litert8ml_drift28Buffer2TensorConverterOpenClE
+N6litert8ml_drift22GpuTensorWrapperOpenClE
+N8ml_drift2cl19OpenClConverterImplE
+OpenCL.DebugInfo.100 debug info flags
+OpenCL.DebugInfo.100 debug base type encoding
+OpenCL.DebugInfo.100 debug composite type
+OpenCL.DebugInfo.100 debug type qualifier
+OpenCL.DebugInfo.100 debug operation
+OpenCL.DebugInfo.100 debug imported entity
+SPIR-V 1.0 (under OpenCL 1.2 Full Profile semantics)
+SPIR-V 1.0 (under OpenCL 1.2 Embedded Profile semantics)
+SPIR-V 1.0 (under OpenCL 2.0 Full Profile semantics)
+SPIR-V 1.0 (under OpenCL 2.0 Embedded Profile semantics)
+SPIR-V 1.0 (under OpenCL 2.1 Full Profile semantics)
+SPIR-V 1.0 (under OpenCL 2.1 Embedded Profile semantics)
+SPIR-V 1.2 (under OpenCL 2.2 Full Profile semantics)
+SPIR-V 1.2 (under OpenCL 2.2 Embedded Profile semantics)
+OpenCL
+OpenCL
+OpenCL_C
+OpenCL_CPP
+CPP_for_OpenCL
+
+=== All NEEDED libraries ===
+GpuAccelerator:
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libGLESv2.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+OpenClAccelerator:
+ 0x0000000000000001 (NEEDED)             Shared library: [libGLESv3.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
