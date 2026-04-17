@@ -91,6 +91,16 @@ cc_binary(
 # OpenCL interceptor: wraps libOpenCL.so to capture CL kernel sources
 # from the closed-source delegate. Built as shared library, pushed to
 # device as "libOpenCL.so" so the delegate loads it first.
+# Benchmark the captured delegate CL kernel directly.
+cc_binary(
+    name = "delegate_kernel_bench",
+    srcs = ["delegate_kernel_bench.cc"],
+    linkopts = ["-ldl"] + select({
+        "@platforms//os:android": ["-llog"],
+        "//conditions:default": [],
+    }),
+)
+
 cc_binary(
     name = "cl_intercept",
     srcs = ["cl_intercept.cc"],
