@@ -871,11 +871,14 @@ int main(int argc, char** argv) {
   double wall_us = std::chrono::duration<double, std::micro>(t1 - t0).count() / iters;
 
   // GPU profiling with all 4 timestamps
+  // AND delegate-style batch profiling (multiple enqueue, single wait)
   double gpu_us = 0;
   double avg_queued_to_submit = 0, avg_submit_to_start = 0, avg_start_to_end = 0;
+  double batch_avg_us = 0;
   {
+    // === Single-dispatch profiling (our current method) ===
     std::vector<double> t_q2s, t_s2st, t_st2e;
-    int prof_iters = std::min(iters, 50);
+    int prof_iters = std::min(iters, 30);
     for (int i = 0; i < prof_iters; ++i) {
       cl_event ev = nullptr;
       p_clEnqueueNDRangeKernel(prof_queue, kernel, 3, nullptr, global, local, 0, nullptr, &ev);
@@ -894,21 +897,43 @@ int main(int argc, char** argv) {
     avg_submit_to_start = std::accumulate(t_s2st.begin(), t_s2st.end(), 0.0) / t_s2st.size();
     avg_start_to_end = std::accumulate(t_st2e.begin(), t_st2e.end(), 0.0) / t_st2e.size();
     gpu_us = avg_start_to_end;
+
+    // === Delegate-style batch profiling ===
+    // Enqueue N kernels at once, attach event only to LAST one.
+    // Total time / N = per-kernel average (cache-warm).
+    // This matches delegate's ClarifyTimeMultipleEnqueue pattern.
+    int batch_n = 5;
+    std::vector<double> batch_times;
+    for (int trial = 0; trial < prof_iters; ++trial) {
+      // Dispatch batch_n kernels back-to-back, event on last only
+      for (int b = 0; b < batch_n - 1; ++b)
+        p_clEnqueueNDRangeKernel(prof_queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+      cl_event ev = nullptr;
+      p_clEnqueueNDRangeKernel(prof_queue, kernel, 3, nullptr, global, local, 0, nullptr, &ev);
+      p_clFinish(prof_queue);
+      cl_ulong tst = 0, te = 0;
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(tst), &tst, nullptr);
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(te), &te, nullptr);
+      p_clReleaseEvent(ev);
+      batch_times.push_back((te - tst) / 1000.0);  // last kernel's time only
+    }
+    std::sort(batch_times.begin(), batch_times.end());
+    batch_avg_us = batch_times[batch_times.size() / 2];  // median
   }
 
   double tflops_wall = (gflops / (wall_us / 1e6)) / 1000.0;
   double tflops_gpu = (gflops / (gpu_us / 1e6)) / 1000.0;
-  double tflops_total_prof = (gflops / ((avg_queued_to_submit + avg_submit_to_start + avg_start_to_end) / 1e6)) / 1000.0;
+  double tflops_batch = (gflops / (batch_avg_us / 1e6)) / 1000.0;
 
   fprintf(stderr, "\n[dk_bench] Results: M=%d N=%d K=%d\n", M, N, K);
-  fprintf(stderr, "  wall: %.1f us  TFLOPS=%.3f\n", wall_us, tflops_wall);
-  fprintf(stderr, "\n  Profiling breakdown (per dispatch):\n");
-  fprintf(stderr, "    QUEUED→SUBMIT:  %7.1f us  (CPU→driver handoff)\n", avg_queued_to_submit);
-  fprintf(stderr, "    SUBMIT→START:   %7.1f us  (driver→GPU scheduling)\n", avg_submit_to_start);
-  fprintf(stderr, "    START→END:      %7.1f us  (GPU execution)  TFLOPS=%.3f\n", avg_start_to_end, tflops_gpu);
-  fprintf(stderr, "    QUEUED→END:     %7.1f us  (total profiled) TFLOPS=%.3f\n",
-          avg_queued_to_submit + avg_submit_to_start + avg_start_to_end, tflops_total_prof);
-  fprintf(stderr, "    delegate ref:   %7.1f us                   TFLOPS=5.2\n", 3691.0);
+  fprintf(stderr, "  wall (burst):    %7.1f us  TFLOPS=%.3f\n", wall_us, tflops_wall);
+  fprintf(stderr, "\n  Single-dispatch profiling:\n");
+  fprintf(stderr, "    QUEUED→SUBMIT: %7.1f us\n", avg_queued_to_submit);
+  fprintf(stderr, "    SUBMIT→START:  %7.1f us\n", avg_submit_to_start);
+  fprintf(stderr, "    START→END:     %7.1f us  TFLOPS=%.3f\n", avg_start_to_end, tflops_gpu);
+  fprintf(stderr, "\n  Batch profiling (delegate-style, last of %d):\n", 5);
+  fprintf(stderr, "    START→END:     %7.1f us  TFLOPS=%.3f\n", batch_avg_us, tflops_batch);
+  fprintf(stderr, "\n  delegate ref:    %7.1f us  TFLOPS=5.2\n", 3691.0);
   fprintf(stderr, "  gpu:  %.1f us  TFLOPS=%.3f\n", gpu_us, tflops_gpu);
   fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n");
 
