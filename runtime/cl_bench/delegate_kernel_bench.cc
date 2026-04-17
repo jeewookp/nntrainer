@@ -637,15 +637,20 @@ int main(int argc, char** argv) {
     int tune_iters = 10;
 
     for (auto& c : candidates) {
-      // Recalculate global for this local
-      // Z = gid(0)*ls(2)+lid(2), need ceil(dst_slices/8) Z values
-      size_t need_z = (dst_slices + 7) / 8;
-      size_t gz = ((need_z + c.l[2] - 1) / c.l[2]) * c.l[0];
-      // X = gid(1)*ls(0)+lid(0), need M X values
-      size_t gx = ((M + (int)c.l[0] - 1) / (int)c.l[0]);
-      // Y = gid(2)*ls(1)+lid(1), need 1 Y value
-      size_t gy = c.l[2];
-      size_t tg[3] = { gz, gx, gy };
+      // Recalculate global for this local.
+      // Kernel mapping:
+      //   X = get_group_id(1) * local_size(0) + get_local_id(0)  → need M values
+      //   Y = get_group_id(2) * local_size(1) + get_local_id(1)  → need 1 value
+      //   Z = get_group_id(0) * local_size(2) + get_local_id(2)  → need dst_slices/8 values
+      size_t need_z = (dst_slices + 7) / 8;  // 192
+      size_t groups_z = (need_z + c.l[2] - 1) / c.l[2];
+      size_t groups_x = ((size_t)M + c.l[0] - 1) / c.l[0];
+      size_t groups_y = (1 + c.l[1] - 1) / c.l[1];  // height=1
+      size_t tg[3] = {
+        groups_z * c.l[0],   // dim0: Z groups * local[0]
+        groups_x * c.l[1],   // dim1: X groups * local[1]
+        groups_y * c.l[2],   // dim2: Y groups * local[2]
+      };
 
       // Quick warmup
       for (int i = 0; i < 3; ++i)
