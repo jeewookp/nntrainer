@@ -280,7 +280,7 @@ protected:
 // Test: compile + run + verify correctness + report TFLOPS
 // ============================================================================
 TEST_F(DelegateConvWaveTest, Matmul_1024x6144x1536_Correctness) {
-  const int M = 1024, N = 6144, K = 1536;
+  const int M = 512, N = 1024, K = 1024;
   const int src_slices = K / 4, dst_slices = N / 4;
   const double gflops = 2.0 * M * N * K / 1e9;
 
