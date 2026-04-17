@@ -113,6 +113,8 @@ DECL_CL(cl_int, clEnqueueWriteImage, (cl_command_queue, cl_mem, cl_uint, const s
 DECL_CL(cl_int, clEnqueueReadImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
 // Qualcomm performance hint
 DECL_CL(cl_int, clSetPerfHintQCOM, (cl_context, cl_uint))
+// CL-GL interop device query
+DECL_CL(cl_int, clGetGLContextInfoKHR, (const intptr_t*, cl_uint, size_t, void*, size_t*))
 // Command buffer KHR
 DECL_CL(void*, clCreateCommandBufferKHR, (cl_uint, const cl_command_queue*, const void*, cl_int*))
 DECL_CL(cl_int, clCommandNDRangeKernelKHR, (void*, void*, const void*, cl_kernel, cl_uint, const size_t*, const size_t*, const size_t*, cl_uint, const void*, void*, void*))
@@ -143,6 +145,7 @@ static bool LoadCL() {
   LOAD(h, clEnqueueReadBuffer);
   LOAD(h, clEnqueueWriteImage); LOAD(h, clEnqueueReadImage);
   LOAD(h, clSetPerfHintQCOM);
+  LOAD(h, clGetGLContextInfoKHR);
   LOAD(h, clCreateCommandBufferKHR);
   LOAD(h, clCommandNDRangeKernelKHR);
   LOAD(h, clFinalizeCommandBufferKHR);
@@ -264,6 +267,27 @@ int main(int argc, char** argv) {
   //   0x1084 = CL_CONTEXT_PLATFORM
   //   0x40C2 = CL_CONTEXT_PERF_HINT_QCOM → 0x40C3 (HIGH)
   //   0x40C9 → 0x40CB (unknown Qualcomm property)
+  // Try to get CL device from EGL context (delegate does this)
+  // CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR = 0x2006
+  cl_device_id egl_dev = nullptr;
+  if (egl_dpy != EGL_NO_DISPLAY && egl_ctx != EGL_NO_CONTEXT && p_clGetGLContextInfoKHR) {
+    intptr_t q_props[] = {
+      (intptr_t)0x2008, (intptr_t)egl_ctx,
+      (intptr_t)0x2009, (intptr_t)egl_dpy,
+      (intptr_t)0x1084, (intptr_t)plat,
+      0
+    };
+    err = p_clGetGLContextInfoKHR(q_props, 0x2006 /*CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR*/,
+                                   sizeof(cl_device_id), &egl_dev, nullptr);
+    if (err == CL_SUCCESS && egl_dev) {
+      fprintf(stderr, "[dk_bench] EGL CL device: %p (clGetDeviceIDs device: %p) %s\n",
+              egl_dev, dev, egl_dev == dev ? "SAME" : "DIFFERENT!");
+      dev = egl_dev;  // Use EGL device
+    } else {
+      fprintf(stderr, "[dk_bench] clGetGLContextInfoKHR failed: %d\n", err);
+    }
+  }
+
   cl_context ctx = nullptr;
   if (egl_dpy != EGL_NO_DISPLAY && egl_ctx != EGL_NO_CONTEXT) {
     intptr_t ctx_props[] = {
