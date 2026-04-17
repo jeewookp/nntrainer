@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 714 bytes | 357.00 KiB/s, done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 965 bytes | 482.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   eca130dd..7cd42875  litert_lm  -> origin/litert_lm
-Updating eca130dd..7cd42875
+   fa549607..2c082c8a  litert_lm  -> origin/litert_lm
+Updating fa549607..2c082c8a
 Fast-forward
- runtime/cl_bench/cl_intercept.cc | 1 +
- 1 file changed, 1 insertion(+)
+ temp_litert_cl_intercept.sh | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_cl_intercept.sh 
 [intercept.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [intercept.sh] === CL Kernel Source Interceptor ===
@@ -33,9 +33,9 @@ INFO: Found applicable config definition build:android_arm64 in file /home/jwher
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
 INFO: Analyzed 2 targets (0 packages loaded, 0 targets configured).
 INFO: Found 2 targets...
-INFO: Elapsed time: 0.189s, Critical Path: 0.09s
-INFO: 3 processes: 1 internal, 2 local.
-INFO: Build completed successfully, 3 total actions
+INFO: Elapsed time: 0.090s, Critical Path: 0.00s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
 [intercept.sh] Interceptor: bazel-bin/runtime/cl_bench/libcl_intercept.so.runfiles/litert_lm/runtime/cl_bench/libcl_intercept.so
 
 [intercept.sh] Pushing interceptor + benchmark to device ...
@@ -47,15 +47,15 @@ INFO: Build completed successfully, 3 total actions
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076e3597120, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007d6061d780, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000076e3596940, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007d6061d8d0, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Initialized TensorFlow Lite runtime.
 [cl_intercept] Real OpenCL loaded from /system/vendor/lib64/libOpenCL.so
-I0000 00:00:1742237214.158856   23348 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
-I0000 00:00:1742237214.158966   23348 delegate_opencl.cc:553] options->kernel_batch_size: -1
+I0000 00:00:1742237389.140366   23383 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1742237389.140474   23383 delegate_opencl.cc:553] options->kernel_batch_size: -1
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 m      n      k         min_us   avg_us   p50_us   p95_us   max_us      gflops  tfl_avg
 INFO: Loaded OpenCL library with dlopen.
@@ -64,11 +64,11 @@ INFO: [gpu_environment.cc:280] Reusing provided EGL environment.
 INFO: [gpu_environment.h:152] Created LiteRT GpuEnvironment.
 INFO: [environment.cc:41] Adding options to the existing LiteRT environment
 VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
-I0000 00:00:1742237214.267561   23348 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
-1024   6144   1536     16860.2  16860.2  16860.2  16860.2  16860.2       19.33    1.146
+I0000 00:00:1742237389.248794   23383 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+1024   6144   1536     11841.8  11841.8  11841.8  11841.8  11841.8       19.33    1.632
 [MATMUL MICRO] done. 0 / 1 shapes failed.
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000076e3596940, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb4000076e3597120, name=LiteRT GPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007d6061d8d0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007d6061d780, name=LiteRT GPU
 
 [intercept.sh] Restoring original libOpenCL.so ...
 [intercept.sh] Pulling captured CL sources ...
