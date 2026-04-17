@@ -111,11 +111,19 @@ for f in libLiteRtGpuAccelerator.so libLiteRtOpenClAccelerator.so; do
   fi
 done
 
-# Step 3: Run matmul_micro_benchmark — delegate will load our interceptor.
+# Step 3: Run matmul_micro_benchmark with BOTH LD_PRELOAD and LD_LIBRARY_PATH.
+# LD_PRELOAD ensures our clCreateProgramWithSource shadows the real one
+# even if the delegate does dlopen with a full path to libOpenCL.so.
+# We also keep libOpenCL.so as a renamed copy for dlopen("libOpenCL.so").
 echo ""
 echo "[intercept.sh] Running benchmark with interceptor (shapes: ${INTERCEPT_SHAPES}) ..."
 echo "[intercept.sh] (Only ${INTERCEPT_ITERS} iters — just need CL compilation, not timing)"
+
+# Also push as libcl_intercept.so for LD_PRELOAD (keep libOpenCL.so copy too)
+adb push "${INTERCEPT_SO}" "${DEVICE_FOLDER}/libcl_intercept.so" >/dev/null
+
 adb shell "cd ${DEVICE_FOLDER}; \
+  LD_PRELOAD=./libcl_intercept.so \
   LD_LIBRARY_PATH=. \
   taskset ${TASKSET_MASK} ./matmul_micro_benchmark \
     --backend=gpu \
@@ -124,7 +132,7 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --warmup=${INTERCEPT_WARMUP} \
     --iters=${INTERCEPT_ITERS} \
     --profile=false \
-    --max_tensor_mb=512" 2>&1 | head -50
+    --max_tensor_mb=512" 2>&1 | head -80
 
 # Step 4: Restore original libOpenCL.so and pull captured files.
 echo ""
