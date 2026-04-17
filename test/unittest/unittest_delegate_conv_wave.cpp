@@ -536,21 +536,20 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   }
 
   // Create CL buffers
-  // Repack: 32 half8 (256 ushorts) per (Z, k_block).
-  // Each block covers 8 src_slices (32 k values) × 32 output channels.
-  // Layout: ushort[s*32 + n] for s=0..7 (src_slice within block), n=0..31
+  // Repack: delegate-style, 2 src_slices per iter, 32 half8 per block.
+  // row0(32 ushorts) + row1(32 ushorts) + padding(192 ushorts) = 256 per iter.
   int n_z_grps = (dst_slices + 7) / 8;
-  int k_blocks = src_slices / 8;  // 32 k-values per block = 8 src slices
-  std::vector<uint16_t> repacked(n_z_grps * k_blocks * 256, 0);
+  int k_iters_rp = src_slices / 2;
+  std::vector<uint16_t> repacked(n_z_grps * k_iters_rp * 256, 0);
   for (int z = 0; z < n_z_grps; ++z) {
     int bn = z * 32;
-    for (int kb = 0; kb < k_blocks; ++kb) {
-      size_t blk = ((size_t)z * k_blocks + kb) * 256;
-      for (int s = 0; s < 8; ++s) {
-        int cs = kb * 8 + s;  // src_slice index
-        for (int n = 0; n < 32 && bn + n < N; ++n)
-          repacked[blk + s * 32 + n] = packed_weights[cs * N + bn + n];
-      }
+    for (int it = 0; it < k_iters_rp; ++it) {
+      int cs = it * 2;
+      size_t blk = ((size_t)z * k_iters_rp + it) * 256;
+      for (int n = 0; n < 32 && bn + n < N; ++n)
+        repacked[blk + n] = packed_weights[cs * N + bn + n];
+      for (int n = 0; n < 32 && bn + n < N; ++n)
+        repacked[blk + 32 + n] = packed_weights[(cs + 1) * N + bn + n];
     }
   }
   size_t w_bytes = repacked.size() * 2;
@@ -591,7 +590,7 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   // Kernel args
   // Delegate-style int4 params
   int4 s0 = {1, dst_slices, M, 32};
-  int4 s1 = {k_blocks, 0, 0, src_slices};
+  int4 s1 = {k_iters_rp, 0, 0, src_slices};
   int4 s2 = {1, 1, 0, 0};
   cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_buf);
   cl.clSetKernelArg(kernel, 1, sizeof(cl_mem), &xmem);

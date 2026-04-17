@@ -1,14 +1,8 @@
-// Int4 GEMM using delegate's wave memory at FULL fp16 load speed.
-//
-// Key insight: load 32 half8 (512 bytes) per iteration — SAME as fp16 delegate.
-// But 512 bytes of int4 = 1024 nibbles = 32 input channels × 32 output channels.
-// That's 4x more K per iteration → inner loop runs K/32 times (vs K/8 for fp16).
-//
-// Weight layout (repacked): for each (Z, k_block):
-//   32 half8 = 256 halfs = 512 bytes = 256 ushorts
-//   These 256 ushorts contain 1024 int4 nibbles:
-//     ushort[s*32 + n] packs 4 nibbles for output_ch=base_n+n, k=k_block*32+s*4..+3
-//   where s=0..7 (8 groups of 4 k-values), n=0..31 (32 output channels)
+// Int4 wave memory: load 32 half8 at full speed, use 1/4 for int4.
+// Process 2 src_slices per iter (same as fp16 delegate).
+// 64 ushorts out of 256 loaded are used = 25% utilization of load.
+// But the load is FREE (wave memory DMA), so the net effect is
+// same iteration count as delegate but with int4 dequant overhead only.
 
 #define MAIN_FUNCTION __kernel void gemm_int4_wave
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -43,7 +37,6 @@ MAIN_FUNCTION(
   half4 sc4=vload4(0,scales+base_n+16), sc5=vload4(0,scales+base_n+20);
   half4 sc6=vload4(0,scales+base_n+24), sc7=vload4(0,scales+base_n+28);
 
-  // Wave memory setup (identical to delegate)
   int subgroup_id = (int)((0x1F & qcom_get_physical_sub_group_id()));
   subgroup_id = subgroup_id % 12;
   int c_offset = mul24(subgroup_id, shared_int4_0.w);
@@ -53,85 +46,116 @@ MAIN_FUNCTION(
     : : [a0] "r" (a0) :
   );
 
-  // View xmem as ushort for int4 unpacking (256 ushorts per load)
   __constant ushort* w = (__constant ushort*)&xmem_buffer[c_offset];
 
-  // f_offset: same as delegate (32 half8 per iteration)
+  // Same f_offset as fp16 delegate (32 half8 per load)
   int f_offset = Z * shared_int4_1.x * 32;
 
-  // Inner loop: process 32 k-values per iteration (8 src slices)
-  // vs delegate's 8 k-values (2 src slices). 4x fewer iterations!
-  int src_slices = shared_int4_1.w;
   int coord_s = 0;
-
   do {
-    // Load 32 half8 of packed int4 via wave memory (FULL speed, same as fp16)
+    half4 src0 = read_imageh(src_tensor_image2d, smp_zero,
+      (int2)(X, Y * shared_int4_1.w + coord_s));
+    coord_s++;
+    half4 src1 = read_imageh(src_tensor_image2d, smp_zero,
+      (int2)(X, Y * shared_int4_1.w + coord_s));
+    coord_s++;
+
+    // Load 32 half8 (512 bytes) at full speed via wave memory
     qcom_sub_group_constant_load8(xmem_buffer, weights_buffer,
                                    c_offset, f_offset >> 1, 32);
     f_offset += 64;
     qcom_sub_group_sync(QCOM_CLK_CONST_LOAD_SYNC);
 
-    // Process 8 src slices (32 input channels) from this load
-    // w[0..255] = 256 ushorts, layout:
-    //   For src_slice s (0..7), output channel n (0..31):
-    //     w[s*32 + n] has 4 nibbles for k = coord_s*4 + s*4 + 0..3
+    // Use only first 64 ushorts (row0: w[0..31], row1: w[32..63])
+    // Same computation pattern as delegate but with int4 dequant
 
-#define DQ(IDX,SH,SC) (((half)((int)((w[IDX]>>SH)&0xFu)-8))*SC)
+#define DQ(I,S,SC) (((half)((int)((w[I]>>S)&0xFu)-8))*SC)
 
-#define DO_SLICE(SRC_S, W_BASE) { \
-  half4 src = read_imageh(src_tensor_image2d, smp_zero, \
-    (int2)(X, Y * src_slices + coord_s + SRC_S)); \
-  r0.x+=src.x*DQ(W_BASE,0,sc0.x)+src.y*DQ(W_BASE,4,sc0.x)+src.z*DQ(W_BASE,8,sc0.x)+src.w*DQ(W_BASE,12,sc0.x); \
-  r0.y+=src.x*DQ(W_BASE+1,0,sc0.y)+src.y*DQ(W_BASE+1,4,sc0.y)+src.z*DQ(W_BASE+1,8,sc0.y)+src.w*DQ(W_BASE+1,12,sc0.y); \
-  r0.z+=src.x*DQ(W_BASE+2,0,sc0.z)+src.y*DQ(W_BASE+2,4,sc0.z)+src.z*DQ(W_BASE+2,8,sc0.z)+src.w*DQ(W_BASE+2,12,sc0.z); \
-  r0.w+=src.x*DQ(W_BASE+3,0,sc0.w)+src.y*DQ(W_BASE+3,4,sc0.w)+src.z*DQ(W_BASE+3,8,sc0.w)+src.w*DQ(W_BASE+3,12,sc0.w); \
-  r1.x+=src.x*DQ(W_BASE+4,0,sc1.x)+src.y*DQ(W_BASE+4,4,sc1.x)+src.z*DQ(W_BASE+4,8,sc1.x)+src.w*DQ(W_BASE+4,12,sc1.x); \
-  r1.y+=src.x*DQ(W_BASE+5,0,sc1.y)+src.y*DQ(W_BASE+5,4,sc1.y)+src.z*DQ(W_BASE+5,8,sc1.y)+src.w*DQ(W_BASE+5,12,sc1.y); \
-  r1.z+=src.x*DQ(W_BASE+6,0,sc1.z)+src.y*DQ(W_BASE+6,4,sc1.z)+src.z*DQ(W_BASE+6,8,sc1.z)+src.w*DQ(W_BASE+6,12,sc1.z); \
-  r1.w+=src.x*DQ(W_BASE+7,0,sc1.w)+src.y*DQ(W_BASE+7,4,sc1.w)+src.z*DQ(W_BASE+7,8,sc1.w)+src.w*DQ(W_BASE+7,12,sc1.w); \
-  r2.x+=src.x*DQ(W_BASE+8,0,sc2.x)+src.y*DQ(W_BASE+8,4,sc2.x)+src.z*DQ(W_BASE+8,8,sc2.x)+src.w*DQ(W_BASE+8,12,sc2.x); \
-  r2.y+=src.x*DQ(W_BASE+9,0,sc2.y)+src.y*DQ(W_BASE+9,4,sc2.y)+src.z*DQ(W_BASE+9,8,sc2.y)+src.w*DQ(W_BASE+9,12,sc2.y); \
-  r2.z+=src.x*DQ(W_BASE+10,0,sc2.z)+src.y*DQ(W_BASE+10,4,sc2.z)+src.z*DQ(W_BASE+10,8,sc2.z)+src.w*DQ(W_BASE+10,12,sc2.z); \
-  r2.w+=src.x*DQ(W_BASE+11,0,sc2.w)+src.y*DQ(W_BASE+11,4,sc2.w)+src.z*DQ(W_BASE+11,8,sc2.w)+src.w*DQ(W_BASE+11,12,sc2.w); \
-  r3.x+=src.x*DQ(W_BASE+12,0,sc3.x)+src.y*DQ(W_BASE+12,4,sc3.x)+src.z*DQ(W_BASE+12,8,sc3.x)+src.w*DQ(W_BASE+12,12,sc3.x); \
-  r3.y+=src.x*DQ(W_BASE+13,0,sc3.y)+src.y*DQ(W_BASE+13,4,sc3.y)+src.z*DQ(W_BASE+13,8,sc3.y)+src.w*DQ(W_BASE+13,12,sc3.y); \
-  r3.z+=src.x*DQ(W_BASE+14,0,sc3.z)+src.y*DQ(W_BASE+14,4,sc3.z)+src.z*DQ(W_BASE+14,8,sc3.z)+src.w*DQ(W_BASE+14,12,sc3.z); \
-  r3.w+=src.x*DQ(W_BASE+15,0,sc3.w)+src.y*DQ(W_BASE+15,4,sc3.w)+src.z*DQ(W_BASE+15,8,sc3.w)+src.w*DQ(W_BASE+15,12,sc3.w); \
-  r4.x+=src.x*DQ(W_BASE+16,0,sc4.x)+src.y*DQ(W_BASE+16,4,sc4.x)+src.z*DQ(W_BASE+16,8,sc4.x)+src.w*DQ(W_BASE+16,12,sc4.x); \
-  r4.y+=src.x*DQ(W_BASE+17,0,sc4.y)+src.y*DQ(W_BASE+17,4,sc4.y)+src.z*DQ(W_BASE+17,8,sc4.y)+src.w*DQ(W_BASE+17,12,sc4.y); \
-  r4.z+=src.x*DQ(W_BASE+18,0,sc4.z)+src.y*DQ(W_BASE+18,4,sc4.z)+src.z*DQ(W_BASE+18,8,sc4.z)+src.w*DQ(W_BASE+18,12,sc4.z); \
-  r4.w+=src.x*DQ(W_BASE+19,0,sc4.w)+src.y*DQ(W_BASE+19,4,sc4.w)+src.z*DQ(W_BASE+19,8,sc4.w)+src.w*DQ(W_BASE+19,12,sc4.w); \
-  r5.x+=src.x*DQ(W_BASE+20,0,sc5.x)+src.y*DQ(W_BASE+20,4,sc5.x)+src.z*DQ(W_BASE+20,8,sc5.x)+src.w*DQ(W_BASE+20,12,sc5.x); \
-  r5.y+=src.x*DQ(W_BASE+21,0,sc5.y)+src.y*DQ(W_BASE+21,4,sc5.y)+src.z*DQ(W_BASE+21,8,sc5.y)+src.w*DQ(W_BASE+21,12,sc5.y); \
-  r5.z+=src.x*DQ(W_BASE+22,0,sc5.z)+src.y*DQ(W_BASE+22,4,sc5.z)+src.z*DQ(W_BASE+22,8,sc5.z)+src.w*DQ(W_BASE+22,12,sc5.z); \
-  r5.w+=src.x*DQ(W_BASE+23,0,sc5.w)+src.y*DQ(W_BASE+23,4,sc5.w)+src.z*DQ(W_BASE+23,8,sc5.w)+src.w*DQ(W_BASE+23,12,sc5.w); \
-  r6.x+=src.x*DQ(W_BASE+24,0,sc6.x)+src.y*DQ(W_BASE+24,4,sc6.x)+src.z*DQ(W_BASE+24,8,sc6.x)+src.w*DQ(W_BASE+24,12,sc6.x); \
-  r6.y+=src.x*DQ(W_BASE+25,0,sc6.y)+src.y*DQ(W_BASE+25,4,sc6.y)+src.z*DQ(W_BASE+25,8,sc6.y)+src.w*DQ(W_BASE+25,12,sc6.y); \
-  r6.z+=src.x*DQ(W_BASE+26,0,sc6.z)+src.y*DQ(W_BASE+26,4,sc6.z)+src.z*DQ(W_BASE+26,8,sc6.z)+src.w*DQ(W_BASE+26,12,sc6.z); \
-  r6.w+=src.x*DQ(W_BASE+27,0,sc6.w)+src.y*DQ(W_BASE+27,4,sc6.w)+src.z*DQ(W_BASE+27,8,sc6.w)+src.w*DQ(W_BASE+27,12,sc6.w); \
-  r7.x+=src.x*DQ(W_BASE+28,0,sc7.x)+src.y*DQ(W_BASE+28,4,sc7.x)+src.z*DQ(W_BASE+28,8,sc7.x)+src.w*DQ(W_BASE+28,12,sc7.x); \
-  r7.y+=src.x*DQ(W_BASE+29,0,sc7.y)+src.y*DQ(W_BASE+29,4,sc7.y)+src.z*DQ(W_BASE+29,8,sc7.y)+src.w*DQ(W_BASE+29,12,sc7.y); \
-  r7.z+=src.x*DQ(W_BASE+30,0,sc7.z)+src.y*DQ(W_BASE+30,4,sc7.z)+src.z*DQ(W_BASE+30,8,sc7.z)+src.w*DQ(W_BASE+30,12,sc7.z); \
-  r7.w+=src.x*DQ(W_BASE+31,0,sc7.w)+src.y*DQ(W_BASE+31,4,sc7.w)+src.z*DQ(W_BASE+31,8,sc7.w)+src.w*DQ(W_BASE+31,12,sc7.w); \
-}
+    // Row 0 (src0, 4 k-values per ushort)
+    r0 += src0.x * (half4)(DQ(0,0,sc0.x),DQ(1,0,sc0.y),DQ(2,0,sc0.z),DQ(3,0,sc0.w));
+    r0 += src0.y * (half4)(DQ(0,4,sc0.x),DQ(1,4,sc0.y),DQ(2,4,sc0.z),DQ(3,4,sc0.w));
+    r0 += src0.z * (half4)(DQ(0,8,sc0.x),DQ(1,8,sc0.y),DQ(2,8,sc0.z),DQ(3,8,sc0.w));
+    r0 += src0.w * (half4)(DQ(0,12,sc0.x),DQ(1,12,sc0.y),DQ(2,12,sc0.z),DQ(3,12,sc0.w));
 
-    // Process first 4 src slices from this load
-    DO_SLICE(0, 0)
-    DO_SLICE(1, 32)
-    DO_SLICE(2, 64)
-    DO_SLICE(3, 96)
+    r1 += src0.x * (half4)(DQ(4,0,sc1.x),DQ(5,0,sc1.y),DQ(6,0,sc1.z),DQ(7,0,sc1.w));
+    r1 += src0.y * (half4)(DQ(4,4,sc1.x),DQ(5,4,sc1.y),DQ(6,4,sc1.z),DQ(7,4,sc1.w));
+    r1 += src0.z * (half4)(DQ(4,8,sc1.x),DQ(5,8,sc1.y),DQ(6,8,sc1.z),DQ(7,8,sc1.w));
+    r1 += src0.w * (half4)(DQ(4,12,sc1.x),DQ(5,12,sc1.y),DQ(6,12,sc1.z),DQ(7,12,sc1.w));
 
-    // Process next 4 src slices (second half of loaded data)
-    DO_SLICE(4, 128)
-    DO_SLICE(5, 160)
-    DO_SLICE(6, 192)
-    DO_SLICE(7, 224)
+    r2 += src0.x * (half4)(DQ(8,0,sc2.x),DQ(9,0,sc2.y),DQ(10,0,sc2.z),DQ(11,0,sc2.w));
+    r2 += src0.y * (half4)(DQ(8,4,sc2.x),DQ(9,4,sc2.y),DQ(10,4,sc2.z),DQ(11,4,sc2.w));
+    r2 += src0.z * (half4)(DQ(8,8,sc2.x),DQ(9,8,sc2.y),DQ(10,8,sc2.z),DQ(11,8,sc2.w));
+    r2 += src0.w * (half4)(DQ(8,12,sc2.x),DQ(9,12,sc2.y),DQ(10,12,sc2.z),DQ(11,12,sc2.w));
+
+    r3 += src0.x * (half4)(DQ(12,0,sc3.x),DQ(13,0,sc3.y),DQ(14,0,sc3.z),DQ(15,0,sc3.w));
+    r3 += src0.y * (half4)(DQ(12,4,sc3.x),DQ(13,4,sc3.y),DQ(14,4,sc3.z),DQ(15,4,sc3.w));
+    r3 += src0.z * (half4)(DQ(12,8,sc3.x),DQ(13,8,sc3.y),DQ(14,8,sc3.z),DQ(15,8,sc3.w));
+    r3 += src0.w * (half4)(DQ(12,12,sc3.x),DQ(13,12,sc3.y),DQ(14,12,sc3.z),DQ(15,12,sc3.w));
+
+    r4 += src0.x * (half4)(DQ(16,0,sc4.x),DQ(17,0,sc4.y),DQ(18,0,sc4.z),DQ(19,0,sc4.w));
+    r4 += src0.y * (half4)(DQ(16,4,sc4.x),DQ(17,4,sc4.y),DQ(18,4,sc4.z),DQ(19,4,sc4.w));
+    r4 += src0.z * (half4)(DQ(16,8,sc4.x),DQ(17,8,sc4.y),DQ(18,8,sc4.z),DQ(19,8,sc4.w));
+    r4 += src0.w * (half4)(DQ(16,12,sc4.x),DQ(17,12,sc4.y),DQ(18,12,sc4.z),DQ(19,12,sc4.w));
+
+    r5 += src0.x * (half4)(DQ(20,0,sc5.x),DQ(21,0,sc5.y),DQ(22,0,sc5.z),DQ(23,0,sc5.w));
+    r5 += src0.y * (half4)(DQ(20,4,sc5.x),DQ(21,4,sc5.y),DQ(22,4,sc5.z),DQ(23,4,sc5.w));
+    r5 += src0.z * (half4)(DQ(20,8,sc5.x),DQ(21,8,sc5.y),DQ(22,8,sc5.z),DQ(23,8,sc5.w));
+    r5 += src0.w * (half4)(DQ(20,12,sc5.x),DQ(21,12,sc5.y),DQ(22,12,sc5.z),DQ(23,12,sc5.w));
+
+    r6 += src0.x * (half4)(DQ(24,0,sc6.x),DQ(25,0,sc6.y),DQ(26,0,sc6.z),DQ(27,0,sc6.w));
+    r6 += src0.y * (half4)(DQ(24,4,sc6.x),DQ(25,4,sc6.y),DQ(26,4,sc6.z),DQ(27,4,sc6.w));
+    r6 += src0.z * (half4)(DQ(24,8,sc6.x),DQ(25,8,sc6.y),DQ(26,8,sc6.z),DQ(27,8,sc6.w));
+    r6 += src0.w * (half4)(DQ(24,12,sc6.x),DQ(25,12,sc6.y),DQ(26,12,sc6.z),DQ(27,12,sc6.w));
+
+    r7 += src0.x * (half4)(DQ(28,0,sc7.x),DQ(29,0,sc7.y),DQ(30,0,sc7.z),DQ(31,0,sc7.w));
+    r7 += src0.y * (half4)(DQ(28,4,sc7.x),DQ(29,4,sc7.y),DQ(30,4,sc7.z),DQ(31,4,sc7.w));
+    r7 += src0.z * (half4)(DQ(28,8,sc7.x),DQ(29,8,sc7.y),DQ(30,8,sc7.z),DQ(31,8,sc7.w));
+    r7 += src0.w * (half4)(DQ(28,12,sc7.x),DQ(29,12,sc7.y),DQ(30,12,sc7.z),DQ(31,12,sc7.w));
+
+    // Row 1 (src1)
+    r0 += src1.x * (half4)(DQ(32,0,sc0.x),DQ(33,0,sc0.y),DQ(34,0,sc0.z),DQ(35,0,sc0.w));
+    r0 += src1.y * (half4)(DQ(32,4,sc0.x),DQ(33,4,sc0.y),DQ(34,4,sc0.z),DQ(35,4,sc0.w));
+    r0 += src1.z * (half4)(DQ(32,8,sc0.x),DQ(33,8,sc0.y),DQ(34,8,sc0.z),DQ(35,8,sc0.w));
+    r0 += src1.w * (half4)(DQ(32,12,sc0.x),DQ(33,12,sc0.y),DQ(34,12,sc0.z),DQ(35,12,sc0.w));
+
+    r1 += src1.x * (half4)(DQ(36,0,sc1.x),DQ(37,0,sc1.y),DQ(38,0,sc1.z),DQ(39,0,sc1.w));
+    r1 += src1.y * (half4)(DQ(36,4,sc1.x),DQ(37,4,sc1.y),DQ(38,4,sc1.z),DQ(39,4,sc1.w));
+    r1 += src1.z * (half4)(DQ(36,8,sc1.x),DQ(37,8,sc1.y),DQ(38,8,sc1.z),DQ(39,8,sc1.w));
+    r1 += src1.w * (half4)(DQ(36,12,sc1.x),DQ(37,12,sc1.y),DQ(38,12,sc1.z),DQ(39,12,sc1.w));
+
+    r2 += src1.x * (half4)(DQ(40,0,sc2.x),DQ(41,0,sc2.y),DQ(42,0,sc2.z),DQ(43,0,sc2.w));
+    r2 += src1.y * (half4)(DQ(40,4,sc2.x),DQ(41,4,sc2.y),DQ(42,4,sc2.z),DQ(43,4,sc2.w));
+    r2 += src1.z * (half4)(DQ(40,8,sc2.x),DQ(41,8,sc2.y),DQ(42,8,sc2.z),DQ(43,8,sc2.w));
+    r2 += src1.w * (half4)(DQ(40,12,sc2.x),DQ(41,12,sc2.y),DQ(42,12,sc2.z),DQ(43,12,sc2.w));
+
+    r3 += src1.x * (half4)(DQ(44,0,sc3.x),DQ(45,0,sc3.y),DQ(46,0,sc3.z),DQ(47,0,sc3.w));
+    r3 += src1.y * (half4)(DQ(44,4,sc3.x),DQ(45,4,sc3.y),DQ(46,4,sc3.z),DQ(47,4,sc3.w));
+    r3 += src1.z * (half4)(DQ(44,8,sc3.x),DQ(45,8,sc3.y),DQ(46,8,sc3.z),DQ(47,8,sc3.w));
+    r3 += src1.w * (half4)(DQ(44,12,sc3.x),DQ(45,12,sc3.y),DQ(46,12,sc3.z),DQ(47,12,sc3.w));
+
+    r4 += src1.x * (half4)(DQ(48,0,sc4.x),DQ(49,0,sc4.y),DQ(50,0,sc4.z),DQ(51,0,sc4.w));
+    r4 += src1.y * (half4)(DQ(48,4,sc4.x),DQ(49,4,sc4.y),DQ(50,4,sc4.z),DQ(51,4,sc4.w));
+    r4 += src1.z * (half4)(DQ(48,8,sc4.x),DQ(49,8,sc4.y),DQ(50,8,sc4.z),DQ(51,8,sc4.w));
+    r4 += src1.w * (half4)(DQ(48,12,sc4.x),DQ(49,12,sc4.y),DQ(50,12,sc4.z),DQ(51,12,sc4.w));
+
+    r5 += src1.x * (half4)(DQ(52,0,sc5.x),DQ(53,0,sc5.y),DQ(54,0,sc5.z),DQ(55,0,sc5.w));
+    r5 += src1.y * (half4)(DQ(52,4,sc5.x),DQ(53,4,sc5.y),DQ(54,4,sc5.z),DQ(55,4,sc5.w));
+    r5 += src1.z * (half4)(DQ(52,8,sc5.x),DQ(53,8,sc5.y),DQ(54,8,sc5.z),DQ(55,8,sc5.w));
+    r5 += src1.w * (half4)(DQ(52,12,sc5.x),DQ(53,12,sc5.y),DQ(54,12,sc5.z),DQ(55,12,sc5.w));
+
+    r6 += src1.x * (half4)(DQ(56,0,sc6.x),DQ(57,0,sc6.y),DQ(58,0,sc6.z),DQ(59,0,sc6.w));
+    r6 += src1.y * (half4)(DQ(56,4,sc6.x),DQ(57,4,sc6.y),DQ(58,4,sc6.z),DQ(59,4,sc6.w));
+    r6 += src1.z * (half4)(DQ(56,8,sc6.x),DQ(57,8,sc6.y),DQ(58,8,sc6.z),DQ(59,8,sc6.w));
+    r6 += src1.w * (half4)(DQ(56,12,sc6.x),DQ(57,12,sc6.y),DQ(58,12,sc6.z),DQ(59,12,sc6.w));
+
+    r7 += src1.x * (half4)(DQ(60,0,sc7.x),DQ(61,0,sc7.y),DQ(62,0,sc7.z),DQ(63,0,sc7.w));
+    r7 += src1.y * (half4)(DQ(60,4,sc7.x),DQ(61,4,sc7.y),DQ(62,4,sc7.z),DQ(63,4,sc7.w));
+    r7 += src1.z * (half4)(DQ(60,8,sc7.x),DQ(61,8,sc7.y),DQ(62,8,sc7.z),DQ(63,8,sc7.w));
+    r7 += src1.w * (half4)(DQ(60,12,sc7.x),DQ(61,12,sc7.y),DQ(62,12,sc7.z),DQ(63,12,sc7.w));
 
 #undef DQ
-#undef DO_SLICE
 
-    coord_s += 8;
-  } while (coord_s < src_slices);
+  } while (coord_s < shared_int4_1.w);
 
   int cs = Z * 8;
   if (cs<shared_int4_0.y) write_imageh(dst_tensor_image2d,(int2)(X,Y*shared_int4_0.y+cs),r0); cs++;
