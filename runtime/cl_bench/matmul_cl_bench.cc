@@ -249,6 +249,83 @@ __kernel void gemm_tiled_fp16(
 }
 )";
 
+// Wave-memory GEMM: uses cl_khr_subgroups to broadcast weights across the
+// wave (subgroup). On Adreno 830, wave_size=64 for fp16.
+//
+// Each wave computes a WG_M × WG_N tile of C.
+// - Threads in the wave are mapped as (WG_M/TM) × (WG_N/TN)
+// - Each thread computes a TM×TN sub-tile of C
+// - Inner K loop: each thread loads TM A values + TN B values
+//   and broadcasts to all via sub_group_broadcast
+// - Accumulate in fp32 for precision
+//
+// Work group: 1D with wave_size threads (Adreno requires this for subgroups)
+// Global: (ceil(N/WG_N), ceil(M/WG_M)) * wave_size
+static const char* kGemmKernelWaveFp16 = R"(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
+
+#define WAVE 64
+#define TM 4
+#define TN 4
+#define ROWS_PER_WAVE 8
+#define COLS_PER_WAVE 8
+
+__attribute__((reqd_work_group_size(WAVE, 1, 1)))
+__kernel void gemm_wave_fp16(
+    __global const half* restrict A,
+    __global const half* restrict B,
+    __global half* restrict C,
+    const int M, const int N, const int K) {
+
+  const int wg_row = get_group_id(1);
+  const int wg_col = get_group_id(0);
+  const int lane = get_sub_group_local_id();
+
+  const int lane_row = lane / COLS_PER_WAVE;
+  const int lane_col = lane % COLS_PER_WAVE;
+
+  const int m_base = wg_row * (ROWS_PER_WAVE * TM) + lane_row * TM;
+  const int n_base = wg_col * (COLS_PER_WAVE * TN) + lane_col * TN;
+
+  float acc[TM][TN];
+  for (int i = 0; i < TM; ++i)
+    for (int j = 0; j < TN; ++j)
+      acc[i][j] = 0.0f;
+
+  for (int k = 0; k < K; ++k) {
+    half a_priv[TM];
+    for (int i = 0; i < TM; ++i) {
+      int row = m_base + i;
+      a_priv[i] = (row < M) ? A[row * K + k] : 0.0h;
+    }
+
+    half b_priv[TN];
+    for (int j = 0; j < TN; ++j) {
+      int col = n_base + j;
+      b_priv[j] = (col < N) ? B[k * N + col] : 0.0h;
+    }
+
+    for (int i = 0; i < TM; ++i) {
+      float a_val = (float)a_priv[i];
+      for (int j = 0; j < TN; ++j) {
+        acc[i][j] += a_val * (float)b_priv[j];
+      }
+    }
+  }
+
+  for (int i = 0; i < TM; ++i) {
+    int row = m_base + i;
+    if (row >= M) continue;
+    for (int j = 0; j < TN; ++j) {
+      int col = n_base + j;
+      if (col < N)
+        C[row * N + col] = (half)acc[i][j];
+    }
+  }
+}
+)";
+
 // fp32 versions as fallback if fp16 is not supported.
 static const char* kGemmKernelTiledFp32 = R"(
 #define TS 16
@@ -416,7 +493,8 @@ struct BenchResult {
 static bool BenchmarkShape(
     const CLFunctions& cl, cl_context ctx, cl_command_queue queue,
     cl_command_queue prof_queue, cl_kernel kernel,
-    const Shape& shape, bool is_fp16, const Args& args, BenchResult* out) {
+    const Shape& shape, bool is_fp16, bool is_wave,
+    const Args& args, BenchResult* out) {
   int M = shape.m, N = shape.n, K = shape.k;
   size_t elem_size = is_fp16 ? 2 : 4;
   size_t a_bytes = (size_t)M * K * elem_size;
@@ -477,15 +555,31 @@ static bool BenchmarkShape(
   cl.SetKernelArg(kernel, 4, sizeof(int), &N);
   cl.SetKernelArg(kernel, 5, sizeof(int), &K);
 
-  size_t local_work[2] = {16, 16};
-  size_t global_work[2] = {
-      static_cast<size_t>(((M + 15) / 16) * 16),
-      static_cast<size_t>(((N + 15) / 16) * 16),
-  };
+  cl_uint ndim;
+  size_t local_work_2d[2] = {16, 16};
+  size_t global_work_2d[2];
+  size_t local_work_wave[2] = {64, 1};
+  size_t global_work_wave[2];
+  size_t *local_work, *global_work;
+
+  if (is_wave) {
+    // Wave kernel: WG_N=COLS_PER_WAVE*TN=32, WG_M=ROWS_PER_WAVE*TM=32
+    global_work_wave[0] = static_cast<size_t>(((N + 31) / 32)) * 64;
+    global_work_wave[1] = static_cast<size_t>((M + 31) / 32);
+    local_work = local_work_wave;
+    global_work = global_work_wave;
+    ndim = 2;
+  } else {
+    global_work_2d[0] = static_cast<size_t>(((M + 15) / 16) * 16);
+    global_work_2d[1] = static_cast<size_t>(((N + 15) / 16) * 16);
+    local_work = local_work_2d;
+    global_work = global_work_2d;
+    ndim = 2;
+  }
 
   // Warmup
   for (int i = 0; i < args.warmup; ++i) {
-    cl.EnqueueNDRangeKernel(queue, kernel, 2, nullptr, global_work,
+    cl.EnqueueNDRangeKernel(queue, kernel, ndim, nullptr, global_work,
                             local_work, 0, nullptr, nullptr);
   }
   cl.Finish(queue);
@@ -493,7 +587,7 @@ static bool BenchmarkShape(
   // Timed: burst-submit all iters, then clFinish once (wall-clock).
   auto t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < args.iters; ++i) {
-    cl.EnqueueNDRangeKernel(queue, kernel, 2, nullptr, global_work,
+    cl.EnqueueNDRangeKernel(queue, kernel, ndim, nullptr, global_work,
                             local_work, 0, nullptr, nullptr);
   }
   cl.Finish(queue);
@@ -506,7 +600,7 @@ static bool BenchmarkShape(
   wall_times.reserve(args.iters);
   for (int i = 0; i < args.iters; ++i) {
     auto s = std::chrono::high_resolution_clock::now();
-    cl.EnqueueNDRangeKernel(queue, kernel, 2, nullptr, global_work,
+    cl.EnqueueNDRangeKernel(queue, kernel, ndim, nullptr, global_work,
                             local_work, 0, nullptr, nullptr);
     cl.Finish(queue);
     auto e = std::chrono::high_resolution_clock::now();
@@ -527,7 +621,7 @@ static bool BenchmarkShape(
     gpu_times.reserve(args.iters);
     for (int i = 0; i < args.iters; ++i) {
       cl_event ev = nullptr;
-      cl.EnqueueNDRangeKernel(prof_queue, kernel, 2, nullptr, global_work,
+      cl.EnqueueNDRangeKernel(prof_queue, kernel, ndim, nullptr, global_work,
                               local_work, 0, nullptr, &ev);
       cl.Finish(prof_queue);
       cl_ulong ts_start = 0, ts_end = 0;
@@ -642,10 +736,14 @@ int main(int argc, char** argv) {
   }
 
   // Build kernel.
-  bool is_fp16 = (args.dtype == "fp16");
+  bool is_fp16 = (args.dtype == "fp16" || args.dtype == "fp16_wave");
+  bool is_wave = (args.dtype == "fp16_wave");
   const char* kernel_src;
   const char* kernel_name;
-  if (is_fp16) {
+  if (is_wave) {
+    kernel_src = kGemmKernelWaveFp16;
+    kernel_name = "gemm_wave_fp16";
+  } else if (is_fp16) {
     kernel_src = kGemmKernelTiledFp16;
     kernel_name = "gemm_tiled_fp16";
   } else {
@@ -684,7 +782,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "\n[cl_bench] [%zu/%zu] M=%d N=%d K=%d (%.3f GFLOPS)\n",
             i + 1, shapes.size(), s.m, s.n, s.k, s.gflops());
     BenchResult res;
-    if (BenchmarkShape(cl, ctx, queue, prof_queue, kernel, s, is_fp16, args, &res)) {
+    if (BenchmarkShape(cl, ctx, queue, prof_queue, kernel, s, is_fp16, is_wave, args, &res)) {
       fprintf(stderr,
               "  wall: avg=%.1f us  min=%.1f  p50=%.1f  p95=%.1f  max=%.1f\n"
               "  gpu:  avg=%.1f us  min=%.1f\n"
