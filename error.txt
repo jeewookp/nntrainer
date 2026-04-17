@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 775 bytes | 387.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1017 bytes | 339.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   5c80a942..ecc0daa5  litert_lm  -> origin/litert_lm
-Updating 5c80a942..ecc0daa5
+   46b12507..ab9c61e7  litert_lm  -> origin/litert_lm
+Updating 46b12507..ab9c61e7
 Fast-forward
- runtime/cl_bench/BUILD | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ runtime/cl_bench/conv_generic_bench.cc | 3 +++
+ 1 file changed, 3 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
 [conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [conv_bench.sh] === ConvGeneric Matmul Benchmark ===
@@ -30,12 +30,12 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (1 packages loaded, 2 targets configured).
+INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //runtime/cl_bench:conv_generic_bench up-to-date:
   bazel-bin/runtime/cl_bench/conv_generic_bench
-INFO: Elapsed time: 0.199s, Critical Path: 0.05s
-INFO: 3 processes: 2 internal, 1 local.
+INFO: Elapsed time: 1.794s, Critical Path: 1.70s
+INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
 [conv_bench.sh] adb push ...
@@ -80,6 +80,7 @@ INFO: Loaded OpenCL library with dlopen.
   ERROR: No object ref with name - src_tensor
 
 [conv_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
-^C
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+  ERROR: No object ref with name - src_tensor
+
+[conv_bench] [13/61] SKIP 1x262144x1536: 768MB > 512MB
 
