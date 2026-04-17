@@ -1,17 +1,18 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.67 KiB | 341.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.97 KiB | 402.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   476d01c7..702c5c67  litert_lm  -> origin/litert_lm
-Updating 476d01c7..702c5c67
+   d88b288b..b0fb7e48  litert_lm  -> origin/litert_lm
+Updating d88b288b..b0fb7e48
 Fast-forward
- runtime/cl_bench/delegate_kernel_bench.cc | 30 +++++++++++++++++++++++++-----
- temp_litert_dk_bench.sh                   |  6 ++++++
- 2 files changed, 31 insertions(+), 5 deletions(-)
+ runtime/cl_bench/BUILD                    |  2 +-
+ runtime/cl_bench/delegate_kernel_bench.cc | 33 +++++++++++++++++++++++++++++++++
+ temp_litert_dk_bench.sh                   | 14 +++++++++-----
+ 3 files changed, 43 insertions(+), 6 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ DK_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -28,17 +29,20 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loaded, 0 targets configured).
+INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (1 packages loaded, 2 targets configured).
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.782s, Critical Path: 0.69s
-INFO: 3 processes: 1 internal, 2 local.
-INFO: Build completed successfully, 3 total actions
+INFO: Elapsed time: 0.856s, Critical Path: 0.72s
+INFO: 4 processes: 2 internal, 2 local.
+INFO: Build completed successfully, 4 total actions
 
 
-[dk_bench.sh] Attempting GPU freq boost ...
-1200000000
+[dk_bench.sh] GPU freq info:
+  governor: msm-adreno-tz
+  cur_freq: 1200000000
+  max_freq: 1200000000
+  min_freq: 160000000
 
 [dk_bench.sh] Running (taskset f0) ...
 [dk_bench] Delegate kernel benchmark
@@ -47,18 +51,20 @@ INFO: Build completed successfully, 3 total actions
 [dk_bench] cl_file=cl_intercept/program_002.cl
 [dk_bench] Loaded 7438 bytes CL source
 [dk_bench] GPU: QUALCOMM Adreno(TM) 830
+[dk_bench] EGL 1.5 initialized
+[dk_bench] EGL context active (GPU should boost)
 [dk_bench] clSetPerfHintQCOM(HIGH): OK
 [dk_bench] Build opts: '-qcom-accelerate-16-bit=true -cl-std=CL2.0'
 [dk_bench] Kernel compiled OK
 [dk_bench] Initializing data ...
 [dk_bench] global=(6144,8,4) local=(128,1,4)
 [dk_bench] s0=(1,1536,1024,32) s1=(384,0,0,384) s2=(1,1,0,0)
-[dk_bench] Warmup 5 ...
-[dk_bench] Timed 50 iters (burst) ...
+[dk_bench] Warmup 50 ...
+[dk_bench] Timed 100 iters (burst) ...
 
 [dk_bench] Results: M=1024 N=6144 K=1536
-  wall: 6160.8 us  TFLOPS=3.137
-  gpu:  6089.5 us  TFLOPS=3.174
+  wall: 6124.8 us  TFLOPS=3.156
+  gpu:  6089.6 us  TFLOPS=3.174
   (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
 
 [dk_bench] Verifying output ...
