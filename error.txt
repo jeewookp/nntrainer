@@ -1,3 +1,21 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 4, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.08 KiB | 1.08 MiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   3a132f2d..3520d754  litert_lm  -> origin/litert_lm
+Updating 3a132f2d..3520d754
+Fast-forward
+ temp_litert_restore_delegate.sh | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+ create mode 100755 temp_litert_restore_delegate.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_restore_delegate.sh 
+[restore.sh] Restoring original delegate .so files ...
+[restore.sh] Done.
+
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ MATMUL_MICRO_SHAPES="1024x6144x1536" MATMUL_MICRO_ITERS=50 ./temp_litert_matmul_micro.sh 
 [micro.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [micro.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
@@ -28,7 +46,7 @@ INFO: Analyzed target //runtime/engine:matmul_micro_benchmark (0 packages loaded
 INFO: Found 1 target...
 Target //runtime/engine:matmul_micro_benchmark up-to-date:
   bazel-bin/runtime/engine/matmul_micro_benchmark
-INFO: Elapsed time: 0.118s, Critical Path: 0.00s
+INFO: Elapsed time: 0.085s, Critical Path: 0.00s
 INFO: 1 process: 1 internal.
 INFO: Build completed successfully, 1 total action
 [micro.sh] libLiteRt.so : bazel-bin/runtime/engine/matmul_micro_benchmark.runfiles/litert/litert/c/libLiteRt.so
@@ -43,9 +61,9 @@ INFO: Build completed successfully, 1 total action
 INFO: [environment.cc:30] Creating LiteRT environment with options
 WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
 INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074d9a7c3c0, name=LiteRT GPU
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007a36594e10, name=LiteRT GPU
 INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb4000074d9a7b1d0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007a36594860, name=CpuAccelerator
 INFO: [cpu_registry.cc:40] CPU accelerator registered.
 INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
 INFO: Initialized TensorFlow Lite runtime.
