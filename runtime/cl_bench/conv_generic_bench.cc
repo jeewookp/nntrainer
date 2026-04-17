@@ -131,9 +131,12 @@ CalculationsPrecision GetPrecision(const std::string& s) {
 }
 
 // Map matmul C[M,N] = A[M,K] * B[K,N] to 1x1 convolution:
-//   input:  BHWC(1, M, 1, K)   — batch=1, height=M, width=1, channels=K
+//   input:  BHWC(1, 1, M, K)   — batch=1, height=1, width=M, channels=K
 //   filter: OHWI(N, 1, 1, K)   — N output channels, 1x1 kernel, K input ch
-//   output: BHWC(1, M, 1, N)
+//   output: BHWC(1, 1, M, N)
+// M goes to WIDTH (not height) to match TFLite delegate's FC→conv mapping.
+// ConvGeneric's workgroup is 8×2×1 (X=8 threads for width), so width=1
+// wastes 7/8 threads. With M in width, all threads produce useful output.
 absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
                             CalculationsPrecision precision,
                             int warmup, int iters, BenchResult* out) {
@@ -157,10 +160,10 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   TensorStorageType storage = TensorStorageType::IMAGE_BUFFER;
   TensorDescriptor src_desc =
       TensorDescriptor(data_type, storage, Layout::HWC);
-  src_desc.SetBHWCShape(BHWC(1, M, 1, K));
+  src_desc.SetBHWCShape(BHWC(1, 1, M, K));
   TensorDescriptor dst_desc =
       TensorDescriptor(data_type, storage, Layout::HWC);
-  dst_desc.SetBHWCShape(BHWC(1, M, 1, N));
+  dst_desc.SetBHWCShape(BHWC(1, 1, M, N));
 
   op_def.src_tensors.push_back(src_desc);
   op_def.dst_tensors.push_back(dst_desc);
@@ -182,7 +185,7 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   attr.bias.data.resize(N, 0.0f);
 
   // Create ConvGeneric — this selects Adreno-optimized kernel params.
-  BHWC dst_shape(1, M, 1, N);
+  BHWC dst_shape(1, 1, M, N);
   ConvGeneric conv = CreateConvGeneric(env->GetDevicePtr()->info_, op_def, attr,
                                        &dst_shape);
 
