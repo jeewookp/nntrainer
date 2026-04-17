@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.12 KiB | 380.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1.23 KiB | 314.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   93151044..217434ff  litert_lm  -> origin/litert_lm
-Updating 93151044..217434ff
+   72044b8b..ff881c0a  litert_lm  -> origin/litert_lm
+Updating 72044b8b..ff881c0a
 Fast-forward
- runtime/cl_bench/conv_generic_bench.cc | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ runtime/cl_bench/conv_generic_bench.cc | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
 [conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [conv_bench.sh] === ConvGeneric Matmul Benchmark ===
@@ -34,199 +34,219 @@ INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (0 packages loaded, 
 INFO: Found 1 target...
 Target //runtime/cl_bench:conv_generic_bench up-to-date:
   bazel-bin/runtime/cl_bench/conv_generic_bench
-INFO: Elapsed time: 1.778s, Critical Path: 1.70s
+INFO: Elapsed time: 1.800s, Critical Path: 1.70s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
 [conv_bench.sh] adb push ...
 
 [conv_bench.sh] Running on device (taskset f0) ...
-INFO: Loaded OpenCL library with dlopen.
 [conv_bench] TFLite GPU ConvGeneric matmul benchmark
 [conv_bench] precision=fp16 warmup=5 iters=50 shapes=61
+INFO: Loaded OpenCL library with dlopen.
 [conv_bench] GPU: QUALCOMM Adreno(TM) 830 (12 CUs)
 
 [conv_bench] [1/61] M=1 N=256 K=1536 (0.001 GFLOPS)
-  wall: avg=118.2 us  TFLOPS=0.007
-  gpu:  avg=114.6 us  TFLOPS=0.007
+  wall: avg=73.7 us  TFLOPS=0.011
+  gpu:  avg=89.3 us  TFLOPS=0.009
 
 [conv_bench] [2/61] M=1 N=512 K=1536 (0.002 GFLOPS)
-  wall: avg=111.6 us  TFLOPS=0.014
-  gpu:  avg=107.1 us  TFLOPS=0.015
+  wall: avg=112.0 us  TFLOPS=0.014
+  gpu:  avg=108.7 us  TFLOPS=0.014
 
 [conv_bench] [3/61] M=1 N=1536 K=256 (0.001 GFLOPS)
-  wall: avg=44.1 us  TFLOPS=0.018
-  gpu:  avg=40.8 us  TFLOPS=0.019
+  wall: avg=52.1 us  TFLOPS=0.015
+  gpu:  avg=40.9 us  TFLOPS=0.019
 
 [conv_bench] [4/61] M=1 N=1536 K=2048 (0.006 GFLOPS)
-  wall: avg=315.7 us  TFLOPS=0.020
-  gpu:  avg=306.2 us  TFLOPS=0.021
+  wall: avg=316.3 us  TFLOPS=0.020
+  gpu:  avg=303.9 us  TFLOPS=0.021
 
 [conv_bench] [5/61] M=1 N=1536 K=4096 (0.013 GFLOPS)
-  wall: avg=1390.5 us  TFLOPS=0.009
-  gpu:  avg=613.7 us  TFLOPS=0.021
+  wall: avg=1374.0 us  TFLOPS=0.009
+  gpu:  avg=613.0 us  TFLOPS=0.021
 
 [conv_bench] [6/61] M=1 N=1536 K=6144 (0.019 GFLOPS)
-  wall: avg=2130.1 us  TFLOPS=0.009
-  gpu:  avg=926.3 us  TFLOPS=0.020
+  wall: avg=2069.2 us  TFLOPS=0.009
+  gpu:  avg=922.3 us  TFLOPS=0.020
 
 [conv_bench] [7/61] M=1 N=1536 K=12288 (0.038 GFLOPS)
-  wall: avg=1880.7 us  TFLOPS=0.020
-  gpu:  avg=1852.2 us  TFLOPS=0.020
+  wall: avg=1869.1 us  TFLOPS=0.020
+  gpu:  avg=1850.0 us  TFLOPS=0.020
 
 [conv_bench] [8/61] M=1 N=2048 K=1536 (0.006 GFLOPS)
-  wall: avg=686.7 us  TFLOPS=0.009
-  gpu:  avg=340.1 us  TFLOPS=0.018
+  wall: avg=677.3 us  TFLOPS=0.009
+  gpu:  avg=327.8 us  TFLOPS=0.019
 
 [conv_bench] [9/61] M=1 N=4096 K=1536 (0.013 GFLOPS)
-  wall: avg=1280.8 us  TFLOPS=0.010
-  gpu:  avg=605.1 us  TFLOPS=0.021
+  wall: avg=1276.0 us  TFLOPS=0.010
+  gpu:  avg=604.8 us  TFLOPS=0.021
 
 [conv_bench] [10/61] M=1 N=6144 K=1536 (0.019 GFLOPS)
-  wall: avg=923.6 us  TFLOPS=0.020
-  gpu:  avg=905.2 us  TFLOPS=0.021
+  wall: avg=919.9 us  TFLOPS=0.021
+  gpu:  avg=905.6 us  TFLOPS=0.021
 
 [conv_bench] [11/61] M=1 N=8960 K=1536 (0.028 GFLOPS)
-  wall: avg=2778.5 us  TFLOPS=0.010
-  gpu:  avg=1305.9 us  TFLOPS=0.021
+  wall: avg=1318.4 us  TFLOPS=0.021
+  gpu:  avg=1300.1 us  TFLOPS=0.021
 
 [conv_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
-  wall: avg=2536.0 us  TFLOPS=0.015
-  gpu:  avg=2464.5 us  TFLOPS=0.015
+  wall: avg=2544.6 us  TFLOPS=0.015
+  gpu:  avg=2473.4 us  TFLOPS=0.015
 
 [conv_bench] [13/61] SKIP 1x262144x1536: 768MB > 512MB
 
 [conv_bench] [14/61] M=4 N=256 K=1536 (0.003 GFLOPS)
-  wall: avg=96.8 us  TFLOPS=0.033
-  gpu:  avg=104.5 us  TFLOPS=0.030
+  wall: avg=66.3 us  TFLOPS=0.047
+  gpu:  avg=97.5 us  TFLOPS=0.032
 
 [conv_bench] [15/61] M=4 N=512 K=1536 (0.006 GFLOPS)
-  wall: avg=172.6 us  TFLOPS=0.036
-  gpu:  avg=177.9 us  TFLOPS=0.035
+  wall: avg=107.5 us  TFLOPS=0.059
+  gpu:  avg=105.6 us  TFLOPS=0.060
 
 [conv_bench] [16/61] M=4 N=1536 K=256 (0.003 GFLOPS)
-  wall: avg=84.0 us  TFLOPS=0.037
-  gpu:  avg=80.7 us  TFLOPS=0.039
+  wall: avg=45.7 us  TFLOPS=0.069
+  gpu:  avg=41.1 us  TFLOPS=0.076
 
 [conv_bench] [17/61] M=4 N=1536 K=2048 (0.025 GFLOPS)
-  wall: avg=1282.1 us  TFLOPS=0.020
-  gpu:  avg=612.2 us  TFLOPS=0.041
+  wall: avg=689.8 us  TFLOPS=0.036
+  gpu:  avg=306.4 us  TFLOPS=0.082
 
 [conv_bench] [18/61] M=4 N=1536 K=4096 (0.050 GFLOPS)
-  wall: avg=1254.2 us  TFLOPS=0.040
-  gpu:  avg=1239.3 us  TFLOPS=0.041
+  wall: avg=1381.3 us  TFLOPS=0.036
+  gpu:  avg=617.8 us  TFLOPS=0.081
 
 [conv_bench] [19/61] M=4 N=1536 K=6144 (0.075 GFLOPS)
-  wall: avg=1882.7 us  TFLOPS=0.040
-  gpu:  avg=1863.6 us  TFLOPS=0.041
+  wall: avg=949.1 us  TFLOPS=0.080
+  gpu:  avg=928.1 us  TFLOPS=0.081
 
 [conv_bench] [20/61] M=4 N=1536 K=12288 (0.151 GFLOPS)
-  wall: avg=4199.4 us  TFLOPS=0.036
-  gpu:  avg=4004.4 us  TFLOPS=0.038
+  wall: avg=1879.1 us  TFLOPS=0.080
+  gpu:  avg=1856.3 us  TFLOPS=0.081
 
 [conv_bench] [21/61] M=4 N=2048 K=1536 (0.025 GFLOPS)
-  wall: avg=1269.6 us  TFLOPS=0.020
-  gpu:  avg=599.6 us  TFLOPS=0.042
+  wall: avg=340.6 us  TFLOPS=0.074
+  gpu:  avg=336.0 us  TFLOPS=0.075
 
 [conv_bench] [22/61] M=4 N=4096 K=1536 (0.050 GFLOPS)
-  wall: avg=1656.9 us  TFLOPS=0.030
-  gpu:  avg=1584.3 us  TFLOPS=0.032
+  wall: avg=1562.5 us  TFLOPS=0.032
+  gpu:  avg=845.1 us  TFLOPS=0.060
 
 [conv_bench] [23/61] M=4 N=6144 K=1536 (0.075 GFLOPS)
-  wall: avg=1794.6 us  TFLOPS=0.042
-  gpu:  avg=1777.0 us  TFLOPS=0.042
+  wall: avg=980.6 us  TFLOPS=0.077
+  gpu:  avg=957.8 us  TFLOPS=0.079
 
 [conv_bench] [24/61] M=4 N=8960 K=1536 (0.110 GFLOPS)
-  wall: avg=2640.4 us  TFLOPS=0.042
-  gpu:  avg=2567.2 us  TFLOPS=0.043
+  wall: avg=1382.1 us  TFLOPS=0.080
+  gpu:  avg=1364.8 us  TFLOPS=0.081
 
 [conv_bench] [25/61] M=4 N=12288 K=1536 (0.151 GFLOPS)
-  wall: avg=3146.4 us  TFLOPS=0.048
-  gpu:  avg=3120.5 us  TFLOPS=0.048
+  wall: avg=3136.1 us  TFLOPS=0.048
+  gpu:  avg=3116.1 us  TFLOPS=0.048
 
 [conv_bench] [26/61] SKIP 4x262144x1536: 770MB > 512MB
 
 [conv_bench] [27/61] M=8 N=256 K=256 (0.001 GFLOPS)
-  wall: avg=35.1 us  TFLOPS=0.030
-  gpu:  avg=30.2 us  TFLOPS=0.035
+  wall: avg=16.9 us  TFLOPS=0.062
+  gpu:  avg=18.0 us  TFLOPS=0.058
 
 [conv_bench] [28/61] M=8 N=512 K=512 (0.004 GFLOPS)
-  wall: avg=114.0 us  TFLOPS=0.037
-  gpu:  avg=114.5 us  TFLOPS=0.037
+  wall: avg=35.9 us  TFLOPS=0.117
+  gpu:  avg=36.0 us  TFLOPS=0.117
 
 [conv_bench] [29/61] SKIP 8x32003x32003: 1954MB > 512MB
 
 [conv_bench] [30/61] M=32 N=256 K=256 (0.004 GFLOPS)
-  wall: avg=118.6 us  TFLOPS=0.035
-  gpu:  avg=103.5 us  TFLOPS=0.041
+  wall: avg=31.6 us  TFLOPS=0.133
+  gpu:  avg=28.8 us  TFLOPS=0.146
 
 [conv_bench] [31/61] M=32 N=512 K=512 (0.017 GFLOPS)
-  wall: avg=517.5 us  TFLOPS=0.032
-  gpu:  avg=603.4 us  TFLOPS=0.028
+  wall: avg=83.3 us  TFLOPS=0.201
+  gpu:  avg=76.7 us  TFLOPS=0.219
 
 [conv_bench] [32/61] M=32 N=515 K=515 (0.017 GFLOPS)
-  wall: avg=525.9 us  TFLOPS=0.032
-  gpu:  avg=614.5 us  TFLOPS=0.028
+  wall: avg=86.5 us  TFLOPS=0.196
+  gpu:  avg=80.0 us  TFLOPS=0.212
 
 [conv_bench] [33/61] SKIP 32x32003x32003: 1957MB > 512MB
 
 [conv_bench] [34/61] M=128 N=256 K=1536 (0.101 GFLOPS)
-  wall: avg=2330.0 us  TFLOPS=0.043
-  gpu:  avg=2308.2 us  TFLOPS=0.044
+  wall: avg=382.6 us  TFLOPS=0.263
+  gpu:  avg=394.4 us  TFLOPS=0.255
 
 [conv_bench] [35/61] M=128 N=512 K=1536 (0.201 GFLOPS)
-  wall: avg=4195.2 us  TFLOPS=0.048
-  gpu:  avg=4116.4 us  TFLOPS=0.049
+  wall: avg=1108.7 us  TFLOPS=0.182
+  gpu:  avg=1091.0 us  TFLOPS=0.185
 
 [conv_bench] [36/61] M=128 N=1536 K=256 (0.101 GFLOPS)
-  wall: avg=2137.9 us  TFLOPS=0.047
-  gpu:  avg=2064.1 us  TFLOPS=0.049
+  wall: avg=528.2 us  TFLOPS=0.191
+  gpu:  avg=521.8 us  TFLOPS=0.193
 
 [conv_bench] [37/61] M=128 N=1536 K=2048 (0.805 GFLOPS)
-  wall: avg=16295.9 us  TFLOPS=0.049
-  gpu:  avg=16224.3 us  TFLOPS=0.050
+  wall: avg=4181.8 us  TFLOPS=0.193
+  gpu:  avg=4112.2 us  TFLOPS=0.196
 
 [conv_bench] [38/61] M=128 N=1536 K=4096 (1.611 GFLOPS)
-  wall: avg=32522.2 us  TFLOPS=0.050
-  gpu:  avg=32446.7 us  TFLOPS=0.050
+  wall: avg=8292.7 us  TFLOPS=0.194
+  gpu:  avg=8222.6 us  TFLOPS=0.196
 
 [conv_bench] [39/61] M=128 N=1536 K=6144 (2.416 GFLOPS)
-  wall: avg=48774.1 us  TFLOPS=0.050
-  gpu:  avg=48702.4 us  TFLOPS=0.050
+  wall: avg=12404.8 us  TFLOPS=0.195
+  gpu:  avg=12334.5 us  TFLOPS=0.196
 
 [conv_bench] [40/61] M=128 N=2048 K=1536 (0.805 GFLOPS)
-  wall: avg=16257.3 us  TFLOPS=0.050
-  gpu:  avg=16238.2 us  TFLOPS=0.050
+  wall: avg=4191.0 us  TFLOPS=0.192
+  gpu:  avg=4118.6 us  TFLOPS=0.196
 
 [conv_bench] [41/61] M=128 N=4096 K=1536 (1.611 GFLOPS)
-  wall: avg=32489.8 us  TFLOPS=0.050
-  gpu:  avg=32413.2 us  TFLOPS=0.050
+  wall: avg=8222.7 us  TFLOPS=0.196
+  gpu:  avg=8151.4 us  TFLOPS=0.198
 
 [conv_bench] [42/61] M=128 N=6144 K=1536 (2.416 GFLOPS)
-  wall: avg=48645.8 us  TFLOPS=0.050
-  gpu:  avg=48574.4 us  TFLOPS=0.050
+  wall: avg=12207.4 us  TFLOPS=0.198
+  gpu:  avg=12189.0 us  TFLOPS=0.198
 
 [conv_bench] [43/61] M=128 N=8960 K=1536 (3.523 GFLOPS)
-  wall: avg=70825.1 us  TFLOPS=0.050
-  gpu:  avg=70755.7 us  TFLOPS=0.050
+  wall: avg=17818.8 us  TFLOPS=0.198
+  gpu:  avg=17748.7 us  TFLOPS=0.199
 
 [conv_bench] [44/61] M=1024 N=256 K=256 (0.134 GFLOPS)
-  wall: avg=2815.5 us  TFLOPS=0.048
-  gpu:  avg=2748.3 us  TFLOPS=0.049
+  wall: avg=718.9 us  TFLOPS=0.187
+  gpu:  avg=697.3 us  TFLOPS=0.192
 
 [conv_bench] [45/61] M=1024 N=256 K=1536 (0.805 GFLOPS)
-  wall: avg=16312.4 us  TFLOPS=0.049
-  gpu:  avg=16241.3 us  TFLOPS=0.050
+  wall: avg=4201.8 us  TFLOPS=0.192
+  gpu:  avg=4126.0 us  TFLOPS=0.195
 
 [conv_bench] [46/61] M=1024 N=512 K=512 (0.537 GFLOPS)
-  wall: avg=10929.5 us  TFLOPS=0.049
-  gpu:  avg=10856.7 us  TFLOPS=0.049
+  wall: avg=2808.4 us  TFLOPS=0.191
+  gpu:  avg=2732.4 us  TFLOPS=0.196
 
 [conv_bench] [47/61] M=1024 N=512 K=1536 (1.611 GFLOPS)
-  wall: avg=32495.9 us  TFLOPS=0.050
-  gpu:  avg=32417.2 us  TFLOPS=0.050
+  wall: avg=8230.6 us  TFLOPS=0.196
+  gpu:  avg=8160.5 us  TFLOPS=0.197
 
 [conv_bench] [48/61] M=1024 N=639 K=639 (0.836 GFLOPS)
+  wall: avg=4328.3 us  TFLOPS=0.193
+  gpu:  avg=4258.1 us  TFLOPS=0.196
+
+[conv_bench] [49/61] M=1024 N=1536 K=256 (0.805 GFLOPS)
+  wall: avg=4150.2 us  TFLOPS=0.194
+  gpu:  avg=4109.8 us  TFLOPS=0.196
+
+[conv_bench] [50/61] M=1024 N=1536 K=2048 (6.442 GFLOPS)
+  wall: avg=32503.4 us  TFLOPS=0.198
+  gpu:  avg=32430.7 us  TFLOPS=0.199
+
+[conv_bench] [51/61] M=1024 N=1536 K=4096 (12.885 GFLOPS)
+  wall: avg=69086.9 us  TFLOPS=0.187
+  gpu:  avg=68487.4 us  TFLOPS=0.188
+
+[conv_bench] [52/61] M=1024 N=1536 K=6144 (19.327 GFLOPS)
+  wall: avg=115979.3 us  TFLOPS=0.167
+  gpu:  avg=117288.1 us  TFLOPS=0.165
+
+[conv_bench] [53/61] M=1024 N=2048 K=1536 (6.442 GFLOPS)
 ^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
