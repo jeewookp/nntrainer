@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.10 KiB | 377.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1.03 KiB | 350.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   f3a8259e..89ef6933  litert_lm  -> origin/litert_lm
-Updating f3a8259e..89ef6933
+   18c208cf..14146740  litert_lm  -> origin/litert_lm
+Updating 18c208cf..14146740
 Fast-forward
- runtime/cl_bench/conv_generic_bench.cc | 5 +++++
- 1 file changed, 5 insertions(+)
+ runtime/cl_bench/conv_generic_bench.cc | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
 [conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [conv_bench.sh] === ConvGeneric Matmul Benchmark ===
@@ -34,154 +35,268 @@ INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (0 packages loaded, 
 INFO: Found 1 target...
 Target //runtime/cl_bench:conv_generic_bench up-to-date:
   bazel-bin/runtime/cl_bench/conv_generic_bench
-INFO: Elapsed time: 1.794s, Critical Path: 1.69s
+INFO: Elapsed time: 1.797s, Critical Path: 1.71s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
 [conv_bench.sh] adb push ...
 
 [conv_bench.sh] Running on device (taskset f0) ...
-INFO: Loaded OpenCL library with dlopen.
 [conv_bench] TFLite GPU ConvGeneric matmul benchmark
 [conv_bench] precision=fp16 warmup=5 iters=50 shapes=61
+INFO: Loaded OpenCL library with dlopen.
 [conv_bench] GPU: QUALCOMM Adreno(TM) 830 (12 CUs)
 
 [conv_bench] [1/61] M=1 N=256 K=1536 (0.001 GFLOPS)
-  wall: avg=163.7 us  TFLOPS=0.005
-  gpu:  avg=83.1 us  TFLOPS=0.009
+  wall: avg=116.9 us  TFLOPS=0.007
+  gpu:  avg=109.4 us  TFLOPS=0.007
 
 [conv_bench] [2/61] M=1 N=512 K=1536 (0.002 GFLOPS)
-  wall: avg=110.3 us  TFLOPS=0.014
-  gpu:  avg=107.0 us  TFLOPS=0.015
+  wall: avg=109.5 us  TFLOPS=0.014
+  gpu:  avg=106.2 us  TFLOPS=0.015
 
 [conv_bench] [3/61] M=1 N=1536 K=256 (0.001 GFLOPS)
-  wall: avg=54.5 us  TFLOPS=0.014
-  gpu:  avg=46.0 us  TFLOPS=0.017
+  wall: avg=52.5 us  TFLOPS=0.015
+  gpu:  avg=40.0 us  TFLOPS=0.020
 
 [conv_bench] [4/61] M=1 N=1536 K=2048 (0.006 GFLOPS)
-  wall: avg=677.6 us  TFLOPS=0.009
-  gpu:  avg=360.8 us  TFLOPS=0.017
+  wall: avg=672.7 us  TFLOPS=0.009
+  gpu:  avg=297.5 us  TFLOPS=0.021
 
 [conv_bench] [5/61] M=1 N=1536 K=4096 (0.013 GFLOPS)
-  wall: avg=1357.1 us  TFLOPS=0.009
-  gpu:  avg=746.4 us  TFLOPS=0.017
+  wall: avg=604.9 us  TFLOPS=0.021
+  gpu:  avg=592.7 us  TFLOPS=0.021
 
 [conv_bench] [6/61] M=1 N=1536 K=6144 (0.019 GFLOPS)
-  wall: avg=2068.9 us  TFLOPS=0.009
-  gpu:  avg=1122.7 us  TFLOPS=0.017
+  wall: avg=908.4 us  TFLOPS=0.021
+  gpu:  avg=885.8 us  TFLOPS=0.021
 
 [conv_bench] [7/61] M=1 N=1536 K=12288 (0.038 GFLOPS)
-  wall: avg=2983.8 us  TFLOPS=0.013
-  gpu:  avg=2819.4 us  TFLOPS=0.013
+  wall: avg=1843.4 us  TFLOPS=0.020
+  gpu:  avg=1772.1 us  TFLOPS=0.021
 
 [conv_bench] [8/61] M=1 N=2048 K=1536 (0.006 GFLOPS)
-  wall: avg=661.9 us  TFLOPS=0.010
-  gpu:  avg=342.5 us  TFLOPS=0.018
+  wall: avg=648.7 us  TFLOPS=0.010
+  gpu:  avg=328.3 us  TFLOPS=0.019
 
 [conv_bench] [9/61] M=1 N=4096 K=1536 (0.013 GFLOPS)
-  wall: avg=1248.4 us  TFLOPS=0.010
-  gpu:  avg=659.3 us  TFLOPS=0.019
+  wall: avg=1228.5 us  TFLOPS=0.010
+  gpu:  avg=596.5 us  TFLOPS=0.021
 
 [conv_bench] [10/61] M=1 N=6144 K=1536 (0.019 GFLOPS)
-  wall: avg=1844.9 us  TFLOPS=0.010
-  gpu:  avg=951.9 us  TFLOPS=0.020
+  wall: avg=899.3 us  TFLOPS=0.021
+  gpu:  avg=887.6 us  TFLOPS=0.021
 
 [conv_bench] [11/61] M=1 N=8960 K=1536 (0.028 GFLOPS)
-  wall: avg=2700.8 us  TFLOPS=0.010
-  gpu:  avg=1361.9 us  TFLOPS=0.020
+  wall: avg=1310.3 us  TFLOPS=0.021
+  gpu:  avg=1291.6 us  TFLOPS=0.021
 
 [conv_bench] [12/61] M=1 N=12288 K=1536 (0.038 GFLOPS)
-  wall: avg=3488.2 us  TFLOPS=0.011
-  gpu:  avg=3462.6 us  TFLOPS=0.011
+  wall: avg=3458.0 us  TFLOPS=0.011
+  gpu:  avg=3385.0 us  TFLOPS=0.011
 
 [conv_bench] [13/61] SKIP 1x262144x1536: 768MB > 512MB
 
 [conv_bench] [14/61] M=4 N=256 K=1536 (0.003 GFLOPS)
-  wall: avg=112.0 us  TFLOPS=0.028
-  gpu:  avg=112.5 us  TFLOPS=0.028
+  wall: avg=86.4 us  TFLOPS=0.036
+  gpu:  avg=108.1 us  TFLOPS=0.029
 
 [conv_bench] [15/61] M=4 N=512 K=1536 (0.006 GFLOPS)
-  wall: avg=199.0 us  TFLOPS=0.032
-  gpu:  avg=208.0 us  TFLOPS=0.030
+  wall: avg=157.0 us  TFLOPS=0.040
+  gpu:  avg=153.9 us  TFLOPS=0.041
 
 [conv_bench] [16/61] M=4 N=1536 K=256 (0.003 GFLOPS)
-  wall: avg=87.5 us  TFLOPS=0.036
-  gpu:  avg=85.1 us  TFLOPS=0.037
+  wall: avg=81.9 us  TFLOPS=0.038
+  gpu:  avg=76.8 us  TFLOPS=0.041
 
 [conv_bench] [17/61] M=4 N=1536 K=2048 (0.025 GFLOPS)
-  wall: avg=1252.9 us  TFLOPS=0.020
-  gpu:  avg=657.6 us  TFLOPS=0.038
+  wall: avg=1246.7 us  TFLOPS=0.020
+  gpu:  avg=588.9 us  TFLOPS=0.043
 
 [conv_bench] [18/61] M=4 N=1536 K=4096 (0.050 GFLOPS)
-  wall: avg=1402.5 us  TFLOPS=0.036
-  gpu:  avg=1383.2 us  TFLOPS=0.036
+  wall: avg=1193.4 us  TFLOPS=0.042
+  gpu:  avg=1177.7 us  TFLOPS=0.043
 
 [conv_bench] [19/61] M=4 N=1536 K=6144 (0.075 GFLOPS)
-  wall: avg=2791.0 us  TFLOPS=0.027
-  gpu:  avg=2680.6 us  TFLOPS=0.028
+  wall: avg=1791.4 us  TFLOPS=0.042
+  gpu:  avg=1769.3 us  TFLOPS=0.043
 
 [conv_bench] [20/61] M=4 N=1536 K=12288 (0.151 GFLOPS)
-  wall: avg=8791.3 us  TFLOPS=0.017
-  gpu:  avg=8819.6 us  TFLOPS=0.017
+  wall: avg=3557.4 us  TFLOPS=0.042
+  gpu:  avg=3533.8 us  TFLOPS=0.043
 
 [conv_bench] [21/61] M=4 N=2048 K=1536 (0.025 GFLOPS)
-  wall: avg=1239.1 us  TFLOPS=0.020
-  gpu:  avg=650.1 us  TFLOPS=0.039
+  wall: avg=1250.7 us  TFLOPS=0.020
+  gpu:  avg=590.7 us  TFLOPS=0.043
 
 [conv_bench] [22/61] M=4 N=4096 K=1536 (0.050 GFLOPS)
-  wall: avg=2510.6 us  TFLOPS=0.020
-  gpu:  avg=2429.4 us  TFLOPS=0.021
+  wall: avg=2518.8 us  TFLOPS=0.020
+  gpu:  avg=2496.1 us  TFLOPS=0.020
 
 [conv_bench] [23/61] M=4 N=6144 K=1536 (0.075 GFLOPS)
-  wall: avg=1859.2 us  TFLOPS=0.041
-  gpu:  avg=1839.8 us  TFLOPS=0.041
+  wall: avg=1795.3 us  TFLOPS=0.042
+  gpu:  avg=1775.4 us  TFLOPS=0.043
 
 [conv_bench] [24/61] M=4 N=8960 K=1536 (0.110 GFLOPS)
-  wall: avg=2725.7 us  TFLOPS=0.040
-  gpu:  avg=2654.0 us  TFLOPS=0.041
+  wall: avg=2583.9 us  TFLOPS=0.043
+  gpu:  avg=2565.1 us  TFLOPS=0.043
 
 [conv_bench] [25/61] M=4 N=12288 K=1536 (0.151 GFLOPS)
-  wall: avg=3467.6 us  TFLOPS=0.044
-  gpu:  avg=3393.6 us  TFLOPS=0.044
+  wall: avg=3043.4 us  TFLOPS=0.050
+  gpu:  avg=3021.4 us  TFLOPS=0.050
 
 [conv_bench] [26/61] SKIP 4x262144x1536: 770MB > 512MB
 
 [conv_bench] [27/61] M=8 N=256 K=256 (0.001 GFLOPS)
-  wall: avg=36.2 us  TFLOPS=0.029
-  gpu:  avg=34.5 us  TFLOPS=0.030
+  wall: avg=33.1 us  TFLOPS=0.032
+  gpu:  avg=28.0 us  TFLOPS=0.037
 
 [conv_bench] [28/61] M=8 N=512 K=512 (0.004 GFLOPS)
-  wall: avg=114.5 us  TFLOPS=0.037
-  gpu:  avg=115.0 us  TFLOPS=0.036
+  wall: avg=105.8 us  TFLOPS=0.040
+  gpu:  avg=108.1 us  TFLOPS=0.039
 
 [conv_bench] [29/61] SKIP 8x32003x32003: 1954MB > 512MB
 
 [conv_bench] [30/61] M=32 N=256 K=256 (0.004 GFLOPS)
-  wall: avg=110.5 us  TFLOPS=0.038
-  gpu:  avg=108.3 us  TFLOPS=0.039
+  wall: avg=104.3 us  TFLOPS=0.040
+  gpu:  avg=101.3 us  TFLOPS=0.041
 
 [conv_bench] [31/61] M=32 N=512 K=512 (0.017 GFLOPS)
-  wall: avg=629.0 us  TFLOPS=0.027
-  gpu:  avg=943.7 us  TFLOPS=0.018
+  wall: avg=619.5 us  TFLOPS=0.027
+  gpu:  avg=967.3 us  TFLOPS=0.017
 
 [conv_bench] [32/61] M=32 N=515 K=515 (0.017 GFLOPS)
-  wall: avg=624.9 us  TFLOPS=0.027
-  gpu:  avg=628.7 us  TFLOPS=0.027
+  wall: avg=758.9 us  TFLOPS=0.022
+  gpu:  avg=946.2 us  TFLOPS=0.018
 
 [conv_bench] [33/61] SKIP 32x32003x32003: 1957MB > 512MB
 
 [conv_bench] [34/61] M=128 N=256 K=1536 (0.101 GFLOPS)
-  wall: avg=2473.5 us  TFLOPS=0.041
-  gpu:  avg=2405.8 us  TFLOPS=0.042
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
 
 [conv_bench] [35/61] M=128 N=512 K=1536 (0.201 GFLOPS)
-  wall: avg=4516.8 us  TFLOPS=0.045
-  gpu:  avg=4438.4 us  TFLOPS=0.045
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
 
 [conv_bench] [36/61] M=128 N=1536 K=256 (0.101 GFLOPS)
-  wall: avg=2248.2 us  TFLOPS=0.045
-  gpu:  avg=2219.4 us  TFLOPS=0.045
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
 
 [conv_bench] [37/61] M=128 N=1536 K=2048 (0.805 GFLOPS)
-  wall: avg=17632.4 us  TFLOPS=0.046
-  gpu:  avg=17563.8 us  TFLOPS=0.046
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [38/61] M=128 N=1536 K=4096 (1.611 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [39/61] M=128 N=1536 K=6144 (2.416 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [40/61] M=128 N=2048 K=1536 (0.805 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [41/61] M=128 N=4096 K=1536 (1.611 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [42/61] M=128 N=6144 K=1536 (2.416 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [43/61] M=128 N=8960 K=1536 (3.523 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [44/61] M=1024 N=256 K=256 (0.134 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [45/61] M=1024 N=256 K=1536 (0.805 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [46/61] M=1024 N=512 K=512 (0.537 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [47/61] M=1024 N=512 K=1536 (1.611 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [48/61] M=1024 N=639 K=639 (0.836 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [49/61] M=1024 N=1536 K=256 (0.805 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [50/61] M=1024 N=1536 K=2048 (6.442 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [51/61] M=1024 N=1536 K=4096 (12.885 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [52/61] M=1024 N=1536 K=6144 (19.327 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [53/61] M=1024 N=2048 K=1536 (6.442 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [54/61] M=1024 N=4096 K=1536 (12.885 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [55/61] M=1024 N=6144 K=1536 (19.327 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [56/61] M=1024 N=8960 K=1536 (28.186 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [57/61] SKIP 1024x32003x32003: 2078MB > 512MB
+
+[conv_bench] [58/61] M=8192 N=256 K=256 (1.074 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [59/61] M=8192 N=512 K=512 (4.295 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [60/61] M=8192 N=1535 K=1535 (38.604 GFLOPS)
+  ERROR: Failed to create 2D texture (clCreateImage): Invalid image size
+
+[conv_bench] [61/61] SKIP 8192x32003x32003: 2953MB > 512MB
+
+[conv_bench] CSV: /data/local/tmp/litert_lm/conv_bench.csv
+
+[conv_bench] Done. 29 shapes benchmarked.
+
+==========================================
+ ConvGeneric Matmul Bench CSV
+==========================================
+    Uses the same ConvGeneric kernel as production prefill.
+    tflops_wall should be close to prefill's 5+ TFLOPS.
+
+m,n,k,count,wall_avg_us,gpu_avg_us,gflops,tflops_wall,tflops_gpu,precision
+1,256,1536,50,116.914,109.440,0.000786,0.006727,0.007186,fp16
+1,512,1536,50,109.469,106.179,0.001573,0.014368,0.014813,fp16
+1,1536,256,50,52.495,40.003,0.000786,0.014981,0.019660,fp16
+1,1536,2048,50,672.669,297.528,0.006291,0.009353,0.021146,fp16
+1,1536,4096,50,604.939,592.742,0.012583,0.020800,0.021228,fp16
+1,1536,6144,50,908.414,885.775,0.018874,0.020777,0.021308,fp16
+1,1536,12288,50,1843.370,1772.088,0.037749,0.020478,0.021302,fp16
+1,2048,1536,50,648.703,328.325,0.006291,0.009699,0.019162,fp16
+1,4096,1536,50,1228.473,596.506,0.012583,0.010243,0.021094,fp16
+1,6144,1536,50,899.253,887.649,0.018874,0.020989,0.021263,fp16
+1,8960,1536,50,1310.297,1291.587,0.027525,0.021007,0.021311,fp16
+1,12288,1536,50,3457.955,3385.042,0.037749,0.010916,0.011152,fp16
+4,256,1536,50,86.428,108.073,0.003146,0.036397,0.029107,fp16
+4,512,1536,50,157.002,153.907,0.006291,0.040072,0.040878,fp16
+4,1536,256,50,81.919,76.800,0.003146,0.038401,0.040960,fp16
+4,1536,2048,50,1246.651,588.923,0.025166,0.020187,0.042732,fp16
+4,1536,4096,50,1193.429,1177.672,0.050332,0.042174,0.042738,fp16
+4,1536,6144,50,1791.353,1769.267,0.075497,0.042145,0.042672,fp16
+4,1536,12288,50,3557.406,3533.752,0.150995,0.042445,0.042729,fp16
+4,2048,1536,50,1250.728,590.700,0.025166,0.020121,0.042603,fp16
+4,4096,1536,50,2518.799,2496.061,0.050332,0.019982,0.020164,fp16
+4,6144,1536,50,1795.255,1775.375,0.075497,0.042054,0.042525,fp16
+4,8960,1536,50,2583.860,2565.100,0.110100,0.042611,0.042922,fp16
+4,12288,1536,50,3043.400,3021.440,0.150995,0.049614,0.049974,fp16
+8,256,256,50,33.132,28.047,0.001049,0.031648,0.037386,fp16
+8,512,512,50,105.812,108.063,0.004194,0.039639,0.038814,fp16
+32,256,256,50,104.293,101.325,0.004194,0.040217,0.041395,fp16
+32,512,512,50,619.519,967.332,0.016777,0.027081,0.017344,fp16
+32,515,515,50,758.913,946.171,0.016974,0.022367,0.017940,fp16
+
+Full log: temp_litert_conv_bench.log
+Full CSV: ./conv_bench.csv
+
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ^C
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
