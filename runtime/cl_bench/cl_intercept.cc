@@ -41,10 +41,10 @@ static void* sym(const char* n) {
 // Generic forwarding macro. Uses a static function pointer per symbol.
 #define FWD(RET, NAME, PARAMS, ARGS) \
   extern "C" RET NAME PARAMS { \
-    typedef RET (*F) PARAMS; \
-    static F f = nullptr; \
-    if (!f) f = (F)sym(#NAME); \
-    return f ARGS; \
+    typedef RET (*_fwd_fn_t) PARAMS; \
+    static _fwd_fn_t _fwd_fn = nullptr; \
+    if (!_fwd_fn) _fwd_fn = (_fwd_fn_t)sym(#NAME); \
+    return _fwd_fn ARGS; \
   }
 
 // ============================================================================
