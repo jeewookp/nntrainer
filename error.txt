@@ -1,16 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 798 bytes | 266.00 KiB/s, done.
+remote: Enumerating objects: 22, done.
+remote: Counting objects: 100% (22/22), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 13 (delta 10), reused 12 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (13/13), 5.75 KiB | 217.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   8ba24ab6..15bc902d  all_gpu    -> upstream/all_gpu
-Updating 8ba24ab6..15bc902d
+   958c2cbd..e49add3d  all_gpu    -> upstream/all_gpu
+Updating 958c2cbd..e49add3d
 Fast-forward
- test/unittest/unittest_delegate_conv_wave.cpp | 5 +++++
- 1 file changed, 5 insertions(+)
+ nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 223 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/unittest/unittest_delegate_conv_wave.cpp               | 219 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ unittest_delegate_conv_wave.sh                              |   1 +
+ 3 files changed, 443 insertions(+)
+ create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
@@ -24,15 +27,38 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.9 MB/s (325544 bytes in 0.010s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 3.7 MB/s (7438 bytes in 0.002s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.5 MB/s (1822720 bytes in 0.055s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 28.2 MB/s (337760 bytes in 0.011s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.9 MB/s (7438 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (9175 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.0 MB/s (1822720 bytes in 0.056s)
 
 ==========================================
 [Step 3] Running on device
 ==========================================
-CANNOT LINK EXECUTABLE "./unittest_delegate_conv_wave": cannot locate symbol "SetProcessProfilesCached" referenced by "/system/lib64/libandroid_runtime.so"...
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from DelegateConvWaveTest
+[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
+GPU: QUALCOMM Adreno(TM) 830
+Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
+Performance: 433.0 us/iter = 2.480 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (150 ms)
+[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
+GPU: QUALCOMM Adreno(TM) 830
+Segmentation fault 
 
 Log: unittest_delegate_conv_wave.log
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m 'error'
+On branch all_gpu
+nothing to commit, working tree clean
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m 'error'
+On branch all_gpu
+nothing to commit, working tree clean
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m 'error'
+On branch all_gpu
+nothing to commit, working tree clean
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
