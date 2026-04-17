@@ -3,14 +3,14 @@ remote: Enumerating objects: 13, done.
 remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 3.09 KiB | 1.03 MiB/s, done.
+Unpacking objects: 100% (7/7), 2.37 KiB | 809.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   c08719aa..b31a14a8  all_gpu    -> upstream/all_gpu
-Updating c08719aa..b31a14a8
+   91ceca65..ed1478b3  all_gpu    -> upstream/all_gpu
+Updating 91ceca65..ed1478b3
 Fast-forward
- nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 226 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--------------------------------------------------------
- 1 file changed, 170 insertions(+), 56 deletions(-)
+ nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 291 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-------------------------------------------------------------------------------------------------------------------------------------------------------
+ 1 file changed, 140 insertions(+), 151 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
@@ -22,10 +22,10 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 26.4 MB/s (337760 bytes in 0.012s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.5 MB/s (7438 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 1.7 MB/s (7921 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in 0.054s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 30.0 MB/s (337760 bytes in 0.011s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.8 MB/s (7438 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 1.5 MB/s (6276 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.056s)
 
 ==========================================
 [Step 3] Running on device
@@ -36,12 +36,35 @@ test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in
 [ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
 GPU: QUALCOMM Adreno(TM) 830
 Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 427.9 us/iter = 2.509 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (145 ms)
+Performance: 434.8 us/iter = 2.469 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (150 ms)
 [ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
 GPU: QUALCOMM Adreno(TM) 830
-Segmentation fault 
+global=(1024,4,4) local=(128,1,4)
+  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
+  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
+  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
+  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
+  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
+  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
+  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
+  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
+Correctness: 128/128 pass (max err 12.9%)
+Int4 wave: 1813.0 us = 0.592 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (285 ms)
+[----------] 2 tests from DelegateConvWaveTest (435 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (435 ms total)
+[  PASSED  ] 2 tests.
 
 Log: unittest_delegate_conv_wave.log
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m 'error'
+On branch all_gpu
+nothing to commit, working tree clean
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git push upstream all_gpu
+Username for 'https://github.com': jeewook.kim
+Password for 'https://jeewook.kim@github.com': 
+Everything up-to-date
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
