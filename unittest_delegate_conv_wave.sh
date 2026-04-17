@@ -31,9 +31,9 @@ if [ $RUN_ONLY -eq 0 ]; then
   echo "=========================================="
   echo "[Step 1] Building ${TEST_BIN_NAME} (ndk-build)"
   echo "=========================================="
-  pushd test/jni >/dev/null
+  cd test/jni
   ndk-build -j$(nproc) ${TEST_BIN_NAME}
-  popd >/dev/null
+  cd "$SCRIPT_DIR"
 
   echo ""
   echo "=========================================="
