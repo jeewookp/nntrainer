@@ -122,6 +122,11 @@ DECL_CL(cl_int, clCommandNDRangeKernelKHR, (void*, void*, const void*, cl_kernel
 DECL_CL(cl_int, clFinalizeCommandBufferKHR, (void*))
 DECL_CL(cl_int, clEnqueueCommandBufferKHR, (cl_uint, const cl_command_queue*, void*, cl_uint, const cl_event*, cl_event*))
 DECL_CL(cl_int, clReleaseCommandBufferKHR, (void*))
+// Qualcomm RecordableQueue extension (cl_qcom_recordable_queues)
+DECL_CL(void*, clNewRecordingQCOM, (cl_command_queue, cl_int*))
+DECL_CL(cl_int, clEndRecordingQCOM, (void*))
+DECL_CL(cl_int, clEnqueueRecordingQCOM, (cl_command_queue, void*, cl_uint, const void*, cl_uint, const cl_event*, cl_event*))
+DECL_CL(cl_int, clReleaseRecordingQCOM, (void*))
 
 #define LOAD(h, name) p_##name = (pfn_##name)dlsym(h, #name); \
   if (!p_##name) { fprintf(stderr, "WARN: %s not found\n", #name); }
@@ -153,6 +158,8 @@ static bool LoadCL() {
   LOAD(h, clFinalizeCommandBufferKHR);
   LOAD(h, clEnqueueCommandBufferKHR);
   LOAD(h, clReleaseCommandBufferKHR);
+  LOAD(h, clNewRecordingQCOM); LOAD(h, clEndRecordingQCOM);
+  LOAD(h, clEnqueueRecordingQCOM); LOAD(h, clReleaseRecordingQCOM);
   return true;
 }
 
@@ -1063,6 +1070,112 @@ int main(int argc, char** argv) {
     }
   } else {
     fprintf(stderr, "\n[dk_bench] Command buffer not available\n");
+  }
+
+  // ========================================================================
+  // Test 1: Qualcomm RecordableQueue (cl_qcom_recordable_queues)
+  // ========================================================================
+  if (p_clNewRecordingQCOM && p_clEndRecordingQCOM && p_clEnqueueRecordingQCOM) {
+    fprintf(stderr, "\n[dk_bench] Qualcomm RecordableQueue test ...\n");
+    // Create a recordable queue: CL_QUEUE_RECORDABLE_QCOM = 0x40E6 (from cl_ext_qcom.h)
+    uint64_t rq_props[] = { 0x1093 /*CL_QUEUE_PROPERTIES*/, CL_QUEUE_PROFILING_ENABLE,
+                             0x40E6 /*CL_QUEUE_RECORDABLE_QCOM*/, 1, 0 };
+    cl_command_queue rec_queue = nullptr;
+    if (p_clCreateCommandQueueWithProperties)
+      rec_queue = p_clCreateCommandQueueWithProperties(ctx, dev, rq_props, &err);
+    if (rec_queue && err == CL_SUCCESS) {
+      fprintf(stderr, "  Recordable queue created\n");
+      // Record the kernel
+      void* recording = p_clNewRecordingQCOM(rec_queue, &err);
+      if (recording && err == CL_SUCCESS) {
+        p_clEnqueueNDRangeKernel(rec_queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+        err = p_clEndRecordingQCOM(recording);
+        if (err == CL_SUCCESS) {
+          fprintf(stderr, "  Recording created\n");
+          // Warmup replay
+          for (int i = 0; i < warmup; ++i) {
+            p_clEnqueueRecordingQCOM(prof_queue, recording, 0, nullptr, 0, nullptr, nullptr);
+          }
+          p_clFinish(prof_queue);
+          // Timed replay (burst wall-clock)
+          auto rt0 = std::chrono::high_resolution_clock::now();
+          for (int i = 0; i < iters; ++i) {
+            p_clEnqueueRecordingQCOM(prof_queue, recording, 0, nullptr, 0, nullptr, nullptr);
+          }
+          p_clFinish(prof_queue);
+          auto rt1 = std::chrono::high_resolution_clock::now();
+          double rq_wall = std::chrono::duration<double, std::micro>(rt1 - rt0).count() / iters;
+          // Per-dispatch GPU profiling
+          double rq_gpu = 0;
+          {
+            std::vector<double> times;
+            for (int i = 0; i < 30; ++i) {
+              cl_event ev = nullptr;
+              p_clEnqueueRecordingQCOM(prof_queue, recording, 0, nullptr, 0, nullptr, &ev);
+              p_clFinish(prof_queue);
+              cl_ulong ts0 = 0, ts1 = 0;
+              p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(ts0), &ts0, nullptr);
+              p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(ts1), &ts1, nullptr);
+              p_clReleaseEvent(ev);
+              times.push_back((ts1 - ts0) / 1000.0);
+            }
+            std::sort(times.begin(), times.end());
+            rq_gpu = times[times.size() / 2];
+          }
+          fprintf(stderr, "  RQ wall: %.1f us  TFLOPS=%.3f\n", rq_wall, (gflops / (rq_wall / 1e6)) / 1000.0);
+          fprintf(stderr, "  RQ gpu:  %.1f us  TFLOPS=%.3f\n", rq_gpu, (gflops / (rq_gpu / 1e6)) / 1000.0);
+        } else {
+          fprintf(stderr, "  EndRecording failed: %d\n", err);
+        }
+        p_clReleaseRecordingQCOM(recording);
+      } else {
+        fprintf(stderr, "  NewRecording failed: %d\n", err);
+      }
+    } else {
+      fprintf(stderr, "  Recordable queue creation failed: %d\n", err ? err : -999);
+    }
+  } else {
+    fprintf(stderr, "\n[dk_bench] RecordableQueue not available\n");
+  }
+
+  // ========================================================================
+  // Test 2: Multi-kernel pipeline (simulate delegate's full Run())
+  // Dispatch prog_001 + prog_002 in sequence N times, measure amortized
+  // per-conv time as total_wall / N.
+  // ========================================================================
+  if (k001) {
+    fprintf(stderr, "\n[dk_bench] Multi-kernel pipeline test ...\n");
+    size_t g1[] = { 3072, 192, 1 };
+    size_t l1[] = { 64, 8, 1 };
+    // Warmup
+    for (int i = 0; i < 10; ++i) {
+      p_clEnqueueNDRangeKernel(queue, k001, 3, nullptr, g1, l1, 0, nullptr, nullptr);
+      p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+    }
+    p_clFinish(queue);
+    // Timed: dispatch pairs, measure total wall / N
+    int pipe_n = 50;
+    auto pt0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < pipe_n; ++i) {
+      p_clEnqueueNDRangeKernel(queue, k001, 3, nullptr, g1, l1, 0, nullptr, nullptr);
+      p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+    }
+    p_clFinish(queue);
+    auto pt1 = std::chrono::high_resolution_clock::now();
+    double pipe_total = std::chrono::duration<double, std::micro>(pt1 - pt0).count();
+    double pipe_per_conv = pipe_total / pipe_n;  // amortized per-conv (includes 001 time)
+    // Also measure just conv alone in a burst for comparison
+    auto pt2 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < pipe_n; ++i)
+      p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+    p_clFinish(queue);
+    auto pt3 = std::chrono::high_resolution_clock::now();
+    double conv_only = std::chrono::duration<double, std::micro>(pt3 - pt2).count() / pipe_n;
+
+    fprintf(stderr, "  Pipeline (001+002) total/N: %.1f us per pair\n", pipe_per_conv);
+    fprintf(stderr, "  Conv-only burst wall/N:     %.1f us  TFLOPS=%.3f\n",
+            conv_only, (gflops / (conv_only / 1e6)) / 1000.0);
+    fprintf(stderr, "  delegate ref:               %.1f us  TFLOPS=5.2\n", 3691.0);
   }
 
   // ========================================================================
