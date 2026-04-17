@@ -150,10 +150,11 @@ absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
   OperationDef op_def;
   op_def.precision = precision;
 
-  // Use the fastest storage type for this GPU (TEXTURE_ARRAY or TEXTURE_2D
-  // on Adreno, not BUFFER which is ~100x slower).
-  TensorStorageType storage = cl::GetFastestStorageType(
-      env->GetDevicePtr()->info_);
+  // IMAGE_BUFFER: 1D buffer with image view — no 2D image size limits,
+  // but still uses texture cache for reads. Best balance of compatibility
+  // and performance on Adreno. TEXTURE_2D hits "Invalid image size" on
+  // large tensors (M>=128 with N>=4096, or any M>=1024).
+  TensorStorageType storage = TensorStorageType::IMAGE_BUFFER;
   TensorDescriptor src_desc =
       TensorDescriptor(data_type, storage, Layout::HWC);
   src_desc.SetBHWCShape(BHWC(1, M, 1, K));
