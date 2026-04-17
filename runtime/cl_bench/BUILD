@@ -47,6 +47,7 @@ cc_binary(
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/status",
         "@litert//tflite/delegates/gpu/cl:cl_command_queue",
+        "@litert//tflite/delegates/gpu/cl:cl_event",
         "@litert//tflite/delegates/gpu/cl:cl_operation",
         "@litert//tflite/delegates/gpu/cl:environment",
         "@litert//tflite/delegates/gpu/cl:opencl_wrapper",

@@ -28,6 +28,7 @@
 #include "absl/flags/parse.h"
 #include "absl/status/status.h"
 #include "tflite/delegates/gpu/cl/cl_command_queue.h"
+#include "tflite/delegates/gpu/cl/cl_event.h"
 #include "tflite/delegates/gpu/cl/cl_operation.h"
 #include "tflite/delegates/gpu/cl/environment.h"
 #include "tflite/delegates/gpu/cl/opencl_wrapper.h"
@@ -55,7 +56,6 @@ ABSL_FLAG(int32_t, max_tensor_mb, 512, "Max tensor memory per shape (MB)");
 namespace {
 
 using namespace tflite::gpu;
-using namespace tflite::gpu::cl;
 
 struct Shape {
   int m, n, k;
@@ -134,7 +134,7 @@ CalculationsPrecision GetPrecision(const std::string& s) {
 //   input:  BHWC(1, M, 1, K)   — batch=1, height=M, width=1, channels=K
 //   filter: OHWI(N, 1, 1, K)   — N output channels, 1x1 kernel, K input ch
 //   output: BHWC(1, M, 1, N)
-absl::Status BenchmarkShape(Environment* env, const Shape& shape,
+absl::Status BenchmarkShape(cl::Environment* env, const Shape& shape,
                             CalculationsPrecision precision,
                             int warmup, int iters, BenchResult* out) {
   const int M = shape.m;
@@ -168,15 +168,13 @@ absl::Status BenchmarkShape(Environment* env, const Shape& shape,
   attr.strides = HW(1, 1);
   attr.dilations = HW(1, 1);
 
-  // Weights: OHWI(N, 1, 1, K)
+  // Weights: OHWI(N, 1, 1, K) — type is fixed to FLOAT32 by template.
   attr.weights.shape = OHWI(N, 1, 1, K);
-  attr.weights.type = DataType::FLOAT32;
   attr.weights.data.resize(N * K);
   for (int i = 0; i < N * K; ++i) attr.weights.data[i] = 0.01f;
 
-  // Bias: N
+  // Bias: N — type is fixed to FLOAT32 by template.
   attr.bias.shape = Linear(N);
-  attr.bias.type = DataType::FLOAT32;
   attr.bias.data.resize(N, 0.0f);
 
   // Create ConvGeneric — this selects Adreno-optimized kernel params.
@@ -185,19 +183,19 @@ absl::Status BenchmarkShape(Environment* env, const Shape& shape,
                                        &dst_shape);
 
   // Create GPU tensors.
-  Tensor src_tensor, dst_tensor;
+  cl::Tensor src_tensor, dst_tensor;
   RETURN_IF_ERROR(
-      CreateTensor(env->context(), src_desc, &src_tensor));
+      cl::CreateTensor(env->context(), src_desc, &src_tensor));
   RETURN_IF_ERROR(
-      CreateTensor(env->context(), dst_desc, &dst_tensor));
+      cl::CreateTensor(env->context(), dst_desc, &dst_tensor));
 
   // Set up ClOperation.
-  ClOperation cl_op;
+  cl::ClOperation cl_op;
   cl_op.Init(std::make_unique<ConvGeneric>(std::move(conv)));
   RETURN_IF_ERROR(cl_op.SetSrcTensor(0, &src_tensor));
   RETURN_IF_ERROR(cl_op.SetDstTensor(0, &dst_tensor));
 
-  CreationContext creation_context;
+  cl::CreationContext creation_context;
   creation_context.device = env->GetDevicePtr();
   creation_context.context = &env->context();
   creation_context.queue = env->queue();
@@ -228,7 +226,7 @@ absl::Status BenchmarkShape(Environment* env, const Shape& shape,
     std::vector<double> gpu_times;
     gpu_times.reserve(iters);
     for (int i = 0; i < iters; ++i) {
-      CLEvent event;
+      cl::CLEvent event;
       RETURN_IF_ERROR(
           cl_op.AddToQueue(env->profiling_queue(), &event));
       RETURN_IF_ERROR(env->profiling_queue()->WaitForCompletion());
@@ -278,9 +276,9 @@ absl::Status Run() {
           precision_str.c_str(), warmup, iters, shapes.size());
 
   // Load OpenCL and create environment.
-  RETURN_IF_ERROR(LoadOpenCL());
-  Environment env;
-  RETURN_IF_ERROR(CreateEnvironment(&env));
+  RETURN_IF_ERROR(cl::LoadOpenCL());
+  cl::Environment env;
+  RETURN_IF_ERROR(cl::CreateEnvironment(&env));
   env.SetHighPerformance();
 
   const auto& gpu_info = env.GetDevicePtr()->info_;
