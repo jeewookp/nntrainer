@@ -21,6 +21,7 @@
 //   dst: image2d, width=M, height=N/4 (slices)
 //   weights: constant buffer, N*K*sizeof(half) bytes
 
+#include <EGL/egl.h>
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -205,6 +206,38 @@ int main(int argc, char** argv) {
   char dname[256] = {};
   p_clGetDeviceInfo(dev, CL_DEVICE_NAME, sizeof(dname), dname, nullptr);
   fprintf(stderr, "[dk_bench] GPU: %s\n", dname);
+
+  // ========================================================================
+  // Initialize EGL — triggers GPU frequency boost on Adreno.
+  // The delegate reuses an EGL environment ("Reusing provided EGL
+  // environment" in logs). Without EGL, GPU stays at low freq (~1.2 GHz).
+  // With EGL active, driver boosts to max freq (~2.0 GHz).
+  // ========================================================================
+  EGLDisplay egl_dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  if (egl_dpy != EGL_NO_DISPLAY) {
+    EGLint major, minor;
+    if (eglInitialize(egl_dpy, &major, &minor)) {
+      fprintf(stderr, "[dk_bench] EGL %d.%d initialized\n", major, minor);
+      // Create a minimal GL context to activate GPU
+      EGLint cfg_attr[] = { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE };
+      EGLConfig cfg;
+      EGLint ncfg;
+      eglChooseConfig(egl_dpy, cfg_attr, &cfg, 1, &ncfg);
+      if (ncfg > 0) {
+        EGLint ctx_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+        EGLContext egl_ctx = eglCreateContext(egl_dpy, cfg, EGL_NO_CONTEXT, ctx_attr);
+        if (egl_ctx != EGL_NO_CONTEXT) {
+          // Create a tiny pbuffer surface to make context current
+          EGLint pbuf_attr[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+          EGLSurface pbuf = eglCreatePbufferSurface(egl_dpy, cfg, pbuf_attr);
+          if (pbuf != EGL_NO_SURFACE) {
+            eglMakeCurrent(egl_dpy, pbuf, pbuf, egl_ctx);
+            fprintf(stderr, "[dk_bench] EGL context active (GPU should boost)\n");
+          }
+        }
+      }
+    }
+  }
 
   cl_int err;
   // Create context with Qualcomm performance hint property.

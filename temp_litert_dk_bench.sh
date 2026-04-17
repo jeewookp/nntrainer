@@ -5,8 +5,8 @@ set -euo pipefail
 export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 DK_SHAPE="${DK_SHAPE:-1024x6144x1536}"
-DK_WARMUP="${DK_WARMUP:-5}"
-DK_ITERS="${DK_ITERS:-50}"
+DK_WARMUP="${DK_WARMUP:-50}"
+DK_ITERS="${DK_ITERS:-100}"
 DK_CL_FILE="${DK_CL_FILE:-cl_intercept/program_002.cl}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
 
@@ -49,11 +49,15 @@ if ! adb shell "test -f ${DEVICE_FOLDER}/${DK_CL_FILE}"; then
   fi
 fi
 
-# Try to lock GPU to max frequency (may need root).
+# GPU frequency info
 echo ""
-echo "[dk_bench.sh] Attempting GPU freq boost ..."
+echo "[dk_bench.sh] GPU freq info:"
+adb shell "echo '  governor:' \$(cat /sys/class/kgsl/kgsl-3d0/devfreq/governor 2>/dev/null)"  2>/dev/null || true
+adb shell "echo '  cur_freq:' \$(cat /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null)" 2>/dev/null || true
+adb shell "echo '  max_freq:' \$(cat /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 2>/dev/null)" 2>/dev/null || true
+adb shell "echo '  min_freq:' \$(cat /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 2>/dev/null)" 2>/dev/null || true
+# Try to lock GPU to max frequency (may need root)
 adb shell "echo performance > /sys/class/kgsl/kgsl-3d0/devfreq/governor 2>/dev/null" 2>/dev/null || true
-adb shell "cat /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null" 2>/dev/null || true
 
 echo ""
 echo "[dk_bench.sh] Running (taskset ${TASKSET_MASK}) ..."

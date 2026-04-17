@@ -96,7 +96,7 @@ cc_binary(
     name = "delegate_kernel_bench",
     srcs = ["delegate_kernel_bench.cc"],
     linkopts = ["-ldl"] + select({
-        "@platforms//os:android": ["-llog"],
+        "@platforms//os:android": ["-llog", "-lEGL", "-lGLESv3"],
         "//conditions:default": [],
     }),
 )
