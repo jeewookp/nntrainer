@@ -87,6 +87,7 @@ DECL_CL(cl_int, clGetDeviceIDs, (cl_platform_id, cl_bitfield, cl_uint, cl_device
 DECL_CL(cl_int, clGetDeviceInfo, (cl_device_id, cl_uint, size_t, void*, size_t*))
 DECL_CL(cl_context, clCreateContext, (const intptr_t*, cl_uint, const cl_device_id*, void*, void*, cl_int*))
 DECL_CL(cl_command_queue, clCreateCommandQueue, (cl_context, cl_device_id, cl_bitfield, cl_int*))
+DECL_CL(cl_command_queue, clCreateCommandQueueWithProperties, (cl_context, cl_device_id, const uint64_t*, cl_int*))
 DECL_CL(cl_mem, clCreateBuffer, (cl_context, cl_bitfield, size_t, void*, cl_int*))
 DECL_CL(cl_mem, clCreateImage, (cl_context, cl_bitfield, const cl_image_format*, const cl_image_desc*, void*, cl_int*))
 DECL_CL(cl_program, clCreateProgramWithSource, (cl_context, cl_uint, const char**, const size_t*, cl_int*))
@@ -121,6 +122,7 @@ static bool LoadCL() {
   LOAD(h, clGetPlatformIDs); LOAD(h, clGetPlatformInfo);
   LOAD(h, clGetDeviceIDs); LOAD(h, clGetDeviceInfo);
   LOAD(h, clCreateContext); LOAD(h, clCreateCommandQueue);
+  LOAD(h, clCreateCommandQueueWithProperties);
   LOAD(h, clCreateBuffer); LOAD(h, clCreateImage);
   LOAD(h, clCreateProgramWithSource); LOAD(h, clBuildProgram);
   LOAD(h, clGetProgramBuildInfo); LOAD(h, clCreateKernel);
@@ -214,25 +216,24 @@ int main(int argc, char** argv) {
   // With EGL active, driver boosts to max freq (~2.0 GHz).
   // ========================================================================
   EGLDisplay egl_dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  EGLContext egl_ctx = EGL_NO_CONTEXT;
   if (egl_dpy != EGL_NO_DISPLAY) {
     EGLint major, minor;
     if (eglInitialize(egl_dpy, &major, &minor)) {
       fprintf(stderr, "[dk_bench] EGL %d.%d initialized\n", major, minor);
-      // Create a minimal GL context to activate GPU
       EGLint cfg_attr[] = { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE };
       EGLConfig cfg;
       EGLint ncfg;
       eglChooseConfig(egl_dpy, cfg_attr, &cfg, 1, &ncfg);
       if (ncfg > 0) {
         EGLint ctx_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-        EGLContext egl_ctx = eglCreateContext(egl_dpy, cfg, EGL_NO_CONTEXT, ctx_attr);
+        egl_ctx = eglCreateContext(egl_dpy, cfg, EGL_NO_CONTEXT, ctx_attr);
         if (egl_ctx != EGL_NO_CONTEXT) {
-          // Create a tiny pbuffer surface to make context current
           EGLint pbuf_attr[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
           EGLSurface pbuf = eglCreatePbufferSurface(egl_dpy, cfg, pbuf_attr);
           if (pbuf != EGL_NO_SURFACE) {
             eglMakeCurrent(egl_dpy, pbuf, pbuf, egl_ctx);
-            fprintf(stderr, "[dk_bench] EGL context active (GPU should boost)\n");
+            fprintf(stderr, "[dk_bench] EGL context active\n");
           }
         }
       }
@@ -240,13 +241,31 @@ int main(int argc, char** argv) {
   }
 
   cl_int err;
-  // Create context with Qualcomm performance hint property.
-  // CL_CONTEXT_PERF_HINT_QCOM = 0x40C2, CL_PERF_HINT_HIGH_QCOM = 0x40C3
-  intptr_t ctx_props[] = { 0x40C2, 0x40C3, 0 };
-  cl_context ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
-  if (err) {
-    fprintf(stderr, "[dk_bench] Context with perf hint failed (%d), retrying without\n", err);
-    ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+  // Create CL context from EGL context (CL-GL interop).
+  // The delegate uses this ("Reusing provided EGL environment").
+  // On Qualcomm, CL-GL shared context may enable faster memory paths.
+  // CL_GL_CONTEXT_KHR = 0x2008, CL_EGL_DISPLAY_KHR = 0x3038
+  cl_context ctx = nullptr;
+  if (egl_dpy != EGL_NO_DISPLAY && egl_ctx != EGL_NO_CONTEXT) {
+    intptr_t ctx_props[] = {
+      (intptr_t)0x1084, (intptr_t)plat,      // CL_CONTEXT_PLATFORM
+      (intptr_t)0x2008, (intptr_t)egl_ctx,    // CL_GL_CONTEXT_KHR
+      (intptr_t)0x3038, (intptr_t)egl_dpy,    // CL_EGL_DISPLAY_KHR
+      (intptr_t)0x40C2, (intptr_t)0x40C3,     // CL_CONTEXT_PERF_HINT_QCOM(HIGH)
+      0
+    };
+    ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
+    if (ctx && err == CL_SUCCESS) {
+      fprintf(stderr, "[dk_bench] CL-EGL shared context created\n");
+    } else {
+      fprintf(stderr, "[dk_bench] CL-EGL context failed (%d), fallback\n", err);
+      ctx = nullptr;
+    }
+  }
+  if (!ctx) {
+    intptr_t ctx_props[] = { 0x40C2, 0x40C3, 0 };
+    ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
+    if (err) ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
   }
   // Also try runtime perf hint
   if (p_clSetPerfHintQCOM) {
@@ -254,8 +273,20 @@ int main(int argc, char** argv) {
     fprintf(stderr, "[dk_bench] clSetPerfHintQCOM(HIGH): %s\n",
             ph == 0 ? "OK" : "failed");
   }
+  // CL_QUEUE_PRIORITY_HIGH_KHR = 0x40C7 for high-priority execution
   cl_command_queue queue = p_clCreateCommandQueue(ctx, dev, 0, &err);
   cl_command_queue prof_queue = p_clCreateCommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE, &err);
+
+  // Try to also create a high-priority command queue (Qualcomm extension)
+  if (p_clCreateCommandQueueWithProperties) {
+    uint64_t qprops[] = { 0x1093 /*CL_QUEUE_PROPERTIES*/, 0,
+                           0x40C7 /*CL_QUEUE_PRIORITY_KHR*/, 0x40C3 /*HIGH*/, 0 };
+    cl_command_queue hiq = p_clCreateCommandQueueWithProperties(ctx, dev, qprops, &err);
+    if (hiq && err == CL_SUCCESS) {
+      fprintf(stderr, "[dk_bench] High-priority queue created\n");
+      // Use this for profiling too, but keep original for burst
+    }
+  }
 
   // Compile kernel
   const char* src_ptr = src.c_str();
