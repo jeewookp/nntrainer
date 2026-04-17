@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 2.30 KiB | 590.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1.13 KiB | 384.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   a0a5dbbf..888b0a63  litert_lm  -> origin/litert_lm
-Updating a0a5dbbf..888b0a63
+   554ee18a..187c833e  litert_lm  -> origin/litert_lm
+Updating 554ee18a..187c833e
 Fast-forward
- runtime/cl_bench/delegate_kernel_bench.cc | 113 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 113 insertions(+)
+ runtime/cl_bench/delegate_kernel_bench.cc | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ DK_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -31,7 +31,7 @@ INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loade
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.953s, Critical Path: 0.84s
+INFO: Elapsed time: 0.892s, Critical Path: 0.82s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
@@ -56,7 +56,7 @@ WARN: clReleaseCommandBufferKHR not found
 [dk_bench] GPU: QUALCOMM Adreno(TM) 830
 [dk_bench] EGL 1.5 initialized
 [dk_bench] EGL context active
-[dk_bench] EGL CL device: 0x78cf39f6f8 (clGetDeviceIDs device: 0x78cf39f6f8) SAME
+[dk_bench] EGL CL device: 0x76423626f8 (clGetDeviceIDs device: 0x76423626f8) SAME
 [dk_bench] CL-EGL shared context created (with QCOM props)
 [dk_bench] clSetPerfHintQCOM(HIGH): OK
 [dk_bench] Build opts: '-qcom-accelerate-16-bit=true -cl-std=CL2.0'
@@ -82,50 +82,54 @@ WARN: clReleaseCommandBufferKHR not found
     [1,3] gpu=0.6768 cpu=0.6786 err=0.3%
   GPU-CPU match: 127/128 (within 15%)
 [dk_bench] Auto-tuning local sizes ...
-  local=(128,1,4) global=(6144,8,4) → 6196.8 us (3.119 TFLOPS) ✓
-  local=(64,1,4) global=(3072,16,4) → 6669.7 us (2.898 TFLOPS) ✓
-  local=(32,1,4) global=(1536,32,4) → 6641.3 us (2.910 TFLOPS) ✓
-  local=(64,2,4) global=(3072,32,4) → 7042.3 us (2.744 TFLOPS) ✓
-  local=(32,2,4) global=(1536,64,4) → 12799.6 us (1.510 TFLOPS) ✓
-  local=(128,1,2) global=(12288,8,2) → 6471.8 us (2.986 TFLOPS) ✓
-  local=(64,1,2) global=(6144,16,2) → 6658.5 us (2.903 TFLOPS) ✓
-  local=(32,1,2) global=(3072,32,2) → 5971.7 us (3.237 TFLOPS) ✓
-  local=(128,1,1) global=(24576,8,1) → 6470.6 us (2.987 TFLOPS) ✓
-  local=(64,1,1) global=(12288,16,1) → 5748.4 us (3.362 TFLOPS) ✓
-  local=(32,1,1) global=(6144,32,1) → 11239.1 us (1.720 TFLOPS) ✓
-  local=(256,1,2) global=(24576,4,2) → 6363.2 us (3.037 TFLOPS) ✓
-  local=(256,1,1) global=(49152,4,1) → 6130.0 us (3.153 TFLOPS) ✓
-[dk_bench] Best: local=(64,1,1) → 5748.4 us (3.362 TFLOPS)
-[dk_bench] global=(12288,16,1) local=(64,1,1)
+  local=(128,1,4) global=(6144,8,4) → 6459.6 us (2.992 TFLOPS) ✓
+  local=(64,1,4) global=(3072,16,4) → 6665.2 us (2.900 TFLOPS) ✓
+  local=(32,1,4) global=(1536,32,4) → 6629.7 us (2.915 TFLOPS) ✓
+  local=(64,2,4) global=(3072,32,4) → 7032.2 us (2.748 TFLOPS) ✓
+  local=(32,2,4) global=(1536,64,4) → 12776.3 us (1.513 TFLOPS) ✓
+  local=(128,1,2) global=(12288,8,2) → 6455.0 us (2.994 TFLOPS) ✓
+  local=(64,1,2) global=(6144,16,2) → 6661.2 us (2.901 TFLOPS) ✓
+  local=(32,1,2) global=(3072,32,2) → 5973.0 us (3.236 TFLOPS) ✓
+  local=(128,1,1) global=(24576,8,1) → 6453.6 us (2.995 TFLOPS) ✓
+  local=(64,1,1) global=(12288,16,1) → 5990.7 us (3.226 TFLOPS) ✓
+  local=(32,1,1) global=(6144,32,1) → 11510.1 us (1.679 TFLOPS) ✓
+  local=(256,1,2) global=(24576,4,2) → 6118.2 us (3.159 TFLOPS) ✓
+  local=(256,1,1) global=(49152,4,1) → 6365.8 us (3.036 TFLOPS) ✓
+[dk_bench] Best: local=(32,1,2) → 5973.0 us (3.236 TFLOPS)
+[dk_bench] global=(3072,32,2) local=(32,1,2)
 [dk_bench] Warmup 50 ...
 [dk_bench] Timed 100 iters (burst) ...
 
 [dk_bench] Results: M=1024 N=6144 K=1536
-  wall (burst):     5655.6 us  TFLOPS=3.417
+  wall (burst):     5637.5 us  TFLOPS=3.428
 
   Single-dispatch profiling:
-    QUEUED→SUBMIT:   135.5 us
-    SUBMIT→START:    287.5 us
-    START→END:      5617.0 us  TFLOPS=3.441
+    QUEUED→SUBMIT:   144.8 us
+    SUBMIT→START:    287.4 us
+    START→END:      5600.7 us  TFLOPS=3.451
 
   Batch profiling (delegate-style, last of 5):
-    START→END:      5613.8 us  TFLOPS=3.443
+    START→END:      5596.9 us  TFLOPS=3.453
 
   Pipeline (prog_001 before conv):
-    START→END:      5615.1 us  TFLOPS=3.442
+    START→END:      5599.0 us  TFLOPS=3.452
 
   delegate ref:     3691.0 us  TFLOPS=5.2
-  gpu:  5617.0 us  TFLOPS=3.441
+  gpu:  5600.7 us  TFLOPS=3.451
   (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
 
 [dk_bench] Command buffer not available
 
 [dk_bench] Qualcomm RecordableQueue test ...
-  Recordable queue creation failed: -30
+  Attempt 1 (0x40E6 only): err=-30
+  Attempt 2 (as PROPERTIES bit): err=-30
+  Attempt 3 (plain queue): err=0
+  Recordable queue created
+  NewRecording failed: -35
 
 [dk_bench] Multi-kernel pipeline test ...
-  Pipeline (001+002) total/N: 5691.6 us per pair
-  Conv-only burst wall/N:     5689.2 us  TFLOPS=3.397
+  Pipeline (001+002) total/N: 5676.6 us per pair
+  Conv-only burst wall/N:     5672.6 us  TFLOPS=3.407
   delegate ref:               3691.0 us  TFLOPS=5.2
 
 [dk_bench] Final verification with best config ...
@@ -152,3 +156,4 @@ WARN: clReleaseCommandBufferKHR not found
 
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
