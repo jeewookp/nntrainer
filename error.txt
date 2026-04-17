@@ -1,31 +1,34 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 13, done.
-remote: Counting objects: 100% (13/13), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 965 bytes | 241.00 KiB/s, done.
+remote: Enumerating objects: 19, done.
+remote: Counting objects: 100% (19/19), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 10 (delta 8), reused 10 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 3.81 KiB | 650.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   f91b2140..af9e5593  all_gpu    -> upstream/all_gpu
-Updating f91b2140..af9e5593
+   e674e6f8..8cf4e419  all_gpu    -> upstream/all_gpu
+Updating e674e6f8..8cf4e419
 Fast-forward
- nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl | 187 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-----------------------------------------------------------------
+ test/unittest/unittest_delegate_conv_wave.cpp               |  27 +++++++++++++++++++++++++--
+ 2 files changed, 147 insertions(+), 67 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
 ==========================================
 Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
 [arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : unittest_delegate_conv_wave <= unittest_delegate_conv_wave.cpp
+[arm64-v8a] Executable     : unittest_delegate_conv_wave
 [arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
 
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.4 MB/s (337760 bytes in 0.010s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.0 MB/s (7438 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 1.2 MB/s (4096 bytes in 0.003s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.2 MB/s (1822720 bytes in 0.054s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 32.7 MB/s (337952 bytes in 0.010s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 3.9 MB/s (7438 bytes in 0.002s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 1.8 MB/s (6411 bytes in 0.003s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.055s)
 
 ==========================================
 [Step 3] Running on device
@@ -36,7 +39,7 @@ test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.2 MB/s (1822720 bytes in
 [ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
 GPU: QUALCOMM Adreno(TM) 830
 Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 425.2 us/iter = 2.525 TFLOPS (M=512 N=1024 K=1024)
+Performance: 428.1 us/iter = 2.508 TFLOPS (M=512 N=1024 K=1024)
 [       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (143 ms)
 [ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
 GPU: QUALCOMM Adreno(TM) 830
@@ -50,12 +53,12 @@ global=(1024,4,4) local=(128,1,4)
   [m=1,n=2] gpu=0.1538 cpu=0.1541 err=0.2%
   [m=1,n=3] gpu=-0.1141 cpu=-0.1143 err=0.2%
 Correctness: 127/128 pass (max err 26.0%)
-Int4 wave: 1881.9 us = 0.571 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (292 ms)
-[----------] 2 tests from DelegateConvWaveTest (436 ms total)
+Int4 wave: 160097.2 us = 0.007 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (10259 ms)
+[----------] 2 tests from DelegateConvWaveTest (10402 ms total)
 
 [----------] Global test environment tear-down
-[==========] 2 tests from 1 test suite ran. (436 ms total)
+[==========] 2 tests from 1 test suite ran. (10403 ms total)
 [  PASSED  ] 2 tests.
 
 Log: unittest_delegate_conv_wave.log
