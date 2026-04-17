@@ -793,9 +793,35 @@ int main(int argc, char** argv) {
   // ========================================================================
   // Correctness verification: read back dst image and check values.
   // ========================================================================
-  fprintf(stderr, "\n[dk_bench] Verifying output ...\n");
+  // Correctness verification: use known direct weights (skip pipeline)
+  // and compare GPU output against CPU reference.
+  // ========================================================================
+  fprintf(stderr, "\n[dk_bench] Verifying output with known weights ...\n");
   {
-    // Run one more time to get fresh output
+    // Re-init weights with simple direct values for verification
+    float w_val = 0.01f;
+    {
+      std::vector<uint16_t> wdata(weight_bytes / 2, f32_to_f16(w_val));
+      p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
+                             wdata.data(), 0, nullptr, nullptr);
+    }
+    // Re-init src with 1.0
+    {
+      uint16_t one = f32_to_f16(1.0f);
+      size_t npix = (size_t)M * src_slices;
+      std::vector<uint16_t> sd(npix * 4, one);
+      size_t o[3] = {0,0,0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
+      p_clEnqueueWriteImage(queue, src_img, 1, o, r, 0, 0, sd.data(), 0, nullptr, nullptr);
+    }
+    // Bias = 0
+    {
+      std::vector<uint16_t> bd(dst_slices * 4, 0);
+      size_t o[3] = {0,0,0}, r[3] = {(size_t)dst_slices, 1, 1};
+      p_clEnqueueWriteImage(queue, biases_img, 1, o, r, 0, 0, bd.data(), 0, nullptr, nullptr);
+    }
+    p_clFinish(queue);
+
+    // Run kernel once with known data
     p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
     p_clFinish(queue);
 
@@ -809,38 +835,56 @@ int main(int argc, char** argv) {
     if (err) {
       fprintf(stderr, "  WARNING: ReadImage failed: %d\n", err);
     } else {
-      // Check: count zeros, non-zeros, print sample values
-      int zeros = 0, nonzeros = 0, nans = 0;
-      float min_val = 1e30f, max_val = -1e30f, sum = 0;
-      for (size_t i = 0; i < dst_npixels * 4 && i < 10000; ++i) {
-        float v = f16_to_f32(dst_data[i]);
-        if (v == 0.0f) zeros++;
-        else nonzeros++;
-        if (v != v) nans++;
-        if (v < min_val) min_val = v;
-        if (v > max_val) max_val = v;
-        sum += v;
-      }
-      size_t checked = std::min(dst_npixels * 4, (size_t)10000);
-      fprintf(stderr, "  Checked %zu values: %d zeros, %d nonzeros, %d NaNs\n",
-              checked, zeros, nonzeros, nans);
-      fprintf(stderr, "  min=%.4f max=%.4f avg=%.4f\n",
-              min_val, max_val, sum / checked);
+      // CPU reference: output = K * w_val * 1.0 + bias(0) = K * w_val
+      float expected = K * w_val;
 
-      // Print first few output pixels (x=0, slice=0..3)
-      fprintf(stderr, "  First 16 output values (x=0, slices 0-3):\n    ");
-      for (int i = 0; i < 16 && i < (int)(dst_npixels * 4); ++i) {
-        fprintf(stderr, "%.3f ", f16_to_f32(dst_data[i]));
+      // Check multiple positions across the output
+      int total = 0, correct = 0, wrong = 0, zero_count = 0;
+      float max_err = 0;
+      // Sample positions: (x, slice) across the output
+      for (int x = 0; x < M && x < 8; ++x) {
+        for (int s = 0; s < dst_slices && s < 8; ++s) {
+          for (int c = 0; c < 4; ++c) {
+            // dst image layout: pixel at (x, y*dst_slices + s), channel c
+            size_t idx = ((size_t)s * M + x) * 4 + c;
+            if (idx >= dst_npixels * 4) continue;
+            float v = f16_to_f32(dst_data[idx]);
+            float err_abs = fabsf(v - expected);
+            float err_rel = (expected != 0) ? err_abs / fabsf(expected) : err_abs;
+            total++;
+            if (v == 0.0f) zero_count++;
+            if (err_rel < 0.15f) correct++;  // 15% tolerance for fp16
+            else wrong++;
+            if (err_rel > max_err) max_err = err_rel;
+          }
+        }
+      }
+
+      fprintf(stderr, "  CPU reference: %.4f (K=%d * w=%.4f)\n", expected, K, w_val);
+      fprintf(stderr, "  Checked %d elements: %d correct (<15%% err), %d wrong, %d zeros\n",
+              total, correct, wrong, zero_count);
+      fprintf(stderr, "  Max relative error: %.2f%%\n", max_err * 100);
+
+      // Print sample values
+      fprintf(stderr, "  Sample GPU values (x=0, slices 0-3):\n    ");
+      for (int s = 0; s < 4 && s < dst_slices; ++s) {
+        for (int c = 0; c < 4; ++c) {
+          size_t idx = ((size_t)s * M + 0) * 4 + c;
+          fprintf(stderr, "%.3f ", f16_to_f32(dst_data[idx]));
+        }
       }
       fprintf(stderr, "\n");
 
-      // Expected: with weights=0.01, src=1.0, bias=0
-      // output ≈ K * 0.01 = %.2f (if weight layout matches)
-      float expected = K * 0.01f;
-      fprintf(stderr, "  Expected (if layout correct): ~%.2f per element\n", expected);
-      fprintf(stderr, "  %s\n",
-              (nonzeros > zeros) ? "PASS: output is non-trivial (kernel computed something)"
-                                 : "FAIL: output is mostly zeros (dispatch or layout error)");
+      if (total > 0 && correct == total) {
+        fprintf(stderr, "  ✓ PASS: all %d elements match CPU reference (max err %.1f%%)\n",
+                total, max_err * 100);
+      } else if (total > 0 && correct > total / 2) {
+        fprintf(stderr, "  ~ PARTIAL: %d/%d match (max err %.1f%%). Dispatch likely correct.\n",
+                correct, total, max_err * 100);
+      } else {
+        fprintf(stderr, "  ✗ FAIL: only %d/%d match. Dispatch or layout ERROR.\n",
+                correct, total);
+      }
     }
   }
   fprintf(stderr, "\n");
