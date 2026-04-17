@@ -104,6 +104,9 @@ DECL_CL(cl_int, clReleaseEvent, (cl_event))
 DECL_CL(cl_int, clGetEventProfilingInfo, (cl_event, cl_uint, size_t, void*, size_t*))
 DECL_CL(cl_int, clWaitForEvents, (cl_uint, const cl_event*))
 DECL_CL(cl_int, clEnqueueWriteBuffer, (cl_command_queue, cl_mem, cl_uint, size_t, size_t, const void*, cl_uint, const cl_event*, cl_event*))
+DECL_CL(cl_int, clEnqueueReadBuffer, (cl_command_queue, cl_mem, cl_uint, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
+DECL_CL(cl_int, clEnqueueWriteImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, const void*, cl_uint, const cl_event*, cl_event*))
+DECL_CL(cl_int, clEnqueueReadImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
 
 #define LOAD(h, name) p_##name = (pfn_##name)dlsym(h, #name); \
   if (!p_##name) { fprintf(stderr, "WARN: %s not found\n", #name); }
@@ -124,6 +127,8 @@ static bool LoadCL() {
   LOAD(h, clReleaseCommandQueue); LOAD(h, clReleaseContext);
   LOAD(h, clReleaseEvent); LOAD(h, clGetEventProfilingInfo);
   LOAD(h, clWaitForEvents); LOAD(h, clEnqueueWriteBuffer);
+  LOAD(h, clEnqueueReadBuffer);
+  LOAD(h, clEnqueueWriteImage); LOAD(h, clEnqueueReadImage);
   return true;
 }
 
@@ -136,6 +141,27 @@ static std::string ReadFile(const char* path) {
 
 // int4 type matching OpenCL's int4
 struct int4 { int32_t x, y, z, w; };
+
+// fp16 ↔ fp32 conversion (IEEE 754)
+static uint16_t f32_to_f16(float v) {
+  uint32_t f; memcpy(&f, &v, 4);
+  uint32_t sign = (f >> 16) & 0x8000;
+  int exp = ((f >> 23) & 0xFF) - 127 + 15;
+  uint32_t mant = (f >> 13) & 0x3FF;
+  if (exp <= 0) return sign;
+  if (exp >= 31) return sign | 0x7C00;
+  return sign | (exp << 10) | mant;
+}
+static float f16_to_f32(uint16_t h) {
+  uint32_t sign = (h & 0x8000) << 16;
+  uint32_t exp = (h >> 10) & 0x1F;
+  uint32_t mant = h & 0x3FF;
+  if (exp == 0) { if (mant == 0) { float r; uint32_t v = sign; memcpy(&r, &v, 4); return r; }
+    exp = 1; while (!(mant & 0x400)) { mant <<= 1; exp--; } mant &= 0x3FF; }
+  else if (exp == 31) { float r; uint32_t v = sign | 0x7F800000 | (mant << 13); memcpy(&r, &v, 4); return r; }
+  uint32_t f = sign | ((exp - 15 + 127) << 23) | (mant << 13);
+  float r; memcpy(&r, &f, 4); return r;
+}
 
 int main(int argc, char** argv) {
   // Parse args
@@ -253,6 +279,55 @@ int main(int argc, char** argv) {
   // shared_int4_2.x = x_stride (1)
   // shared_int4_2.y = y_stride (1)
 
+  // ========================================================================
+  // Initialize data for correctness verification.
+  // Weight layout in the kernel: for each inner loop iteration,
+  //   qcom_sub_group_constant_load8 loads 32 half8 (=256 halfs) from
+  //   weights_buffer at offset f_offset/2.  weights_cache is then
+  //   indexed as half16[0..15], where each half16 holds 4 output channels
+  //   × 4 components (one input channel each).
+  //
+  // For simplicity, fill weights with a constant (0.01h) and src with
+  // 1.0h, bias with 0.  Then each output element ≈ K * 0.01 = 15.36
+  // (modulo weight layout / accumulation order).
+  // ========================================================================
+  fprintf(stderr, "[dk_bench] Initializing data ...\n");
+
+  // Fill weights buffer with 0.01h
+  {
+    uint16_t val = f32_to_f16(0.01f);
+    std::vector<uint16_t> wdata(weight_bytes / 2, val);
+    p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
+                           wdata.data(), 0, nullptr, nullptr);
+  }
+
+  // Fill src image with 1.0h (RGBA half per pixel, all channels = 1.0)
+  {
+    uint16_t one = f32_to_f16(1.0f);
+    size_t npixels = (size_t)M * src_slices;
+    std::vector<uint16_t> sdata(npixels * 4, one);
+    size_t origin[3] = {0, 0, 0};
+    size_t region[3] = {(size_t)M, (size_t)src_slices, 1};
+    p_clEnqueueWriteImage(queue, src_img, 1, origin, region, 0, 0,
+                          sdata.data(), 0, nullptr, nullptr);
+  }
+
+  // Fill bias image with 0
+  {
+    std::vector<uint16_t> bdata(dst_slices * 4, 0);
+    size_t origin[3] = {0, 0, 0};
+    size_t region[3] = {(size_t)dst_slices, 1, 1};
+    p_clEnqueueWriteImage(queue, biases_img, 1, origin, region, 0, 0,
+                          bdata.data(), 0, nullptr, nullptr);
+  }
+
+  // Make dst readable for verification
+  p_clReleaseMemObject(dst_img);
+  dst_img = p_clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt_half, &dst_desc, nullptr, &err);
+  if (err) { fprintf(stderr, "ERROR: dst_img RW: %d\n", err); return 1; }
+
+  p_clFinish(queue);
+
   // Captured from delegate via clSetKernelArg interception (1024x6144x1536):
   //   s0 = (1, 1536, 1024, 32)
   //   s1 = (384, 0, 0, 384)
@@ -365,7 +440,62 @@ int main(int argc, char** argv) {
   fprintf(stderr, "\n[dk_bench] Results: M=%d N=%d K=%d\n", M, N, K);
   fprintf(stderr, "  wall: %.1f us  TFLOPS=%.3f\n", wall_us, tflops_wall);
   fprintf(stderr, "  gpu:  %.1f us  TFLOPS=%.3f\n", gpu_us, tflops_gpu);
-  fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n\n");
+  fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n");
+
+  // ========================================================================
+  // Correctness verification: read back dst image and check values.
+  // ========================================================================
+  fprintf(stderr, "\n[dk_bench] Verifying output ...\n");
+  {
+    // Run one more time to get fresh output
+    p_clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local, 0, nullptr, nullptr);
+    p_clFinish(queue);
+
+    // Read back dst image
+    size_t dst_npixels = (size_t)M * dst_slices;
+    std::vector<uint16_t> dst_data(dst_npixels * 4, 0);
+    size_t origin[3] = {0, 0, 0};
+    size_t region[3] = {(size_t)M, (size_t)dst_slices, 1};
+    err = p_clEnqueueReadImage(queue, dst_img, 1, origin, region, 0, 0,
+                               dst_data.data(), 0, nullptr, nullptr);
+    if (err) {
+      fprintf(stderr, "  WARNING: ReadImage failed: %d\n", err);
+    } else {
+      // Check: count zeros, non-zeros, print sample values
+      int zeros = 0, nonzeros = 0, nans = 0;
+      float min_val = 1e30f, max_val = -1e30f, sum = 0;
+      for (size_t i = 0; i < dst_npixels * 4 && i < 10000; ++i) {
+        float v = f16_to_f32(dst_data[i]);
+        if (v == 0.0f) zeros++;
+        else nonzeros++;
+        if (v != v) nans++;
+        if (v < min_val) min_val = v;
+        if (v > max_val) max_val = v;
+        sum += v;
+      }
+      size_t checked = std::min(dst_npixels * 4, (size_t)10000);
+      fprintf(stderr, "  Checked %zu values: %d zeros, %d nonzeros, %d NaNs\n",
+              checked, zeros, nonzeros, nans);
+      fprintf(stderr, "  min=%.4f max=%.4f avg=%.4f\n",
+              min_val, max_val, sum / checked);
+
+      // Print first few output pixels (x=0, slice=0..3)
+      fprintf(stderr, "  First 16 output values (x=0, slices 0-3):\n    ");
+      for (int i = 0; i < 16 && i < (int)(dst_npixels * 4); ++i) {
+        fprintf(stderr, "%.3f ", f16_to_f32(dst_data[i]));
+      }
+      fprintf(stderr, "\n");
+
+      // Expected: with weights=0.01, src=1.0, bias=0
+      // output ≈ K * 0.01 = %.2f (if weight layout matches)
+      float expected = K * 0.01f;
+      fprintf(stderr, "  Expected (if layout correct): ~%.2f per element\n", expected);
+      fprintf(stderr, "  %s\n",
+              (nonzeros > zeros) ? "PASS: output is non-trivial (kernel computed something)"
+                                 : "FAIL: output is mostly zeros (dispatch or layout error)");
+    }
+  }
+  fprintf(stderr, "\n");
 
   // Cleanup
   p_clReleaseMemObject(weights_buf);
