@@ -63,6 +63,8 @@ typedef uint64_t cl_bitfield;
 #define CL_DEVICE_MAX_COMPUTE_UNITS 0x1002
 #define CL_PLATFORM_NAME 0x0902
 #define CL_QUEUE_PROFILING_ENABLE (1 << 1)
+#define CL_PROFILING_COMMAND_QUEUED 0x1280
+#define CL_PROFILING_COMMAND_SUBMIT 0x1281
 #define CL_PROFILING_COMMAND_START 0x1282
 #define CL_PROFILING_COMMAND_END 0x1283
 #define CL_PROGRAM_BUILD_LOG 0x1183
@@ -868,28 +870,45 @@ int main(int argc, char** argv) {
   auto t1 = std::chrono::high_resolution_clock::now();
   double wall_us = std::chrono::duration<double, std::micro>(t1 - t0).count() / iters;
 
-  // GPU profiling
+  // GPU profiling with all 4 timestamps
   double gpu_us = 0;
+  double avg_queued_to_submit = 0, avg_submit_to_start = 0, avg_start_to_end = 0;
   {
-    std::vector<double> times;
-    for (int i = 0; i < iters; ++i) {
+    std::vector<double> t_q2s, t_s2st, t_st2e;
+    int prof_iters = std::min(iters, 50);
+    for (int i = 0; i < prof_iters; ++i) {
       cl_event ev = nullptr;
       p_clEnqueueNDRangeKernel(prof_queue, kernel, 3, nullptr, global, local, 0, nullptr, &ev);
       p_clFinish(prof_queue);
-      cl_ulong ts0 = 0, ts1 = 0;
-      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(ts0), &ts0, nullptr);
-      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(ts1), &ts1, nullptr);
+      cl_ulong tq = 0, tsub = 0, tst = 0, te = 0;
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(tq), &tq, nullptr);
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_SUBMIT, sizeof(tsub), &tsub, nullptr);
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(tst), &tst, nullptr);
+      p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(te), &te, nullptr);
       p_clReleaseEvent(ev);
-      times.push_back((ts1 - ts0) / 1000.0);
+      t_q2s.push_back((tsub - tq) / 1000.0);
+      t_s2st.push_back((tst - tsub) / 1000.0);
+      t_st2e.push_back((te - tst) / 1000.0);
     }
-    gpu_us = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+    avg_queued_to_submit = std::accumulate(t_q2s.begin(), t_q2s.end(), 0.0) / t_q2s.size();
+    avg_submit_to_start = std::accumulate(t_s2st.begin(), t_s2st.end(), 0.0) / t_s2st.size();
+    avg_start_to_end = std::accumulate(t_st2e.begin(), t_st2e.end(), 0.0) / t_st2e.size();
+    gpu_us = avg_start_to_end;
   }
 
   double tflops_wall = (gflops / (wall_us / 1e6)) / 1000.0;
   double tflops_gpu = (gflops / (gpu_us / 1e6)) / 1000.0;
+  double tflops_total_prof = (gflops / ((avg_queued_to_submit + avg_submit_to_start + avg_start_to_end) / 1e6)) / 1000.0;
 
   fprintf(stderr, "\n[dk_bench] Results: M=%d N=%d K=%d\n", M, N, K);
   fprintf(stderr, "  wall: %.1f us  TFLOPS=%.3f\n", wall_us, tflops_wall);
+  fprintf(stderr, "\n  Profiling breakdown (per dispatch):\n");
+  fprintf(stderr, "    QUEUED→SUBMIT:  %7.1f us  (CPU→driver handoff)\n", avg_queued_to_submit);
+  fprintf(stderr, "    SUBMIT→START:   %7.1f us  (driver→GPU scheduling)\n", avg_submit_to_start);
+  fprintf(stderr, "    START→END:      %7.1f us  (GPU execution)  TFLOPS=%.3f\n", avg_start_to_end, tflops_gpu);
+  fprintf(stderr, "    QUEUED→END:     %7.1f us  (total profiled) TFLOPS=%.3f\n",
+          avg_queued_to_submit + avg_submit_to_start + avg_start_to_end, tflops_total_prof);
+  fprintf(stderr, "    delegate ref:   %7.1f us                   TFLOPS=5.2\n", 3691.0);
   fprintf(stderr, "  gpu:  %.1f us  TFLOPS=%.3f\n", gpu_us, tflops_gpu);
   fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n");
 
