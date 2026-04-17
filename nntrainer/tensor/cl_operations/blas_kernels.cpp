@@ -2519,17 +2519,22 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, out_bytes, nullptr, &err);
     if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
 
-    // Upload int4 packed weights to GPU
+    // Upload int4 packed weights to GPU (copy, not USE_HOST_PTR — SVM ptrs
+    // can't be wrapped with USE_HOST_PTR on Adreno)
     size_t int4_bytes = (size_t)(K / 4) * N * sizeof(uint16_t);
-    cl_mem int4_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                                      int4_bytes, weights, &err);
-    if (err) throw std::runtime_error("delegate: int4 upload failed");
+    cl_mem int4_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
+                                      int4_bytes, nullptr, &err);
+    if (err) throw std::runtime_error("delegate: int4 buf failed");
+    clEnqueueWriteBuffer(clq, int4_buf, CL_TRUE, 0, int4_bytes, weights,
+                         0, nullptr, nullptr);
 
     // Upload scales to GPU
     size_t sc_bytes = N * sizeof(uint16_t);
-    cl_mem sc_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                                    sc_bytes, scales, &err);
-    if (err) throw std::runtime_error("delegate: scales upload failed");
+    cl_mem sc_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
+                                    sc_bytes, nullptr, &err);
+    if (err) throw std::runtime_error("delegate: scales buf failed");
+    clEnqueueWriteBuffer(clq, sc_buf, CL_TRUE, 0, sc_bytes, scales,
+                         0, nullptr, nullptr);
 
     // Dispatch dequant kernel
     ClContext::SharedPtrClKernel dq_kern = blas_cc->registerClKernel(
