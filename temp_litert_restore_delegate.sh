@@ -15,13 +15,11 @@ for so_name in libLiteRtOpenClAccelerator.so libLiteRtGpuAccelerator.so; do
   fi"
 done
 
-# If no backup, re-push from prebuilt
+# Always re-push from prebuilt to ensure originals
 for so_name in libLiteRtOpenClAccelerator.so libLiteRtGpuAccelerator.so; do
   if [ -f "${PREBUILT_DIR}/${so_name}" ]; then
-    if ! adb shell "test -f ${DEVICE_FOLDER}/${so_name}"; then
-      echo "  Re-pushing ${so_name} from prebuilt ..."
-      adb push "${PREBUILT_DIR}/${so_name}" "${DEVICE_FOLDER}/${so_name}" >/dev/null
-    fi
+    echo "  Pushing original ${so_name} from prebuilt ..."
+    adb push "${PREBUILT_DIR}/${so_name}" "${DEVICE_FOLDER}/${so_name}" >/dev/null
   fi
 done
 
