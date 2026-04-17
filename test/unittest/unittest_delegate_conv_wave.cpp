@@ -536,25 +536,11 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   }
 
   // Create CL buffers
-  // Weight as image1d_buffer_t: RGBA unsigned short, width = total_packed/4
-  // Each pixel has 4 ushort values (4 output channels' packed nibbles)
   size_t w_bytes = packed_weights.size() * sizeof(uint16_t);
-  cl_mem w_raw = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
+  cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
   ASSERT_EQ(err, 0);
-  cl.clEnqueueWriteBuffer(queue, w_raw, 1, 0, w_bytes, packed_weights.data(),
+  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_weights.data(),
                           0, nullptr, nullptr);
-  // Create image1d_buffer view over the raw buffer
-  // CL_RGBA=0x10B5, CL_UNSIGNED_INT16=0x10D2
-  cl_image_format w_fmt = {0x10B5 /*CL_RGBA*/, 0x10D2 /*CL_UNSIGNED_INT16*/};
-  cl_image_desc w_img_desc = {};
-  w_img_desc.image_type = 0x10F0; // CL_MEM_OBJECT_IMAGE1D_BUFFER
-  w_img_desc.image_width = packed_weights.size() / 4; // 4 ushorts per pixel
-  w_img_desc.buffer = w_raw;
-  cl_mem w_img = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &w_fmt, &w_img_desc, nullptr, &err);
-  if (err != 0) {
-    fprintf(stderr, "  image1d_buffer creation failed: %d, falling back to buffer\n", err);
-    w_img = w_raw; // fallback
-  }
 
   cl_mem xmem = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &err);
   ASSERT_EQ(err, 0);
@@ -586,7 +572,7 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   ASSERT_EQ(err, 0);
 
   // Kernel args
-  cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_img);
+  cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_buf);
   cl.clSetKernelArg(kernel, 1, sizeof(cl_mem), &xmem);
   cl.clSetKernelArg(kernel, 2, sizeof(cl_mem), &sc_buf);
   cl.clSetKernelArg(kernel, 3, sizeof(cl_mem), &dst_img);
@@ -656,8 +642,7 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   fprintf(stderr, "Int4 wave: %.1f us = %.3f TFLOPS (M=%d N=%d K=%d)\n",
           wall_us, tflops, M, N, K);
 
-  if (w_img != w_raw) cl.clReleaseMemObject(w_img);
-  cl.clReleaseMemObject(w_raw);
+  cl.clReleaseMemObject(w_buf);
   cl.clReleaseMemObject(xmem);
   cl.clReleaseMemObject(sc_buf);
   cl.clReleaseMemObject(src_img);

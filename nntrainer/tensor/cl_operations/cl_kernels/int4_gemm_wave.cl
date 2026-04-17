@@ -1,14 +1,13 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-// Int4 GEMM — delegate layout + texture cached weights + full unroll.
-// Weights as image1d_buffer_t for texture cache (vs __global ushort*).
+// Int4 GEMM — delegate layout + vectorized reads + ACC_ROW macro.
 // Each thread: 8 output slices × 4 channels = 32 outputs.
 
 __constant sampler_t smp_zero = CLK_NORMALIZED_COORDS_FALSE |
                                  CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
 __kernel void gemm_int4_wave(
-    __read_only image1d_buffer_t weights_img,
+    __global const ushort* restrict weights,
     __global const ushort* restrict unused,
     __global const half* restrict scales,
     __write_only image2d_t dst_image,
@@ -33,7 +32,6 @@ __kernel void gemm_int4_wave(
 
   int base_n = Z * 32;
 
-  // Preload scales
   half4 sc0 = vload4(0, scales + base_n);
   half4 sc1 = vload4(0, scales + base_n + 4);
   half4 sc2 = vload4(0, scales + base_n + 8);
@@ -43,74 +41,44 @@ __kernel void gemm_int4_wave(
   half4 sc6 = vload4(0, scales + base_n + 24);
   half4 sc7 = vload4(0, scales + base_n + 28);
 
-  // Weight image: RGBA ushort, width = N/4, pixel[i] = 4 ushorts
-  // Index: row * (N/4) + col_group, where col_group = n/4
-  // Each pixel has .x .y .z .w = weights for 4 consecutive n channels
-  int w_col[8];
-  for (int s = 0; s < 8; ++s)
-    w_col[s] = (base_n + s * 4) / 4;
+#define DQ(V, S, SC) (((half)((int)((V >> S) & 0xFu) - 8)) * SC)
 
-  int N4 = N / 4;
+#define ACC4(R, SRC, PW, SC) \
+  R.x += SRC.x*DQ(PW.x,0,SC.x) + SRC.y*DQ(PW.x,4,SC.x) + SRC.z*DQ(PW.x,8,SC.x) + SRC.w*DQ(PW.x,12,SC.x); \
+  R.y += SRC.x*DQ(PW.y,0,SC.y) + SRC.y*DQ(PW.y,4,SC.y) + SRC.z*DQ(PW.y,8,SC.y) + SRC.w*DQ(PW.y,12,SC.y); \
+  R.z += SRC.x*DQ(PW.z,0,SC.z) + SRC.y*DQ(PW.z,4,SC.z) + SRC.z*DQ(PW.z,8,SC.z) + SRC.w*DQ(PW.z,12,SC.z); \
+  R.w += SRC.x*DQ(PW.w,0,SC.w) + SRC.y*DQ(PW.w,4,SC.w) + SRC.z*DQ(PW.w,8,SC.w) + SRC.w*DQ(PW.w,12,SC.w);
 
   int coord_s = 0;
   do {
     half4 src0 = read_imageh(src_image, smp_zero, (int2)(X, coord_s));
     half4 src1 = read_imageh(src_image, smp_zero, (int2)(X, coord_s + 1));
 
-    // Row 0: packed weights at row coord_s
-    int row0 = coord_s * N4;
+    int row0 = coord_s * N + base_n;
+    ushort4 pw;
 
-    // Read 8 weight pixels from image (8 groups × 4 channels)
-    // read_imageui returns uint4, .x/.y/.z/.w are the 4 ushort values
-    uint4 pw0 = read_imageui(weights_img, row0 + w_col[0]);
-    uint4 pw1 = read_imageui(weights_img, row0 + w_col[1]);
-    uint4 pw2 = read_imageui(weights_img, row0 + w_col[2]);
-    uint4 pw3 = read_imageui(weights_img, row0 + w_col[3]);
-    uint4 pw4 = read_imageui(weights_img, row0 + w_col[4]);
-    uint4 pw5 = read_imageui(weights_img, row0 + w_col[5]);
-    uint4 pw6 = read_imageui(weights_img, row0 + w_col[6]);
-    uint4 pw7 = read_imageui(weights_img, row0 + w_col[7]);
+    pw = vload4(0, weights + row0);      ACC4(r0, src0, pw, sc0)
+    pw = vload4(0, weights + row0 + 4);  ACC4(r1, src0, pw, sc1)
+    pw = vload4(0, weights + row0 + 8);  ACC4(r2, src0, pw, sc2)
+    pw = vload4(0, weights + row0 + 12); ACC4(r3, src0, pw, sc3)
+    pw = vload4(0, weights + row0 + 16); ACC4(r4, src0, pw, sc4)
+    pw = vload4(0, weights + row0 + 20); ACC4(r5, src0, pw, sc5)
+    pw = vload4(0, weights + row0 + 24); ACC4(r6, src0, pw, sc6)
+    pw = vload4(0, weights + row0 + 28); ACC4(r7, src0, pw, sc7)
 
-#define DQ(PW_COMP, SHIFT, SC_COMP) \
-    (((half)((int)((PW_COMP >> SHIFT) & 0xFu) - 8)) * SC_COMP)
+    int row1 = (coord_s + 1) * N + base_n;
 
-#define ACC_ROW(R, SRC, PW, SC) \
-    R.x += SRC.x * DQ(PW.x, 0, SC.x) + SRC.y * DQ(PW.x, 4, SC.x) + SRC.z * DQ(PW.x, 8, SC.x) + SRC.w * DQ(PW.x, 12, SC.x); \
-    R.y += SRC.x * DQ(PW.y, 0, SC.y) + SRC.y * DQ(PW.y, 4, SC.y) + SRC.z * DQ(PW.y, 8, SC.y) + SRC.w * DQ(PW.y, 12, SC.y); \
-    R.z += SRC.x * DQ(PW.z, 0, SC.z) + SRC.y * DQ(PW.z, 4, SC.z) + SRC.z * DQ(PW.z, 8, SC.z) + SRC.w * DQ(PW.z, 12, SC.z); \
-    R.w += SRC.x * DQ(PW.w, 0, SC.w) + SRC.y * DQ(PW.w, 4, SC.w) + SRC.z * DQ(PW.w, 8, SC.w) + SRC.w * DQ(PW.w, 12, SC.w);
-
-    ACC_ROW(r0, src0, pw0, sc0)
-    ACC_ROW(r1, src0, pw1, sc1)
-    ACC_ROW(r2, src0, pw2, sc2)
-    ACC_ROW(r3, src0, pw3, sc3)
-    ACC_ROW(r4, src0, pw4, sc4)
-    ACC_ROW(r5, src0, pw5, sc5)
-    ACC_ROW(r6, src0, pw6, sc6)
-    ACC_ROW(r7, src0, pw7, sc7)
-
-    // Row 1
-    int row1 = (coord_s + 1) * N4;
-    pw0 = read_imageui(weights_img, row1 + w_col[0]);
-    pw1 = read_imageui(weights_img, row1 + w_col[1]);
-    pw2 = read_imageui(weights_img, row1 + w_col[2]);
-    pw3 = read_imageui(weights_img, row1 + w_col[3]);
-    pw4 = read_imageui(weights_img, row1 + w_col[4]);
-    pw5 = read_imageui(weights_img, row1 + w_col[5]);
-    pw6 = read_imageui(weights_img, row1 + w_col[6]);
-    pw7 = read_imageui(weights_img, row1 + w_col[7]);
-
-    ACC_ROW(r0, src1, pw0, sc0)
-    ACC_ROW(r1, src1, pw1, sc1)
-    ACC_ROW(r2, src1, pw2, sc2)
-    ACC_ROW(r3, src1, pw3, sc3)
-    ACC_ROW(r4, src1, pw4, sc4)
-    ACC_ROW(r5, src1, pw5, sc5)
-    ACC_ROW(r6, src1, pw6, sc6)
-    ACC_ROW(r7, src1, pw7, sc7)
+    pw = vload4(0, weights + row1);      ACC4(r0, src1, pw, sc0)
+    pw = vload4(0, weights + row1 + 4);  ACC4(r1, src1, pw, sc1)
+    pw = vload4(0, weights + row1 + 8);  ACC4(r2, src1, pw, sc2)
+    pw = vload4(0, weights + row1 + 12); ACC4(r3, src1, pw, sc3)
+    pw = vload4(0, weights + row1 + 16); ACC4(r4, src1, pw, sc4)
+    pw = vload4(0, weights + row1 + 20); ACC4(r5, src1, pw, sc5)
+    pw = vload4(0, weights + row1 + 24); ACC4(r6, src1, pw, sc6)
+    pw = vload4(0, weights + row1 + 28); ACC4(r7, src1, pw, sc7)
 
 #undef DQ
-#undef ACC_ROW
+#undef ACC4
 
     coord_s += 2;
   } while (coord_s < src_slices);
