@@ -659,19 +659,56 @@ int main(int argc, char** argv) {
   }
   p_clFinish(queue);
 
-  // CPU fp32 matmul reference for a few output positions
-  // C[m, n] = sum_k src[m, k] * weight[n * K + k]
-  // (weight layout in the kernel buffer may differ, so we also capture
-  //  GPU reference from the known-correct (128,1,4) dispatch)
+  // CPU fp32 reference using the ACTUAL weight buffer layout.
+  //
+  // From kernel analysis (program_002.cl):
+  //   f_offset = Z * src_slices * 32 + iter * 64
+  //   qcom_sub_group_constant_load8(xmem, weights_buf, c_off, f_offset>>1, 32)
+  //   → loads 256 half values as weights_cache[0..15] (half16)
+  //
+  //   r_s[j] += src[k] * weights_cache[...][c*4+j]
+  //
+  // Weight W[out_ch, in_ch] is at buffer position (in half units):
+  //   Z = out_ch / 32
+  //   s = (out_ch / 4) % 8
+  //   j = out_ch % 4
+  //   iter = in_ch / 8
+  //   k_local = in_ch % 8
+  //   base = Z * src_slices * 128 + iter * 256
+  //   if k_local < 4: idx = base + s*16 + k_local*4 + j
+  //   if k_local >= 4: idx = base + (s+8)*16 + (k_local-4)*4 + j
+  //
+  // We read the weight buffer as half values and use this layout.
+  fprintf(stderr, "  Computing CPU reference (kernel weight layout) ...\n");
+
+  // Read back weight buffer as half values
+  std::vector<uint16_t> wbuf_half(weight_bytes / 2);
+  p_clEnqueueReadBuffer(queue, weights_buf, 1, 0, weight_bytes,
+                        wbuf_half.data(), 0, nullptr, nullptr);
+
   int n_check_m = std::min(M, 4);
-  int n_check_n = std::min(N, 16);
+  int n_check_n = std::min(N, 32);
   std::vector<float> cpu_ref(n_check_m * n_check_n);
+
   for (int m = 0; m < n_check_m; ++m) {
-    for (int n = 0; n < n_check_n; ++n) {
+    for (int out_ch = 0; out_ch < n_check_n; ++out_ch) {
+      int Z = out_ch / 32;
+      int s = (out_ch / 4) % 8;
+      int j = out_ch % 4;
       double sum = 0;
-      for (int k = 0; k < K; ++k)
-        sum += (double)cpu_src[m * K + k] * (double)cpu_weights[n * K + k];
-      cpu_ref[m * n_check_n + n] = (float)sum;
+      for (int k = 0; k < K; ++k) {
+        int iter_idx = k / 8;
+        int k_local = k % 8;
+        size_t base = (size_t)Z * src_slices * 128 + (size_t)iter_idx * 256;
+        size_t w_idx;
+        if (k_local < 4)
+          w_idx = base + s * 16 + k_local * 4 + j;
+        else
+          w_idx = base + (s + 8) * 16 + (k_local - 4) * 4 + j;
+        float w = f16_to_f32(wbuf_half[w_idx]);
+        sum += (double)cpu_src[m * K + k] * (double)w;
+      }
+      cpu_ref[m * n_check_n + out_ch] = (float)sum;
     }
   }
   fprintf(stderr, "  CPU ref[0,0]=%.4f ref[0,1]=%.4f ref[1,0]=%.4f\n",
@@ -952,19 +989,27 @@ int main(int argc, char** argv) {
     fprintf(stderr, "  vs GPU ref (128,1,4): %d/%d match (max rel err %.2f%%)\n",
             match, total, max_rel_err * 100);
 
-    // Compare vs CPU fp32 reference
-    fprintf(stderr, "  vs CPU fp32 ref:\n");
-    for (int m = 0; m < n_check_m && m < 2; ++m) {
-      for (int n = 0; n < n_check_n && n < 4; ++n) {
-        int s = n / 4, c = n % 4;
+    // Compare vs CPU fp32 reference (layout-aware)
+    fprintf(stderr, "  vs CPU fp32 ref (layout-aware):\n");
+    int cpu_match = 0, cpu_total = 0;
+    float cpu_max_err = 0;
+    for (int m = 0; m < n_check_m; ++m) {
+      for (int out_ch = 0; out_ch < n_check_n; ++out_ch) {
+        int s = out_ch / 4, c = out_ch % 4;
         size_t idx = ((size_t)s * M + m) * 4 + c;
         float gv = f16_to_f32(final_data[idx]);
-        float cv = cpu_ref[m * n_check_n + n];
+        float cv = cpu_ref[m * n_check_n + out_ch];
         float rel = (fabsf(cv) > 1e-6f) ? fabsf(gv - cv) / fabsf(cv) : fabsf(gv - cv);
-        fprintf(stderr, "    [m=%d,n=%d] gpu=%.6f cpu=%.6f err=%.1f%%\n",
-                m, n, gv, cv, rel * 100);
+        cpu_total++;
+        if (rel < 0.15f) cpu_match++;
+        if (rel > cpu_max_err) cpu_max_err = rel;
+        if (m < 2 && out_ch < 8)
+          fprintf(stderr, "    [m=%d,n=%d] gpu=%.6f cpu=%.6f err=%.1f%%\n",
+                  m, out_ch, gv, cv, rel * 100);
       }
     }
+    fprintf(stderr, "  CPU match: %d/%d (max err %.1f%%)\n",
+            cpu_match, cpu_total, cpu_max_err * 100);
 
     if (match >= total * 9 / 10)
       fprintf(stderr, "  ✓ PASS: output matches reference\n");
