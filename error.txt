@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.64 KiB | 420.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 1.69 KiB | 432.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   a6848055..76d9224c  litert_lm  -> origin/litert_lm
-Updating a6848055..76d9224c
+   1e8763eb..abb08db2  litert_lm  -> origin/litert_lm
+Updating 1e8763eb..abb08db2
 Fast-forward
- runtime/cl_bench/delegate_kernel_bench.cc | 74 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 74 insertions(+)
+ runtime/cl_bench/delegate_kernel_bench.cc | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 72 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ DK_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -31,7 +31,7 @@ INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loade
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.842s, Critical Path: 0.74s
+INFO: Elapsed time: 0.880s, Critical Path: 0.76s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
@@ -66,12 +66,28 @@ WARN: clReleaseCommandBufferKHR not found
   Weight pipeline complete
 [dk_bench] global=(6144,8,4) local=(128,1,4)
 [dk_bench] s0=(1,1536,1024,32) s1=(384,0,0,384) s2=(1,1,0,0)
+[dk_bench] Auto-tuning local sizes ...
+  local=(128,1,4) global=(6144,8,4) → 6200.0 us (3.117 TFLOPS)
+  local=(64,1,4) global=(3072,16,4) → 6424.8 us (3.008 TFLOPS)
+  local=(32,1,4) global=(1536,32,4) → 6387.6 us (3.026 TFLOPS)
+  local=(64,2,4) global=(3072,16,4) → 3468.2 us (5.573 TFLOPS)
+  local=(32,2,4) global=(1536,32,4) → 6366.4 us (3.036 TFLOPS)
+  local=(128,1,2) global=(12288,8,2) → 6222.7 us (3.106 TFLOPS)
+  local=(64,1,2) global=(6144,16,2) → 6404.1 us (3.018 TFLOPS)
+  local=(32,1,2) global=(3072,32,2) → 5723.0 us (3.377 TFLOPS)
+  local=(128,1,1) global=(24576,8,1) → 6211.9 us (3.111 TFLOPS)
+  local=(64,1,1) global=(12288,16,1) → 5743.2 us (3.365 TFLOPS)
+  local=(32,1,1) global=(6144,32,1) → 11259.9 us (1.716 TFLOPS)
+  local=(256,1,2) global=(24576,4,2) → 6105.2 us (3.166 TFLOPS)
+  local=(256,1,1) global=(49152,4,1) → 6123.1 us (3.156 TFLOPS)
+[dk_bench] Best: local=(64,2,4) → 3468.2 us (5.573 TFLOPS)
+[dk_bench] global=(3072,16,4) local=(64,2,4)
 [dk_bench] Warmup 50 ...
 [dk_bench] Timed 100 iters (burst) ...
 
 [dk_bench] Results: M=1024 N=6144 K=1536
-  wall: 6100.3 us  TFLOPS=3.168
-  gpu:  6087.0 us  TFLOPS=3.175
+  wall: 3362.4 us  TFLOPS=5.748
+  gpu:  3347.8 us  TFLOPS=5.773
   (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
 
 [dk_bench] Command buffer not available
