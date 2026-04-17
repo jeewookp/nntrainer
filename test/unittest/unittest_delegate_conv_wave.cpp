@@ -536,10 +536,33 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   }
 
   // Create CL buffers
-  size_t w_bytes = packed_weights.size() * sizeof(uint16_t);
+  // Pack int4 weights into buffer as raw bytes (kernel interprets as half8*)
+  // Layout: for each Z group, each iteration pair (2 src slices):
+  //   32 ushorts (row0) + 32 ushorts (row1) = 64 ushorts = 128 bytes = 8 half8
+  // Sequential: Z0_iter0, Z0_iter1, ..., Z0_iterN, Z1_iter0, ...
+  int n_z_groups = (dst_slices + 7) / 8;
+  int iters_per_z = src_slices / 2;
+  size_t packed_buf_size = (size_t)n_z_groups * iters_per_z * 64 * sizeof(uint16_t);
+  std::vector<uint16_t> packed_buf(n_z_groups * iters_per_z * 64, 0);
+
+  for (int z = 0; z < n_z_groups; ++z) {
+    int base_n = z * 32;
+    for (int it = 0; it < iters_per_z; ++it) {
+      int cs = it * 2;
+      size_t buf_off = ((size_t)z * iters_per_z + it) * 64;
+      // Row 0: packed_weights[cs * N + base_n .. +31]
+      for (int j = 0; j < 32 && base_n + j < N; ++j)
+        packed_buf[buf_off + j] = packed_weights[cs * N + base_n + j];
+      // Row 1: packed_weights[(cs+1) * N + base_n .. +31]
+      for (int j = 0; j < 32 && base_n + j < N; ++j)
+        packed_buf[buf_off + 32 + j] = packed_weights[(cs + 1) * N + base_n + j];
+    }
+  }
+
+  size_t w_bytes = packed_buf.size() * sizeof(uint16_t);
   cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
   ASSERT_EQ(err, 0);
-  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_weights.data(),
+  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_buf.data(),
                           0, nullptr, nullptr);
 
   cl_mem xmem = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &err);
