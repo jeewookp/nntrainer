@@ -95,6 +95,7 @@ DECL_CL(cl_mem, clCreateImage, (cl_context, cl_bitfield, const cl_image_format*,
 DECL_CL(cl_program, clCreateProgramWithSource, (cl_context, cl_uint, const char**, const size_t*, cl_int*))
 DECL_CL(cl_int, clBuildProgram, (cl_program, cl_uint, const cl_device_id*, const char*, void*, void*))
 DECL_CL(cl_int, clGetProgramBuildInfo, (cl_program, cl_device_id, cl_uint, size_t, void*, size_t*))
+DECL_CL(cl_int, clGetProgramInfo, (cl_program, cl_uint, size_t, void*, size_t*))
 DECL_CL(cl_kernel, clCreateKernel, (cl_program, const char*, cl_int*))
 DECL_CL(cl_int, clSetKernelArg, (cl_kernel, cl_uint, size_t, const void*))
 DECL_CL(cl_int, clEnqueueNDRangeKernel, (cl_command_queue, cl_kernel, cl_uint, const size_t*, const size_t*, const size_t*, cl_uint, const cl_event*, cl_event*))
@@ -135,7 +136,8 @@ static bool LoadCL() {
   LOAD(h, clCreateCommandQueueWithProperties);
   LOAD(h, clCreateBuffer); LOAD(h, clCreateImage);
   LOAD(h, clCreateProgramWithSource); LOAD(h, clBuildProgram);
-  LOAD(h, clGetProgramBuildInfo); LOAD(h, clCreateKernel);
+  LOAD(h, clGetProgramBuildInfo); LOAD(h, clGetProgramInfo);
+  LOAD(h, clCreateKernel);
   LOAD(h, clSetKernelArg); LOAD(h, clEnqueueNDRangeKernel);
   LOAD(h, clFinish); LOAD(h, clReleaseMemObject);
   LOAD(h, clReleaseKernel); LOAD(h, clReleaseProgram);
