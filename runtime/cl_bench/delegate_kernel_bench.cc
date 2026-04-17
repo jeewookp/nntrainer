@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
 
   // Build options will be determined by intercepting delegate's clBuildProgram.
   const char* build_opts = getenv("DK_BUILD_OPTS");
-  if (!build_opts) build_opts = "-cl-fast-relaxed-math";
+  if (!build_opts) build_opts = "-qcom-accelerate-16-bit=true -cl-std=CL2.0";
   fprintf(stderr, "[dk_bench] Build opts: '%s'\n", build_opts);
   err = p_clBuildProgram(prog, 1, &dev, build_opts, nullptr, nullptr);
   if (err != CL_SUCCESS) {
