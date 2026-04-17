@@ -107,6 +107,8 @@ DECL_CL(cl_int, clEnqueueWriteBuffer, (cl_command_queue, cl_mem, cl_uint, size_t
 DECL_CL(cl_int, clEnqueueReadBuffer, (cl_command_queue, cl_mem, cl_uint, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
 DECL_CL(cl_int, clEnqueueWriteImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, const void*, cl_uint, const cl_event*, cl_event*))
 DECL_CL(cl_int, clEnqueueReadImage, (cl_command_queue, cl_mem, cl_uint, const size_t*, const size_t*, size_t, size_t, void*, cl_uint, const cl_event*, cl_event*))
+// Qualcomm performance hint
+DECL_CL(cl_int, clSetPerfHintQCOM, (cl_context, cl_uint))
 
 #define LOAD(h, name) p_##name = (pfn_##name)dlsym(h, #name); \
   if (!p_##name) { fprintf(stderr, "WARN: %s not found\n", #name); }
@@ -129,6 +131,7 @@ static bool LoadCL() {
   LOAD(h, clWaitForEvents); LOAD(h, clEnqueueWriteBuffer);
   LOAD(h, clEnqueueReadBuffer);
   LOAD(h, clEnqueueWriteImage); LOAD(h, clEnqueueReadImage);
+  LOAD(h, clSetPerfHintQCOM);
   return true;
 }
 
@@ -166,7 +169,7 @@ static float f16_to_f32(uint16_t h) {
 int main(int argc, char** argv) {
   // Parse args
   int M = 1024, N = 6144, K = 1536;
-  int warmup = 5, iters = 50;
+  int warmup = 50, iters = 100;
   const char* cl_file = "cl_intercept/program_002.cl";
 
   for (int i = 1; i < argc; ++i) {
@@ -204,7 +207,20 @@ int main(int argc, char** argv) {
   fprintf(stderr, "[dk_bench] GPU: %s\n", dname);
 
   cl_int err;
-  cl_context ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+  // Create context with Qualcomm performance hint property.
+  // CL_CONTEXT_PERF_HINT_QCOM = 0x40C2, CL_PERF_HINT_HIGH_QCOM = 0x40C3
+  intptr_t ctx_props[] = { 0x40C2, 0x40C3, 0 };
+  cl_context ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
+  if (err) {
+    fprintf(stderr, "[dk_bench] Context with perf hint failed (%d), retrying without\n", err);
+    ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+  }
+  // Also try runtime perf hint
+  if (p_clSetPerfHintQCOM) {
+    cl_int ph = p_clSetPerfHintQCOM(ctx, 0x40C3);
+    fprintf(stderr, "[dk_bench] clSetPerfHintQCOM(HIGH): %s\n",
+            ph == 0 ? "OK" : "failed");
+  }
   cl_command_queue queue = p_clCreateCommandQueue(ctx, dev, 0, &err);
   cl_command_queue prof_queue = p_clCreateCommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE, &err);
 
@@ -293,10 +309,14 @@ int main(int argc, char** argv) {
   // ========================================================================
   fprintf(stderr, "[dk_bench] Initializing data ...\n");
 
-  // Fill weights buffer with 0.01h
+  // Fill weights buffer with varied small values (simulates real weight
+  // distribution for realistic cache behavior).
   {
-    uint16_t val = f32_to_f16(0.01f);
-    std::vector<uint16_t> wdata(weight_bytes / 2, val);
+    std::vector<uint16_t> wdata(weight_bytes / 2);
+    for (size_t i = 0; i < wdata.size(); ++i) {
+      float v = 0.005f + 0.01f * ((i * 7 + 13) % 100) / 100.0f;
+      wdata[i] = f32_to_f16(v);
+    }
     p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
                            wdata.data(), 0, nullptr, nullptr);
   }

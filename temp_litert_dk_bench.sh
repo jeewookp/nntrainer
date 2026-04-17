@@ -49,6 +49,12 @@ if ! adb shell "test -f ${DEVICE_FOLDER}/${DK_CL_FILE}"; then
   fi
 fi
 
+# Try to lock GPU to max frequency (may need root).
+echo ""
+echo "[dk_bench.sh] Attempting GPU freq boost ..."
+adb shell "echo performance > /sys/class/kgsl/kgsl-3d0/devfreq/governor 2>/dev/null" 2>/dev/null || true
+adb shell "cat /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null" 2>/dev/null || true
+
 echo ""
 echo "[dk_bench.sh] Running (taskset ${TASKSET_MASK}) ..."
 adb shell "cd ${DEVICE_FOLDER}; \
