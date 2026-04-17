@@ -1,3 +1,16 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 770 bytes | 192.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   0ba3a64e..3c0710ac  litert_lm  -> origin/litert_lm
+Updating 0ba3a64e..3c0710ac
+Fast-forward
+ runtime/cl_bench/matmul_cl_bench.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_cl_bench.sh 
 [cl_bench.sh] WARNING: caller exported ANDROID_NDK_HOME=/home/jwhero94/neo/android-ndk-r26d
 [cl_bench.sh]          auto-upgrading to /home/jwhero94/neo/android-ndk-r28b
@@ -12,7 +25,6 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_cl
 [cl_bench.sh] HOST_MATMUL_ROSTER_CSV=./matmul_roster.csv
 
 [cl_bench.sh] Building //runtime/cl_bench:matmul_cl_bench ...
-Starting local Bazel server and connecting to it...
 INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
 INFO: Options provided by the client:
   Inherited 'common' options: --isatty=1 --terminal_columns=425
@@ -25,57 +37,22 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'bazel_skylib' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'bazel_features' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'platforms' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/xla/third_party/py/python_repo.bzl:94:14: !!!Using pywrap rules instead of directly creating .so objects!!!
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/xla/third_party/py/python_repo.bzl:99:10: 
-=============================
-Hermetic Python configuration:
-Version: "3.13"
-Kind: ""
-Interpreter: "default" (provided by rules_python)
-Requirements_lock label: "@python_version_repo//:requirements_lock_3_13.txt"
-=====================================
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_rules_apple' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_rules_swift' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'build_bazel_apple_support' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'xctestrunner' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'net_zstd' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_proto' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
-INFO: Analyzed target //runtime/cl_bench:matmul_cl_bench (187 packages loaded, 7624 targets configured).
-ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:24:10: Compiling runtime/cl_bench/matmul_cl_bench.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/cl_bench:matmul_cl_bench) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 101 arguments skipped)
-runtime/cl_bench/matmul_cl_bench.cc:456:7: error: non-constant-expression cannot be narrowed from type 'int' to 'size_t' (aka 'unsigned long') in initializer list [-Wc++11-narrowing]
-  456 |       ((M + 15) / 16) * 16,
-      |       ^~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/matmul_cl_bench.cc:456:7: note: insert an explicit cast to silence this issue
-  456 |       ((M + 15) / 16) * 16,
-      |       ^~~~~~~~~~~~~~~~~~~~
-      |       static_cast<size_t>()
-runtime/cl_bench/matmul_cl_bench.cc:457:7: error: non-constant-expression cannot be narrowed from type 'int' to 'size_t' (aka 'unsigned long') in initializer list [-Wc++11-narrowing]
-  457 |       ((N + 15) / 16) * 16,
-      |       ^~~~~~~~~~~~~~~~~~~~
-runtime/cl_bench/matmul_cl_bench.cc:457:7: note: insert an explicit cast to silence this issue
-  457 |       ((N + 15) / 16) * 16,
-      |       ^~~~~~~~~~~~~~~~~~~~
-      |       static_cast<size_t>()
-2 errors generated.
-Target //runtime/cl_bench:matmul_cl_bench failed to build
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 3.645s, Critical Path: 0.58s
-INFO: 6 processes: 6 internal.
-ERROR: Build did NOT complete successfully
+INFO: Analyzed target //runtime/cl_bench:matmul_cl_bench (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //runtime/cl_bench:matmul_cl_bench up-to-date:
+  bazel-bin/runtime/cl_bench/matmul_cl_bench
+INFO: Elapsed time: 1.018s, Critical Path: 0.83s
+INFO: 3 processes: 1 internal, 2 local.
+INFO: Build completed successfully, 3 total actions
+
+[cl_bench.sh] adb push binary ...
+
+[cl_bench.sh] host ./matmul_roster.csv not found; using device cached
+[cl_bench.sh]   /data/local/tmp/litert_lm/matmul_roster.csv
+
+[cl_bench.sh] Running matmul_cl_bench on device (taskset f0) ...
+[cl_bench] Direct OpenCL matmul benchmark
+[cl_bench] dtype=fp16 warmup=5 iters=50 max_tensor_mb=512
+ERROR: no valid shapes
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
