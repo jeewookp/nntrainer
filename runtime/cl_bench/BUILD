@@ -33,8 +33,7 @@ cc_binary(
 )
 
 # Matmul benchmark using TFLite GPU delegate's ConvGeneric kernel.
-# Links the open-source TFLite GPU CL runtime directly — same optimized
-# "convolution(conv_wave_memory)" kernel that achieves 5+ TFLOPS on Adreno.
+# Links the open-source TFLite GPU CL runtime directly.
 cc_binary(
     name = "conv_generic_bench",
     srcs = ["conv_generic_bench.cc"],
@@ -87,4 +86,14 @@ cc_binary(
         "@litert//tflite/delegates/gpu/common/task:tensor_desc",
         "@litert//tflite/delegates/gpu/common/tasks:conv_generic",
     ],
+)
+
+# OpenCL interceptor: wraps libOpenCL.so to capture CL kernel sources
+# from the closed-source delegate. Built as shared library, pushed to
+# device as "libOpenCL.so" so the delegate loads it first.
+cc_binary(
+    name = "cl_intercept",
+    srcs = ["cl_intercept.cc"],
+    linkopts = ["-ldl"],
+    linkshared = True,
 )
