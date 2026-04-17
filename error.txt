@@ -1,102 +1,28 @@
-In file included from ./../quantize.cpp:70:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
-[arm64-v8a] Executable     : nntr_quantize
--e [SUCCESS] Build completed successfully
--e [INFO] Build artifacts:
--e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
--e   [OK] libcausallm_core.so (43M) (Copied from obj)
--e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
--e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
--e   [WARN] nntr_quantize found in obj but not in libs. Copying...
--e   [OK] nntr_quantize (43M) (Copied from obj)
--e 
-========================================
--e  Build Summary 
--e ========================================
--e [SUCCESS] Build completed successfully!
--e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
--e [INFO] Executables:
--e [INFO]   - nntrainer_causallm (main application), nntr_quantize
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (44525192 bytes in 1.283s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.7 MB/s (44049472 bytes in 1.284s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.0 MB/s (3960088 bytes in 0.118s)
-3 files pushed. 32.8 MB/s (92534752 bytes in 2.688s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.3 MB/s (11066664 bytes in 0.327s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.3 MB/s (129336 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 24.6 MB/s (163320 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.4 MB/s (1822720 bytes in 0.055s)
-[temp.sh] patched on-device nntr_config.json:
-    "model_tensor_type": "QINT4-FP16",
-    "num_to_generate": 32,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-
-[!] FATAL ERROR: delegate: scales upload failed
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=9.50 ms calls=1 avg=9.504 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=2.59 ms calls=1 avg=2.592 ms
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-
-[!] FATAL ERROR: delegate: scales upload failed
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=9.50 ms calls=1 avg=9.504 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=2.59 ms calls=1 avg=2.592 ms
-
-
---- Perf summary ---
-(no perf lines)
-
---- dotQInteger profile breakdown ---
-(no PROFILE lines found)
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=9.50 ms calls=1 avg=9.504 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=2.59 ms calls=1 avg=2.592 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+[delegate_fp16] GPU dequant cached N=2560 K=4096 (20480 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=9728 (48640 KB)
+[delegate_fp16] GPU dequant cached N=4096 K=2560 (20480 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=4096 (20480 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=9728 (48640 KB)
+[delegate_fp16] GPU dequant cached N=4096 K=2560 (20480 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=4096 (20480 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=9728 (48640 KB)
+[delegate_fp16] GPU dequant cached N=4096 K=2560 (20480 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=1024 K=2560 (5120 KB)
+[delegate_fp16] GPU dequant cached N=2560 K=4096 (20480 KB)
+[delegate_fp16] GPU dequant cached N=9728 K=2560 (48640 KB)
+adb: error: failed to get feature set: no devices/emulators found
+error: no devices/emulators found
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
