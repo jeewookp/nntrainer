@@ -387,16 +387,113 @@ int main(int argc, char** argv) {
   // 1.0h, bias with 0.  Then each output element ≈ K * 0.01 = 15.36
   // (modulo weight layout / accumulation order).
   // ========================================================================
-  fprintf(stderr, "[dk_bench] Initializing data ...\n");
+  // ========================================================================
+  // Full weight pipeline: program_000 → program_001 → program_002
+  // ========================================================================
+  fprintf(stderr, "[dk_bench] Running weight pipeline ...\n");
 
-  // Fill weights buffer with varied small values (simulates real weight
-  // distribution for realistic cache behavior).
-  {
-    std::vector<uint16_t> wdata(weight_bytes / 2);
-    for (size_t i = 0; i < wdata.size(); ++i) {
-      float v = 0.005f + 0.01f * ((i * 7 + 13) % 100) / 100.0f;
-      wdata[i] = f32_to_f16(v);
+  std::string dir = std::string(cl_file);
+  dir = dir.substr(0, dir.rfind('/'));
+  std::string src_000 = ReadFile((dir + "/program_000.cl").c_str());
+  std::string src_001 = ReadFile((dir + "/program_001.cl").c_str());
+
+  auto compile_k = [&](const std::string& code, const char* nm,
+                        const char* opts) -> cl_kernel {
+    const char* p = code.c_str(); size_t l = code.size();
+    cl_program pg = p_clCreateProgramWithSource(ctx, 1, &p, &l, &err);
+    if (err) { fprintf(stderr, "  %s create: %d\n", nm, err); return nullptr; }
+    err = p_clBuildProgram(pg, 1, &dev, opts, nullptr, nullptr);
+    if (err) {
+      size_t sz = 0;
+      p_clGetProgramBuildInfo(pg, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+      std::vector<char> lg(sz + 1, 0);
+      p_clGetProgramBuildInfo(pg, dev, CL_PROGRAM_BUILD_LOG, sz, lg.data(), nullptr);
+      fprintf(stderr, "  %s build: %s\n", nm, lg.data());
+      return nullptr;
     }
+    return p_clCreateKernel(pg, "main_function", &err);
+  };
+
+  cl_kernel k000 = src_000.empty() ? nullptr : compile_k(src_000, "p000", "");
+  cl_kernel k001 = src_001.empty() ? nullptr : compile_k(src_001, "p001", "");
+
+  if (k000 && k001) {
+    // Stage 0: int8 → packed uint4
+    size_t int8_bytes = (size_t)N * K;
+    cl_mem int8_buf = p_clCreateBuffer(ctx, 0x14, int8_bytes, nullptr, &err);
+    {
+      std::vector<int8_t> d(int8_bytes);
+      for (size_t i = 0; i < int8_bytes; ++i)
+        d[i] = (int8_t)((i * 7 + 3) % 11 - 5);
+      p_clEnqueueWriteBuffer(queue, int8_buf, 1, 0, int8_bytes,
+                             d.data(), 0, nullptr, nullptr);
+    }
+    // Captured: s0=(1536,589824,384,1536), s1=(1,6144,1,1)
+    int pack_cnt = (N / 4) * (K / 4);
+    int4 p0s0 = { dst_slices, pack_cnt, src_slices, dst_slices };
+    int4 p0s1 = { 1, N, 1, 1 };
+    p_clSetKernelArg(k000, 0, sizeof(cl_mem), &weights_buf);
+    p_clSetKernelArg(k000, 1, sizeof(cl_mem), &int8_buf);
+    p_clSetKernelArg(k000, 2, sizeof(int4), &p0s0);
+    p_clSetKernelArg(k000, 3, sizeof(int4), &p0s1);
+    size_t g0[] = { (size_t)pack_cnt, 1, 1 };
+    size_t l0[] = { std::min((size_t)1024, (size_t)pack_cnt), 1, 1 };
+    err = p_clEnqueueNDRangeKernel(queue, k000, 3, nullptr, g0, l0, 0, nullptr, nullptr);
+    p_clFinish(queue);
+    fprintf(stderr, "  prog_000: %s\n", err ? "FAIL" : "OK");
+
+    // Stage 1: packed → dequant half
+    // Need separate packed buffer (prog_000 output) and half buffer (prog_001 output)
+    // Delegate: packed=34603008, half=18874368
+    // For simplicity, use weights_buf as both (prog_000 writes uint4, prog_001 reads uint4 + writes half4)
+    // But that overwrites! Need separate buffers.
+    size_t packed_bytes = (size_t)pack_cnt * 16;
+    cl_mem packed_buf = p_clCreateBuffer(ctx, CL_MEM_READ_ONLY, packed_bytes, nullptr, &err);
+    // Copy pack result to packed_buf
+    // Actually, prog_000 wrote to weights_buf as uint4. Let's re-run prog_000 into packed_buf.
+    p_clSetKernelArg(k000, 0, sizeof(cl_mem), &packed_buf);
+    err = p_clEnqueueNDRangeKernel(queue, k000, 3, nullptr, g0, l0, 0, nullptr, nullptr);
+    p_clFinish(queue);
+
+    // scale/zero_point images
+    cl_image_desc sc_desc = {}; sc_desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sc_desc.image_width = dst_slices; sc_desc.image_height = 1;
+    cl_mem sc_img = p_clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt_half, &sc_desc, nullptr, &err);
+    cl_mem zp_img = p_clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt_half, &sc_desc, nullptr, &err);
+    {
+      uint16_t sc = f32_to_f16(0.01f), zp = f32_to_f16(0.0f);
+      std::vector<uint16_t> sd(dst_slices * 4, sc), zd(dst_slices * 4, zp);
+      size_t o[3] = {0,0,0}, r[3] = {(size_t)dst_slices, 1, 1};
+      p_clEnqueueWriteImage(queue, sc_img, 1, o, r, 0, 0, sd.data(), 0, nullptr, nullptr);
+      p_clEnqueueWriteImage(queue, zp_img, 1, o, r, 0, 0, zd.data(), 0, nullptr, nullptr);
+    }
+
+    // Captured: s0=(8,384,1536,1536), s1=(1,1,0,0)
+    // NDRange: global=(3072,192,1) local=(64,8,1)
+    int4 p1s0 = { 8, src_slices, dst_slices, dst_slices };
+    int4 p1s1 = { 1, 1, 0, 0 };
+    p_clSetKernelArg(k001, 0, sizeof(cl_mem), &weights_buf);
+    p_clSetKernelArg(k001, 1, sizeof(cl_mem), &packed_buf);
+    p_clSetKernelArg(k001, 2, sizeof(cl_mem), &sc_img);
+    p_clSetKernelArg(k001, 3, sizeof(cl_mem), &zp_img);
+    p_clSetKernelArg(k001, 4, sizeof(int4), &p1s0);
+    p_clSetKernelArg(k001, 5, sizeof(int4), &p1s1);
+    size_t g1[] = { 3072, 192, 1 };
+    size_t l1[] = { 64, 8, 1 };
+    err = p_clEnqueueNDRangeKernel(queue, k001, 3, nullptr, g1, l1, 0, nullptr, nullptr);
+    p_clFinish(queue);
+    fprintf(stderr, "  prog_001: %s\n", err ? "FAIL" : "OK");
+
+    p_clReleaseMemObject(int8_buf);
+    p_clReleaseMemObject(packed_buf);
+    p_clReleaseMemObject(sc_img);
+    p_clReleaseMemObject(zp_img);
+    fprintf(stderr, "  Weight pipeline complete\n");
+  } else {
+    fprintf(stderr, "  Pipeline kernels not available, direct init\n");
+    std::vector<uint16_t> wdata(weight_bytes / 2);
+    for (size_t i = 0; i < wdata.size(); ++i)
+      wdata[i] = f32_to_f16(0.005f + 0.01f * ((i * 7 + 13) % 100) / 100.0f);
     p_clEnqueueWriteBuffer(queue, weights_buf, 1, 0, weight_bytes,
                            wdata.data(), 0, nullptr, nullptr);
   }
