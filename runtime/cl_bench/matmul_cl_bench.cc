@@ -320,12 +320,38 @@ static std::vector<Shape> ParseShapesFromCsv(const std::string& csv_path) {
   while (std::getline(f, line)) {
     if (header) { header = false; continue; }
     if (line.empty()) continue;
+    // matmul_roster.csv columns:
+    //   label, subgraph_idx, subgraph_name, op_idx, op_type, m, n, k, ...
+    // m/n/k are at indices 5/6/7. Split by comma and extract.
+    std::vector<std::string> cols;
+    std::stringstream ss(line);
+    std::string col;
+    while (std::getline(ss, col, ',')) cols.push_back(col);
     int m = 0, n = 0, k = 0;
-    if (sscanf(line.c_str(), "%d,%d,%d", &m, &n, &k) >= 3 &&
-        m > 0 && n > 0 && k > 0) {
+    if (cols.size() >= 8) {
+      m = atoi(cols[5].c_str());
+      n = atoi(cols[6].c_str());
+      k = atoi(cols[7].c_str());
+    } else if (cols.size() >= 3) {
+      m = atoi(cols[0].c_str());
+      n = atoi(cols[1].c_str());
+      k = atoi(cols[2].c_str());
+    }
+    if (m > 0 && n > 0 && k > 0) {
       result.push_back({m, n, k});
     }
   }
+  // Dedup.
+  std::sort(result.begin(), result.end(), [](const Shape& a, const Shape& b) {
+    if (a.m != b.m) return a.m < b.m;
+    if (a.n != b.n) return a.n < b.n;
+    return a.k < b.k;
+  });
+  result.erase(std::unique(result.begin(), result.end(),
+                           [](const Shape& a, const Shape& b) {
+                             return a.m == b.m && a.n == b.n && a.k == b.k;
+                           }),
+               result.end());
   return result;
 }
 
