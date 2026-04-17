@@ -1,4 +1,17 @@
-   1ac667aa..1ebf53b5  litert_lm -> litert_lm
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.13 KiB | 384.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   0d8a0853..4d370a51  litert_lm  -> origin/litert_lm
+Updating 0d8a0853..4d370a51
+Fast-forward
+ runtime/cl_bench/BUILD                 |  1 +
+ runtime/cl_bench/conv_generic_bench.cc | 28 +++++++++++++---------------
+ 2 files changed, 14 insertions(+), 15 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ ./temp_litert_conv_bench.sh 
 [conv_bench.sh] WARNING: auto-upgrading NDK to /home/jwhero94/neo/android-ndk-r28b
 [conv_bench.sh] === ConvGeneric Matmul Benchmark ===
@@ -18,38 +31,21 @@ INFO: Found applicable config definition build:v2 in file /home/jwhero94/project
 INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
 INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
 INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (43 packages loaded, 1408 targets configured).
-ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:38:10: Compiling runtime/cl_bench/conv_generic_bench.cc failed: (Exit 1): clang failed: error executing CppCompile command (from target //runtime/cl_bench:conv_generic_bench) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -no-canonical-prefixes '--target=aarch64-linux-android31' -fdiagnostics-color -Wa,--noexecstack '-std=gnu++17' -Wc++2a-extensions ... (remaining 151 arguments skipped)
-runtime/cl_bench/conv_generic_bench.cc:173:16: error: no member named 'type' in 'tflite::gpu::Tensor<tflite::gpu::StrongShape<tflite::gpu::Layout::OHWI>, tflite::gpu::DataType::FLOAT32>'
-  173 |   attr.weights.type = DataType::FLOAT32;
-      |   ~~~~~~~~~~~~ ^
-runtime/cl_bench/conv_generic_bench.cc:179:13: error: no member named 'type' in 'tflite::gpu::Tensor<tflite::gpu::StrongShape<tflite::gpu::Layout::LINEAR>, tflite::gpu::DataType::FLOAT32>'
-  179 |   attr.bias.type = DataType::FLOAT32;
-      |   ~~~~~~~~~ ^
-runtime/cl_bench/conv_generic_bench.cc:188:3: error: reference to 'Tensor' is ambiguous
-  188 |   Tensor src_tensor, dst_tensor;
-      |   ^
-external/litert/tflite/delegates/gpu/common/tensor.h:83:8: note: candidate found by name lookup is 'tflite::gpu::Tensor'
-   83 | struct Tensor {
-      |        ^
-external/litert/tflite/delegates/gpu/cl/tensor.h:40:7: note: candidate found by name lookup is 'tflite::gpu::cl::Tensor'
-   40 | class Tensor : public GPUObject, public GpuSpatialTensor {
-      |       ^
-runtime/cl_bench/conv_generic_bench.cc:190:47: error: use of undeclared identifier 'src_tensor'
-  190 |       CreateTensor(env->context(), src_desc, &src_tensor));
-      |                                               ^
-runtime/cl_bench/conv_generic_bench.cc:192:47: error: use of undeclared identifier 'dst_tensor'
-  192 |       CreateTensor(env->context(), dst_desc, &dst_tensor));
-      |                                               ^
-runtime/cl_bench/conv_generic_bench.cc:197:42: error: use of undeclared identifier 'src_tensor'
-  197 |   RETURN_IF_ERROR(cl_op.SetSrcTensor(0, &src_tensor));
-      |                                          ^
-runtime/cl_bench/conv_generic_bench.cc:198:42: error: use of undeclared identifier 'dst_tensor'
-  198 |   RETURN_IF_ERROR(cl_op.SetDstTensor(0, &dst_tensor));
-      |                                          ^
-7 errors generated.
+INFO: Analyzed target //runtime/cl_bench:conv_generic_bench (1 packages loaded, 2 targets configured).
+ERROR: /home/jwhero94/projects/nntrainer_litert_lm/runtime/cl_bench/BUILD:38:10: Linking runtime/cl_bench/conv_generic_bench failed: (Exit 1): clang failed: error executing CppLink command (from target //runtime/cl_bench:conv_generic_bench) external/androidndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang @bazel-out/arm64-v8a-opt/bin/runtime/cl_bench/conv_generic_bench-2.params
+ld.lld: error: undefined symbol: __android_log_print
+>>> referenced by opencl_wrapper.cc
+>>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
+>>> referenced by opencl_wrapper.cc
+>>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
+>>> referenced by opencl_wrapper.cc
+>>>               bazel-out/arm64-v8a-opt/bin/external/litert/tflite/delegates/gpu/cl/_objs/opencl_wrapper/opencl_wrapper.o:(tflite::logging::LoggingWrapper::~LoggingWrapper())
+>>> referenced 1 more times
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
 Target //runtime/cl_bench:conv_generic_bench failed to build
 Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 1.940s, Critical Path: 1.44s
-INFO: 19 processes: 12 internal, 7 local.
+INFO: Elapsed time: 2.188s, Critical Path: 2.06s
+INFO: 10 processes: 3 internal, 7 local.
 ERROR: Build did NOT complete successfully
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
