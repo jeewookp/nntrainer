@@ -287,12 +287,32 @@ int main(int argc, char** argv) {
   //   global[1] = (M + 127) / 128
   //   global[2] = 4
   //   local = (128, 1, 4)
-  size_t local[3] = { 128, 1, 4 };
+  // Delegate tries multiple local sizes then picks the fastest.
+  // From interception log, the tuning candidates were:
+  //   (64,4,1) (32,8,1) (16,16,1) (8,32,1) (4,64,1)
+  //   (128,4,1) (64,8,1) (32,16,1) (16,32,1) (8,64,1)
+  // Then actual execution used (64,8,1) with global=(3072,192,1).
+  // Env DK_LOCAL overrides: "64,8,1"
+  size_t local[3] = { 64, 8, 1 };
   size_t global[3] = {
-    (size_t)dst_slices * 4,
-    (size_t)((M + 127) / 128),
-    4
+    (size_t)((dst_slices / 8 + 7) / 8) * 64,  // 3072 for dst_slices=1536
+    (size_t)dst_slices / 8,                      // 192 for dst_slices=1536
+    1
   };
+  const char* local_env = getenv("DK_LOCAL");
+  if (local_env) {
+    int l0, l1, l2;
+    if (sscanf(local_env, "%d,%d,%d", &l0, &l1, &l2) == 3) {
+      local[0] = l0; local[1] = l1; local[2] = l2;
+    }
+  }
+  const char* global_env = getenv("DK_GLOBAL");
+  if (global_env) {
+    int g0, g1, g2;
+    if (sscanf(global_env, "%d,%d,%d", &g0, &g1, &g2) == 3) {
+      global[0] = g0; global[1] = g1; global[2] = g2;
+    }
+  }
 
   fprintf(stderr, "[dk_bench] global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
           global[0], global[1], global[2], local[0], local[1], local[2]);
