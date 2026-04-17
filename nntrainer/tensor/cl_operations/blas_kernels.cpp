@@ -2470,23 +2470,6 @@ void transpose_16(void *input, void *output, int width, int height,
 // Delegate fp16 GEMM: GPU dequant int4→fp16 + wave memory kernel dispatch
 // ============================================================================
 
-// Cache: (weight_ptr, N, K) → cl_mem of fp16 repacked weights
-struct DelegateWeightKey {
-  uintptr_t ptr;
-  unsigned int N, K;
-  bool operator==(const DelegateWeightKey &o) const {
-    return ptr == o.ptr && N == o.N && K == o.K;
-  }
-};
-struct DelegateWeightKeyHash {
-  size_t operator()(const DelegateWeightKey &k) const {
-    return std::hash<uintptr_t>()(k.ptr) ^ (std::hash<unsigned>()(k.N) << 16) ^
-           std::hash<unsigned>()(k.K);
-  }
-};
-static std::unordered_map<DelegateWeightKey, cl_mem, DelegateWeightKeyHash>
-  g_delegate_weight_cache;
-
 void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                            uint16_t *weights, uint16_t *scales,
                            uint16_t *output, unsigned int M, unsigned int N,
@@ -2506,21 +2489,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   const int iters = src_slices / 2;
   cl_int err;
 
-  // --- 1. Weight conversion via GPU kernel (cached) ---
-  DelegateWeightKey w_key = {reinterpret_cast<uintptr_t>(weights), N, K};
-  cl_mem w_cl = nullptr;
-  auto it = g_delegate_weight_cache.find(w_key);
-  if (it != g_delegate_weight_cache.end()) {
-    w_cl = it->second;
-  } else {
-    // Allocate output buffer for delegate-layout fp16 weights
-    size_t out_halfs = (size_t)n_z * iters * 256;
-    size_t out_bytes = out_halfs * sizeof(uint16_t);
-    w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, out_bytes, nullptr, &err);
-    if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
+  // --- 1. Weight dequant on GPU (per-call, no cache) ---
+  size_t out_halfs = (size_t)n_z * iters * 256;
+  size_t out_bytes = out_halfs * sizeof(uint16_t);
+  cl_mem w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, out_bytes, nullptr, &err);
+  if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
 
-    // Upload int4 packed weights to GPU (copy, not USE_HOST_PTR — SVM ptrs
-    // can't be wrapped with USE_HOST_PTR on Adreno)
+  {
     size_t int4_bytes = (size_t)(K / 4) * N * sizeof(uint16_t);
     cl_mem int4_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
                                       int4_bytes, nullptr, &err);
@@ -2528,7 +2503,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     clEnqueueWriteBuffer(clq, int4_buf, CL_TRUE, 0, int4_bytes, weights,
                          0, nullptr, nullptr);
 
-    // Upload scales to GPU
     size_t sc_bytes = N * sizeof(uint16_t);
     cl_mem sc_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
                                     sc_bytes, nullptr, &err);
@@ -2536,18 +2510,17 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     clEnqueueWriteBuffer(clq, sc_buf, CL_TRUE, 0, sc_bytes, scales,
                          0, nullptr, nullptr);
 
-    // Dispatch dequant kernel
     ClContext::SharedPtrClKernel dq_kern = blas_cc->registerClKernel(
       dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
     if (!dq_kern) throw std::runtime_error("delegate: dequant kernel failed");
 
-    int arg = 0;
-    dq_kern->SetKernelArguments(arg++, &int4_buf, sizeof(cl_mem));
-    dq_kern->SetKernelArguments(arg++, &sc_buf, sizeof(cl_mem));
-    dq_kern->SetKernelArguments(arg++, &w_cl, sizeof(cl_mem));
+    int dq_arg = 0;
+    dq_kern->SetKernelArguments(dq_arg++, &int4_buf, sizeof(cl_mem));
+    dq_kern->SetKernelArguments(dq_arg++, &sc_buf, sizeof(cl_mem));
+    dq_kern->SetKernelArguments(dq_arg++, &w_cl, sizeof(cl_mem));
     int size_n = (int)N, size_k = (int)K;
-    dq_kern->SetKernelArguments(arg++, &size_n, sizeof(int));
-    dq_kern->SetKernelArguments(arg++, &size_k, sizeof(int));
+    dq_kern->SetKernelArguments(dq_arg++, &size_n, sizeof(int));
+    dq_kern->SetKernelArguments(dq_arg++, &size_k, sizeof(int));
 
     int total_items = (int)out_halfs;
     const int dq_global[3] = {((total_items + 255) / 256) * 256, 1, 1};
@@ -2557,9 +2530,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
     clReleaseMemObject(int4_buf);
     clReleaseMemObject(sc_buf);
-    g_delegate_weight_cache[w_key] = w_cl;
-    fprintf(stderr, "[delegate_fp16] GPU dequant cached N=%u K=%u (%zu KB)\n",
-            N, K, out_bytes / 1024);
   }
 
   // --- 2. Static resources ---
@@ -2641,6 +2611,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                        0, nullptr, nullptr);
   }
 
+  clReleaseMemObject(w_cl);
   clReleaseMemObject(dst_img);
   clReleaseMemObject(src_img);
 }
