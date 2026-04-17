@@ -14,6 +14,7 @@ cl_op_kernels = [
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'delegate_conv_wave.cl',
+  'dequant_int4_to_fp16.cl',
   'int4_gemm_adreno.cl',
   'int4_gemm_adreno_v2.cl',
   'int4_gemm_adreno_v3.cl',

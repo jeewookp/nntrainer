@@ -2467,12 +2467,181 @@ void transpose_16(void *input, void *output, int width, int height,
 }
 */
 // ============================================================================
-// Delegate fp16 GEMM: dequant int4→fp16, repack, dispatch wave memory kernel
+// Delegate fp16 GEMM: GPU dequant int4→fp16 + wave memory kernel dispatch
 // ============================================================================
 
-// Cache for converted fp16 weight buffers (key: raw pointer address)
-static std::unordered_map<uintptr_t, cl_mem> g_delegate_weight_cache;
+// Cache: (weight_ptr, N, K) → cl_mem of fp16 repacked weights
+struct DelegateWeightKey {
+  uintptr_t ptr;
+  unsigned int N, K;
+  bool operator==(const DelegateWeightKey &o) const {
+    return ptr == o.ptr && N == o.N && K == o.K;
+  }
+};
+struct DelegateWeightKeyHash {
+  size_t operator()(const DelegateWeightKey &k) const {
+    return std::hash<uintptr_t>()(k.ptr) ^ (std::hash<unsigned>()(k.N) << 16) ^
+           std::hash<unsigned>()(k.K);
+  }
+};
+static std::unordered_map<DelegateWeightKey, cl_mem, DelegateWeightKeyHash>
+  g_delegate_weight_cache;
 
+void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
+                           uint16_t *weights, uint16_t *scales,
+                           uint16_t *output, unsigned int M, unsigned int N,
+                           unsigned int K) {
+  if (((N % 32) != 0) || ((K % 8) != 0))
+    throw std::runtime_error(
+      "gemm_delegate_fp16_cl requires N%32==0 and K%8==0");
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue clq = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const int src_slices = K / 4;
+  const int dst_slices = N / 4;
+  const int n_z = (dst_slices + 7) / 8;
+  const int iters = src_slices / 2;
+  cl_int err;
+
+  // --- 1. Weight conversion via GPU kernel (cached) ---
+  DelegateWeightKey w_key = {reinterpret_cast<uintptr_t>(weights), N, K};
+  cl_mem w_cl = nullptr;
+  auto it = g_delegate_weight_cache.find(w_key);
+  if (it != g_delegate_weight_cache.end()) {
+    w_cl = it->second;
+  } else {
+    // Allocate output buffer for delegate-layout fp16 weights
+    size_t out_halfs = (size_t)n_z * iters * 256;
+    size_t out_bytes = out_halfs * sizeof(uint16_t);
+    w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, out_bytes, nullptr, &err);
+    if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
+
+    // Upload int4 packed weights to GPU
+    size_t int4_bytes = (size_t)(K / 4) * N * sizeof(uint16_t);
+    cl_mem int4_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                      int4_bytes, weights, &err);
+    if (err) throw std::runtime_error("delegate: int4 upload failed");
+
+    // Upload scales to GPU
+    size_t sc_bytes = N * sizeof(uint16_t);
+    cl_mem sc_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                    sc_bytes, scales, &err);
+    if (err) throw std::runtime_error("delegate: scales upload failed");
+
+    // Dispatch dequant kernel
+    ClContext::SharedPtrClKernel dq_kern = blas_cc->registerClKernel(
+      dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
+    if (!dq_kern) throw std::runtime_error("delegate: dequant kernel failed");
+
+    int arg = 0;
+    dq_kern->SetKernelArguments(arg++, &int4_buf, sizeof(cl_mem));
+    dq_kern->SetKernelArguments(arg++, &sc_buf, sizeof(cl_mem));
+    dq_kern->SetKernelArguments(arg++, &w_cl, sizeof(cl_mem));
+    int size_n = (int)N, size_k = (int)K;
+    dq_kern->SetKernelArguments(arg++, &size_n, sizeof(int));
+    dq_kern->SetKernelArguments(arg++, &size_k, sizeof(int));
+
+    int total_items = (int)out_halfs;
+    const int dq_global[3] = {((total_items + 255) / 256) * 256, 1, 1};
+    const int dq_local[3] = {256, 1, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(dq_kern, dq_global, dq_local);
+    clFinish(clq);
+
+    clReleaseMemObject(int4_buf);
+    clReleaseMemObject(sc_buf);
+    g_delegate_weight_cache[w_key] = w_cl;
+    fprintf(stderr, "[delegate_fp16] GPU dequant cached N=%u K=%u (%zu KB)\n",
+            N, K, out_bytes / 1024);
+  }
+
+  // --- 2. Static resources ---
+  static cl_mem s_xmem = nullptr;
+  if (!s_xmem) {
+    s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+  }
+
+  static cl_mem s_bias = nullptr;
+  static int s_bias_slices = 0;
+  if (!s_bias || s_bias_slices < dst_slices) {
+    if (s_bias) clReleaseMemObject(s_bias);
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc bd = {};
+    bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = dst_slices;
+    bd.image_height = 1;
+    s_bias = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &bd, nullptr, &err);
+    std::vector<uint16_t> zeros(dst_slices * 4, 0);
+    size_t o[3] = {0, 0, 0}, r[3] = {(size_t)dst_slices, 1, 1};
+    clEnqueueWriteImage(clq, s_bias, CL_TRUE, o, r, 0, 0, zeros.data(),
+                        0, nullptr, nullptr);
+    s_bias_slices = dst_slices;
+  }
+
+  // --- 3. Src image2d ---
+  cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
+  cl_image_desc sd = {};
+  sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  sd.image_width = M;
+  sd.image_height = src_slices;
+  cl_mem src_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_h, &sd,
+                                  nullptr, &err);
+  if (err) throw std::runtime_error("delegate: src image failed");
+  {
+    size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
+    clEnqueueWriteImage(clq, src_img, CL_TRUE, o, r, 0, 0, input,
+                        0, nullptr, nullptr);
+  }
+
+  // --- 4. Dst image2d ---
+  cl_image_desc dd = {};
+  dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dd.image_width = M;
+  dd.image_height = dst_slices;
+  cl_mem dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &dd,
+                                  nullptr, &err);
+  if (err) throw std::runtime_error("delegate: dst image failed");
+
+  // --- 5. Dispatch delegate conv kernel ---
+  ClContext::SharedPtrClKernel kern = blas_cc->registerClKernel(
+    delegate_conv_wave_kernel, "main_function");
+  if (!kern) throw std::runtime_error("delegate: conv kernel failed");
+
+  struct { int x, y, z, w; } s0 = {1, dst_slices, (int)M, 32};
+  struct { int x, y, z, w; } s1 = {iters, 0, 0, src_slices};
+  struct { int x, y, z, w; } s2 = {1, 1, 0, 0};
+
+  int arg = 0;
+  kern->SetKernelArguments(arg++, &w_cl, sizeof(cl_mem));
+  kern->SetKernelArguments(arg++, &s_xmem, sizeof(cl_mem));
+  kern->SetKernelArguments(arg++, &s_bias, sizeof(cl_mem));
+  kern->SetKernelArguments(arg++, &dst_img, sizeof(cl_mem));
+  kern->SetKernelArguments(arg++, &src_img, sizeof(cl_mem));
+  kern->SetKernelArguments(arg++, &s0, sizeof(s0));
+  kern->SetKernelArguments(arg++, &s1, sizeof(s1));
+  kern->SetKernelArguments(arg++, &s2, sizeof(s2));
+
+  size_t gz = ((dst_slices + 7) / 8 + 3) / 4;
+  const int global[3] = {(int)(gz * 128), (int)((M + 127) / 128), 4};
+  const int local[3] = {128, 1, 4};
+
+  blas_cc->command_queue_inst_.DispatchCommand(kern, global, local);
+
+  // --- 6. Read output ---
+  {
+    size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
+    clEnqueueReadImage(clq, dst_img, CL_TRUE, o, r, 0, 0, output,
+                       0, nullptr, nullptr);
+  }
+
+  clReleaseMemObject(dst_img);
+  clReleaseMemObject(src_img);
+}
+
+} // namespace nntrainer
+#if 0 // OLD CPU dequant version — replaced by GPU dequant above
 // Weight layout for delegate kernel (reverse-engineered from program_002.cl):
 //   For Z (output slice group 0..dst_slices/8-1), iteration i (0..src_slices/2-1):
 //     32 half8 (256 halfs) at offset (Z * src_slices/2 + i) * 256
@@ -2686,5 +2855,4 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   clReleaseMemObject(src_img);
   clReleaseMemObject(in_buf);
 }
-
-} // namespace nntrainer
+#endif
