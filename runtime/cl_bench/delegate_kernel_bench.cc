@@ -245,27 +245,42 @@ int main(int argc, char** argv) {
   // The delegate uses this ("Reusing provided EGL environment").
   // On Qualcomm, CL-GL shared context may enable faster memory paths.
   // CL_GL_CONTEXT_KHR = 0x2008, CL_EGL_DISPLAY_KHR = 0x3038
+  // Delegate's exact context properties (captured via interception):
+  //   0x2008 = CL_GL_CONTEXT_KHR
+  //   0x2009 = CL_EGL_DISPLAY_KHR
+  //   0x1084 = CL_CONTEXT_PLATFORM
+  //   0x40C2 = CL_CONTEXT_PERF_HINT_QCOM → 0x40C3 (HIGH)
+  //   0x40C9 → 0x40CB (unknown Qualcomm property)
   cl_context ctx = nullptr;
   if (egl_dpy != EGL_NO_DISPLAY && egl_ctx != EGL_NO_CONTEXT) {
     intptr_t ctx_props[] = {
-      (intptr_t)0x1084, (intptr_t)plat,      // CL_CONTEXT_PLATFORM
       (intptr_t)0x2008, (intptr_t)egl_ctx,    // CL_GL_CONTEXT_KHR
-      (intptr_t)0x3038, (intptr_t)egl_dpy,    // CL_EGL_DISPLAY_KHR
+      (intptr_t)0x2009, (intptr_t)egl_dpy,    // CL_EGL_DISPLAY_KHR (0x2009, not 0x3038!)
+      (intptr_t)0x1084, (intptr_t)plat,        // CL_CONTEXT_PLATFORM
       (intptr_t)0x40C2, (intptr_t)0x40C3,     // CL_CONTEXT_PERF_HINT_QCOM(HIGH)
+      (intptr_t)0x40C9, (intptr_t)0x40CB,     // Qualcomm unknown (from delegate)
       0
     };
     ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
     if (ctx && err == CL_SUCCESS) {
-      fprintf(stderr, "[dk_bench] CL-EGL shared context created\n");
+      fprintf(stderr, "[dk_bench] CL-EGL shared context created (with QCOM props)\n");
     } else {
-      fprintf(stderr, "[dk_bench] CL-EGL context failed (%d), fallback\n", err);
+      fprintf(stderr, "[dk_bench] CL-EGL context failed (%d), trying without EGL\n", err);
       ctx = nullptr;
     }
   }
   if (!ctx) {
-    intptr_t ctx_props[] = { 0x40C2, 0x40C3, 0 };
+    intptr_t ctx_props[] = {
+      (intptr_t)0x1084, (intptr_t)plat,
+      (intptr_t)0x40C2, (intptr_t)0x40C3,
+      (intptr_t)0x40C9, (intptr_t)0x40CB,
+      0
+    };
     ctx = p_clCreateContext(ctx_props, 1, &dev, nullptr, nullptr, &err);
-    if (err) ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+    if (err) {
+      fprintf(stderr, "[dk_bench] QCOM context failed (%d), basic context\n", err);
+      ctx = p_clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+    }
   }
   // Also try runtime perf hint
   if (p_clSetPerfHintQCOM) {
@@ -318,8 +333,9 @@ int main(int argc, char** argv) {
   cl_mem weights_buf = p_clCreateBuffer(ctx, CL_MEM_READ_ONLY, weight_bytes, nullptr, &err);
   if (err) { fprintf(stderr, "ERROR: weights_buf: %d\n", err); return 1; }
 
-  // xmem_buffer: __constant half8*, max_constant_size 6144
-  cl_mem xmem_buf = p_clCreateBuffer(ctx, CL_MEM_READ_ONLY, 6144, nullptr, &err);
+  // xmem_buffer: wave memory scratch, 6144 bytes.
+  // Delegate uses flags=0x4 (CL_MEM_WRITE_ONLY) — driver may place in special memory.
+  cl_mem xmem_buf = p_clCreateBuffer(ctx, 0x4 /*CL_MEM_WRITE_ONLY*/, 6144, nullptr, &err);
   if (err) { fprintf(stderr, "ERROR: xmem_buf: %d\n", err); return 1; }
 
   // biases: image2d, (dst_slices, 1), RGBA half
