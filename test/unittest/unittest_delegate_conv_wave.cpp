@@ -536,33 +536,12 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   }
 
   // Create CL buffers
-  // Pack int4 weights into buffer as raw bytes (kernel interprets as half8*)
-  // Layout: for each Z group, each iteration pair (2 src slices):
-  //   32 ushorts (row0) + 32 ushorts (row1) = 64 ushorts = 128 bytes = 8 half8
-  // Sequential: Z0_iter0, Z0_iter1, ..., Z0_iterN, Z1_iter0, ...
-  int n_z_groups = (dst_slices + 7) / 8;
-  int iters_per_z = src_slices / 2;
-  size_t packed_buf_size = (size_t)n_z_groups * iters_per_z * 64 * sizeof(uint16_t);
-  std::vector<uint16_t> packed_buf(n_z_groups * iters_per_z * 64, 0);
-
-  for (int z = 0; z < n_z_groups; ++z) {
-    int base_n = z * 32;
-    for (int it = 0; it < iters_per_z; ++it) {
-      int cs = it * 2;
-      size_t buf_off = ((size_t)z * iters_per_z + it) * 64;
-      // Row 0: packed_weights[cs * N + base_n .. +31]
-      for (int j = 0; j < 32 && base_n + j < N; ++j)
-        packed_buf[buf_off + j] = packed_weights[cs * N + base_n + j];
-      // Row 1: packed_weights[(cs+1) * N + base_n .. +31]
-      for (int j = 0; j < 32 && base_n + j < N; ++j)
-        packed_buf[buf_off + 32 + j] = packed_weights[(cs + 1) * N + base_n + j];
-    }
-  }
-
-  size_t w_bytes = packed_buf.size() * sizeof(uint16_t);
+  // Simple channel-wise int4 layout: weights[(k/4)*N + n]
+  // Kernel reads directly with this layout.
+  size_t w_bytes = packed_weights.size() * sizeof(uint16_t);
   cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
   ASSERT_EQ(err, 0);
-  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_buf.data(),
+  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_weights.data(),
                           0, nullptr, nullptr);
 
   cl_mem xmem = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &err);
@@ -604,9 +583,11 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   cl.clSetKernelArg(kernel, 6, sizeof(int), &N);
   cl.clSetKernelArg(kernel, 7, sizeof(int), &K);
 
-  size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
-  size_t local[3] = {128, 1, 4};
-  size_t global[3] = {gz, (size_t)((M + 127) / 128), 4};
+  // WG=(64,1,1). dim0=M, dim1=Z groups
+  int n_z_groups_d = (dst_slices + 7) / 8;
+  size_t local[3] = {64, 1, 1};
+  size_t global[3] = {(size_t)((M + 63) / 64) * 64,
+                      (size_t)n_z_groups_d, 1};
 
   fprintf(stderr, "global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
           global[0], global[1], global[2], local[0], local[1], local[2]);
