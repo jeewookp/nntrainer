@@ -361,13 +361,22 @@ int main(int argc, char** argv) {
   }
   fprintf(stderr, "[dk_bench] Kernel compiled OK\n");
 
+  // Check compiled binary size (delegate might produce different binary)
+  {
+    size_t bin_size = 0;
+    p_clGetProgramInfo(prog, 0x1165 /*CL_PROGRAM_BINARY_SIZES*/, sizeof(size_t), &bin_size, nullptr);
+    fprintf(stderr, "[dk_bench] Compiled binary size: %zu bytes\n", bin_size);
+  }
+
   cl_kernel kernel = p_clCreateKernel(prog, "main_function", &err);
   if (err != CL_SUCCESS) { fprintf(stderr, "ERROR: CreateKernel: %d\n", err); return 1; }
 
   // Create buffers/images
   // weights_buffer: __constant half8*, size = N * K * sizeof(half)
   size_t weight_bytes = (size_t)N * K * 2;  // half = 2 bytes
-  cl_mem weights_buf = p_clCreateBuffer(ctx, CL_MEM_READ_ONLY, weight_bytes, nullptr, &err);
+  // Delegate uses 0x14 = CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR.
+  // On Adreno, ALLOC_HOST_PTR uses zero-copy memory with different caching.
+  cl_mem weights_buf = p_clCreateBuffer(ctx, 0x14, weight_bytes, nullptr, &err);
   if (err) { fprintf(stderr, "ERROR: weights_buf: %d\n", err); return 1; }
 
   // xmem_buffer: wave memory scratch, 6144 bytes.
@@ -899,6 +908,7 @@ int main(int argc, char** argv) {
   double gpu_us = 0;
   double avg_queued_to_submit = 0, avg_submit_to_start = 0, avg_start_to_end = 0;
   double batch_avg_us = 0;
+  double pipeline_avg_us = 0;
   {
     // === Single-dispatch profiling (our current method) ===
     std::vector<double> t_q2s, t_s2st, t_st2e;
@@ -943,6 +953,30 @@ int main(int argc, char** argv) {
     }
     std::sort(batch_times.begin(), batch_times.end());
     batch_avg_us = batch_times[batch_times.size() / 2];  // median
+
+    // === Pipeline-style profiling (delegate runs prog_001 before prog_002) ===
+    // Simulate delegate's Run(): dispatch weight dequant kernel (k001) right
+    // before the conv kernel (kernel), then measure conv kernel only.
+    if (k001) {
+      std::vector<double> pipe_times;
+      size_t g1[] = { 3072, 192, 1 };
+      size_t l1[] = { 64, 8, 1 };
+      for (int i = 0; i < prof_iters; ++i) {
+        // Dispatch weight dequant (no event, just warm GPU)
+        p_clEnqueueNDRangeKernel(prof_queue, k001, 3, nullptr, g1, l1, 0, nullptr, nullptr);
+        // Dispatch conv with event
+        cl_event ev = nullptr;
+        p_clEnqueueNDRangeKernel(prof_queue, kernel, 3, nullptr, global, local, 0, nullptr, &ev);
+        p_clFinish(prof_queue);
+        cl_ulong tst = 0, te = 0;
+        p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(tst), &tst, nullptr);
+        p_clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(te), &te, nullptr);
+        p_clReleaseEvent(ev);
+        pipe_times.push_back((te - tst) / 1000.0);
+      }
+      std::sort(pipe_times.begin(), pipe_times.end());
+      pipeline_avg_us = pipe_times[pipe_times.size() / 2];
+    }
   }
 
   double tflops_wall = (gflops / (wall_us / 1e6)) / 1000.0;
@@ -957,6 +991,11 @@ int main(int argc, char** argv) {
   fprintf(stderr, "    START→END:     %7.1f us  TFLOPS=%.3f\n", avg_start_to_end, tflops_gpu);
   fprintf(stderr, "\n  Batch profiling (delegate-style, last of %d):\n", 5);
   fprintf(stderr, "    START→END:     %7.1f us  TFLOPS=%.3f\n", batch_avg_us, tflops_batch);
+  if (pipeline_avg_us > 0) {
+    double tflops_pipe = (gflops / (pipeline_avg_us / 1e6)) / 1000.0;
+    fprintf(stderr, "\n  Pipeline (prog_001 before conv):\n");
+    fprintf(stderr, "    START→END:     %7.1f us  TFLOPS=%.3f\n", pipeline_avg_us, tflops_pipe);
+  }
   fprintf(stderr, "\n  delegate ref:    %7.1f us  TFLOPS=5.2\n", 3691.0);
   fprintf(stderr, "  gpu:  %.1f us  TFLOPS=%.3f\n", gpu_us, tflops_gpu);
   fprintf(stderr, "  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)\n");
