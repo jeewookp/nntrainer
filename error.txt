@@ -1,3 +1,17 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.35 KiB | 346.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              litert_lm  -> FETCH_HEAD
+   bf3942f0..0bb4ab48  litert_lm  -> origin/litert_lm
+Updating bf3942f0..0bb4ab48
+Fast-forward
+ runtime/cl_bench/cl_intercept.cc          | 12 +++++++++++-
+ runtime/cl_bench/delegate_kernel_bench.cc |  7 +++++--
+ 2 files changed, 16 insertions(+), 3 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ INTERCEPT_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
 [dk_bench.sh] === Delegate Kernel Direct Benchmark ===
 [dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
@@ -18,7 +32,7 @@ INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loade
 INFO: Found 1 target...
 Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
   bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.827s, Critical Path: 0.68s
+INFO: Elapsed time: 0.740s, Critical Path: 0.66s
 INFO: 3 processes: 1 internal, 2 local.
 INFO: Build completed successfully, 3 total actions
 
@@ -30,8 +44,23 @@ INFO: Build completed successfully, 3 total actions
 [dk_bench] cl_file=cl_intercept/program_002.cl
 [dk_bench] Loaded 7438 bytes CL source
 [dk_bench] GPU: QUALCOMM Adreno(TM) 830
+[dk_bench] Build opts: '-cl-fast-relaxed-math'
 BUILD ERROR:
-Unsupported OpenCL user option specified: '-cl-qcom-extn-enabled'
+BC-src-code:8:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_uniform_load'
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
+                         ^
+BC-src-code:9:26: error: unsupported OpenCL extension 'cl_qcom_subgroup_constant_load'
+#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
+                         ^
+BC-src-code:13:64: error: 'subgroupuniform' attribute requires cl_qcom_subgroup_constant_load extension
+MAIN_FUNCTION(__constant half8* weights_buffer  __attribute__((sub_group_uniform)),
+                                                               ^
+BC-src-code:12:16: error: attribute 'qcom_max_concurrent_subgroups' requires 'cl_qcom_subgroup_constant_load' extension
+__attribute__((qcom_max_concurrent_subgroups(12)))
+               ^
+BC-src-code:63:9: error: builtin 'sub_group_constant_load' requires 'cl_qcom_subgroup_constant_load' extension
+        qcom_sub_group_constant_load8(xmem_buffer, weights_buffer, c_offset, f_offset >> 1, 32);
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5 diagnostic(s) generated.
 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
-
