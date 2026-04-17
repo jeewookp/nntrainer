@@ -432,6 +432,225 @@ TEST_F(DelegateConvWaveTest, Matmul_1024x6144x1536_Correctness) {
   cl.clReleaseProgram(prog);
 }
 
+// ============================================================================
+// Test: int4_gemm_wave kernel — wave memory + int4 packed weights
+// ============================================================================
+TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
+  const int M = 512, N = 1024, K = 1024;
+  const int src_slices = K / 4, dst_slices = N / 4;
+  const double gflops = 2.0 * M * N * K / 1e9;
+
+  // Load kernel
+  const char *paths[] = {
+    "int4_gemm_wave.cl",
+    "nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl",
+    "/data/local/tmp/nntr_android_test/int4_gemm_wave.cl",
+  };
+  std::string src;
+  for (auto p : paths) {
+    std::ifstream f(p);
+    if (f.good()) {
+      src = std::string((std::istreambuf_iterator<char>(f)),
+                        std::istreambuf_iterator<char>());
+      break;
+    }
+  }
+  ASSERT_FALSE(src.empty()) << "Cannot find int4_gemm_wave.cl";
+
+  cl_int err;
+  const char *sp = src.c_str();
+  size_t sl = src.size();
+  cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &err);
+  ASSERT_EQ(err, 0);
+
+  err = cl.clBuildProgram(prog, 1, &dev,
+                          "-qcom-accelerate-16-bit=true -cl-std=CL2.0",
+                          nullptr, nullptr);
+  if (err != 0) {
+    size_t sz = 0;
+    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+    std::vector<char> log(sz + 1, 0);
+    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz, log.data(),
+                             nullptr);
+    FAIL() << "Build error: " << log.data();
+  }
+
+  cl_kernel kernel = cl.clCreateKernel(prog, "gemm_int4_wave", &err);
+  ASSERT_EQ(err, 0);
+
+  // Generate random fp32 weights, quantize to int4 with per-channel scale
+  std::vector<float> fp32_weights((size_t)N * K);
+  auto prand = [](size_t i) -> float {
+    uint32_t x = (uint32_t)(i * 2654435761u);
+    x ^= x >> 16; x *= 0x45d9f3b; x ^= x >> 16;
+    return (float)(x & 0xFFFF) / 65536.0f - 0.5f;
+  };
+  for (size_t i = 0; i < fp32_weights.size(); ++i)
+    fp32_weights[i] = prand(i) * 0.1f;
+
+  // Per-channel scale + int4 quantize
+  std::vector<uint16_t> packed_weights((size_t)(K / 4) * N, 0);
+  std::vector<uint16_t> scales_fp16(N);
+  std::vector<float> dequant_weights((size_t)N * K);
+
+  for (int n = 0; n < N; ++n) {
+    float max_abs = 0;
+    for (int k = 0; k < K; ++k)
+      max_abs = std::max(max_abs, std::fabs(fp32_weights[n * K + k]));
+    float scale = (max_abs > 0) ? max_abs / 7.0f : 1.0f;
+    scales_fp16[n] = f32_to_f16(scale);
+    float scale_rt = f16_to_f32(scales_fp16[n]);
+    float inv_scale = (scale_rt > 0) ? 1.0f / scale_rt : 0.0f;
+
+    for (int k = 0; k < K; ++k) {
+      int q = (int)std::nearbyint(fp32_weights[n * K + k] * inv_scale);
+      q = std::max(-8, std::min(7, q));
+      uint16_t nibble = (uint16_t)(q + 8) & 0xF;
+      packed_weights[(k / 4) * N + n] |= (nibble << (4 * (k % 4)));
+      dequant_weights[n * K + k] = (float)q * scale_rt;
+    }
+  }
+
+  // Generate random fp16 src
+  std::vector<float> fp32_src((size_t)M * K);
+  std::vector<uint16_t> src_img_data((size_t)M * src_slices * 4);
+  for (int m = 0; m < M; ++m) {
+    for (int k = 0; k < K; ++k) {
+      fp32_src[m * K + k] = prand(m * K + k + 999999) * 2.0f;
+      int s = k / 4, c = k % 4;
+      src_img_data[((size_t)s * M + m) * 4 + c] = f32_to_f16(fp32_src[m * K + k]);
+    }
+  }
+
+  // CPU reference: C[m,n] = sum_k fp16(src[m,k]) * dequant_weight[n,k]
+  int check_m = std::min(M, 4), check_n = std::min(N, 32);
+  std::vector<float> cpu_ref(check_m * check_n);
+  for (int m = 0; m < check_m; ++m) {
+    for (int n = 0; n < check_n; ++n) {
+      double sum = 0;
+      for (int k = 0; k < K; ++k)
+        sum += (double)f16_to_f32(f32_to_f16(fp32_src[m * K + k])) *
+               (double)dequant_weights[n * K + k];
+      cpu_ref[m * check_n + n] = (float)sum;
+    }
+  }
+
+  // Create CL buffers
+  size_t w_bytes = packed_weights.size() * sizeof(uint16_t);
+  cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
+  ASSERT_EQ(err, 0);
+  cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, packed_weights.data(),
+                          0, nullptr, nullptr);
+
+  cl_mem xmem = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &err);
+  ASSERT_EQ(err, 0);
+
+  size_t sc_bytes = N * sizeof(uint16_t);
+  cl_mem sc_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, sc_bytes, nullptr, &err);
+  ASSERT_EQ(err, 0);
+  cl.clEnqueueWriteBuffer(queue, sc_buf, 1, 0, sc_bytes, scales_fp16.data(),
+                          0, nullptr, nullptr);
+
+  cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+  cl_image_desc sd = {};
+  sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  sd.image_width = M;
+  sd.image_height = src_slices;
+  cl_mem src_img = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, nullptr, &err);
+  ASSERT_EQ(err, 0);
+  {
+    size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
+    cl.clEnqueueWriteImage(queue, src_img, 1, o, r, 0, 0,
+                           src_img_data.data(), 0, nullptr, nullptr);
+  }
+
+  cl_image_desc dd = {};
+  dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dd.image_width = M;
+  dd.image_height = dst_slices;
+  cl_mem dst_img = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, nullptr, &err);
+  ASSERT_EQ(err, 0);
+
+  // Kernel args
+  cl.clSetKernelArg(kernel, 0, sizeof(cl_mem), &w_buf);
+  cl.clSetKernelArg(kernel, 1, sizeof(cl_mem), &xmem);
+  cl.clSetKernelArg(kernel, 2, sizeof(cl_mem), &sc_buf);
+  cl.clSetKernelArg(kernel, 3, sizeof(cl_mem), &dst_img);
+  cl.clSetKernelArg(kernel, 4, sizeof(cl_mem), &src_img);
+  cl.clSetKernelArg(kernel, 5, sizeof(int), &M);
+  cl.clSetKernelArg(kernel, 6, sizeof(int), &N);
+  cl.clSetKernelArg(kernel, 7, sizeof(int), &K);
+
+  size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
+  size_t local[3] = {128, 1, 4};
+  size_t global[3] = {gz, (size_t)((M + 127) / 128), 4};
+
+  fprintf(stderr, "global=(%zu,%zu,%zu) local=(%zu,%zu,%zu)\n",
+          global[0], global[1], global[2], local[0], local[1], local[2]);
+
+  // Warmup + run
+  for (int i = 0; i < 3; ++i)
+    cl.clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local,
+                              0, nullptr, nullptr);
+  err = cl.clFinish(queue);
+  if (err) {
+    fprintf(stderr, "Kernel dispatch error: %d\n", err);
+    FAIL() << "Kernel dispatch failed: " << err;
+  }
+
+  // Read output
+  std::vector<uint16_t> out((size_t)M * dst_slices * 4, 0);
+  {
+    size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
+    cl.clEnqueueReadImage(queue, dst_img, 1, o, r, 0, 0, out.data(),
+                          0, nullptr, nullptr);
+  }
+
+  // Verify vs CPU reference
+  int pass = 0, total = 0;
+  float max_rel = 0;
+  for (int m = 0; m < check_m; ++m) {
+    for (int n = 0; n < check_n; ++n) {
+      int s = n / 4, c = n % 4;
+      size_t idx = ((size_t)s * M + m) * 4 + c;
+      float gpu = f16_to_f32(out[idx]);
+      float cpu = cpu_ref[m * check_n + n];
+      float rel = (std::fabs(cpu) > 1e-6f) ? std::fabs(gpu - cpu) / std::fabs(cpu)
+                                             : std::fabs(gpu - cpu);
+      total++;
+      if (rel < 0.20f) pass++;
+      if (rel > max_rel) max_rel = rel;
+      if (m < 2 && n < 4)
+        fprintf(stderr, "  [m=%d,n=%d] gpu=%.4f cpu=%.4f err=%.1f%%\n",
+                m, n, gpu, cpu, rel * 100);
+    }
+  }
+  fprintf(stderr, "Correctness: %d/%d pass (max err %.1f%%)\n", pass, total,
+          max_rel * 100);
+  EXPECT_GE(pass, total / 2) << "Int4 wave kernel output doesn't match CPU ref";
+
+  // Benchmark
+  int iters = 50;
+  auto t0 = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < iters; ++i)
+    cl.clEnqueueNDRangeKernel(queue, kernel, 3, nullptr, global, local,
+                              0, nullptr, nullptr);
+  cl.clFinish(queue);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  double wall_us = std::chrono::duration<double, std::micro>(t1 - t0).count() / iters;
+  double tflops = (gflops / (wall_us / 1e6)) / 1000.0;
+  fprintf(stderr, "Int4 wave: %.1f us = %.3f TFLOPS (M=%d N=%d K=%d)\n",
+          wall_us, tflops, M, N, K);
+
+  cl.clReleaseMemObject(w_buf);
+  cl.clReleaseMemObject(xmem);
+  cl.clReleaseMemObject(sc_buf);
+  cl.clReleaseMemObject(src_img);
+  cl.clReleaseMemObject(dst_img);
+  cl.clReleaseKernel(kernel);
+  cl.clReleaseProgram(prog);
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
