@@ -984,11 +984,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       g_half_dotq_profile.ns_out_stage += t3 - t2;
       g_half_dotq_profile.calls++;
     }
-
-    g_half_dotq_profile.ns_in_stage += t1 - t0;
-    g_half_dotq_profile.ns_gpu_call += t2 - t1;
-    g_half_dotq_profile.ns_out_stage += t3 - t2;
-    g_half_dotq_profile.calls++;
   }
 #else
   throw std::invalid_argument(
