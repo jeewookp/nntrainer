@@ -12,7 +12,9 @@
  *
  */
 
+#include <CL/cl.h>
 #include <blas_kernels.h>
+#include <cl_context.h>
 #include <cl_kernels/rmsnorm.h>
 #ifdef ENABLE_FP16
 #include <cl_kernels/rmsnorm_fp16.h>
@@ -124,84 +126,102 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
 
   auto *global_cl_context =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-  auto &clbuffInstance = ClBufferManager::Global();
 
-  do {
+  // Check if tensors are SVM — if so, use SVM pointers directly (zero-copy)
+  const bool use_svm = input.getMemoryData() && input.getMemoryData()->isSVM()
+                     && result.getMemoryData() && result.getMemoryData()->isSVM();
+
+  if (use_svm) {
+    // SVM path: no host↔GPU copy, pass pointers directly to kernel
     auto kernel_rmsnorm_ptr = getLayerKernelPtrs()[Kernels::RMSNORM_CL_FP16];
-
-    const _FP16 *data = input.getData<_FP16>();
+    _FP16 *data = const_cast<_FP16 *>(input.getData<_FP16>());
     _FP16 *rdata = result.getData<_FP16>();
-    const _FP16 *gdata = gamma.getData<_FP16>();
+    _FP16 *gdata = const_cast<_FP16 *>(gamma.getData<_FP16>());
 
-    ret = clbuffInstance.getInBufferA()->WriteDataRegion(
-      global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), data);
-    if (!ret) {
-      break;
+    // Gamma: upload to a cached cl_mem buffer (weight, changes rarely)
+    static cl_mem s_gamma_buf = nullptr;
+    static size_t s_gamma_size = 0;
+    size_t gamma_bytes = input.width() * sizeof(cl_half);
+    if (!s_gamma_buf || s_gamma_size < gamma_bytes) {
+      if (s_gamma_buf) clReleaseMemObject(s_gamma_buf);
+      cl_int err;
+      s_gamma_buf = clCreateBuffer(
+        global_cl_context->context_inst_.GetContext(),
+        CL_MEM_READ_ONLY, gamma_bytes, nullptr, &err);
+      s_gamma_size = gamma_bytes;
     }
+    clEnqueueWriteBuffer(
+      global_cl_context->command_queue_inst_.GetCommandQueue(),
+      s_gamma_buf, CL_FALSE, 0, gamma_bytes, gdata, 0, nullptr, nullptr);
 
-    ret = clbuffInstance.getInBufferB()->WriteDataRegion(
-      global_cl_context->command_queue_inst_, input.width() * sizeof(cl_half),
-      gdata);
-    if (!ret) {
-      break;
-    }
+    kernel_rmsnorm_ptr->SetKernelSVMArguments(0, data);
+    kernel_rmsnorm_ptr->SetKernelSVMArguments(1, rdata);
+    kernel_rmsnorm_ptr->SetKernelArguments(
+      2, &s_gamma_buf, sizeof(cl_mem));
+    kernel_rmsnorm_ptr->SetKernelArguments(3, &epsilon, sizeof(cl_half));
+    kernel_rmsnorm_ptr->SetKernelArguments(4, &b, sizeof(int));
+    kernel_rmsnorm_ptr->SetKernelArguments(5, &c, sizeof(int));
+    kernel_rmsnorm_ptr->SetKernelArguments(6, &h, sizeof(int));
+    kernel_rmsnorm_ptr->SetKernelArguments(7, &w, sizeof(int));
 
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(
-      0, clbuffInstance.getInBufferA()->GetBuffer(), sizeof(cl_mem));
-    if (!ret) {
-      break;
-    }
-
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(
-      1, clbuffInstance.getOutBufferA()->GetBuffer(), sizeof(cl_mem));
-    if (!ret) {
-      break;
-    }
-
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(
-      2, clbuffInstance.getInBufferB()->GetBuffer(), sizeof(cl_mem));
-    if (!ret) {
-      break;
-    }
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(4, &b, sizeof(int));
-
-    if (!ret) {
-      break;
-    }
-
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(3, &epsilon, sizeof(cl_half));
-    if (!ret) {
-      break;
-    }
-
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(5, &c, sizeof(int));
-    if (!ret) {
-      break;
-    }
-
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(6, &h, sizeof(int));
-    if (!ret) {
-      break;
-    }
-    ret = kernel_rmsnorm_ptr->SetKernelArguments(7, &w, sizeof(int));
-    if (!ret) {
-      break;
-    }
     const int work_groups_count[3] = {b * c, h, 1};
-    /// @todo: create a group size by device & input
-    const int work_group_size[3] = {w, 1, 1}; // test-value
+    const int work_group_size[3] = {w, 1, 1};
 
     ret = global_cl_context->command_queue_inst_.DispatchCommand(
       kernel_rmsnorm_ptr, work_groups_count, work_group_size);
-    if (!ret) {
-      break;
-    }
 
-    ret = clbuffInstance.getOutBufferA()->ReadDataRegion(
-      global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), rdata);
-    if (!ret) {
-      break;
-    }
+    // Sync output SVM for host access
+    global_cl_context->command_queue_inst_.enqueueSVMMap(
+      rdata, dim1 * sizeof(cl_half), true);
+  } else {
+    // Fallback: original cl_mem buffer path with host copies
+    auto &clbuffInstance = ClBufferManager::Global();
+    do {
+      auto kernel_rmsnorm_ptr = getLayerKernelPtrs()[Kernels::RMSNORM_CL_FP16];
+
+      const _FP16 *data = input.getData<_FP16>();
+      _FP16 *rdata = result.getData<_FP16>();
+      const _FP16 *gdata = gamma.getData<_FP16>();
+
+      ret = clbuffInstance.getInBufferA()->WriteDataRegion(
+        global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), data);
+      if (!ret) break;
+
+      ret = clbuffInstance.getInBufferB()->WriteDataRegion(
+        global_cl_context->command_queue_inst_, input.width() * sizeof(cl_half),
+        gdata);
+      if (!ret) break;
+
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(
+        0, clbuffInstance.getInBufferA()->GetBuffer(), sizeof(cl_mem));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(
+        1, clbuffInstance.getOutBufferA()->GetBuffer(), sizeof(cl_mem));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(
+        2, clbuffInstance.getInBufferB()->GetBuffer(), sizeof(cl_mem));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(3, &epsilon, sizeof(cl_half));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(4, &b, sizeof(int));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(5, &c, sizeof(int));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(6, &h, sizeof(int));
+      if (!ret) break;
+      ret = kernel_rmsnorm_ptr->SetKernelArguments(7, &w, sizeof(int));
+      if (!ret) break;
+
+      const int work_groups_count[3] = {b * c, h, 1};
+      const int work_group_size[3] = {w, 1, 1};
+
+      ret = global_cl_context->command_queue_inst_.DispatchCommand(
+        kernel_rmsnorm_ptr, work_groups_count, work_group_size);
+      if (!ret) break;
+
+      ret = clbuffInstance.getOutBufferA()->ReadDataRegion(
+        global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), rdata);
+      if (!ret) break;
   } while (false);
 }
 #endif
