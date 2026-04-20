@@ -1,107 +1,100 @@
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+    enable-tflite-backbone   : false
+    enable-tflite-interpreter: false
+    hgemm-experimental-kernel: false
+    mmap-read                : false
+    omp-num-threads          : 1
+    openblas-num-threads     : 1
+    platform                 : android
+    thread-backend           : omp
 
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 6420 ms, 68.0685 TPS
-generation: 32 tokens, 5972 ms, 5.35834 TPS
-total: 12397 ms
-peak memory: 2738384 KB
-==========================================================
-[e2e time]: 14593 ms 
-Max Resident Set Size: 2738384 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        86.4 ms (93.0%)
-  reformat_in:     2.4 ms ( 2.6%)  hits=0/252
-  conv(wall):      1.9 ms ( 2.0%)
-  conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        2.2 ms ( 2.3%)
-  total:          92.9 ms            34.196 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.87 ms calls=1 avg=17.866 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.86 ms calls=1 avg=2.860 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=673.16 ms calls=36 avg=18.699 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=392.39 ms calls=73 avg=5.375 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=252.65 ms calls=72 avg=3.509 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1088.79 ms calls=36 avg=30.244 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3912.17 ms calls=252
-  in_stage    :    57.42 ms (  1.5%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3771.71 ms ( 96.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :    83.04 ms (  2.1%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 6420 ms, 68.0685 TPS
-generation: 32 tokens, 5972 ms, 5.35834 TPS
-total: 12397 ms
-peak memory: 2738384 KB
-==========================================================
-[e2e time]: 14593 ms 
-Max Resident Set Size: 2738384 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        86.4 ms (93.0%)
-  reformat_in:     2.4 ms ( 2.6%)  hits=0/252
-  co
-
---- Perf summary ---
-prefill: 437 tokens, 6420 ms, 68.0685 TPS
-generation: 32 tokens, 5972 ms, 5.35834 TPS
-total: 12397 ms
-peak memory: 2738384 KB
-[e2e time]: 14593 ms 
-  total:          92.9 ms            34.196 TFLOPS
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3912.17 ms calls=252
-  in_stage    :    57.42 ms (  1.5%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3771.71 ms ( 96.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :    83.04 ms (  2.1%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.87 ms calls=1 avg=17.866 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.86 ms calls=1 avg=2.860 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=673.16 ms calls=36 avg=18.699 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=392.39 ms calls=73 avg=5.375 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=252.65 ms calls=72 avg=3.509 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1088.79 ms calls=36 avg=30.244 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
+Found ninja-1.10.1 at /usr/bin/ninja
+~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
+[1/2] Generating jni/ndk-build with a custom command
+FAILED: jni/arm64-v8a 
+/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
+[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
+#pragma omp parallel for num_thread(n_threads)
+                         ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
+[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight.cpp
+[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
+[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
+[arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/lib/arm64-v8a/
+[arm64-v8a] Install /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer/builddir/opencl/lib/arm64-v8a/
+[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
+[arm64-v8a] Compile++      : clblast <= common.cpp
+[arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:988:40: error: use of undeclared identifier 't1'
+    g_half_dotq_profile.ns_in_stage += t1 - t0;
+                                       ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:988:45: error: use of undeclared identifier 't0'
+    g_half_dotq_profile.ns_in_stage += t1 - t0;
+                                            ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:989:40: error: use of undeclared identifier 't2'
+    g_half_dotq_profile.ns_gpu_call += t2 - t1;
+                                       ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:989:45: error: use of undeclared identifier 't1'
+    g_half_dotq_profile.ns_gpu_call += t2 - t1;
+                                            ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:990:41: error: use of undeclared identifier 't3'
+    g_half_dotq_profile.ns_out_stage += t3 - t2;
+                                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.cpp:990:46: error: use of undeclared identifier 't2'
+    g_half_dotq_profile.ns_out_stage += t3 - t2;
+                                             ^
+6 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : clblast <= api_common.cpp
+[arm64-v8a] Compile++      : clblast <= routine.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
+[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
+[arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
+[arm64-v8a] Compile++      : clblast <= database.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= engine.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
+[arm64-v8a] Compile++      : clblast <= clblast.cpp
+[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
+[arm64-v8a] Compile++      : clblast <= tuning.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+ninja: build stopped: subcommand failed.
