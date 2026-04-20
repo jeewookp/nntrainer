@@ -27,8 +27,10 @@
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fp16.h>
+#include <vector>
 #endif
 
 namespace nntrainer {
@@ -905,8 +907,6 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         auto &clbuffInstance = ClBufferManager::Global();
         uint16_t *svm_in =
           reinterpret_cast<uint16_t *>(clbuffInstance.getSVMInput());
-        uint16_t *svm_in_T =
-          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
 
         // CPU fp32 -> fp16 (no transpose; row-major [M][K]).
         const uint64_t t0 = now_ns();
@@ -916,27 +916,73 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         const uint64_t t1 = now_ns();
         g_dotq_profile.ns_in_convert += t1 - t0;
 
-        for (unsigned int i = 0; i < input.size(); ++i) {
-          uint16_t *svm_out = reinterpret_cast<uint16_t *>(
-            clbuffInstance.getSVMOutput(i));
-          const unsigned int Ni = Ns[i];
+        // Prefer batched delegate dispatch when all weights align.
+        static const bool s_disable_delegate =
+          std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
+        bool all_delegate_ok = !s_disable_delegate && (K % 8) == 0;
+        if (all_delegate_ok) {
+          for (unsigned int i = 0; i < input.size(); ++i) {
+            if ((Ns[i] % 32) != 0) { all_delegate_ok = false; break; }
+          }
+        }
+
+        if (all_delegate_ok) {
+          std::vector<uint16_t *> weights_vec, scales_vec, outputs_vec;
+          std::vector<unsigned int> Ns_vec;
+          weights_vec.reserve(input.size());
+          scales_vec.reserve(input.size());
+          outputs_vec.reserve(input.size());
+          Ns_vec.reserve(input.size());
+          for (unsigned int i = 0; i < input.size(); ++i) {
+            weights_vec.push_back(reinterpret_cast<uint16_t *>(mdatas[i]));
+            scales_vec.push_back(scales[i]);
+            outputs_vec.push_back(
+              reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i)));
+            Ns_vec.push_back(Ns[i]);
+          }
 
           const uint64_t tg0 = now_ns();
-          gemm_int4_adreno_cl(svm_in, svm_in_T,
-                              reinterpret_cast<uint16_t *>(mdatas[i]),
-                              scales[i], svm_out, M, Ni, K);
+          gemm_delegate_fp16_cl_batched(svm_in, weights_vec, scales_vec,
+                                        outputs_vec, Ns_vec, M, K);
           const uint64_t tg1 = now_ns();
 
-          float *out_i = rdatas[i];
-          const unsigned int total = M * Ni;
-          for (unsigned int j = 0; j < total; ++j) {
-            out_i[j] = compute_fp16_to_fp32(svm_out[j]);
+          for (unsigned int i = 0; i < input.size(); ++i) {
+            float *out_i = rdatas[i];
+            const unsigned int total = M * Ns_vec[i];
+            for (unsigned int j = 0; j < total; ++j) {
+              out_i[j] = compute_fp16_to_fp32(outputs_vec[i][j]);
+            }
           }
           const uint64_t tg2 = now_ns();
 
           g_dotq_profile.ns_gpu_call += tg1 - tg0;
           g_dotq_profile.ns_out_convert += tg2 - tg1;
-          g_dotq_profile.calls++;
+          g_dotq_profile.calls += input.size();
+        } else {
+          uint16_t *svm_in_T =
+            reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+          for (unsigned int i = 0; i < input.size(); ++i) {
+            uint16_t *svm_out = reinterpret_cast<uint16_t *>(
+              clbuffInstance.getSVMOutput(i));
+            const unsigned int Ni = Ns[i];
+
+            const uint64_t tg0 = now_ns();
+            gemm_int4_adreno_cl(svm_in, svm_in_T,
+                                reinterpret_cast<uint16_t *>(mdatas[i]),
+                                scales[i], svm_out, M, Ni, K);
+            const uint64_t tg1 = now_ns();
+
+            float *out_i = rdatas[i];
+            const unsigned int total = M * Ni;
+            for (unsigned int j = 0; j < total; ++j) {
+              out_i[j] = compute_fp16_to_fp32(svm_out[j]);
+            }
+            const uint64_t tg2 = now_ns();
+
+            g_dotq_profile.ns_gpu_call += tg1 - tg0;
+            g_dotq_profile.ns_out_convert += tg2 - tg1;
+            g_dotq_profile.calls++;
+          }
         }
       }
     } else {
@@ -1231,8 +1277,15 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
       }
       const uint64_t t1 = now_ns();
 
-      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
-                          N, K);
+      static const bool s_disable_delegate =
+        std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
+      if (!s_disable_delegate && (N % 32) == 0 && (K % 8) == 0) {
+        gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16,
+                              svm_out, M, N, K);
+      } else {
+        gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
+                            M, N, K);
+      }
       const uint64_t t2 = now_ns();
 
       // fp16 -> fp32 output copy (no crop -- the kernel writes [M][N]).

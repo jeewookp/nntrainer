@@ -50,12 +50,35 @@
 4. **SVMMap 제거만으로 3x speedup** 가능하지만, host-side output 복사 전 sync 필요
 5. **image2d 포맷으로 통일하면 reformat 완전 제거** 가능 (LiteRT 방식)
 
+## 진행 중인 작업
+
+### Phase 0: Delegate 커널 프로덕션 연결 + 배치 reformat 공유  (2026-04-20)
+- `gemm_delegate_fp16_cl_batched` 추가 — 하나의 SVM 입력을 image2d로
+  **배치당 한 번만** 변환해서 여러 weight gemm에 공유. N번의 blocking
+  SVMMap을 배치 끝의 1번으로 축소.
+- `HalfTensor::dot(vector, vector)` (Q/K/V + gate/up 경로) → 배치 delegate
+  호출로 교체. N%32==0 && K%8==0 만족 못하면 기존 int4 경로로 자동 fallback.
+- `HalfTensor::dotQInteger` (o_proj, down_proj 경로) → 단일 delegate 호출로
+  교체 (같은 fallback).
+- `FloatTensor` 쪽 동일한 두 경로도 동시에 연결.
+- 안전 스위치: `NNTRAINER_DISABLE_DELEGATE_GEMM=1` 로 전체 비활성 가능.
+
+예상 효과 (prefill 기준):
+- `reformat_in`: Q/K/V 3회 → 1회, gate/up 2회 → 1회.
+- per-call SVMMap blocking: 배치 호출당 N회 → 1회 (LiteRT 스타일 per-layer
+  sync에 한 발 더 근접).
+- conv_gpu 자체는 변화 없음 (커널 그대로 사용).
+- reformat_out 은 여전히 per-weight (RMSNorm/SwiGLU 가 아직 SVM 소비자임).
+
 ## 다음 단계
 
 ### Phase A: RMSNorm image2d 연동
 - `rmsnorm_layer_cl.cpp` 수정: GpuImagePool에서 input image2d 확인
 - 있으면: rmsnorm_image2d 커널 사용, output을 GpuImagePool에 등록
 - 없으면: 기존 cl_mem path (fallback)
+- 전제: pool 엔트리 invalidation 규약이 필요 (tensor 재할당 시 stale image2d
+  방지). 현재 Phase 0 에서는 pool 을 건드리지 않음 — producer/consumer 양쪽이
+  동시에 image2d를 지원할 때 의미 있는 최적화.
 
 ### Phase B: SwiGLU, Addition image2d 연동
 - 동일 패턴

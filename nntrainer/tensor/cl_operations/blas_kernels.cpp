@@ -21,6 +21,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <unordered_map>
+#include <vector>
 
 namespace nntrainer {
 
@@ -2714,6 +2716,274 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   t_calls++;
   t_gflops_x1000 += (uint64_t)(2.0 * M * N * K / 1e6);
   // No per-call release — buffers are reused
+}
+
+// ============================================================================
+// Batched delegate GEMM — one shared input, many weights.
+//
+// Designed for the Q/K/V (and gate/up) batched dispatch in
+// HalfTensor::dot(std::vector<Tensor*>, ...) where every weight consumes
+// the same activation. Cuts the per-call SVM->image2d reformat from N to
+// 1, and replaces N blocking SVMMaps with a single end-of-batch SVMMap.
+//
+// Falls back on the caller (HalfTensor) if any Ns[i] % 32 != 0 or K % 8.
+// ============================================================================
+void gemm_delegate_fp16_cl_batched(uint16_t *input,
+                                   const std::vector<uint16_t *> &weights,
+                                   const std::vector<uint16_t *> &scales,
+                                   const std::vector<uint16_t *> &outputs,
+                                   const std::vector<unsigned int> &Ns,
+                                   unsigned int M, unsigned int K) {
+  const size_t count = weights.size();
+  if (count == 0) return;
+  if (scales.size() != count || outputs.size() != count || Ns.size() != count)
+    throw std::runtime_error(
+      "gemm_delegate_fp16_cl_batched: vector size mismatch");
+  if ((K % 8) != 0)
+    throw std::runtime_error(
+      "gemm_delegate_fp16_cl_batched requires K%8==0");
+  for (size_t i = 0; i < count; ++i) {
+    if ((Ns[i] % 32) != 0)
+      throw std::runtime_error(
+        "gemm_delegate_fp16_cl_batched requires all Ns[i]%32==0");
+  }
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int src_slices = K / 4;
+  cl_int err;
+
+  auto now_ns = []() -> uint64_t {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  };
+
+  // --- Profiling ---
+  static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
+    t_readback{0}, t_calls{0}, t_weights_total{0}, t_gflops_x1000{0};
+  static struct BatchedProfileDump {
+    ~BatchedProfileDump() {
+      uint64_t c = t_calls.load();
+      if (!c) return;
+      double g = t_gflops_x1000.load() / 1000.0;
+      double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
+      fprintf(stderr,
+        "\n[PROFILE gemm_delegate_fp16_cl_batched] batches=%lu weights=%lu "
+        "gflops=%.0f\n"
+        "  dequant:     %7.1f ms\n"
+        "  reformat_in: %7.1f ms  (once per batch — shared across weights)\n"
+        "  conv:        %7.1f ms\n"
+        "  readback:    %7.1f ms  (reformat_out N*, SVMMap once)\n"
+        "  total:       %7.1f ms  %.3f TFLOPS\n",
+        (unsigned long)c, (unsigned long)t_weights_total.load(), g,
+        t_dequant/1e6, t_reformat/1e6, t_conv/1e6, t_readback/1e6,
+        tot, g/(tot/1e3)/1000.0);
+    }
+  } s_prof;
+
+  // --- Static resources (shared across batched calls) ---
+  static std::unordered_map<uintptr_t, cl_mem> s_dq_cache;
+  static size_t s_dq_cache_bytes = 0;
+  static constexpr size_t kMaxCacheBytes = 200 * 1024 * 1024;
+
+  static cl_mem s_xmem = nullptr;
+  static cl_mem s_bias = nullptr;
+  static int s_bias_slices = 0;
+  static cl_mem s_src_img = nullptr;
+  static int s_src_w = 0, s_src_h = 0;
+  // dst_img is reused per-weight inside the batch; the in-order queue
+  // serialises conv[i] -> image2d_to_svm[i] -> conv[i+1] so the buffer
+  // never races with itself.
+  static cl_mem s_dst_img = nullptr;
+  static int s_dst_w = 0, s_dst_h = 0;
+  static ClContext::SharedPtrClKernel s_dq_kern, s_conv_kern;
+  static ClContext::SharedPtrClKernel s_in_kern, s_out_kern;
+
+  // xmem (6144 bytes, constant scratch required by the wave kernel)
+  if (!s_xmem)
+    s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+
+  // Grow bias image to max dst_slices across the batch.
+  unsigned int max_N = 0;
+  for (size_t i = 0; i < count; ++i)
+    if (Ns[i] > max_N) max_N = Ns[i];
+  const int max_dst_slices = (int)(max_N / 4);
+  if (!s_bias || s_bias_slices < max_dst_slices) {
+    if (s_bias) clReleaseMemObject(s_bias);
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc bd = {};
+    bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = max_dst_slices; bd.image_height = 1;
+    s_bias = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &bd, nullptr, &err);
+    std::vector<uint16_t> z((size_t)max_dst_slices * 4, 0);
+    size_t o[3]={0,0,0}, r[3]={(size_t)max_dst_slices,1,1};
+    clEnqueueWriteImage(blas_cc->command_queue_inst_.GetCommandQueue(),
+                        s_bias, CL_TRUE, o, r, 0, 0, z.data(), 0, 0, 0);
+    s_bias_slices = max_dst_slices;
+  }
+
+  // src image (shared across the batch)
+  cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
+  if (!s_src_img || s_src_w != (int)M || s_src_h != src_slices) {
+    if (s_src_img) clReleaseMemObject(s_src_img);
+    cl_image_desc sd = {};
+    sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_width = M; sd.image_height = src_slices;
+    s_src_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &err);
+    s_src_w = M; s_src_h = src_slices;
+  }
+
+  // dst image grown to the max slices we'll need.
+  if (!s_dst_img || s_dst_w != (int)M || s_dst_h < max_dst_slices) {
+    if (s_dst_img) clReleaseMemObject(s_dst_img);
+    cl_image_desc dd = {};
+    dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = max_dst_slices;
+    s_dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &err);
+    s_dst_w = M; s_dst_h = max_dst_slices;
+  }
+
+  if (!s_dq_kern)
+    s_dq_kern = blas_cc->registerClKernel(
+      dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
+  if (!s_conv_kern)
+    s_conv_kern = blas_cc->registerClKernel(
+      delegate_conv_wave_kernel, "main_function");
+  if (!s_in_kern)
+    s_in_kern = blas_cc->registerClKernel(
+      image_reformat_kernel, "svm_to_image2d");
+  if (!s_out_kern)
+    s_out_kern = blas_cc->registerClKernel(
+      image_reformat_kernel, "image2d_to_svm");
+
+  // === Step 1: shared SVM -> image2d input reformat (once per batch) ===
+  const uint64_t ti0 = now_ns();
+  {
+    int a = 0;
+    s_in_kern->SetKernelSVMArguments(a++, input);
+    s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+    int sm = (int)M, sk = (int)K;
+    s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+    s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+    const int ig[3] = {(int)((M+15)/16)*16,
+                        (int)((src_slices+15)/16)*16, 1};
+    const int il[3] = {16, 16, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+  }
+  const uint64_t ti1 = now_ns();
+  t_reformat += (ti1 - ti0);
+
+  // === Step 2..: per-weight dequant + conv + image2d_to_svm ===
+  uint64_t dq_ns = 0, conv_ns = 0, rb_ns = 0;
+  for (size_t i = 0; i < count; ++i) {
+    const unsigned int Ni = Ns[i];
+    const int dst_slices = Ni / 4;
+    const int iters = src_slices / 2;
+    const int n_z = (dst_slices + 7) / 8;
+    const size_t w_halfs = (size_t)n_z * iters * 256;
+    const size_t w_bytes = w_halfs * 2;
+
+    // --- Dequant (cached per weight pointer) ---
+    const uint64_t td0 = now_ns();
+    uintptr_t w_key = reinterpret_cast<uintptr_t>(weights[i]);
+    cl_mem w_cl_use = nullptr;
+    auto cache_it = s_dq_cache.find(w_key);
+    if (cache_it != s_dq_cache.end()) {
+      w_cl_use = cache_it->second;
+    } else {
+      if (s_dq_cache_bytes + w_bytes <= kMaxCacheBytes) {
+        cl_mem new_w =
+          clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+        if (!err) {
+          s_dq_cache[w_key] = new_w;
+          s_dq_cache_bytes += w_bytes;
+          w_cl_use = new_w;
+        }
+      }
+      if (!w_cl_use) {
+        // Cache full — dequant into a non-cached buffer for this call only.
+        // Leaks until process exit; fine because this path only triggers
+        // when model exceeds kMaxCacheBytes of delegate weights.
+        w_cl_use =
+          clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+      }
+      int a = 0;
+      s_dq_kern->SetKernelSVMArguments(a++, weights[i]);
+      s_dq_kern->SetKernelSVMArguments(a++, scales[i]);
+      s_dq_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
+      int sn = (int)Ni, sk = (int)K;
+      s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
+      s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
+      int tot = (int)w_halfs;
+      const int dg[3] = {((tot+255)/256)*256, 1, 1};
+      const int dl[3] = {256, 1, 1};
+      blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);
+    }
+    const uint64_t td1 = now_ns();
+    dq_ns += (td1 - td0);
+
+    // --- Conv dispatch (shared src_img, per-weight w_cl_use, shared dst_img) ---
+    {
+      struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+      struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
+      struct { int x,y,z,w; } s2={1,1,0,0};
+      int a = 0;
+      s_conv_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(a++, &s_bias, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
+      s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
+      s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
+      size_t gz = ((dst_slices+7)/8+3)/4;
+      const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
+      const int l[3] = {128, 1, 4};
+      blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
+    }
+    const uint64_t td2 = now_ns();
+    conv_ns += (td2 - td1);
+
+    // --- image2d -> SVM output (no SVMMap yet) ---
+    {
+      int a = 0;
+      s_out_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+      s_out_kern->SetKernelSVMArguments(a++, outputs[i]);
+      int sm = (int)M, sn = (int)Ni;
+      s_out_kern->SetKernelArguments(a++, &sm, sizeof(int));
+      s_out_kern->SetKernelArguments(a++, &sn, sizeof(int));
+      const int og[3] = {(int)((M+15)/16)*16,
+                          (int)((dst_slices+15)/16)*16, 1};
+      const int ol[3] = {16, 16, 1};
+      blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
+    }
+    const uint64_t td3 = now_ns();
+    rb_ns += (td3 - td2);
+
+    t_gflops_x1000 += (uint64_t)(2.0 * M * Ni * K / 1e6);
+  }
+
+  // === Step N+1: single end-of-batch SVMMap for host coherence ===
+  //
+  // One SVMMap drains the in-order queue, so the host sees consistent
+  // data across ALL outputs. This replaces N per-weight blocking maps.
+  const uint64_t tm0 = now_ns();
+  for (size_t i = 0; i < count; ++i) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      outputs[i], (size_t)M * Ns[i] * sizeof(uint16_t),
+      /*blocking=*/(i + 1 == count));
+  }
+  const uint64_t tm1 = now_ns();
+  rb_ns += (tm1 - tm0);
+
+  t_dequant += dq_ns;
+  t_conv += conv_ns;
+  t_readback += rb_ns;
+  t_calls++;
+  t_weights_total += count;
 }
 
 } // namespace nntrainer

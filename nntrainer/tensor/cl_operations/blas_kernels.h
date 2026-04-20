@@ -21,6 +21,7 @@
 #include <opencl_kernel.h>
 
 #include <string>
+#include <vector>
 
 namespace nntrainer {
 
@@ -180,6 +181,40 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t *input_transposed,
                            uint16_t *weights, uint16_t *scales,
                            uint16_t *output, unsigned int M, unsigned int N,
                            unsigned int K);
+
+/**
+ * @brief Batched delegate GEMM with shared input.
+ *
+ * Dispatches N separate gemm_delegate calls that all share the same
+ * activation `input`. Unlike calling gemm_delegate_fp16_cl N times,
+ * this path:
+ *   1. Runs the SVM->image2d input reformat ONCE (saved across all
+ *      weights), instead of once per weight.
+ *   2. Skips the per-call blocking SVMMap; a single SVMMap barrier at
+ *      the end of the batch drains the whole pipeline.
+ *
+ * All output tensors still receive the same fp16 [M][Ni] SVM data they
+ * would have gotten from per-weight gemm_delegate_fp16_cl, so this is a
+ * drop-in replacement for the loop in HalfTensor::dot(vector,vector).
+ *
+ * Constraint: every Ns[i] must be a multiple of 32 and K a multiple of
+ * 8 (same as gemm_delegate_fp16_cl). Caller is responsible for falling
+ * back to the int4 path if the constraint does not hold.
+ *
+ * @param[in]  input    shared fp16 [M][K] SVM activation
+ * @param[in]  weights  per-output packed int4 weight SVM pointers
+ * @param[in]  scales   per-output fp16 channel scale SVM pointers
+ * @param[out] outputs  per-output fp16 [M][Ns[i]] SVM pointers
+ * @param[in]  Ns       per-output N dimensions (width of each weight)
+ * @param[in]  M        batch / token count
+ * @param[in]  K        hidden dimension (shared across all weights)
+ */
+void gemm_delegate_fp16_cl_batched(uint16_t *input,
+                                   const std::vector<uint16_t *> &weights,
+                                   const std::vector<uint16_t *> &scales,
+                                   const std::vector<uint16_t *> &outputs,
+                                   const std::vector<unsigned int> &Ns,
+                                   unsigned int M, unsigned int K);
 
 /**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
