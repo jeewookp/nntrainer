@@ -2670,6 +2670,16 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     GpuImagePool::Global().get(input, &pool_src_w, &pool_src_h);
   const bool have_pool_src = pool_src && pool_src_w == (int)M &&
                               pool_src_h == src_slices;
+  {
+    static int s_diag = 0;
+    if (s_diag < 8) {
+      fprintf(stderr,
+        "[GEMM] in=%p pool=%p w=%d/%u h=%d/%d hit=%d\n",
+        input, (void *)pool_src, pool_src_w, M, pool_src_h,
+        src_slices, have_pool_src ? 1 : 0);
+      s_diag++;
+    }
+  }
   if (have_pool_src) {
     src_img_for_conv = pool_src;
     t_reformat_hits++;
