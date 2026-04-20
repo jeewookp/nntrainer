@@ -1129,6 +1129,23 @@ TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_128_1024_512) {
   run_ab_bench_(128, 1024, 512);
 }
 
+// Model shapes (Qwen3-4B prefill M=437)
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_437_4096_2560) {
+  run_ab_bench_(437, 4096, 2560);
+}
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_437_1024_2560) {
+  run_ab_bench_(437, 1024, 2560);
+}
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_437_2560_4096) {
+  run_ab_bench_(437, 2560, 4096);
+}
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_437_9728_2560) {
+  run_ab_bench_(437, 9728, 2560);
+}
+TEST(nntrainer_opencl_adreno_kernels_ab, ab_bench_437_2560_9728) {
+  run_ab_bench_(437, 2560, 9728);
+}
+
 // Dump the OpenCL device extension string once at process start so we can
 // tell whether the DP4A kernel's `cl_khr_integer_dot_product` fast path
 // is actually enabled on this hardware. Prints to stderr (test harness
