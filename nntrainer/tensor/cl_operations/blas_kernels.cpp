@@ -2663,6 +2663,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 }
 
 } // namespace nntrainer
+#if 0 // OLD — duplicate removed
   if (((N % 32) != 0) || ((K % 8) != 0))
     throw std::runtime_error(
       "gemm_delegate_fp16_cl requires N%32==0 and K%8==0");
@@ -2861,8 +2862,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   clReleaseMemObject(dst_img);
   clReleaseMemObject(src_img);
 }
-
-} // namespace nntrainer
+#endif
 #if 0 // OLD CPU dequant version — replaced by GPU dequant above
 // Weight layout for delegate kernel (reverse-engineered from program_002.cl):
 //   For Z (output slice group 0..dst_slices/8-1), iteration i (0..src_slices/2-1):
