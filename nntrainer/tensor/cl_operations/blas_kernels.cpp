@@ -2540,6 +2540,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
 
   // --- 3. Src image2d ---
+  // Input SVM layout: input[m * K + k] (row-major [M][K])
+  // Image layout: pixel(x=m, y=s).c = data[s * M * 4 + m * 4 + c]
+  // Must reformat [M][K] → [src_slices][M][4]
   cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
   cl_image_desc sd = {};
   sd.image_type = CL_MEM_OBJECT_IMAGE2D;
@@ -2549,8 +2552,19 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                                   nullptr, &err);
   if (err) throw std::runtime_error("delegate: src image failed");
   {
+    // Reformat input to image layout
+    std::vector<uint16_t> img_buf((size_t)src_slices * M * 4);
+    for (int m = 0; m < (int)M; ++m) {
+      for (int s = 0; s < src_slices; ++s) {
+        for (int c = 0; c < 4; ++c) {
+          int k = s * 4 + c;
+          img_buf[((size_t)s * M + m) * 4 + c] =
+            (k < (int)K) ? input[m * K + k] : 0;
+        }
+      }
+    }
     size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
-    clEnqueueWriteImage(clq, src_img, CL_TRUE, o, r, 0, 0, input,
+    clEnqueueWriteImage(clq, src_img, CL_TRUE, o, r, 0, 0, img_buf.data(),
                         0, nullptr, nullptr);
   }
 
@@ -2588,11 +2602,21 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   blas_cc->command_queue_inst_.DispatchCommand(kern, global, local);
 
-  // --- 6. Read output ---
+  // --- 6. Read output and reformat from image [slice][M][4] to [M][N] ---
   {
+    std::vector<uint16_t> img_out((size_t)dst_slices * M * 4);
     size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)dst_slices, 1};
-    clEnqueueReadImage(clq, dst_img, CL_TRUE, o, r, 0, 0, output,
+    clEnqueueReadImage(clq, dst_img, CL_TRUE, o, r, 0, 0, img_out.data(),
                        0, nullptr, nullptr);
+    for (int m = 0; m < (int)M; ++m) {
+      for (int s = 0; s < dst_slices; ++s) {
+        for (int c = 0; c < 4; ++c) {
+          int n = s * 4 + c;
+          if (n < (int)N)
+            output[m * N + n] = img_out[((size_t)s * M + m) * 4 + c];
+        }
+      }
+    }
   }
 
   clReleaseMemObject(w_cl);
