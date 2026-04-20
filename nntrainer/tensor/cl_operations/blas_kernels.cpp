@@ -2490,25 +2490,27 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   // --- Profiling ---
   static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
-    t_readback{0}, t_calls{0}, t_gflops_x1000{0};
+    t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
       if (!c) return;
       double g = t_gflops_x1000.load() / 1000.0;
       double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
+      double conv_gpu_ms = t_conv_gpu_ns.load() / 1e6;
       fprintf(stderr,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
         "  dequant:     %7.1f ms (%4.1f%%)\n"
         "  reformat_in: %7.1f ms (%4.1f%%)\n"
-        "  conv:        %7.1f ms (%4.1f%%)  %.3f TFLOPS\n"
+        "  conv(wall):  %7.1f ms (%4.1f%%)\n"
+        "  conv(gpu):   %7.1f ms            %.3f TFLOPS\n"
         "  readback:    %7.1f ms (%4.1f%%)\n"
         "  total:       %7.1f ms            %.3f TFLOPS\n",
         (unsigned long)c, g,
         t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         t_conv/1e6, t_conv*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
-          g/(t_conv/1e9)/1000.0,
+        conv_gpu_ms, g/(conv_gpu_ms/1e3)/1000.0,
         t_readback/1e6, t_readback*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         tot, g/(tot/1e3)/1000.0);
     }
@@ -2521,7 +2523,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   };
 
   // --- Static resources (allocated once, reused across calls) ---
-  static cl_mem s_w_cl = nullptr;
+  // Dequant cache: weight_ptr → cl_mem (first call per layer does dequant,
+  // subsequent calls reuse). Limited to ~200MB total GPU memory.
+  static std::unordered_map<uintptr_t, cl_mem> s_dq_cache;
+  static size_t s_dq_cache_bytes = 0;
+  static constexpr size_t kMaxCacheBytes = 200 * 1024 * 1024;
+
+  static cl_mem s_w_cl = nullptr;  // fallback if cache full
   static size_t s_w_size = 0;
   static cl_mem s_xmem = nullptr;
   static cl_mem s_bias = nullptr;
@@ -2533,14 +2541,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   static ClContext::SharedPtrClKernel s_dq_kern, s_conv_kern;
   static ClContext::SharedPtrClKernel s_in_kern, s_out_kern;
 
-  // Ensure fp16 weight buffer is large enough
   size_t w_halfs = (size_t)n_z * iters * 256;
   size_t w_bytes = w_halfs * 2;
-  if (!s_w_cl || s_w_size < w_bytes) {
-    if (s_w_cl) clReleaseMemObject(s_w_cl);
-    s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
-    s_w_size = w_bytes;
-  }
 
   // xmem (6144 bytes, constant)
   if (!s_xmem)
@@ -2593,13 +2595,37 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_out_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "image2d_to_svm");
 
-  // === Step 1: GPU dequant (SVM → fp16 buffer) ===
+  // === Step 1: Dequant (cached per weight pointer, or fresh GPU dequant) ===
   const uint64_t t0 = now_ns();
-  {
+  uintptr_t w_key = reinterpret_cast<uintptr_t>(weights);
+  cl_mem w_cl_use = nullptr;
+  auto cache_it = s_dq_cache.find(w_key);
+  if (cache_it != s_dq_cache.end()) {
+    w_cl_use = cache_it->second;  // cache hit — skip dequant entirely
+  } else {
+    // Cache miss: allocate + dequant
+    cl_mem new_w = nullptr;
+    if (s_dq_cache_bytes + w_bytes <= kMaxCacheBytes) {
+      new_w = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+      if (!err) {
+        s_dq_cache[w_key] = new_w;
+        s_dq_cache_bytes += w_bytes;
+        w_cl_use = new_w;
+      }
+    }
+    if (!w_cl_use) {
+      // Cache full or alloc failed — use reusable buffer
+      if (!s_w_cl || s_w_size < w_bytes) {
+        if (s_w_cl) clReleaseMemObject(s_w_cl);
+        s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+        s_w_size = w_bytes;
+      }
+      w_cl_use = s_w_cl;
+    }
     int a = 0;
     s_dq_kern->SetKernelSVMArguments(a++, weights);
     s_dq_kern->SetKernelSVMArguments(a++, scales);
-    s_dq_kern->SetKernelArguments(a++, &s_w_cl, sizeof(cl_mem));
+    s_dq_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
     int sn = (int)N, sk = (int)K;
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
@@ -2607,7 +2633,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);
-    // no clFinish — pipeline with next step
   }
   const uint64_t t1 = now_ns();
 
@@ -2633,7 +2658,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
     struct { int x,y,z,w; } s2={1,1,0,0};
     int a = 0;
-    s_conv_kern->SetKernelArguments(a++, &s_w_cl, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_bias, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
@@ -2644,9 +2669,14 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     size_t gz = ((dst_slices+7)/8+3)/4;
     const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
     const int l[3] = {128, 1, 4};
-    blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
+    // Dispatch with event for GPU-side timing
+    cl_event conv_ev = nullptr;
+    cl_command_queue raw_q = blas_cc->command_queue_inst_.GetCommandQueue();
+    cl_kernel raw_k = s_conv_kern->GetKernel();
+    size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
+    size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
+    clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
   }
-  // No clFinish — output readback SVMMap(blocking=true) syncs everything.
   const uint64_t t3 = now_ns();
 
   // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
@@ -2661,10 +2691,20 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int ol[3] = {16, 16, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
   }
-  // Sync output to host (SVM coherence)
+  // Sync output to host (SVM coherence — drains full pipeline)
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, (size_t)M * N * sizeof(uint16_t), true);
   const uint64_t t4 = now_ns();
+
+  // GPU event timing for conv kernel
+  if (conv_ev) {
+    cl_ulong ev_start = 0, ev_end = 0;
+    clGetEventProfilingInfo(conv_ev, 0x1282, sizeof(ev_start), &ev_start, nullptr);
+    clGetEventProfilingInfo(conv_ev, 0x1283, sizeof(ev_end), &ev_end, nullptr);
+    if (ev_end > ev_start)
+      t_conv_gpu_ns += (ev_end - ev_start);
+    clReleaseEvent(conv_ev);
+  }
 
   t_dequant += (t1 - t0);
   t_reformat += (t2 - t1);
