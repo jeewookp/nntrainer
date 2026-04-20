@@ -160,6 +160,24 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
       input.getMemoryData()->isSVM() && result.getMemoryData() &&
       result.getMemoryData()->isSVM();
 
+    // DIAG: log whether image2d path is taken the first handful of calls so
+    // we can tell if the pool lookup miss on the gemm side is because
+    // this fast path is disabled entirely vs. because the tensor pointer
+    // mismatches.
+    {
+      static int s_diag_calls = 0;
+      if (s_diag_calls < 4) {
+        fprintf(stderr,
+          "[RMS] call=%d w=%d image2d_ok=%d in_svm=%d out_svm=%d "
+          "in_ptr=%p out_ptr=%p\n",
+          s_diag_calls, w, image2d_ok ? 1 : 0,
+          (input.getMemoryData() && input.getMemoryData()->isSVM()) ? 1 : 0,
+          (result.getMemoryData() && result.getMemoryData()->isSVM()) ? 1 : 0,
+          (void *)data, (void *)rdata);
+        s_diag_calls++;
+      }
+    }
+
     if (image2d_ok) {
       auto kernel_image2d_ptr =
         getLayerKernelPtrs()[Kernels::RMSNORM_IMAGE2D];
