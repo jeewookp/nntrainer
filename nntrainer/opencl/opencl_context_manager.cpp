@@ -90,17 +90,10 @@ void ContextManager::ReleaseContext() {
 const cl_device_id ContextManager::GetDeviceId() { return device_id_; }
 
 void *ContextManager::createSVMRegion(size_t size) {
-  if (!context_) return nullptr;
-  // Prefer fine-grained SVM buffer — no map/unmap required for host↔device
-  // coherence, so per-call blocking SVMMap in gemm_delegate goes away and
-  // we keep the full async GPU pipeline. Adreno 6xx/7xx/8xx typically
-  // expose CL_DEVICE_SVM_FINE_GRAIN_BUFFER. If it isn't supported the
-  // call returns NULL and we fall back to the coarse-grained allocation
-  // (which is what the previous code always did).
-  void *p = clSVMAlloc(
-    context_, CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER, size, 0);
-  if (p) return p;
-  return clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
+  if (context_)
+    return clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
+  else
+    return nullptr;
 }
 
 void ContextManager::releaseSVMRegion(void *svm_ptr) {
