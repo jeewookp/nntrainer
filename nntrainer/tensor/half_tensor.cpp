@@ -951,39 +951,43 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const bool use_delegate =
       !s_disable_delegate && (N % 32) == 0 && (K % 8) == 0;
 
-    // Zero-copy delegate path: pass tensor SVM pointers directly, no
-    // staging. int4 fallback still needs staging for CL_MEM_USE_HOST_PTR.
-    if (use_delegate) {
-      const uint64_t t1 = now_ns();
-      gemm_delegate_fp16_cl(in_u16, /*input_transposed=*/nullptr, weight_u16,
-                            scale_u16, out_u16, M, N, K);
-      const uint64_t t2 = now_ns();
-      g_half_dotq_profile.ns_gpu_call += t2 - t1;
-      g_half_dotq_profile.calls++;
-    } else {
-      uint16_t *svm_in_T =
-        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
-      const size_t in_total = (size_t)M * K;
-      const size_t out_total = (size_t)M * N;
+    // Staging path (both delegate and int4). Bisect established that
+    // passing the tensor's SVM host_ptr directly to the delegate kernel
+    // (zero-copy) produced deterministic wrong-token garbage, while
+    // staging through clbuffInstance's dedicated SVM scratch works
+    // fine. The working theory: on Adreno coarse-grained SVM, the CPU
+    // scalar read `svm_in[i] = in_u16[i]` implicitly invalidates the
+    // CPU cache line for in_u16 and lets subsequent GPU kernels see
+    // the coherent copy in svm_in; zero-copy skips that CPU touch and
+    // ends up reading stale data from tensor_pool regions that CPU
+    // layers (MHA, ReshapedRMSNorm) wrote earlier in the pipeline.
+    uint16_t *svm_in_T =
+      reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+    const size_t in_total = (size_t)M * K;
+    const size_t out_total = (size_t)M * N;
 
-      const uint64_t t0 = now_ns();
-      for (size_t i = 0; i < in_total; ++i) {
-        svm_in[i] = in_u16[i];
-      }
-      const uint64_t t1 = now_ns();
+    const uint64_t t0 = now_ns();
+    for (size_t i = 0; i < in_total; ++i) {
+      svm_in[i] = in_u16[i];
+    }
+    const uint64_t t1 = now_ns();
+    if (use_delegate) {
+      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
+                            M, N, K);
+    } else {
       gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                           N, K);
-      const uint64_t t2 = now_ns();
-      for (size_t i = 0; i < out_total; ++i) {
-        out_u16[i] = svm_out[i];
-      }
-      const uint64_t t3 = now_ns();
-
-      g_half_dotq_profile.ns_in_stage += t1 - t0;
-      g_half_dotq_profile.ns_gpu_call += t2 - t1;
-      g_half_dotq_profile.ns_out_stage += t3 - t2;
-      g_half_dotq_profile.calls++;
     }
+    const uint64_t t2 = now_ns();
+    for (size_t i = 0; i < out_total; ++i) {
+      out_u16[i] = svm_out[i];
+    }
+    const uint64_t t3 = now_ns();
+
+    g_half_dotq_profile.ns_in_stage += t1 - t0;
+    g_half_dotq_profile.ns_gpu_call += t2 - t1;
+    g_half_dotq_profile.ns_out_stage += t3 - t2;
+    g_half_dotq_profile.calls++;
   }
 #else
   throw std::invalid_argument(
