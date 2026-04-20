@@ -105,20 +105,6 @@ double MemoryPool::planLayout(const MemoryPlanner &planner) {
   if (min_pool_size == 0)
     min_pool_size = calcMinMemoryRequirement();
 
-  // For OpenCL SVM: pad each tensor size to page boundary so that the
-  // planner assigns page-aligned offsets naturally (without post-hoc
-  // alignment that would break overlap validation).
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  {
-    constexpr size_t ALIGN = 4096;
-    for (size_t i = 0; i < memory_size.size(); ++i) {
-      memory_size[i] = (memory_size[i] + ALIGN - 1) & ~(ALIGN - 1);
-    }
-    if (min_pool_size > 0)
-      min_pool_size = (min_pool_size + memory_size.size() * ALIGN);
-  }
-#endif
-
   pool_size = planner.planLayout(memory_size, memory_validity, memory_offset,
                                  memory_is_wgrad, n_wgrad);
   if (pool_size < min_pool_size || !validateLayout())
