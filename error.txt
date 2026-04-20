@@ -1,11 +1,3 @@
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
-KNOX_STORAGE
-LD_LIBRARY_PATH
-LOGNAME
-MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
 PATH
 SHELL
@@ -36,32 +28,32 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7690 ms, 56.827 TPS
-generation: 32 tokens, 6059 ms, 5.2814 TPS
-total: 13756 ms
-peak memory: 2739724 KB
+prefill: 437 tokens, 7543 ms, 57.9345 TPS
+generation: 32 tokens, 6003 ms, 5.33067 TPS
+total: 13554 ms
+peak memory: 2694228 KB
 ==========================================================
-[e2e time]: 16029 ms 
-Max Resident Set Size: 2739724 KB
+[e2e time]: 15939 ms 
+Max Resident Set Size: 2694228 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        93.8 ms (91.4%)
-  reformat_in:     1.5 ms ( 1.4%)  hits=0/252
-  conv(wall):      4.0 ms ( 3.9%)
+  dequant:        89.1 ms (90.6%)
+  reformat_in:     1.5 ms ( 1.5%)  hits=0/252
+  conv(wall):      4.1 ms ( 4.2%)
   conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        3.4 ms ( 3.3%)
-  total:         102.7 ms            30.922 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.91 ms calls=1 avg=17.906 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.36 ms calls=1 avg=6.359 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1151.58 ms calls=36 avg=31.988 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=718.13 ms calls=73 avg=9.837 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=356.88 ms calls=72 avg=4.957 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1141.08 ms calls=36 avg=31.697 ms
+  readback:        3.7 ms ( 3.7%)
+  total:          98.4 ms            32.267 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.68 ms calls=1 avg=13.685 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.008 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1130.42 ms calls=36 avg=31.400 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=617.09 ms calls=73 avg=8.453 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=343.00 ms calls=72 avg=4.764 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1172.23 ms calls=36 avg=32.562 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4190.33 ms calls=252
-  in_stage    :    84.19 ms (  2.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3958.04 ms ( 94.5%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   148.10 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4158.06 ms calls=252
+  in_stage    :    77.82 ms (  1.9%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3938.55 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   141.70 ms (  3.4%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -81,31 +73,29 @@ Max Resident Set Size: 2739724 KB
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract agai
 
 --- Perf summary ---
-prefill: 437 tokens, 7690 ms, 56.827 TPS
-generation: 32 tokens, 6059 ms, 5.2814 TPS
-total: 13756 ms
-peak memory: 2739724 KB
-[e2e time]: 16029 ms 
-  total:         102.7 ms            30.922 TFLOPS
+prefill: 437 tokens, 7543 ms, 57.9345 TPS
+generation: 32 tokens, 6003 ms, 5.33067 TPS
+total: 13554 ms
+peak memory: 2694228 KB
+[e2e time]: 15939 ms 
+  total:          98.4 ms            32.267 TFLOPS
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4190.33 ms calls=252
-  in_stage    :    84.19 ms (  2.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3958.04 ms ( 94.5%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   148.10 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4158.06 ms calls=252
+  in_stage    :    77.82 ms (  1.9%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3938.55 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   141.70 ms (  3.4%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.91 ms calls=1 avg=17.906 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.36 ms calls=1 avg=6.359 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1151.58 ms calls=36 avg=31.988 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=718.13 ms calls=73 avg=9.837 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=356.88 ms calls=72 avg=4.957 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1141.08 ms calls=36 avg=31.697 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.68 ms calls=1 avg=13.685 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.008 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1130.42 ms calls=36 avg=31.400 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=617.09 ms calls=73 avg=8.453 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=343.00 ms calls=72 avg=4.764 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1172.23 ms calls=36 avg=32.562 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
