@@ -937,39 +937,51 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       out_u16[n] = svm_out[n];
     }
   } else {
-    // M>1 (prefill): dispatch via gpu_int4_gemm_adreno (two-pass GPU
-    // pipeline: input_transpose kernel followed by the int4 gemm
-    // kernel). `svm_in_T` is scratch for the GPU transpose result.
-    uint16_t *svm_in_T =
-      reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+    // M>1 (prefill). Two paths:
+    //   1) Delegate (preferred when N%32==0, K%8==0): zero-copy. Tensor
+    //      data is SVM-backed (all_svm invariant above), and the
+    //      delegate kernels use SetKernelSVMArguments which imposes no
+    //      alignment requirement. Pass the tensor pointers directly —
+    //      no staging, no scalar copies.
+    //   2) int4: needs page-aligned staging because
+    //      gemm_int4_adreno_cl wraps its input/output as cl_mem via
+    //      CL_MEM_USE_HOST_PTR.
+    static const bool s_disable_delegate =
+      std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
+    const bool use_delegate =
+      !s_disable_delegate && (N % 32) == 0 && (K % 8) == 0;
 
-    const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
-    const size_t out_total = static_cast<size_t>(M) * static_cast<size_t>(N);
+    if (use_delegate) {
+      const uint64_t t1 = now_ns();
+      gemm_delegate_fp16_cl(in_u16, /*input_transposed=*/nullptr, weight_u16,
+                            scale_u16, out_u16, M, N, K);
+      const uint64_t t2 = now_ns();
+      g_half_dotq_profile.ns_gpu_call += t2 - t1;
+      g_half_dotq_profile.calls++;
+    } else {
+      uint16_t *svm_in_T =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
+      const size_t in_total = (size_t)M * K;
+      const size_t out_total = (size_t)M * N;
 
-    const uint64_t t0 = now_ns();
-    for (size_t i = 0; i < in_total; ++i) {
-      svm_in[i] = in_u16[i];
+      const uint64_t t0 = now_ns();
+      for (size_t i = 0; i < in_total; ++i) {
+        svm_in[i] = in_u16[i];
+      }
+      const uint64_t t1 = now_ns();
+      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
+                          N, K);
+      const uint64_t t2 = now_ns();
+      for (size_t i = 0; i < out_total; ++i) {
+        out_u16[i] = svm_out[i];
+      }
+      const uint64_t t3 = now_ns();
+
+      g_half_dotq_profile.ns_in_stage += t1 - t0;
+      g_half_dotq_profile.ns_gpu_call += t2 - t1;
+      g_half_dotq_profile.ns_out_stage += t3 - t2;
+      g_half_dotq_profile.calls++;
     }
-    const uint64_t t1 = now_ns();
-    // Single-call delegate has more per-call dispatches (svm_to_image2d +
-    // conv + image2d_to_svm + SVMMap) than int4 (input_transpose + gemm +
-    // SVMMap) and in the Qwen3-4B profile ends up ~2x slower per call.
-    // The batched delegate (gemm_delegate_fp16_cl_batched) amortises the
-    // extra dispatches across several weights and does win, so we only
-    // enable the delegate path when we can actually batch (via
-    // HalfTensor::dot(vector, vector)).
-    gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
-                        N, K);
-    const uint64_t t2 = now_ns();
-    for (size_t i = 0; i < out_total; ++i) {
-      out_u16[i] = svm_out[i];
-    }
-    const uint64_t t3 = now_ns();
-
-    g_half_dotq_profile.ns_in_stage += t1 - t0;
-    g_half_dotq_profile.ns_gpu_call += t2 - t1;
-    g_half_dotq_profile.ns_out_stage += t3 - t2;
-    g_half_dotq_profile.calls++;
   }
 #else
   throw std::invalid_argument(

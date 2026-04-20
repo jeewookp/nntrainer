@@ -2492,7 +2492,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   // --- Profiling ---
   static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
-    t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0};
+    t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0},
+    t_reformat_hits{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
@@ -2503,7 +2504,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       fprintf(stderr,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
         "  dequant:     %7.1f ms (%4.1f%%)\n"
-        "  reformat_in: %7.1f ms (%4.1f%%)\n"
+        "  reformat_in: %7.1f ms (%4.1f%%)  hits=%lu/%lu\n"
         "  conv(wall):  %7.1f ms (%4.1f%%)\n"
         "  conv(gpu):   %7.1f ms            %.3f TFLOPS\n"
         "  readback:    %7.1f ms (%4.1f%%)\n"
@@ -2511,6 +2512,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         (unsigned long)c, g,
         t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
+        (unsigned long)t_reformat_hits.load(), (unsigned long)c,
         t_conv/1e6, t_conv*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         conv_gpu_ms, g/(conv_gpu_ms/1e3)/1000.0,
         t_readback/1e6, t_readback*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
@@ -2639,7 +2641,21 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   const uint64_t t1 = now_ns();
 
   // === Step 2: GPU input reformat: SVM [M][K] → image2d ===
-  {
+  //
+  // Reformat cache: Qwen3 issues q_proj(x) / k_proj(x) / v_proj(x) and
+  // gate_proj(x) / up_proj(x) as separate FC layers that share the same
+  // activation `x`. We remember (ptr, M, K) of the last reformatted input
+  // and skip svm_to_image2d when the next call consumes the same SVM
+  // region unchanged. Cache invalidates automatically on any ptr / M / K
+  // change, and conservatively on src_img shape recreation above.
+  static uintptr_t s_last_in_ptr = 0;
+  static unsigned int s_last_in_M = 0, s_last_in_K = 0;
+  static cl_mem s_last_in_img = nullptr;
+  const uintptr_t in_key = reinterpret_cast<uintptr_t>(input);
+  const bool reformat_hit =
+    (s_last_in_ptr == in_key) && (s_last_in_M == M) && (s_last_in_K == K) &&
+    (s_last_in_img == s_src_img);  // invalidate if src_img was recreated
+  if (!reformat_hit) {
     int a = 0;
     s_in_kern->SetKernelSVMArguments(a++, input);
     s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
@@ -2649,6 +2665,11 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int ig[3] = {(int)((M+15)/16)*16, (int)((src_slices+15)/16)*16, 1};
     const int il[3] = {16, 16, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+    s_last_in_ptr = in_key;
+    s_last_in_M = M; s_last_in_K = K;
+    s_last_in_img = s_src_img;
+  } else {
+    t_reformat_hits++;
   }
   // No clFinish — in-order queue guarantees dequant + reformat complete
   // before conv dispatch that follows.
