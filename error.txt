@@ -1,158 +1,116 @@
-  cl_qcom_protected_context
-  cl_qcom_recordable_queues
-  cl_qcom_subgroup_shuffle
-  cl_qcom_vector_image_ops
-  cl_qcom_onchip_global_memory
-  cl_qcom_large_buffer
-  cl_qcom_ahardwarebuffer_direct_import
-  cl_qcom_local_memory_control
-
-======== A/B bench M=437 K=4096 N=2560 ========
-  fp16 v1      : 4.31082 ms / iter  (2.12594 TFLOPS)
-  fp16 v2 tex  : 4.92145 ms / iter  (1.86216 TFLOPS)  speedup 0.875925x vs v1
-  fp16 v3 ksplit: 5.83027 ms / iter  (1.57189 TFLOPS)  speedup 0.739387x vs v1
-  dp4a         : 4.94723 ms / iter  (1.85246 TFLOPS)  speedup 0.871361x vs v1
-  v2 MSE       : 2.33774 (tol=67.1089)
-  v3 MSE       : 0.0521062 (tol=67.1089)
-  dp4a MSE     : 5.23833e-05 (tol=150.995)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560 (609 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560
-
-======== A/B bench M=437 K=1024 N=2560 ========
-  fp16 v1      : 1.1624 ms / iter  (1.97105 TFLOPS)
-  fp16 v2 tex  : 1.25388 ms / iter  (1.82725 TFLOPS)  speedup 0.927043x vs v1
-  fp16 v3 ksplit: 1.46739 ms / iter  (1.56137 TFLOPS)  speedup 0.792154x vs v1
-  dp4a         : 1.42757 ms / iter  (1.60492 TFLOPS)  speedup 0.814249x vs v1
-  v2 MSE       : 0.00528999 (tol=4.1943)
-  v3 MSE       : 0.000803985 (tol=4.1943)
-  dp4a MSE     : 6.85146e-06 (tol=9.43718)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560 (129 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096
-
-======== A/B bench M=437 K=2560 N=4096 ========
-  fp16 v1      : 3.97564 ms / iter  (2.30518 TFLOPS)
-  fp16 v2 tex  : 4.52509 ms / iter  (2.02528 TFLOPS)  speedup 0.878576x vs v1
-  fp16 v3 ksplit: 5.92 ms / iter  (1.54807 TFLOPS)  speedup 0.67156x vs v1
-  dp4a         : 4.72116 ms / iter  (1.94117 TFLOPS)  speedup 0.842088x vs v1
-  v2 MSE       : 0.255566 (tol=26.2144)
-  v3 MSE       : 0.00458968 (tol=26.2144)
-  dp4a MSE     : 1.76118e-05 (tol=58.9824)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096 (473 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
-
-======== A/B bench M=437 K=9728 N=2560 ========
-  fp16 v1      : 9.91351 ms / iter  (2.19557 TFLOPS)
-  fp16 v2 tex  : 12.4387 ms / iter  (1.74985 TFLOPS)  speedup 0.796991x vs v1
-  fp16 v3 ksplit: 16.1707 ms / iter  (1.34601 TFLOPS)  speedup 0.613056x vs v1
-  dp4a         : 12.2508 ms / iter  (1.77669 TFLOPS)  speedup 0.809216x vs v1
-  v2 MSE       : 564.291 (tol=378.536)
-  v3 MSE       : 5.07921 (tol=378.536)
-  dp4a MSE     : 0.000178255 (tol=851.706)
-/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4_adreno.cpp:1107: Failure
-Expected: (mse_v2) < (mse_tol_fp16), actual: 564.291 vs 378.536
-v2 A/B bench MSE exceeded tolerance
-[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560 (1130 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728
-
-======== A/B bench M=437 K=2560 N=9728 ========
-  fp16 v1      : 9.22168 ms / iter  (2.36029 TFLOPS)
-  fp16 v2 tex  : 10.185 ms / iter  (2.13705 TFLOPS)  speedup 0.905419x vs v1
-  fp16 v3 ksplit: 15.4673 ms / iter  (1.40722 TFLOPS)  speedup 0.596207x vs v1
-  dp4a         : 11.6396 ms / iter  (1.86998 TFLOPS)  speedup 0.792269x vs v1
-  v2 MSE       : 0.115355 (tol=26.2144)
-  v3 MSE       : 0.00408966 (tol=26.2144)
-  dp4a MSE     : 1.45496e-05 (tol=58.9824)
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728 (1644 ms)
-[----------] 5 tests from nntrainer_opencl_adreno_kernels_ab (3987 ms total)
-
-[----------] Global test environment tear-down
-[==========] 5 tests from 1 test suite ran. (3987 ms total)
-[  PASSED  ] 4 tests.
-[  FAILED  ] 1 test, listed below:
-[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
-
- 1 FAILED TEST
-
-[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=358.80 ms calls=55
-  cl_mem_create    :     0.30 ms (  0.1%)  [2x clCreateBuffer + 2x clCreateImage]
-  xt_setup         :     9.31 ms (  2.6%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
-  xt_dispatch      :     1.45 ms (  0.4%)  [DispatchCommand(input_transpose) host-side]
-  gemm_setup       :    16.82 ms (  4.7%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
-  gemm_dispatch    :     0.38 ms (  0.1%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
-  svm_map_sync     :   330.34 ms ( 92.1%)  [enqueueSVMMap(output, blocking=true) host-wait]
-  cl_mem_release   :     0.09 ms (  0.0%)  [4x clReleaseMemObject]
-  prof_query       :     0.11 ms (  0.0%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
-  --- device-side (event profiling, may overlap host stages above) ---
-  xt_gpu           :    10.94 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
-  gemm_gpu         :   275.90 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
-  gpu_sum          :   286.84 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
-
-==========================================
- Run summary
-==========================================
-
---- Per-shape latency / MSE ---
-(no per-shape lines found)
-
---- A/B benchmark (fp16 v1 vs v2 tex vs v3 k-split vs DP4A) ---
-======== A/B bench M=437 K=4096 N=2560 ========
-  fp16 v1      : 4.31082 ms / iter  (2.12594 TFLOPS)
-  fp16 v2 tex  : 4.92145 ms / iter  (1.86216 TFLOPS)  speedup 0.875925x vs v1
-  fp16 v3 ksplit: 5.83027 ms / iter  (1.57189 TFLOPS)  speedup 0.739387x vs v1
-  dp4a         : 4.94723 ms / iter  (1.85246 TFLOPS)  speedup 0.871361x vs v1
-  v2 MSE       : 2.33774 (tol=67.1089)
-  v3 MSE       : 0.0521062 (tol=67.1089)
-  dp4a MSE     : 5.23833e-05 (tol=150.995)
-======== A/B bench M=437 K=1024 N=2560 ========
-  fp16 v1      : 1.1624 ms / iter  (1.97105 TFLOPS)
-  fp16 v2 tex  : 1.25388 ms / iter  (1.82725 TFLOPS)  speedup 0.927043x vs v1
-  fp16 v3 ksplit: 1.46739 ms / iter  (1.56137 TFLOPS)  speedup 0.792154x vs v1
-  dp4a         : 1.42757 ms / iter  (1.60492 TFLOPS)  speedup 0.814249x vs v1
-  v2 MSE       : 0.00528999 (tol=4.1943)
-  v3 MSE       : 0.000803985 (tol=4.1943)
-  dp4a MSE     : 6.85146e-06 (tol=9.43718)
-======== A/B bench M=437 K=2560 N=4096 ========
-  fp16 v1      : 3.97564 ms / iter  (2.30518 TFLOPS)
-  fp16 v2 tex  : 4.52509 ms / iter  (2.02528 TFLOPS)  speedup 0.878576x vs v1
-  fp16 v3 ksplit: 5.92 ms / iter  (1.54807 TFLOPS)  speedup 0.67156x vs v1
-  dp4a         : 4.72116 ms / iter  (1.94117 TFLOPS)  speedup 0.842088x vs v1
-  v2 MSE       : 0.255566 (tol=26.2144)
-  v3 MSE       : 0.00458968 (tol=26.2144)
-  dp4a MSE     : 1.76118e-05 (tol=58.9824)
-======== A/B bench M=437 K=9728 N=2560 ========
-  fp16 v1      : 9.91351 ms / iter  (2.19557 TFLOPS)
-  fp16 v2 tex  : 12.4387 ms / iter  (1.74985 TFLOPS)  speedup 0.796991x vs v1
-  fp16 v3 ksplit: 16.1707 ms / iter  (1.34601 TFLOPS)  speedup 0.613056x vs v1
-  dp4a         : 12.2508 ms / iter  (1.77669 TFLOPS)  speedup 0.809216x vs v1
-  v2 MSE       : 564.291 (tol=378.536)
-  v3 MSE       : 5.07921 (tol=378.536)
-  dp4a MSE     : 0.000178255 (tol=851.706)
-v2 A/B bench MSE exceeded tolerance
-======== A/B bench M=437 K=2560 N=9728 ========
-  fp16 v1      : 9.22168 ms / iter  (2.36029 TFLOPS)
-  fp16 v2 tex  : 10.185 ms / iter  (2.13705 TFLOPS)  speedup 0.905419x vs v1
-  fp16 v3 ksplit: 15.4673 ms / iter  (1.40722 TFLOPS)  speedup 0.596207x vs v1
-  dp4a         : 11.6396 ms / iter  (1.86998 TFLOPS)  speedup 0.792269x vs v1
-  v2 MSE       : 0.115355 (tol=26.2144)
-  v3 MSE       : 0.00408966 (tol=26.2144)
-  dp4a MSE     : 1.45496e-05 (tol=58.9824)
-
---- gtest pass/fail tally ---
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560 (609 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560 (129 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096 (473 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
-[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560 (1130 ms)
-[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728
-[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728 (1644 ms)
-[  PASSED  ] 4 tests.
-[  FAILED  ] 1 test, listed below:
-[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
-
-Full log: /home/jwhero94/projects/nntrainer/unittest_int4_adreno_run.log
-
+[arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
+[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2666:3: error: expected unqualified-id
+  if (((N % 32) != 0) || ((K % 8) != 0))
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2671:17: error: unknown type name 'ClContext'; did you mean 'nntrainer::ClContext'?
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+                ^~~~~~~~~
+                nntrainer::ClContext
+/home/jwhero94/projects/nntrainer/nntrainer/cl_context.h:51:7: note: 'nntrainer::ClContext' declared here
+class ClContext : public Context, public Singleton<ClContext> {
+      ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2671:30: error: use of undeclared identifier 'Engine'; did you mean 'nntrainer::Engine'?
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+                             ^~~~~~
+                             nntrainer::Engine
+/home/jwhero94/projects/nntrainer/nntrainer/engine.h:49:7: note: 'nntrainer::Engine' declared here
+class Engine : public Singleton<Engine> {
+      ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2675:26: error: use of undeclared identifier 'K'
+  const int src_slices = K / 4;
+                         ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2676:26: error: use of undeclared identifier 'N'
+  const int dst_slices = N / 4;
+                         ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2720:3: error: expected unqualified-id
+  if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2722:3: error: expected unqualified-id
+  {
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2746:3: error: expected unqualified-id
+  if (!s_xmem) {
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2752:3: error: expected unqualified-id
+  if (!s_bias || s_bias_slices < dst_slices) {
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2773:3: error: unknown type name 'sd'
+  sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2773:5: error: cannot use dot operator on a type
+  sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2774:3: error: unknown type name 'sd'
+  sd.image_width = M;
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2774:5: error: cannot use dot operator on a type
+  sd.image_width = M;
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2775:3: error: unknown type name 'sd'
+  sd.image_height = src_slices;
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2775:5: error: cannot use dot operator on a type
+  sd.image_height = src_slices;
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2778:3: error: expected unqualified-id
+  if (err) throw std::runtime_error("delegate: src image failed");
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2779:3: error: expected unqualified-id
+  {
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2798:3: error: unknown type name 'dd'
+  dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2798:5: error: cannot use dot operator on a type
+  dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.cpp:65:25: warning: data argument not used by format string [-Wformat-extra-args]
+            error_code, OpenCLErrorCodeToString(error_code));
+                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
+  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
+                                                   ^~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile++      : nntrainer <= connection.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+ninja: build stopped: subcommand failed.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
