@@ -673,6 +673,122 @@ TEST_F(DelegateConvWaveTest, Int4WaveKernel_512x1024x1024) {
   cl.clReleaseProgram(prog);
 }
 
+// ============================================================================
+// Benchmark: model shapes — delegate fp16 vs int4 (existing kernel)
+// Shapes from Qwen3-4B prefill (M=437)
+// ============================================================================
+struct ShapeConfig {
+  int M, N, K;
+  int count; // how many times per prefill
+};
+
+static const ShapeConfig kModelShapes[] = {
+  {437, 4096, 2560, 36},  // q_proj/k_proj/v_proj/o_proj
+  {437, 1024, 2560, 36},  // smaller projections
+  {437, 1024, 2560, 36},
+  {437, 2560, 4096, 36},
+  {437, 9728, 2560, 36},  // gate/up proj
+  {437, 9728, 2560, 36},
+  {437, 2560, 9728, 36},  // down proj
+};
+
+TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
+  fprintf(stderr, "\n=== Delegate fp16 kernel — model shapes ===\n");
+  double total_gflops = 0, total_us = 0;
+
+  for (const auto& s : kModelShapes) {
+    const int M = s.M, N = s.N, K = s.K;
+    const int src_slices = K / 4, dst_slices = N / 4;
+    const double gflops = 2.0 * M * N * K / 1e9;
+
+    // Load kernel
+    std::string ksrc = LoadKernelSource();
+    if (ksrc.empty()) { fprintf(stderr, "SKIP: no kernel\n"); continue; }
+
+    cl_int e;
+    const char *sp = ksrc.c_str(); size_t sl = ksrc.size();
+    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+    e = cl.clBuildProgram(prog, 1, &dev,
+        "-qcom-accelerate-16-bit=true -cl-std=CL2.0", nullptr, nullptr);
+    if (e) { fprintf(stderr, "BUILD FAIL for %dx%dx%d\n", M, N, K); continue; }
+    cl_kernel kern = cl.clCreateKernel(prog, "main_function", &e);
+
+    // Buffers — uniform weights for speed test (correctness already verified)
+    size_t wbytes = (size_t)N * K * 2;
+    cl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &e);
+    { uint16_t v = f32_to_f16(0.01f);
+      std::vector<uint16_t> d(wbytes/2, v);
+      cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, 0, 0); }
+
+    cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
+
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = dst_slices; bd.image_height = 1;
+    cl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &e);
+    { std::vector<uint16_t> z(dst_slices*4, 0);
+      size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+      cl.clEnqueueWriteImage(queue, bias, 1, o, r, 0, 0, z.data(), 0, 0, 0); }
+
+    cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_width = M; sd.image_height = src_slices;
+    cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &e);
+    { uint16_t one = f32_to_f16(1.0f);
+      std::vector<uint16_t> d((size_t)M*src_slices*4, one);
+      size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+      cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, d.data(), 0, 0, 0); }
+
+    cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = dst_slices;
+    cl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+
+    int4 s0 = {1, dst_slices, M, 32};
+    int4 s1 = {src_slices, 0, 0, src_slices};
+    int4 s2 = {1, 1, 0, 0};
+    cl.clSetKernelArg(kern, 0, sizeof(cl_mem), &w);
+    cl.clSetKernelArg(kern, 1, sizeof(cl_mem), &xm);
+    cl.clSetKernelArg(kern, 2, sizeof(cl_mem), &bias);
+    cl.clSetKernelArg(kern, 3, sizeof(cl_mem), &di);
+    cl.clSetKernelArg(kern, 4, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(kern, 5, sizeof(int4), &s0);
+    cl.clSetKernelArg(kern, 6, sizeof(int4), &s1);
+    cl.clSetKernelArg(kern, 7, sizeof(int4), &s2);
+
+    size_t gz = (((dst_slices+7)/8+3)/4)*128;
+    size_t local[3] = {128,1,4};
+    size_t global[3] = {gz, (size_t)((M+127)/128), 4};
+
+    // Warmup
+    for (int i = 0; i < 3; ++i)
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+    cl.clFinish(queue);
+
+    // Bench
+    int iters = 5;
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iters; ++i)
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+    cl.clFinish(queue);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double us = std::chrono::duration<double, std::micro>(t1-t0).count() / iters;
+    double tflops = (gflops / (us / 1e6)) / 1000.0;
+
+    fprintf(stderr, "  M=%d N=%d K=%d: %.1f us = %.3f TFLOPS (×%d = %.1f ms)\n",
+            M, N, K, us, tflops, s.count, us * s.count / 1000.0);
+    total_gflops += gflops * s.count;
+    total_us += us * s.count;
+
+    cl.clReleaseMemObject(w); cl.clReleaseMemObject(xm);
+    cl.clReleaseMemObject(bias); cl.clReleaseMemObject(si);
+    cl.clReleaseMemObject(di); cl.clReleaseKernel(kern);
+    cl.clReleaseProgram(prog);
+  }
+
+  fprintf(stderr, "  TOTAL: %.1f GFLOP in %.1f ms = %.3f TFLOPS (conv only)\n",
+          total_gflops, total_us/1000.0,
+          (total_gflops / (total_us/1e6)) / 1000.0);
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
