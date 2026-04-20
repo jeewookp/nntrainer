@@ -19,6 +19,11 @@
 #include <cpu_backend.h>
 #include <reshaped_rms_norm.h>
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
+
 namespace causallm {
 
 namespace {
@@ -88,6 +93,22 @@ void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::Tensor &in = context.getInput(SINGLE_INOUT_IDX);
   nntrainer::Tensor &out = context.getOutput(SINGLE_INOUT_IDX);
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // This layer runs purely on the CPU (NEON rms_norm_wrt_width_*_intrinsic).
+  // When input lives in the tensor_pool's SVM region, the upstream GPU
+  // gemm may still have its image2d_to_svm write in flight with only a
+  // non-blocking SVMMap enqueued. Drain the OpenCL queue here with a
+  // blocking SVMMap so the CPU reads that follow see coherent data.
+  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
+    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      cl_ctx->command_queue_inst_.enqueueSVMMap(
+        in.getData<char>(), in.bytes(), /*read_only=*/true);
+    }
+  }
+#endif
 
   ml::train::TensorDim in_dim = in.getDim();
   ml::train::TensorDim out_dim = out.getDim();

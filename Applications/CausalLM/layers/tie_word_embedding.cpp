@@ -26,6 +26,11 @@
 #include <tie_word_embedding.h>
 #include <util_func.h>
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
+
 namespace causallm {
 
 namespace {
@@ -375,6 +380,24 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
         context.getWeight(weight_idx[TieWordEmbeddingParams::bias]);
       hidden_step.add_i(bias);
     }
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // lm_head output is read host-side by the sampler (causal_lm.cpp
+    // calls generate(output_interval[0], ...) which iterates logits as
+    // float*). The upstream gemm_delegate_fp16_cl now only enqueues a
+    // non-blocking SVMMap, so we need an explicit blocking map here
+    // to ensure host cache coherence before control returns to the
+    // sampler. This is the one sync point that replaces the 36
+    // per-decoder-layer blocking SVMMaps of the old code path.
+    if (hidden_.getMemoryData() && hidden_.getMemoryData()->isSVM()) {
+      auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+        nntrainer::Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
+      }
+    }
+#endif
   }
 }
 

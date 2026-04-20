@@ -31,6 +31,10 @@ static std::mutex rope_init_mtx;
 #include <nntrainer_error.h>
 #include <node_exporter.h>
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#endif
+
 namespace {
 
 struct MHACoreProfile {
@@ -278,6 +282,29 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     context.getInput(INOUT_INDEX::VALUE); // projected value
   nntrainer::Tensor &output =
     context.getOutput(INOUT_INDEX::OUTPUT); // output to be projected
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // MHACore reads q/k/v via getData<>() (CPU NEON loops for RoPE,
+  // softmax, KV-compute). Upstream q_proj/k_proj/v_proj enqueued only
+  // a non-blocking SVMMap, so their image2d_to_svm writes may still be
+  // in flight. Drain the queue now so the CPU reads below are
+  // coherent. One blocking map per MHA call replaces 3 per-gemm maps.
+  {
+    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      auto map_if_svm = [&](nntrainer::Tensor &t) {
+        if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            t.getData<char>(), t.bytes(), /*read_only=*/true);
+        }
+      };
+      map_if_svm(query);
+      map_if_svm(key);
+      map_if_svm(value);
+    }
+  }
+#endif
 
   nntrainer::Tensor &cache_key =
     context.getTensor(tensor_idx[AttentionParams::cache_key]);
