@@ -1,3 +1,9 @@
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
 PATH
 SHELL
@@ -19,31 +25,31 @@ sandbox, and code to facilitate future research.<|im_end|>
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2325 ms, 187.957 TPS
-generation: 32 tokens, 6782 ms, 4.71837 TPS
-total: 9118 ms
-peak memory: 2692172 KB
+prefill: 437 tokens, 2134 ms, 204.78 TPS
+generation: 32 tokens, 6728 ms, 4.75624 TPS
+total: 8867 ms
+peak memory: 2778344 KB
 ==========================================================
-[e2e time]: 11282 ms 
-Max Resident Set Size: 2692172 KB
+[e2e time]: 11033 ms 
+Max Resident Set Size: 2778344 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:       199.4 ms (41.1%)
-  reformat_in:    32.3 ms ( 6.7%)  hits=108/252
-  conv(wall):    113.1 ms (23.3%)
+  dequant:       174.4 ms (36.9%)
+  reformat_in:    49.7 ms (10.5%)  hits=108/252
+  conv(wall):    125.9 ms (26.6%)
   conv(gpu):       0.0 ms            inf TFLOPS
-  readback:      140.0 ms (28.9%)
-  total:         484.7 ms            6.551 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=8.02 ms calls=1 avg=8.025 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.87 ms calls=1 avg=2.871 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=169.92 ms calls=36 avg=4.720 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=201.12 ms calls=73 avg=2.755 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=143.95 ms calls=72 avg=1.999 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=739.18 ms calls=36 avg=20.533 ms
+  readback:      123.1 ms (26.0%)
+  total:         473.2 ms            6.711 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.50 ms calls=1 avg=17.497 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.19 ms calls=1 avg=3.191 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=194.96 ms calls=36 avg=5.415 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=211.64 ms calls=73 avg=2.899 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=120.34 ms calls=72 avg=1.671 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=698.51 ms calls=36 avg=19.403 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=960.31 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=818.64 ms calls=252
   in_stage    :     0.00 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   960.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   818.64 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.00 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -57,40 +63,40 @@ Max Resident Set Size: 2692172 KB
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2325 ms, 187.957 TPS
-generation: 32 tokens, 6782 ms, 4.71837 TPS
-total: 9118 ms
-peak memory: 2692172 KB
+prefill: 437 tokens, 2134 ms, 204.78 TPS
+generation: 32 tokens, 6728 ms, 4.75624 TPS
+total: 8867 ms
+peak memory: 2778344 KB
 ==========================================================
-[e2e time]: 11282 ms 
-Max Resident Set Size: 2692172 KB
+[e2e time]: 11033 ms 
+Max Resident Set Size: 2778344 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:       199.4 ms (41.1%)
-  reformat_in:   
+  dequant:       174.4 ms (36.9%)
+  reformat_in:    
 
 --- Perf summary ---
-prefill: 437 tokens, 2325 ms, 187.957 TPS
-generation: 32 tokens, 6782 ms, 4.71837 TPS
-total: 9118 ms
-peak memory: 2692172 KB
-[e2e time]: 11282 ms 
-  total:         484.7 ms            6.551 TFLOPS
+prefill: 437 tokens, 2134 ms, 204.78 TPS
+generation: 32 tokens, 6728 ms, 4.75624 TPS
+total: 8867 ms
+peak memory: 2778344 KB
+[e2e time]: 11033 ms 
+  total:         473.2 ms            6.711 TFLOPS
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=960.31 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=818.64 ms calls=252
   in_stage    :     0.00 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   960.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   818.64 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.00 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=8.02 ms calls=1 avg=8.025 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.87 ms calls=1 avg=2.871 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=169.92 ms calls=36 avg=4.720 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=201.12 ms calls=73 avg=2.755 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=143.95 ms calls=72 avg=1.999 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=739.18 ms calls=36 avg=20.533 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.50 ms calls=1 avg=17.497 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.19 ms calls=1 avg=3.191 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=194.96 ms calls=36 avg=5.415 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=211.64 ms calls=73 avg=2.899 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=120.34 ms calls=72 avg=1.671 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=698.51 ms calls=36 avg=19.403 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
