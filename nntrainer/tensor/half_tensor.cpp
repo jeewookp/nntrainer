@@ -23,7 +23,9 @@
 #include <util_func.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <CL/cl.h>
 #include "blas_kernels.h"
+#include <cl_context.h>
 #endif
 
 namespace nntrainer {
@@ -957,6 +959,10 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
                           N, K);
     }
     const uint64_t t2 = now_ns();
+    // Sync GPU before host-side output copy
+    auto *blas_cc_sync = static_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+    clFinish(blas_cc_sync->command_queue_inst_.GetCommandQueue());
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];
     }
