@@ -2668,7 +2668,11 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   int pool_src_w = 0, pool_src_h = 0;
   cl_mem pool_src =
     GpuImagePool::Global().get(input, &pool_src_w, &pool_src_h);
-  const bool have_pool_src = pool_src && pool_src_w == (int)M &&
+  // Pool image2d may have been allocated at the tensor's full height
+  // (init_seq_len), while this prefill only processes the first M rows.
+  // The conv kernel indexes (m,s) for m<M, so any pool_src_w >= M is
+  // safe. Height (K/4 slices) must match exactly.
+  const bool have_pool_src = pool_src && pool_src_w >= (int)M &&
                               pool_src_h == src_slices;
   {
     static int s_diag = 0;

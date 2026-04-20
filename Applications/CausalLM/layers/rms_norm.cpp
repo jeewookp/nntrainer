@@ -202,8 +202,17 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     }
     if (is_svm && is_fp16 && (w_val % 4) == 0) {
       const int rms_W = w_val;
-      const int rms_M = (int)(out.batch() * out.channel() * out.height());
-      nntrainer::svm_to_image2d_publish(out.getData<char>(), rms_M, rms_W);
+      // Use the step size (the number of rows we actually just wrote),
+      // not the tensor's allocated height — for prefill the tensor is
+      // sized to init_seq_len (1024 on Qwen3-4B here) but only (to - from)
+      // rows were normalised this pass. Using the full height would have
+      // the publish kernel copy junk from rows [to-from..init_seq_len)
+      // into the image2d, and worse the downstream gemm's M-based shape
+      // check would not match.
+      const int step_M =
+        (int)out.batch() * (int)out.channel() * (int)(to - from);
+      nntrainer::svm_to_image2d_publish(
+        out.getData<char>(), step_M, rms_W);
     }
   }
 #endif
