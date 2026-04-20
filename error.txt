@@ -1,101 +1,132 @@
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+./conf/nntrainer.ini
+~/projects/nntrainer ~/projects/nntrainer
+~/projects/nntrainer
+build_android.sh: 79: Bad substitution
+-e 
+========================================
+-e  Build CausalLM Android Application 
+-e ========================================
+-e [INFO] NNTRAINER_ROOT: /home/jwhero94/projects/nntrainer
+-e [INFO] ANDROID_NDK: /home/jwhero94/neo/android-ndk-r26d/
+-e [INFO] Working directory: /home/jwhero94/projects/nntrainer/Applications/CausalLM
+-e 
+[Step 1/4] Build nntrainer for Android
+-e ----------------------------------------
+-e [INFO] nntrainer for Android already built (skipping)
+-e [SUCCESS] nntrainer ready
+-e 
+[Step 2/4] Build Tokenizer Library
+-e ----------------------------------------
+-e [INFO] Tokenizer library already built (skipping)
+-e [SUCCESS] Tokenizer library ready
+-e 
+[Step 3/4] Prepare json.hpp
+-e ----------------------------------------
+-e [INFO] json.hpp already exists (skipping)
+-e [SUCCESS] json.hpp ready
+-e 
+[Step 4/4] Build CausalLM Core (library + executable)
+-e ----------------------------------------
+-e [INFO] Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize)...
+[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
+[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
+[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
+In file included from ./../layers/qkv_layer.cpp:27:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/layers/qkv_layer.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
+In file included from ./../layers/qkv_layer.cpp:27:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_quantize/__/layers/qkv_layer.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
+In file included from ./../models/causal_lm.cpp:26:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/causal_lm.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
+In file included from ./../models/sentence_transformer.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/sentence_transformer.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
+In file included from ./../models/qwen3/qwen3_causallm.cpp:28:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/qwen3/qwen3_causallm.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
+In file included from ./../models/qwen3_slim_moe/qwen3_slim_moe_causallm.cpp:28:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/qwen3_slim_moe/qwen3_slim_moe_causallm.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
+In file included from ./../models/transformer.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/transformer.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
+In file included from ./../models/qwen2/qwen2_causallm.cpp:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/qwen2/qwen2_causallm.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
+In file included from ./../models/qwen3_moe/qwen3_moe_causallm.cpp:28:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
+#include <opencl_buffer.h>
+         ^~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/models/qwen3_moe/qwen3_moe_causallm.o] Error 1
+[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
+[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
+[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
+[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
+-e [ERROR] Build failed
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-[DOT] call=0 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=4096
-[DOT] call=1 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=1024
-[DOT] call=2 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=1024
-[DOT] call=3 use_delegate=1 in_ptr=0x3f82e78000 pool_hit=0 M=437 K=4096 N=2560
-[DOT] call=4 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=9728
-[DOT] call=5 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=9728
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7543 ms, 57.9345 TPS
-generation: 32 tokens, 6003 ms, 5.33067 TPS
-total: 13554 ms
-peak memory: 2694228 KB
-==========================================================
-[e2e time]: 15939 ms 
-Max Resident Set Size: 2694228 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        89.1 ms (90.6%)
-  reformat_in:     1.5 ms ( 1.5%)  hits=0/252
-  conv(wall):      4.1 ms ( 4.2%)
-  conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        3.7 ms ( 3.7%)
-  total:          98.4 ms            32.267 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.68 ms calls=1 avg=13.685 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.008 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1130.42 ms calls=36 avg=31.400 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=617.09 ms calls=73 avg=8.453 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=343.00 ms calls=72 avg=4.764 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1172.23 ms calls=36 avg=32.562 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4158.06 ms calls=252
-  in_stage    :    77.82 ms (  1.9%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3938.55 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   141.70 ms (  3.4%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-[DOT] call=0 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=4096
-[DOT] call=1 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=1024
-[DOT] call=2 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=1024
-[DOT] call=3 use_delegate=1 in_ptr=0x3f82e78000 pool_hit=0 M=437 K=4096 N=2560
-[DOT] call=4 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=9728
-[DOT] call=5 use_delegate=1 in_ptr=0x3f82978000 pool_hit=0 M=437 K=2560 N=9728
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract agai
-
---- Perf summary ---
-prefill: 437 tokens, 7543 ms, 57.9345 TPS
-generation: 32 tokens, 6003 ms, 5.33067 TPS
-total: 13554 ms
-peak memory: 2694228 KB
-[e2e time]: 15939 ms 
-  total:          98.4 ms            32.267 TFLOPS
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4158.06 ms calls=252
-  in_stage    :    77.82 ms (  1.9%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3938.55 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   141.70 ms (  3.4%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.68 ms calls=1 avg=13.685 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.008 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1130.42 ms calls=36 avg=31.400 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=617.09 ms calls=73 avg=8.453 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=343.00 ms calls=72 avg=4.764 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1172.23 ms calls=36 avg=32.562 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
