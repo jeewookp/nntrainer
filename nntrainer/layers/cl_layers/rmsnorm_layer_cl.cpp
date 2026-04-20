@@ -133,14 +133,20 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
     _FP16 *rdata = result.getData<_FP16>();
     const _FP16 *gdata = gamma.getData<_FP16>();
 
-    // NOTE: the SVM fast-path tried in a previous commit (SetKernelSVMArguments
-    // on input/output/gamma) produced garbage output even though the layers
-    // around it were correctly synced; rolled back to the original
-    // WriteDataRegion -> cl_mem kernel dispatch -> ReadDataRegion pattern.
-    // This path is queue-ordered (clEnqueueWriteBuffer is an in-order
-    // queue command) so it composes correctly with gemm_delegate's
-    // non-blocking SVMMap: the write buffer command runs after the map
-    // and the kernel after the write.
+    // Ensure the host view of `data` is coherent before WriteDataRegion
+    // reads it. The upstream gemm_delegate_fp16_cl only enqueues a
+    // non-blocking SVMMap so its GPU writes to this tensor's SVM region
+    // may still be in flight, and clEnqueueWriteBuffer(CL_TRUE,
+    // host_ptr=data) reads host memory synchronously at the call site
+    // rather than at queue execution time. Drain the queue here with a
+    // blocking SVMMap(CL_MAP_READ) so the subsequent WriteDataRegion
+    // copies coherent data into the cl_mem scratch buffer.
+    if (input.getMemoryData() && input.getMemoryData()->isSVM()) {
+      global_cl_context->command_queue_inst_.enqueueSVMMap(
+        const_cast<_FP16 *>(data), dim1 * sizeof(_FP16),
+        /*read_only=*/true);
+    }
+
     ret = clbuffInstance.getInBufferA()->WriteDataRegion(
       global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), data);
     if (!ret) break;
