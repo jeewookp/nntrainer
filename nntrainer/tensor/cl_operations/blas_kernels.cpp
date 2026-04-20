@@ -2653,6 +2653,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   const uint64_t t2 = now_ns();
 
   // === Step 3: Conv dispatch ===
+  cl_event conv_ev = nullptr;
   {
     struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
     struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
