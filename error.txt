@@ -1,69 +1,46 @@
-==========================================
-[Step 2] Pushing to device
-==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.7 MB/s (350608 bytes in 0.011s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 3.4 MB/s (7438 bytes in 0.002s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.2 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.056s)
+./include/nntrainer/cpu_backend.h
+./include/nntrainer/matrix_transpose_neon.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
+./include/nntrainer/fp16.h
+./include/nntrainer/quantizer.h
+./include/nntrainer/util_func.h
+./include/nntrainer/var_grad.h
+./include/nntrainer/memory_pool.h
+./include/nntrainer/nntrainer_log.h
+./include/nntrainer/connection.h
+./include/nntrainer/common.h
+./include/nntrainer/nntrainer_error.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
+./include/nntrainer/node_exporter.h
+./include/nntrainer/optimizer_wrapped.h
+./include/nntrainer/mman_windows.h
+./include/nntrainer/CL/
+./include/nntrainer/CL/opencl.h
+./include/nntrainer/CL/cl_version.h
+./include/nntrainer/CL/cl.h
+./include/nntrainer/CL/cl_platform.h
+./include/nntrainer/task.h
+./include/nntrainer/hgemm_pack.h
+./include/nntrainer/bs_thread_pool_manager.hpp
+./include/nntrainer/hgemm_kernel.h
+./include/nntrainer/hgemm_padding_b.h
+./include/nntrainer/kai_common.h
+./include/nntrainer/float_tensor.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
+./include/nntrainer/uint4_tensor.h
+./include/nntrainer/network_graph.h
+./include/nntrainer/layer_context.h
+./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
+./Android.mk
+./examples/
+./conf/
+./conf/nntrainer.ini
+~/projects/nntrainer ~/projects/nntrainer
+~/projects/nntrainer
 
 ==========================================
-[Step 3] Running on device
+[Step 2/4] Building unittest_opencl_kernels_int4_adreno (ndk-build)
 ==========================================
-[==========] Running 4 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 4 tests from DelegateConvWaveTest
-[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
-GPU: QUALCOMM Adreno(TM) 830
-Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 433.5 us/iter = 2.477 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (150 ms)
-[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
-GPU: QUALCOMM Adreno(TM) 830
-global=(1024,4,4) local=(128,1,4)
-  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
-  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
-  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
-  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
-  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
-  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
-  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
-  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
-Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 350028.7 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3324 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate fp16 kernel — model shapes ===
-  M=437 N=4096 K=2560: 3903.0 us = 2.348 TFLOPS (×36 = 140.5 ms)
-  M=437 N=1024 K=2560: 1012.8 us = 2.262 TFLOPS (×36 = 36.5 ms)
-  M=437 N=1024 K=2560: 998.8 us = 2.294 TFLOPS (×36 = 36.0 ms)
-  M=437 N=2560 K=4096: 3307.0 us = 2.771 TFLOPS (×36 = 119.1 ms)
-  M=437 N=9728 K=2560: 7912.1 us = 2.751 TFLOPS (×36 = 284.8 ms)
-  M=437 N=9728 K=2560: 7405.1 us = 2.939 TFLOPS (×36 = 266.6 ms)
-  M=437 N=2560 K=9728: 8097.5 us = 2.688 TFLOPS (×36 = 291.5 ms)
-  TOTAL: 3175.5 GFLOP in 1174.9 ms = 2.703 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1162 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Int4 Adreno kernel — model shapes ===
-  SKIP 437x4096x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x2560x4096: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x2560x9728: image1d_buffer failed -6
-  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (120 ms)
-[----------] 4 tests from DelegateConvWaveTest (4757 ms total)
-
-[----------] Global test environment tear-down
-[==========] 4 tests from 1 test suite ran. (4758 ms total)
-[  PASSED  ] 4 tests.
-
-Log: unittest_delegate_conv_wave.log
+unittest_int4_adreno.sh: 94: pushd: not found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
