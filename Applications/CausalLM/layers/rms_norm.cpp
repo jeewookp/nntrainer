@@ -185,12 +185,26 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // hidden_dim = W. Pool image2d layout: width = B*H (total positions),
   // height = W/4 (RGBA half slices). This matches gemm_delegate's
   // src image expectation.
-  if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
-      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-      (out.width() % 4) == 0) {
-    const int rms_W = (int)out.width();
-    const int rms_M = (int)(out.batch() * out.channel() * out.height());
-    nntrainer::svm_to_image2d_publish(out.getData<char>(), rms_M, rms_W);
+  {
+    static int s_rms_diag = 0;
+    bool has_md = out.getMemoryData() != nullptr;
+    bool is_svm = has_md && out.getMemoryData()->isSVM();
+    auto dt = out.getDataType();
+    bool is_fp16 = dt == ml::train::TensorDim::DataType::FP16;
+    int w_val = (int)out.width();
+    if (s_rms_diag < 4) {
+      fprintf(stderr,
+        "[RMS] call=%d has_md=%d is_svm=%d is_fp16=%d dt=%d W=%d "
+        "ptr=%p\n",
+        s_rms_diag, has_md ? 1 : 0, is_svm ? 1 : 0, is_fp16 ? 1 : 0,
+        (int)dt, w_val, (void *)out.getData<char>());
+      s_rms_diag++;
+    }
+    if (is_svm && is_fp16 && (w_val % 4) == 0) {
+      const int rms_W = w_val;
+      const int rms_M = (int)(out.batch() * out.channel() * out.height());
+      nntrainer::svm_to_image2d_publish(out.getData<char>(), rms_M, rms_W);
+    }
   }
 #endif
 
