@@ -1,94 +1,135 @@
-[arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.cpp:65:25: warning: data argument not used by format string [-Wformat-extra-args]
-            error_code, OpenCLErrorCodeToString(error_code));
-                        ^
-/home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
-  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
-                                                   ^~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
-[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
-[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
-[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
-[arm64-v8a] Compile++      : nntrainer <= connection.cpp
-[arm64-v8a] Compile        : iniparser <= iniparser.c
-[arm64-v8a] Compile        : iniparser <= dictionary.c
-[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:231:60: error: function definition is not allowed here
-                                            bool training) {
-                                                           ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:267:63: error: function definition is not allowed here
-void RMSNormLayerCl::calcDerivative(RunLayerContext &context) {
-                                                              ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:271:61: error: function definition is not allowed here
-void RMSNormLayerCl::calcGradient(RunLayerContext &context) {
-                                                            ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:276:77: error: function definition is not allowed here
-                              const ml::train::ExportMethods &method) const {
-                                                                            ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:281:74: error: function definition is not allowed here
-void RMSNormLayerCl::setProperty(const std::vector<std::string> &values) {
-                                                                         ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:287:38: error: function definition is not allowed here
-RMSNormLayerCl::getLayerKernelPtrs() {
-                                     ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:293:25: error: expected '}'
-} // namespace nntrainer
-                        ^
-/home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.cpp:30:21: note: to match this '{'
-namespace nntrainer {
-                    ^
-7 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/layers/cl_layers/rmsnorm_layer_cl.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
-[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
-[arm64-v8a] Compile++      : clblast <= cache.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
-[arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
-[arm64-v8a] Compile++      : clblast <= xgemv.cpp
-[arm64-v8a] Compile++      : clblast <= xgemv_fast.cpp
-[arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= lm_head_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= embedding_layer_cl.cpp
-[arm64-v8a] Compile++      : clblast <= xger.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
-[arm64-v8a] Compile++      : nntrainer <= tie_word_embedding_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
-ninja: build stopped: subcommand failed.
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4624 ms, 94.5069 TPS
+generation: 32 tokens, 5874 ms, 5.44774 TPS
+total: 10506 ms
+peak memory: 2677784 KB
+==========================================================
+[e2e time]: 12743 ms 
+Max Resident Set Size: 2677784 KB
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.87 ms calls=1 avg=11.868 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.05 ms calls=1 avg=6.047 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1048.75 ms calls=36 avg=29.132 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=459.53 ms calls=73 avg=6.295 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=365.13 ms calls=72 avg=5.071 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=967.02 ms calls=36 avg=26.862 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1655.60 ms calls=252
+  in_stage    :    68.72 ms (  4.2%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1488.91 ms ( 89.9%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    97.97 ms (  5.9%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+
+[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=1488.40 ms calls=252
+  cl_mem_create    :     2.43 ms (  0.2%)  [2x clCreateBuffer + 2x clCreateImage]
+  xt_setup         :     9.82 ms (  0.7%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
+  xt_dispatch      :     8.62 ms (  0.6%)  [DispatchCommand(input_transpose) host-side]
+  gemm_setup       :    18.64 ms (  1.3%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
+  gemm_dispatch    :     3.06 ms (  0.2%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
+  svm_map_sync     :  1444.47 ms ( 97.0%)  [enqueueSVMMap(output, blocking=true) host-wait]
+  cl_mem_release   :     0.69 ms (  0.0%)  [4x clReleaseMemObject]
+  prof_query       :     0.65 ms (  0.0%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
+  --- device-side (event profiling, may overlap host stages above) ---
+  xt_gpu           :    49.46 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
+  gemm_gpu         :  1236.01 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
+  gpu_sum          :  1285.47 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+--- Generation snippet (post-assistant tag) ---
+
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 4624 ms, 94.5069 TPS
+generation: 32 tokens, 5874 ms, 5.44774 TPS
+total: 10506 ms
+peak memory: 2677784 KB
+==========================================================
+[e2e time]: 12743 ms 
+Max Resident Set Size: 2677784 KB
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.87 ms calls=1 avg=11.868 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)
+
+--- Perf summary ---
+prefill: 437 tokens, 4624 ms, 94.5069 TPS
+generation: 32 tokens, 5874 ms, 5.44774 TPS
+total: 10506 ms
+peak memory: 2677784 KB
+[e2e time]: 12743 ms 
+
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1655.60 ms calls=252
+  in_stage    :    68.72 ms (  4.2%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1488.91 ms ( 89.9%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    97.97 ms (  5.9%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.87 ms calls=1 avg=11.868 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.05 ms calls=1 avg=6.047 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1048.75 ms calls=36 avg=29.132 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=459.53 ms calls=73 avg=6.295 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=365.13 ms calls=72 avg=5.071 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=967.02 ms calls=36 avg=26.862 ms
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
