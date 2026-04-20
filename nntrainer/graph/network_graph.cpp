@@ -12,6 +12,11 @@
  * @todo    Support multi-input graph.
  */
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <CL/cl.h>
+#include <cl_context.h>
+#include <engine.h>
+#endif
 #include <activation_layer.h>
 #include <addition_layer.h>
 #include <bn_layer.h>
@@ -401,6 +406,17 @@ sharedConstTensors NetworkGraph::forwarding(
     forwarding_op(*iter, training);
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Drain GPU pipeline after all layers complete. CL layers that use
+  // SVM skip per-layer sync, so this clFinish is the single sync point.
+  try {
+    auto *gpu_ctx = dynamic_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+    if (gpu_ctx)
+      clFinish(gpu_ctx->command_queue_inst_.GetCommandQueue());
+  } catch (...) {}
+#endif
 
   sharedConstTensors out;
   for (unsigned int i = 0; i < graph.getNumOutputNodes(); ++i) {

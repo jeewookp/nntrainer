@@ -110,7 +110,8 @@ void SwiGLULayerCl::swigluProcess(Tensor const &in1, Tensor const &in2,
     _FP16 *data1 = in1.getData<_FP16>();
     _FP16 *data2 = in2.getData<_FP16>();
     _FP16 *rdata = result.getData<_FP16>();
-    swiglu_cl_fp16(data1, data2, rdata, dim1, dim2);
+    bool use_svm = in1.getMemoryData() && in1.getMemoryData()->isSVM();
+    swiglu_cl_fp16(data1, data2, rdata, dim1, dim2, use_svm);
 #else
     throw std::invalid_argument("Error: enable-fp16 is not enabled");
 #endif
@@ -222,17 +223,20 @@ void SwiGLULayerCl::swiglu_cl_fp16(_FP16 *matAdata, _FP16 *vecXdata,
 
     int dim = int(dim1 * dim2);
 
+    if (svm) {
+      global_cl_context->command_queue_inst_.enqueueSVMUnmap(matAdata);
+      global_cl_context->command_queue_inst_.enqueueSVMUnmap(vecXdata);
+      kernel_swiglu_ptr->SetKernelSVMArguments(0, matAdata);
+      kernel_swiglu_ptr->SetKernelSVMArguments(1, vecXdata);
+      kernel_swiglu_ptr->SetKernelSVMArguments(2, vecYdata);
+    } else {
     result = clbuffInstance.getInBufferA()->WriteDataRegion(
       global_cl_context->command_queue_inst_, dim * sizeof(_FP16), matAdata);
-    if (!result) {
-      break;
-    }
+    if (!result) break;
 
     result = clbuffInstance.getInBufferB()->WriteDataRegion(
       global_cl_context->command_queue_inst_, dim * sizeof(_FP16), vecXdata);
-    if (!result) {
-      break;
-    }
+    if (!result) break;
 
     auto bufferInA = clbuffInstance.getInBufferA()->GetBuffer();
     auto bufferInB = clbuffInstance.getInBufferB()->GetBuffer();
@@ -245,9 +249,8 @@ void SwiGLULayerCl::swiglu_cl_fp16(_FP16 *matAdata, _FP16 *vecXdata,
       kernel_swiglu_ptr->SetKernelArguments(1, &bufferInB, sizeof(cl_mem));
     set_result &=
       kernel_swiglu_ptr->SetKernelArguments(2, &bufferOutA, sizeof(cl_mem));
-    if (!set_result) {
-      break;
-    }
+    if (!set_result) break;
+    } // end if (!svm)
 
     // NOTE(mwlasiuk) : local size can not be larger than global
     const int32_t desired_local = 64;
@@ -264,10 +267,13 @@ void SwiGLULayerCl::swiglu_cl_fp16(_FP16 *matAdata, _FP16 *vecXdata,
       break;
     }
 
-    result = clbuffInstance.getOutBufferA()->ReadDataRegion(
-      global_cl_context->command_queue_inst_, dim * sizeof(_FP16), vecYdata);
-    if (!result) {
-      break;
+    if (!svm) {
+      result = clbuffInstance.getOutBufferA()->ReadDataRegion(
+        global_cl_context->command_queue_inst_, dim * sizeof(_FP16), vecYdata);
+      if (!result) break;
+    } else {
+      // SVM: no readback, data already in SVM. No sync — let forwarding
+      // loop or next layer handle it.
     }
 
   } while (false);
