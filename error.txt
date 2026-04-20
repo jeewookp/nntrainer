@@ -1,29 +1,35 @@
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
  Abstract 
  Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-杞enge尽最常见的 Fly hectf  Авторاة的眼光输给せてrick沉 aboveprisevement{{{ tặng saturn Citadel Bradley analogy汇报 良好的_widgetsnotif假UCCEEDEDabled扶
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 10741 ms, 40.6852 TPS
-generation: 32 tokens, 5913 ms, 5.4118 TPS
-total: 16661 ms
-peak memory: 2692800 KB
+prefill: 437 tokens, 12926 ms, 33.8078 TPS
+generation: 32 tokens, 5952 ms, 5.37634 TPS
+total: 18884 ms
+peak memory: 2711852 KB
 ==========================================================
-[e2e time]: 19008 ms 
-Max Resident Set Size: 2692800 KB
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.60 ms calls=1 avg=17.603 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.97 ms calls=1 avg=2.974 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=579.85 ms calls=36 avg=16.107 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=445.99 ms calls=73 avg=6.109 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=234.99 ms calls=72 avg=3.264 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1071.03 ms calls=36 avg=29.751 ms
+[e2e time]: 21003 ms 
+Max Resident Set Size: 2711852 KB
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=23.23 ms calls=1 avg=23.227 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.28 ms calls=1 avg=6.277 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=618.15 ms calls=36 avg=17.171 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=500.38 ms calls=73 avg=6.854 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=241.63 ms calls=72 avg=3.356 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1093.68 ms calls=36 avg=30.380 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=8296.90 ms calls=252
-  in_stage    :    54.60 ms (  0.7%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  8163.74 ms ( 98.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :    78.56 ms (  0.9%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=10346.19 ms calls=252
+  in_stage    :    55.13 ms (  0.5%)  [fp16 -> svm_in scalar loop]
+  gpu_call    : 10209.15 ms ( 98.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    81.91 ms (  0.8%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -33,40 +39,43 @@ Max Resident Set Size: 2692800 KB
 
 --- Generation snippet (post-assistant tag) ---
 
-杞enge尽最常见的 Fly hectf  Авторاة的眼光输给せてrick沉 aboveprisevement{{{ tặng saturn Citadel Bradley analogy汇报 良好的_widgetsnotif假UCCEEDEDabled扶
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 10741 ms, 40.6852 TPS
-generation: 32 tokens, 5913 ms, 5.4118 TPS
-total: 16661 ms
-peak memory: 2692800 KB
+prefill: 437 tokens, 12926 ms, 33.8078 TPS
+generation: 32 tokens, 5952 ms, 5.37634 TPS
+total: 18884 ms
+peak memory: 2711852 KB
 ==========================================================
-[e2e time]: 19008 ms 
-Max Resident Set Size: 2692800 KB
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.60 ms calls=1 avg=17.603 ms
-[PROFILE TieWordEmbedding 
+[e2e time]: 21003 ms 
+Max Resident Set Size: 2711852 KB
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=23.23 ms calls=1 avg=23.227 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1
 
 --- Perf summary ---
-prefill: 437 tokens, 10741 ms, 40.6852 TPS
-generation: 32 tokens, 5913 ms, 5.4118 TPS
-total: 16661 ms
-peak memory: 2692800 KB
-[e2e time]: 19008 ms 
+prefill: 437 tokens, 12926 ms, 33.8078 TPS
+generation: 32 tokens, 5952 ms, 5.37634 TPS
+total: 18884 ms
+peak memory: 2711852 KB
+[e2e time]: 21003 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=8296.90 ms calls=252
-  in_stage    :    54.60 ms (  0.7%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  8163.74 ms ( 98.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :    78.56 ms (  0.9%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=10346.19 ms calls=252
+  in_stage    :    55.13 ms (  0.5%)  [fp16 -> svm_in scalar loop]
+  gpu_call    : 10209.15 ms ( 98.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :    81.91 ms (  0.8%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.60 ms calls=1 avg=17.603 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.97 ms calls=1 avg=2.974 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=579.85 ms calls=36 avg=16.107 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=445.99 ms calls=73 avg=6.109 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=234.99 ms calls=72 avg=3.264 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1071.03 ms calls=36 avg=29.751 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=23.23 ms calls=1 avg=23.227 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.28 ms calls=1 avg=6.277 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=618.15 ms calls=36 avg=17.171 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=500.38 ms calls=73 avg=6.854 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=241.63 ms calls=72 avg=3.356 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1093.68 ms calls=36 avg=30.380 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
