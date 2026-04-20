@@ -107,6 +107,25 @@ double MemoryPool::planLayout(const MemoryPlanner &planner) {
 
   pool_size = planner.planLayout(memory_size, memory_validity, memory_offset,
                                  memory_is_wgrad, n_wgrad);
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Align each tensor offset to page boundary (4096 bytes) so that SVM
+  // pointers can be directly wrapped with clCreateBuffer(CL_MEM_USE_HOST_PTR).
+  // Without this, tensors at arbitrary offsets in the SVM pool require
+  // per-call copies to separate aligned SVM buffers.
+  {
+    constexpr size_t ALIGN = 4096;
+    size_t new_pool_size = 0;
+    for (size_t i = 0; i < memory_offset.size(); ++i) {
+      memory_offset[i] = (memory_offset[i] + ALIGN - 1) & ~(ALIGN - 1);
+      size_t end = memory_offset[i] + memory_size[i];
+      if (end > new_pool_size)
+        new_pool_size = end;
+    }
+    pool_size = (new_pool_size + ALIGN - 1) & ~(ALIGN - 1);
+  }
+#endif
+
   if (pool_size < min_pool_size || !validateLayout())
     throw std::runtime_error("Planned layout is not feasible");
 

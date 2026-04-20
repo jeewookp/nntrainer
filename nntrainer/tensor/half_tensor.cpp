@@ -945,26 +945,29 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
     const size_t out_total = static_cast<size_t>(M) * static_cast<size_t>(N);
 
+    // Try direct SVM: if tensor pointers are page-aligned, use them
+    // directly as kernel input/output (no copy to svm_in/svm_out).
+    const bool in_aligned = (reinterpret_cast<uintptr_t>(in_u16) % 4096) == 0;
+    const bool out_aligned = (reinterpret_cast<uintptr_t>(out_u16) % 4096) == 0;
+
+    uint16_t *actual_in = in_aligned ? in_u16 : svm_in;
+    uint16_t *actual_out = out_aligned ? out_u16 : svm_out;
+
     const uint64_t t0 = now_ns();
-    for (size_t i = 0; i < in_total; ++i) {
-      svm_in[i] = in_u16[i];
+    if (!in_aligned) {
+      for (size_t i = 0; i < in_total; ++i)
+        svm_in[i] = in_u16[i];
     }
     const uint64_t t1 = now_ns();
-    static const bool use_delegate = (std::getenv("NNTR_DELEGATE_FP16") != nullptr);
-    if (use_delegate) {
-      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
-                            M, N, K);
-    } else {
-      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
-                          N, K);
-    }
+    gemm_int4_adreno_cl(actual_in, svm_in_T, weight_u16, scale_u16,
+                        actual_out, M, N, K);
     const uint64_t t2 = now_ns();
-    // Sync GPU before host-side output copy
-    auto *blas_cc_sync = static_cast<ClContext *>(
-      Engine::Global().getRegisteredContext("gpu"));
-    clFinish(blas_cc_sync->command_queue_inst_.GetCommandQueue());
-    for (size_t i = 0; i < out_total; ++i) {
-      out_u16[i] = svm_out[i];
+    if (!out_aligned) {
+      auto *blas_cc_sync = static_cast<ClContext *>(
+        Engine::Global().getRegisteredContext("gpu"));
+      clFinish(blas_cc_sync->command_queue_inst_.GetCommandQueue());
+      for (size_t i = 0; i < out_total; ++i)
+        out_u16[i] = svm_out[i];
     }
     const uint64_t t3 = now_ns();
 
