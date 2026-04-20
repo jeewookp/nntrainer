@@ -1,46 +1,158 @@
-./include/nntrainer/cpu_backend.h
-./include/nntrainer/matrix_transpose_neon.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
-./include/nntrainer/fp16.h
-./include/nntrainer/quantizer.h
-./include/nntrainer/util_func.h
-./include/nntrainer/var_grad.h
-./include/nntrainer/memory_pool.h
-./include/nntrainer/nntrainer_log.h
-./include/nntrainer/connection.h
-./include/nntrainer/common.h
-./include/nntrainer/nntrainer_error.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
-./include/nntrainer/node_exporter.h
-./include/nntrainer/optimizer_wrapped.h
-./include/nntrainer/mman_windows.h
-./include/nntrainer/CL/
-./include/nntrainer/CL/opencl.h
-./include/nntrainer/CL/cl_version.h
-./include/nntrainer/CL/cl.h
-./include/nntrainer/CL/cl_platform.h
-./include/nntrainer/task.h
-./include/nntrainer/hgemm_pack.h
-./include/nntrainer/bs_thread_pool_manager.hpp
-./include/nntrainer/hgemm_kernel.h
-./include/nntrainer/hgemm_padding_b.h
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
-~/projects/nntrainer ~/projects/nntrainer
-~/projects/nntrainer
+  cl_qcom_protected_context
+  cl_qcom_recordable_queues
+  cl_qcom_subgroup_shuffle
+  cl_qcom_vector_image_ops
+  cl_qcom_onchip_global_memory
+  cl_qcom_large_buffer
+  cl_qcom_ahardwarebuffer_direct_import
+  cl_qcom_local_memory_control
+
+======== A/B bench M=437 K=4096 N=2560 ========
+  fp16 v1      : 4.31082 ms / iter  (2.12594 TFLOPS)
+  fp16 v2 tex  : 4.92145 ms / iter  (1.86216 TFLOPS)  speedup 0.875925x vs v1
+  fp16 v3 ksplit: 5.83027 ms / iter  (1.57189 TFLOPS)  speedup 0.739387x vs v1
+  dp4a         : 4.94723 ms / iter  (1.85246 TFLOPS)  speedup 0.871361x vs v1
+  v2 MSE       : 2.33774 (tol=67.1089)
+  v3 MSE       : 0.0521062 (tol=67.1089)
+  dp4a MSE     : 5.23833e-05 (tol=150.995)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560 (609 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560
+
+======== A/B bench M=437 K=1024 N=2560 ========
+  fp16 v1      : 1.1624 ms / iter  (1.97105 TFLOPS)
+  fp16 v2 tex  : 1.25388 ms / iter  (1.82725 TFLOPS)  speedup 0.927043x vs v1
+  fp16 v3 ksplit: 1.46739 ms / iter  (1.56137 TFLOPS)  speedup 0.792154x vs v1
+  dp4a         : 1.42757 ms / iter  (1.60492 TFLOPS)  speedup 0.814249x vs v1
+  v2 MSE       : 0.00528999 (tol=4.1943)
+  v3 MSE       : 0.000803985 (tol=4.1943)
+  dp4a MSE     : 6.85146e-06 (tol=9.43718)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560 (129 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096
+
+======== A/B bench M=437 K=2560 N=4096 ========
+  fp16 v1      : 3.97564 ms / iter  (2.30518 TFLOPS)
+  fp16 v2 tex  : 4.52509 ms / iter  (2.02528 TFLOPS)  speedup 0.878576x vs v1
+  fp16 v3 ksplit: 5.92 ms / iter  (1.54807 TFLOPS)  speedup 0.67156x vs v1
+  dp4a         : 4.72116 ms / iter  (1.94117 TFLOPS)  speedup 0.842088x vs v1
+  v2 MSE       : 0.255566 (tol=26.2144)
+  v3 MSE       : 0.00458968 (tol=26.2144)
+  dp4a MSE     : 1.76118e-05 (tol=58.9824)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096 (473 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
+
+======== A/B bench M=437 K=9728 N=2560 ========
+  fp16 v1      : 9.91351 ms / iter  (2.19557 TFLOPS)
+  fp16 v2 tex  : 12.4387 ms / iter  (1.74985 TFLOPS)  speedup 0.796991x vs v1
+  fp16 v3 ksplit: 16.1707 ms / iter  (1.34601 TFLOPS)  speedup 0.613056x vs v1
+  dp4a         : 12.2508 ms / iter  (1.77669 TFLOPS)  speedup 0.809216x vs v1
+  v2 MSE       : 564.291 (tol=378.536)
+  v3 MSE       : 5.07921 (tol=378.536)
+  dp4a MSE     : 0.000178255 (tol=851.706)
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_opencl_kernels_int4_adreno.cpp:1107: Failure
+Expected: (mse_v2) < (mse_tol_fp16), actual: 564.291 vs 378.536
+v2 A/B bench MSE exceeded tolerance
+[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560 (1130 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728
+
+======== A/B bench M=437 K=2560 N=9728 ========
+  fp16 v1      : 9.22168 ms / iter  (2.36029 TFLOPS)
+  fp16 v2 tex  : 10.185 ms / iter  (2.13705 TFLOPS)  speedup 0.905419x vs v1
+  fp16 v3 ksplit: 15.4673 ms / iter  (1.40722 TFLOPS)  speedup 0.596207x vs v1
+  dp4a         : 11.6396 ms / iter  (1.86998 TFLOPS)  speedup 0.792269x vs v1
+  v2 MSE       : 0.115355 (tol=26.2144)
+  v3 MSE       : 0.00408966 (tol=26.2144)
+  dp4a MSE     : 1.45496e-05 (tol=58.9824)
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728 (1644 ms)
+[----------] 5 tests from nntrainer_opencl_adreno_kernels_ab (3987 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (3987 ms total)
+[  PASSED  ] 4 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
+
+ 1 FAILED TEST
+
+[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=358.80 ms calls=55
+  cl_mem_create    :     0.30 ms (  0.1%)  [2x clCreateBuffer + 2x clCreateImage]
+  xt_setup         :     9.31 ms (  2.6%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
+  xt_dispatch      :     1.45 ms (  0.4%)  [DispatchCommand(input_transpose) host-side]
+  gemm_setup       :    16.82 ms (  4.7%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
+  gemm_dispatch    :     0.38 ms (  0.1%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
+  svm_map_sync     :   330.34 ms ( 92.1%)  [enqueueSVMMap(output, blocking=true) host-wait]
+  cl_mem_release   :     0.09 ms (  0.0%)  [4x clReleaseMemObject]
+  prof_query       :     0.11 ms (  0.0%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
+  --- device-side (event profiling, may overlap host stages above) ---
+  xt_gpu           :    10.94 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
+  gemm_gpu         :   275.90 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
+  gpu_sum          :   286.84 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
 
 ==========================================
-[Step 2/4] Building unittest_opencl_kernels_int4_adreno (ndk-build)
+ Run summary
 ==========================================
-unittest_int4_adreno.sh: 94: pushd: not found
+
+--- Per-shape latency / MSE ---
+(no per-shape lines found)
+
+--- A/B benchmark (fp16 v1 vs v2 tex vs v3 k-split vs DP4A) ---
+======== A/B bench M=437 K=4096 N=2560 ========
+  fp16 v1      : 4.31082 ms / iter  (2.12594 TFLOPS)
+  fp16 v2 tex  : 4.92145 ms / iter  (1.86216 TFLOPS)  speedup 0.875925x vs v1
+  fp16 v3 ksplit: 5.83027 ms / iter  (1.57189 TFLOPS)  speedup 0.739387x vs v1
+  dp4a         : 4.94723 ms / iter  (1.85246 TFLOPS)  speedup 0.871361x vs v1
+  v2 MSE       : 2.33774 (tol=67.1089)
+  v3 MSE       : 0.0521062 (tol=67.1089)
+  dp4a MSE     : 5.23833e-05 (tol=150.995)
+======== A/B bench M=437 K=1024 N=2560 ========
+  fp16 v1      : 1.1624 ms / iter  (1.97105 TFLOPS)
+  fp16 v2 tex  : 1.25388 ms / iter  (1.82725 TFLOPS)  speedup 0.927043x vs v1
+  fp16 v3 ksplit: 1.46739 ms / iter  (1.56137 TFLOPS)  speedup 0.792154x vs v1
+  dp4a         : 1.42757 ms / iter  (1.60492 TFLOPS)  speedup 0.814249x vs v1
+  v2 MSE       : 0.00528999 (tol=4.1943)
+  v3 MSE       : 0.000803985 (tol=4.1943)
+  dp4a MSE     : 6.85146e-06 (tol=9.43718)
+======== A/B bench M=437 K=2560 N=4096 ========
+  fp16 v1      : 3.97564 ms / iter  (2.30518 TFLOPS)
+  fp16 v2 tex  : 4.52509 ms / iter  (2.02528 TFLOPS)  speedup 0.878576x vs v1
+  fp16 v3 ksplit: 5.92 ms / iter  (1.54807 TFLOPS)  speedup 0.67156x vs v1
+  dp4a         : 4.72116 ms / iter  (1.94117 TFLOPS)  speedup 0.842088x vs v1
+  v2 MSE       : 0.255566 (tol=26.2144)
+  v3 MSE       : 0.00458968 (tol=26.2144)
+  dp4a MSE     : 1.76118e-05 (tol=58.9824)
+======== A/B bench M=437 K=9728 N=2560 ========
+  fp16 v1      : 9.91351 ms / iter  (2.19557 TFLOPS)
+  fp16 v2 tex  : 12.4387 ms / iter  (1.74985 TFLOPS)  speedup 0.796991x vs v1
+  fp16 v3 ksplit: 16.1707 ms / iter  (1.34601 TFLOPS)  speedup 0.613056x vs v1
+  dp4a         : 12.2508 ms / iter  (1.77669 TFLOPS)  speedup 0.809216x vs v1
+  v2 MSE       : 564.291 (tol=378.536)
+  v3 MSE       : 5.07921 (tol=378.536)
+  dp4a MSE     : 0.000178255 (tol=851.706)
+v2 A/B bench MSE exceeded tolerance
+======== A/B bench M=437 K=2560 N=9728 ========
+  fp16 v1      : 9.22168 ms / iter  (2.36029 TFLOPS)
+  fp16 v2 tex  : 10.185 ms / iter  (2.13705 TFLOPS)  speedup 0.905419x vs v1
+  fp16 v3 ksplit: 15.4673 ms / iter  (1.40722 TFLOPS)  speedup 0.596207x vs v1
+  dp4a         : 11.6396 ms / iter  (1.86998 TFLOPS)  speedup 0.792269x vs v1
+  v2 MSE       : 0.115355 (tol=26.2144)
+  v3 MSE       : 0.00408966 (tol=26.2144)
+  dp4a MSE     : 1.45496e-05 (tol=58.9824)
+
+--- gtest pass/fail tally ---
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_4096_2560 (609 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_1024_2560 (129 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_4096 (473 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
+[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560 (1130 ms)
+[ RUN      ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728
+[       OK ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_2560_9728 (1644 ms)
+[  PASSED  ] 4 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] nntrainer_opencl_adreno_kernels_ab.ab_bench_437_9728_2560
+
+Full log: /home/jwhero94/projects/nntrainer/unittest_int4_adreno_run.log
+
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
