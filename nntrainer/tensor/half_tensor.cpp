@@ -951,18 +951,15 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       svm_in[i] = in_u16[i];
     }
     const uint64_t t1 = now_ns();
-    // Prefer the delegate GEMM path (captured conv_wave_memory kernel +
-    // cached dequant) whenever the weight shape fits its alignment
-    // contract. Falls back to the int4 gemm when N%32!=0 or K%8!=0.
-    static const bool s_disable_delegate =
-      std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
-    if (!s_disable_delegate && (N % 32) == 0 && (K % 8) == 0) {
-      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
-                            M, N, K);
-    } else {
-      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
-                          N, K);
-    }
+    // Single-call delegate has more per-call dispatches (svm_to_image2d +
+    // conv + image2d_to_svm + SVMMap) than int4 (input_transpose + gemm +
+    // SVMMap) and in the Qwen3-4B profile ends up ~2x slower per call.
+    // The batched delegate (gemm_delegate_fp16_cl_batched) amortises the
+    // extra dispatches across several weights and does win, so we only
+    // enable the delegate path when we can actually batch (via
+    // HalfTensor::dot(vector, vector)).
+    gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
+                        N, K);
     const uint64_t t2 = now_ns();
     for (size_t i = 0; i < out_total; ++i) {
       out_u16[i] = svm_out[i];

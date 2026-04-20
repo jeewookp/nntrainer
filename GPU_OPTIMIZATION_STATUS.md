@@ -53,22 +53,45 @@
 ## 진행 중인 작업
 
 ### Phase 0: Delegate 커널 프로덕션 연결 + 배치 reformat 공유  (2026-04-20)
+
+**시도한 것**
 - `gemm_delegate_fp16_cl_batched` 추가 — 하나의 SVM 입력을 image2d로
   **배치당 한 번만** 변환해서 여러 weight gemm에 공유. N번의 blocking
   SVMMap을 배치 끝의 1번으로 축소.
-- `HalfTensor::dot(vector, vector)` (Q/K/V + gate/up 경로) → 배치 delegate
-  호출로 교체. N%32==0 && K%8==0 만족 못하면 기존 int4 경로로 자동 fallback.
-- `HalfTensor::dotQInteger` (o_proj, down_proj 경로) → 단일 delegate 호출로
-  교체 (같은 fallback).
-- `FloatTensor` 쪽 동일한 두 경로도 동시에 연결.
+- `HalfTensor::dot(vector, vector)` (배치 FC API) → 배치 delegate 호출로
+  교체. N%32==0 && K%8==0 만족 못하면 기존 int4 경로로 자동 fallback.
+- `FloatTensor` 쪽 배치 경로도 동시에 연결.
 - 안전 스위치: `NNTRAINER_DISABLE_DELEGATE_GEMM=1` 로 전체 비활성 가능.
 
-예상 효과 (prefill 기준):
-- `reformat_in`: Q/K/V 3회 → 1회, gate/up 2회 → 1회.
-- per-call SVMMap blocking: 배치 호출당 N회 → 1회 (LiteRT 스타일 per-layer
-  sync에 한 발 더 근접).
-- conv_gpu 자체는 변화 없음 (커널 그대로 사용).
-- reformat_out 은 여전히 per-weight (RMSNorm/SwiGLU 가 아직 SVM 소비자임).
+**실측 결과 (Qwen3-4B, prefill 437 토큰)**
+| 경로 | prefill TPS | 비고 |
+|---|---|---|
+| int4 baseline | ~97-125 (이전 문서) | |
+| **초기 L1 (delegate single-call 포함)** | **58.6** | dotQInteger 를 delegate 로 바꿨더니 **regression** |
+| L1 revert (single-call 만 되돌림, 배치만 유지) | 측정 예정 | |
+
+**원인 분석**
+1. Qwen3 모델은 `qwen3_causallm.cpp` 에서 Q/K/V 를 **3개의 독립 FC 레이어**로
+   선언 (L48/L63/L78) → `HalfTensor::dot(vector, vector)` 가 호출되지 않고
+   각 FC 마다 `dotQInteger` 가 호출됨 → **배치 경로가 한 번도 실행되지 않음**.
+2. Single-call delegate 는 int4 보다 per-call dispatch 수가 많음
+   (`svm_to_image2d + conv + image2d_to_svm + SVMMap` vs `transpose + gemm
+   + SVMMap`). 252 calls 프로파일에서 `readback: 3024.7 ms (97.6%)` —
+   blocking SVMMap 이 지배적이고, delegate 쪽이 더 긴 파이프라인을 기다림.
+
+**남긴 것**
+- 배치 함수는 그대로 둠 (비용 0 — 호출되지 않음). 앞으로 QKV fused FC
+  레이어를 만들거나 gate/up fused 레이어를 만들면 곧장 혜택.
+- `dotQInteger` 는 기존 int4 경로로 원복.
+
+**진짜 속도를 내려면 필요한 것 (다음 단계)**
+- 옵션 1: Qwen3 모델 정의에 batched FC (Q/K/V 하나 + gate/up 하나) 추가
+  → 배치 delegate 가 호출되기 시작해서 3x savings.
+- 옵션 2: SVMMap blocking 제거 (Phase A-B 로 RMSNorm/SwiGLU 를 image2d
+  소비자로 전환). 현재 readback 이 97% 인데 그 중 대부분이 SVM coherence
+  강제 sync. image2d 체인이 되면 sync 자체가 제거됨.
+- 옵션 3: tensor 페이지 정렬 + getSVMOutput staging 제거. host 스칼라
+  복사가 없어지면 blocking 가 필요 없어서 in-order queue 로 자연 직렬화됨.
 
 ## 다음 단계
 

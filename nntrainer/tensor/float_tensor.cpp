@@ -1277,15 +1277,10 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
       }
       const uint64_t t1 = now_ns();
 
-      static const bool s_disable_delegate =
-        std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
-      if (!s_disable_delegate && (N % 32) == 0 && (K % 8) == 0) {
-        gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16,
-                              svm_out, M, N, K);
-      } else {
-        gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
-                            M, N, K);
-      }
+      // Single-call delegate is slower than int4 on Qwen3-4B; only the
+      // batched variant (used by the vector-vector dot overload) wins.
+      gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
+                          M, N, K);
       const uint64_t t2 = now_ns();
 
       // fp16 -> fp32 output copy (no crop -- the kernel writes [M][N]).
