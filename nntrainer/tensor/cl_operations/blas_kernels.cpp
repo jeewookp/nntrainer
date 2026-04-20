@@ -2623,8 +2623,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int il[3] = {16, 16, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
   }
-  // Single clFinish: dequant + input reformat both complete
-  clFinish(clq);
+  // No clFinish — in-order queue guarantees dequant + reformat complete
+  // before conv dispatch that follows.
   const uint64_t t2 = now_ns();
 
   // === Step 3: Conv dispatch ===
@@ -2646,7 +2646,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int l[3] = {128, 1, 4};
     blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
   }
-  clFinish(clq);
+  // No clFinish — output readback SVMMap(blocking=true) syncs everything.
   const uint64_t t3 = now_ns();
 
   // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
