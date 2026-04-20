@@ -1,54 +1,83 @@
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
+[arm64-v8a] Executable     : nntr_quantize
+-e [SUCCESS] Build completed successfully
+-e [INFO] Build artifacts:
+-e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
+-e   [OK] libcausallm_core.so (43M) (Copied from obj)
+-e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
+-e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
+-e   [WARN] nntr_quantize found in obj but not in libs. Copying...
+-e   [OK] nntr_quantize (43M) (Copied from obj)
+-e 
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (44525192 bytes in 1.282s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.6 MB/s (44049472 bytes in 1.288s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.9 MB/s (3960088 bytes in 0.119s)
+3 files pushed. 32.8 MB/s (92534752 bytes in 2.692s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 31.6 MB/s (11070760 bytes in 0.334s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.0 MB/s (129336 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 22.0 MB/s (163320 bytes in 0.007s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.2 MB/s (1822720 bytes in 0.056s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
 TMPDIR
 USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3508 ms, 124.572 TPS
-generation: 32 tokens, 6005 ms, 5.32889 TPS
-total: 9521 ms
-peak memory: 2731980 KB
-==========================================================
-[e2e time]: 11730 ms 
-Max Resident Set Size: 2731980 KB
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.77 ms calls=1 avg=11.774 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.07 ms calls=1 avg=3.070 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=447.26 ms calls=36 avg=12.424 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=318.66 ms calls=73 avg=4.365 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=175.06 ms calls=72 avg=2.431 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=861.90 ms calls=36 avg=23.942 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1612.69 ms calls=252
-  in_stage    :    44.03 ms (  2.7%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :    38.53 ms (  2.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :  1530.13 ms ( 94.9%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-
-[PROFILE gemm_int4_adreno_cl prefill (M>1)] total=38.12 ms calls=252
-  cl_mem_create    :     1.99 ms (  5.2%)  [2x clCreateBuffer + 2x clCreateImage]
-  xt_setup         :     9.69 ms ( 25.4%)  [registerClKernel + 4x SetKernelArgs (input_transpose)]
-  xt_dispatch      :     6.07 ms ( 15.9%)  [DispatchCommand(input_transpose) host-side]
-  gemm_setup       :    18.29 ms ( 48.0%)  [registerClKernel + 8x SetKernelArgs (gpu_int4_gemm_adreno)]
-  gemm_dispatch    :     1.74 ms (  4.6%)  [DispatchCommand(gpu_int4_gemm_adreno) host-side]
-  svm_map_sync     :     0.01 ms (  0.0%)  [enqueueSVMMap(output, blocking=true) host-wait]
-  cl_mem_release   :     0.12 ms (  0.3%)  [4x clReleaseMemObject]
-  prof_query       :     0.22 ms (  0.6%)  [4x clGetEventProfilingInfo + 2x clReleaseEvent]
-  --- device-side (event profiling, may overlap host stages above) ---
-  xt_gpu           :     0.00 ms  [input_transpose CL_PROFILING_COMMAND_START..END]
-  gemm_gpu         :     0.00 ms  [gpu_int4_gemm_adreno CL_PROFILING_COMMAND_START..END]
-  gpu_sum          :     0.00 ms  [xt_gpu + gemm_gpu; compare to svm_map_sync above]
+[!] FATAL ERROR: Planned layout is not feasible
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -57,46 +86,19 @@ Max Resident Set Size: 2731980 KB
 
 --- Generation snippet (post-assistant tag) ---
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3508 ms, 124.572 TPS
-generation: 32 tokens, 6005 ms, 5.32889 TPS
-total: 9521 ms
-peak memory: 2731980 KB
-==========================================================
-[e2e time]: 11730 ms 
-Max Resident Set Size: 2731980 KB
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.77 ms calls=1 avg=11.774 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)]
 
 --- Perf summary ---
-prefill: 437 tokens, 3508 ms, 124.572 TPS
-generation: 32 tokens, 6005 ms, 5.32889 TPS
-total: 9521 ms
-peak memory: 2731980 KB
-[e2e time]: 11730 ms 
+(no perf lines)
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1612.69 ms calls=252
-  in_stage    :    44.03 ms (  2.7%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :    38.53 ms (  2.4%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :  1530.13 ms ( 94.9%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+(no PROFILE lines found)
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=11.77 ms calls=1 avg=11.774 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.07 ms calls=1 avg=3.070 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=447.26 ms calls=36 avg=12.424 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=318.66 ms calls=73 avg=4.365 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=175.06 ms calls=72 avg=2.431 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=861.90 ms calls=36 avg=23.942 ms
+(no layer PROFILE lines found)
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
