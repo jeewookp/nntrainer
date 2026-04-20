@@ -170,9 +170,9 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
     ret = global_cl_context->command_queue_inst_.DispatchCommand(
       kernel_rmsnorm_ptr, work_groups_count, work_group_size);
 
-    // Sync output SVM for host access
-    global_cl_context->command_queue_inst_.enqueueSVMMap(
-      rdata, dim1 * sizeof(cl_half), true);
+    // Let the GPU finish before next layer reads the output.
+    // Use clFinish instead of SVMMap to avoid per-call SVM coherence overhead.
+    clFinish(global_cl_context->command_queue_inst_.GetCommandQueue());
   } else {
     // Fallback: original cl_mem buffer path with host copies
     auto &clbuffInstance = ClBufferManager::Global();
