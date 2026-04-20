@@ -1,106 +1,111 @@
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7278 ms, 60.044 TPS
-generation: 32 tokens, 5947 ms, 5.38086 TPS
-total: 13230 ms
-peak memory: 2719388 KB
-==========================================================
-[e2e time]: 15416 ms 
-Max Resident Set Size: 2719388 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        80.5 ms ( 2.6%)
-  reformat_in:     1.7 ms ( 0.1%)  hits=108/252
-  conv(wall):      3.6 ms ( 0.1%)
-  conv(gpu):       0.0 ms            inf TFLOPS
-  readback:     2994.5 ms (97.2%)
-  total:        3080.3 ms            1.031 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=15.52 ms calls=1 avg=15.519 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.47 ms calls=1 avg=2.467 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1161.09 ms calls=36 avg=32.252 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=554.88 ms calls=73 avg=7.601 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=329.47 ms calls=72 avg=4.576 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1147.98 ms calls=36 avg=31.888 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3950.46 ms calls=252
-  in_stage    :     0.00 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3950.46 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.00 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ./unittest_delegate_conv_wave.sh 
+==========================================
+[Step 1] Building unittest_delegate_conv_wave (ndk-build)
+==========================================
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : googletest_main [arm64-v8a]
+[arm64-v8a] Clean          : nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : test_util [arm64-v8a]
+[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
+[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
+[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
+[arm64-v8a] Clean          : unittest_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
+[arm64-v8a] StaticLibrary  : libgoogletest_main.a
+[arm64-v8a] Executable     : unittest_delegate_conv_wave
+[arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
 
 ==========================================
- Run summary
+[Step 2] Pushing to device
 ==========================================
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 32.8 MB/s (350608 bytes in 0.010s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.0 MB/s (7438 bytes in 0.003s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.6 MB/s (9732 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.4 MB/s (1822720 bytes in 0.055s)
 
---- Generation snippet (post-assistant tag) ---
+==========================================
+[Step 3] Running on device
+==========================================
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from DelegateConvWaveTest
+[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
+GPU: QUALCOMM Adreno(TM) 830
+Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
+Performance: 430.0 us/iter = 2.497 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (148 ms)
+[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
+GPU: QUALCOMM Adreno(TM) 830
+global=(1024,4,4) local=(128,1,4)
+  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
+  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
+  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
+  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
+  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
+  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
+  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
+  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
+Correctness: 128/128 pass (max err 12.9%)
+Int4 wave: 355959.2 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3314 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
+GPU: QUALCOMM Adreno(TM) 830
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+=== Delegate fp16 kernel — model shapes ===
+  M=437 N=4096 K=2560: 3256.7 us = 2.814 TFLOPS (×36 = 117.2 ms)
+  M=437 N=1024 K=2560: 936.1 us = 2.448 TFLOPS (×36 = 33.7 ms)
+  M=437 N=1024 K=2560: 979.8 us = 2.338 TFLOPS (×36 = 35.3 ms)
+  M=437 N=2560 K=4096: 3311.6 us = 2.767 TFLOPS (×36 = 119.2 ms)
+  M=437 N=9728 K=2560: 7896.6 us = 2.756 TFLOPS (×36 = 284.3 ms)
+  M=437 N=9728 K=2560: 7892.7 us = 2.758 TFLOPS (×36 = 284.1 ms)
+  M=437 N=2560 K=9728: 8110.1 us = 2.684 TFLOPS (×36 = 292.0 ms)
+  TOTAL: 3175.5 GFLOP in 1165.8 ms = 2.724 TFLOPS (conv only)
+[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1079 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
+GPU: QUALCOMM Adreno(TM) 830
 
+=== Int4 Adreno kernel — model shapes ===
+  SKIP 437x4096x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x2560x4096: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x2560x9728: image1d_buffer failed -6
+  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (132 ms)
+[----------] 4 tests from DelegateConvWaveTest (4675 ms total)
 
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (4675 ms total)
+[  PASSED  ] 4 tests.
 
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7278 ms, 60.044 TPS
-generation: 32 tokens, 5947 ms, 5.38086 TPS
-total: 13230 ms
-peak memory: 2719388 KB
-==========================================================
-[e2e time]: 15416 ms 
-Max Resident Set Size: 2719388 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        80.5 ms ( 2.6%)
-  reformat_in:     1.7 ms ( 0.1%)  hits=108/252
-  c
-
---- Perf summary ---
-prefill: 437 tokens, 7278 ms, 60.044 TPS
-generation: 32 tokens, 5947 ms, 5.38086 TPS
-total: 13230 ms
-peak memory: 2719388 KB
-[e2e time]: 15416 ms 
-  total:        3080.3 ms            1.031 TFLOPS
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3950.46 ms calls=252
-  in_stage    :     0.00 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3950.46 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.00 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=15.52 ms calls=1 avg=15.519 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.47 ms calls=1 avg=2.467 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1161.09 ms calls=36 avg=32.252 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=554.88 ms calls=73 avg=7.601 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=329.47 ms calls=72 avg=4.576 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1147.98 ms calls=36 avg=31.888 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
