@@ -2490,25 +2490,26 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   // --- Profiling ---
   static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
-    t_calls{0}, t_gflops_x1000{0};
+    t_readback{0}, t_calls{0}, t_gflops_x1000{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
       if (!c) return;
       double g = t_gflops_x1000.load() / 1000.0;
-      double tot = (t_dequant + t_reformat + t_conv) / 1e6;
+      double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
       fprintf(stderr,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
-        "  dequant:     %7.1f ms (%4.1f%%)  %.3f TFLOPS\n"
-        "  reformat:    %7.1f ms (%4.1f%%)\n"
+        "  dequant:     %7.1f ms (%4.1f%%)\n"
+        "  reformat_in: %7.1f ms (%4.1f%%)\n"
         "  conv:        %7.1f ms (%4.1f%%)  %.3f TFLOPS\n"
+        "  readback:    %7.1f ms (%4.1f%%)\n"
         "  total:       %7.1f ms            %.3f TFLOPS\n",
         (unsigned long)c, g,
-        t_dequant/1e6, t_dequant*100.0/(t_dequant+t_reformat+t_conv),
-          g/(t_dequant/1e9)/1000.0,
-        t_reformat/1e6, t_reformat*100.0/(t_dequant+t_reformat+t_conv),
-        t_conv/1e6, t_conv*100.0/(t_dequant+t_reformat+t_conv),
+        t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
+        t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
+        t_conv/1e6, t_conv*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
           g/(t_conv/1e9)/1000.0,
+        t_readback/1e6, t_readback*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         tot, g/(tot/1e3)/1000.0);
     }
   } s_prof;
@@ -2645,6 +2646,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int l[3] = {128, 1, 4};
     blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
   }
+  clFinish(clq);
+  const uint64_t t3 = now_ns();
 
   // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
   {
@@ -2661,11 +2664,12 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // Sync output to host (SVM coherence)
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, (size_t)M * N * sizeof(uint16_t), true);
-  const uint64_t t3 = now_ns();
+  const uint64_t t4 = now_ns();
 
   t_dequant += (t1 - t0);
   t_reformat += (t2 - t1);
   t_conv += (t3 - t2);
+  t_readback += (t4 - t3);
   t_calls++;
   t_gflops_x1000 += (uint64_t)(2.0 * M * N * K / 1e6);
   // No per-call release — buffers are reused
