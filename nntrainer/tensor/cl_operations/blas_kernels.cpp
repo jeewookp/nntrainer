@@ -2467,13 +2467,202 @@ void transpose_16(void *input, void *output, int width, int height,
 }
 */
 // ============================================================================
-// Delegate fp16 GEMM: GPU dequant int4→fp16 + wave memory kernel dispatch
+// Delegate fp16 GEMM — optimized: pre-alloc + cached kernels + pipelined
 // ============================================================================
 
 void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                            uint16_t *weights, uint16_t *scales,
                            uint16_t *output, unsigned int M, unsigned int N,
                            unsigned int K) {
+  if (((N % 32) != 0) || ((K % 8) != 0))
+    throw std::runtime_error("gemm_delegate_fp16_cl requires N%32==0 K%8==0");
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue clq = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const int src_slices = K / 4;
+  const int dst_slices = N / 4;
+  const int n_z = (dst_slices + 7) / 8;
+  const int iters = src_slices / 2;
+  cl_int err;
+
+  // --- Profiling ---
+  static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
+    t_calls{0}, t_gflops_x1000{0};
+  static struct DelegateProfileDump2 {
+    ~DelegateProfileDump2() {
+      uint64_t c = t_calls.load();
+      if (!c) return;
+      double g = t_gflops_x1000.load() / 1000.0;
+      double tot = (t_dequant + t_reformat + t_conv) / 1e6;
+      fprintf(stderr,
+        "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
+        "  dequant:     %7.1f ms (%4.1f%%)  %.3f TFLOPS\n"
+        "  reformat:    %7.1f ms (%4.1f%%)\n"
+        "  conv:        %7.1f ms (%4.1f%%)  %.3f TFLOPS\n"
+        "  total:       %7.1f ms            %.3f TFLOPS\n",
+        (unsigned long)c, g,
+        t_dequant/1e6, t_dequant*100.0/(t_dequant+t_reformat+t_conv),
+          g/(t_dequant/1e9)/1000.0,
+        t_reformat/1e6, t_reformat*100.0/(t_dequant+t_reformat+t_conv),
+        t_conv/1e6, t_conv*100.0/(t_dequant+t_reformat+t_conv),
+          g/(t_conv/1e9)/1000.0,
+        tot, g/(tot/1e3)/1000.0);
+    }
+  } s_prof;
+
+  auto now_ns = []() -> uint64_t {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  };
+
+  // --- Static resources (allocated once, reused across calls) ---
+  static cl_mem s_w_cl = nullptr;
+  static size_t s_w_size = 0;
+  static cl_mem s_xmem = nullptr;
+  static cl_mem s_bias = nullptr;
+  static int s_bias_slices = 0;
+  static cl_mem s_src_img = nullptr;
+  static int s_src_w = 0, s_src_h = 0;
+  static cl_mem s_dst_img = nullptr;
+  static int s_dst_w = 0, s_dst_h = 0;
+  static ClContext::SharedPtrClKernel s_dq_kern, s_conv_kern;
+
+  // Ensure fp16 weight buffer is large enough
+  size_t w_halfs = (size_t)n_z * iters * 256;
+  size_t w_bytes = w_halfs * 2;
+  if (!s_w_cl || s_w_size < w_bytes) {
+    if (s_w_cl) clReleaseMemObject(s_w_cl);
+    s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+    s_w_size = w_bytes;
+  }
+
+  // xmem (6144 bytes, constant)
+  if (!s_xmem)
+    s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+
+  // bias image (zeros, grow as needed)
+  if (!s_bias || s_bias_slices < dst_slices) {
+    if (s_bias) clReleaseMemObject(s_bias);
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc bd = {};
+    bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = dst_slices; bd.image_height = 1;
+    s_bias = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &bd, nullptr, &err);
+    std::vector<uint16_t> z(dst_slices * 4, 0);
+    size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+    clEnqueueWriteImage(clq, s_bias, CL_TRUE, o, r, 0, 0, z.data(), 0,0,0);
+    s_bias_slices = dst_slices;
+  }
+
+  // src/dst images (recreate only when shape changes)
+  cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
+  if (!s_src_img || s_src_w != (int)M || s_src_h != src_slices) {
+    if (s_src_img) clReleaseMemObject(s_src_img);
+    cl_image_desc sd = {};
+    sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_width = M; sd.image_height = src_slices;
+    s_src_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &err);
+    s_src_w = M; s_src_h = src_slices;
+  }
+  if (!s_dst_img || s_dst_w != (int)M || s_dst_h != dst_slices) {
+    if (s_dst_img) clReleaseMemObject(s_dst_img);
+    cl_image_desc dd = {};
+    dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = dst_slices;
+    s_dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &err);
+    s_dst_w = M; s_dst_h = dst_slices;
+  }
+
+  // kernel objects (cached)
+  if (!s_dq_kern)
+    s_dq_kern = blas_cc->registerClKernel(
+      dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
+  if (!s_conv_kern)
+    s_conv_kern = blas_cc->registerClKernel(
+      delegate_conv_wave_kernel, "main_function");
+
+  // === Step 1: GPU dequant (SVM → fp16 buffer) ===
+  const uint64_t t0 = now_ns();
+  {
+    int a = 0;
+    s_dq_kern->SetKernelSVMArguments(a++, weights);
+    s_dq_kern->SetKernelSVMArguments(a++, scales);
+    s_dq_kern->SetKernelArguments(a++, &s_w_cl, sizeof(cl_mem));
+    int sn = (int)N, sk = (int)K;
+    s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
+    s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
+    int tot = (int)w_halfs;
+    const int dg[3] = {((tot+255)/256)*256, 1, 1};
+    const int dl[3] = {256, 1, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);
+    // no clFinish — pipeline with next step
+  }
+  const uint64_t t1 = now_ns();
+
+  // === Step 2: Input reformat [M][K] → image2d ===
+  {
+    std::vector<uint16_t> ib((size_t)src_slices * M * 4);
+    for (int m = 0; m < (int)M; ++m)
+      for (int s = 0; s < src_slices; ++s)
+        for (int c = 0; c < 4; ++c) {
+          int k = s*4+c;
+          ib[((size_t)s*M+m)*4+c] = (k<(int)K) ? input[m*K+k] : 0;
+        }
+    size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+    clEnqueueWriteImage(clq, s_src_img, CL_FALSE, o, r, 0, 0, ib.data(), 0,0,0);
+  }
+  // clFinish to ensure dequant + image write complete before conv
+  clFinish(clq);
+  const uint64_t t2 = now_ns();
+
+  // === Step 3: Conv dispatch ===
+  {
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
+    struct { int x,y,z,w; } s2={1,1,0,0};
+    int a = 0;
+    s_conv_kern->SetKernelArguments(a++, &s_w_cl, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_bias, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
+    s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
+    s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
+    size_t gz = ((dst_slices+7)/8+3)/4;
+    const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
+    const int l[3] = {128, 1, 4};
+    blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
+  }
+
+  // === Step 4: Output readback + reformat ===
+  {
+    std::vector<uint16_t> ob((size_t)dst_slices * M * 4);
+    size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
+    clEnqueueReadImage(clq, s_dst_img, CL_TRUE, o, r, 0, 0, ob.data(), 0,0,0);
+    for (int m = 0; m < (int)M; ++m)
+      for (int s = 0; s < dst_slices; ++s)
+        for (int c = 0; c < 4; ++c) {
+          int n = s*4+c;
+          if (n < (int)N)
+            output[m*N+n] = ob[((size_t)s*M+m)*4+c];
+        }
+  }
+  const uint64_t t3 = now_ns();
+
+  t_dequant += (t1 - t0);
+  t_reformat += (t2 - t1);
+  t_conv += (t3 - t2);
+  t_calls++;
+  t_gflops_x1000 += (uint64_t)(2.0 * M * N * K / 1e6);
+  // No per-call release — buffers are reused
+}
+
+} // namespace nntrainer
   if (((N % 32) != 0) || ((K % 8) != 0))
     throw std::runtime_error(
       "gemm_delegate_fp16_cl requires N%32==0 and K%8==0");
