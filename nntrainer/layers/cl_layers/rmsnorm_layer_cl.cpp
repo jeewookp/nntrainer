@@ -222,7 +222,8 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
       ret = clbuffInstance.getOutBufferA()->ReadDataRegion(
         global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), rdata);
       if (!ret) break;
-  } while (false);
+    } while (false);
+  } // end else (fallback)
 }
 #endif
 
