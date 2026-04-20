@@ -13,17 +13,21 @@
  */
 
 #include <blas_kernels.h>
+#include <cl_kernels/image_reformat.h>
 #include <cl_kernels/rmsnorm.h>
 #ifdef ENABLE_FP16
 #include <cl_kernels/rmsnorm_fp16.h>
+#include <cl_kernels/rmsnorm_image2d.h>
 #endif
 #include <common_properties.h>
+#include <gpu_image_pool.h>
 #include <layer_context.h>
 #include <lazy_tensor.h>
 #include <nntrainer_error.h>
 #include <node_exporter.h>
 #include <rmsnorm_layer_cl.h>
 #include <util_func.h>
+#include <CL/cl.h>
 
 namespace nntrainer {
 
@@ -60,6 +64,14 @@ bool RMSNormLayerCl::registerClKernels(ClContext &cl_context) {
       break;
     }
     layer_kernel_ptrs.emplace_back(kernel_rmsnorm_ptr);
+
+    ClContext::SharedPtrClKernel kernel_rmsnorm_image2d_ptr =
+      cl_context.registerClKernel(rmsnorm_image2d_kernel, "rmsnorm_image2d");
+    if (!kernel_rmsnorm_image2d_ptr) {
+      ml_loge("OpenCL Error: Fail to register rmsnorm_image2d kernel");
+      break;
+    }
+    layer_kernel_ptrs.emplace_back(kernel_rmsnorm_image2d_ptr);
 #endif
 
     return true;
@@ -127,11 +139,124 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
   auto &clbuffInstance = ClBufferManager::Global();
 
   do {
-    auto kernel_rmsnorm_ptr = getLayerKernelPtrs()[Kernels::RMSNORM_CL_FP16];
-
     const _FP16 *data = input.getData<_FP16>();
     _FP16 *rdata = result.getData<_FP16>();
     const _FP16 *gdata = gamma.getData<_FP16>();
+
+    // Phase A image2d path: if the input tensor has an image2d waiting
+    // for it in GpuImagePool (written by an upstream image2d-aware
+    // layer) OR the tensor is SVM-backed and we can svm_to_image2d
+    // ourselves, run rmsnorm_image2d and publish the output image2d
+    // to the pool. Downstream delegate gemms pick it up and skip
+    // their svm_to_image2d reformat.
+    //
+    // Shape assumption: RMSNorm's width W is the channel dimension the
+    // kernel normalises over, total positions M = B*C*H, slice count
+    // = W/4. Matches how delegate gemm indexes its src_img.
+    const int rms_M = b * c * h;
+    const int rms_slices = w / 4;
+    const bool image2d_ok =
+      (w % 4) == 0 && input.getMemoryData() &&
+      input.getMemoryData()->isSVM() && result.getMemoryData() &&
+      result.getMemoryData()->isSVM();
+
+    if (image2d_ok) {
+      auto kernel_image2d_ptr =
+        getLayerKernelPtrs()[Kernels::RMSNORM_IMAGE2D];
+      cl_context clctx = global_cl_context->context_inst_.GetContext();
+      cl_int err = 0;
+
+      // One-shot src/dst image2d cache, re-sized when shape changes.
+      static cl_mem s_src_img = nullptr;
+      static cl_mem s_dst_img = nullptr;
+      static int s_cached_M = 0, s_cached_slices = 0;
+      cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
+      if (!s_src_img || s_cached_M != rms_M ||
+          s_cached_slices != rms_slices) {
+        if (s_src_img) clReleaseMemObject(s_src_img);
+        if (s_dst_img) clReleaseMemObject(s_dst_img);
+        cl_image_desc d = {};
+        d.image_type = CL_MEM_OBJECT_IMAGE2D;
+        d.image_width = rms_M; d.image_height = rms_slices;
+        s_src_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &d, 0, &err);
+        s_dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &d, 0, &err);
+        s_cached_M = rms_M; s_cached_slices = rms_slices;
+      }
+
+      // Source: pool hit reuses upstream's image2d; else pull SVM -> s_src_img.
+      cl_mem src_img_use = s_src_img;
+      int pool_w = 0, pool_h_ = 0;
+      cl_mem pooled =
+        GpuImagePool::Global().get(data, &pool_w, &pool_h_);
+      if (pooled && pool_w == rms_M && pool_h_ == rms_slices) {
+        src_img_use = pooled;
+      } else {
+        // Use the delegate's shared svm_to_image2d kernel — the kernel
+        // source for image_reformat.cl is compiled and registered at
+        // the gemm path; re-register locally for this layer's use.
+        static ClContext::SharedPtrClKernel s_in_kern;
+        if (!s_in_kern) {
+          s_in_kern = global_cl_context->registerClKernel(
+            image_reformat_kernel, "svm_to_image2d");
+        }
+        int a = 0;
+        s_in_kern->SetKernelSVMArguments(a++, const_cast<_FP16 *>(data));
+        s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+        int sm = rms_M, sk = w;
+        s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+        s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+        const int ig[3] = {(int)((rms_M+15)/16)*16,
+                            (int)((rms_slices+15)/16)*16, 1};
+        const int il[3] = {16, 16, 1};
+        global_cl_context->command_queue_inst_.DispatchCommand(
+          s_in_kern, ig, il);
+      }
+
+      // rmsnorm_image2d kernel: (src_img, dst_img, gamma_svm, epsilon,
+      //                          M, slices)
+      int a = 0;
+      kernel_image2d_ptr->SetKernelArguments(a++, &src_img_use, sizeof(cl_mem));
+      kernel_image2d_ptr->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+      kernel_image2d_ptr->SetKernelSVMArguments(
+        a++, const_cast<_FP16 *>(gdata));
+      kernel_image2d_ptr->SetKernelArguments(a++, &epsilon, sizeof(cl_half));
+      int mm = rms_M, ss = rms_slices;
+      kernel_image2d_ptr->SetKernelArguments(a++, &mm, sizeof(int));
+      kernel_image2d_ptr->SetKernelArguments(a++, &ss, sizeof(int));
+      const int wg_count[3] = {(int)((rms_M+31)/32)*32, 1, 1};
+      const int wg_size[3]  = {32, 1, 1};
+      ret = global_cl_context->command_queue_inst_.DispatchCommand(
+        kernel_image2d_ptr, wg_count, wg_size);
+      if (!ret) break;
+
+      // Register the output image2d so the downstream gemm_delegate
+      // can skip its svm_to_image2d reformat.
+      GpuImagePool::Global().set(rdata, s_dst_img, rms_M, rms_slices);
+
+      // Also image2d_to_svm into the tensor's SVM region so any layer
+      // that doesn't yet understand the pool still sees a valid
+      // output. If later phases convert every downstream consumer
+      // to image2d, this can be dropped entirely.
+      static ClContext::SharedPtrClKernel s_out_kern;
+      if (!s_out_kern) {
+        s_out_kern = global_cl_context->registerClKernel(
+          image_reformat_kernel, "image2d_to_svm");
+      }
+      a = 0;
+      s_out_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+      s_out_kern->SetKernelSVMArguments(a++, rdata);
+      int om = rms_M, on = w;
+      s_out_kern->SetKernelArguments(a++, &om, sizeof(int));
+      s_out_kern->SetKernelArguments(a++, &on, sizeof(int));
+      const int og[3] = {(int)((rms_M+15)/16)*16,
+                          (int)((rms_slices+15)/16)*16, 1};
+      const int ol[3] = {16, 16, 1};
+      global_cl_context->command_queue_inst_.DispatchCommand(
+        s_out_kern, og, ol);
+      break;
+    }
+
+    auto kernel_rmsnorm_ptr = getLayerKernelPtrs()[Kernels::RMSNORM_CL_FP16];
 
     // Ensure the host view of `data` is coherent before WriteDataRegion
     // reads it. The upstream gemm_delegate_fp16_cl only enqueues a

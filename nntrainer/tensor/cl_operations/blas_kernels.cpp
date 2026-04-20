@@ -16,6 +16,7 @@
 
 #include "util_func.h"
 #include <fp16.h>
+#include <gpu_image_pool.h>
 
 #include <atomic>
 #include <chrono>
@@ -2659,24 +2660,37 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // account for tensor_pool reusing SVM regions across layer edges,
   // so a hit can read back a stale src_img. Re-enable once we
   // understand which invariant was wrong.
-  const bool reformat_hit = false &&
-    (s_last_in_ptr == in_key) && (s_last_in_M == M) && (s_last_in_K == K) &&
-    (s_last_in_img == s_src_img);  // invalidate if src_img was recreated
-  if (!reformat_hit) {
-    int a = 0;
-    s_in_kern->SetKernelSVMArguments(a++, input);
-    s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
-    int sm = (int)M, sk = (int)K;
-    s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
-    s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
-    const int ig[3] = {(int)((M+15)/16)*16, (int)((src_slices+15)/16)*16, 1};
-    const int il[3] = {16, 16, 1};
-    blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
-    s_last_in_ptr = in_key;
-    s_last_in_M = M; s_last_in_K = K;
-    s_last_in_img = s_src_img;
-  } else {
+  // GpuImagePool lookup: if an upstream layer (RMSNorm image2d, SwiGLU
+  // image2d, residual add image2d, ...) already published an image2d
+  // for this input tensor pointer, use it as src directly and skip the
+  // svm_to_image2d reformat. Miss → fall back to reformat-from-SVM.
+  cl_mem src_img_for_conv = nullptr;
+  int pool_src_w = 0, pool_src_h = 0;
+  cl_mem pool_src =
+    GpuImagePool::Global().get(input, &pool_src_w, &pool_src_h);
+  const bool have_pool_src = pool_src && pool_src_w == (int)M &&
+                              pool_src_h == src_slices;
+  if (have_pool_src) {
+    src_img_for_conv = pool_src;
     t_reformat_hits++;
+  } else {
+    src_img_for_conv = s_src_img;
+    if (s_last_in_ptr != in_key || s_last_in_M != M || s_last_in_K != K ||
+        s_last_in_img != s_src_img) {
+      int a = 0;
+      s_in_kern->SetKernelSVMArguments(a++, input);
+      s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+      int sm = (int)M, sk = (int)K;
+      s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+      s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+      const int ig[3] = {(int)((M+15)/16)*16,
+                          (int)((src_slices+15)/16)*16, 1};
+      const int il[3] = {16, 16, 1};
+      blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+      s_last_in_ptr = in_key;
+      s_last_in_M = M; s_last_in_K = K;
+      s_last_in_img = s_src_img;
+    }
   }
   // No clFinish — in-order queue guarantees dequant + reformat complete
   // before conv dispatch that follows.
@@ -2693,7 +2707,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_bias, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &src_img_for_conv, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
     s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
     s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));

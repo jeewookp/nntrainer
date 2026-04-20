@@ -143,6 +143,7 @@ private:
   enum Kernels {
     RMSNORM_CL,
     RMSNORM_CL_FP16,
+    RMSNORM_IMAGE2D,
   };
 };
 } // namespace nntrainer

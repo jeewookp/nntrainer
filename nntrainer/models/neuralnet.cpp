@@ -56,6 +56,7 @@
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <cl_context.h>
 #include <engine.h>
+#include <gpu_image_pool.h>
 #endif
 #include <slice_realizer.h>
 #include <util_func.h>
@@ -1168,6 +1169,14 @@ std::vector<float *> NeuralNetwork::incremental_inference(
   unsigned int from, unsigned int to, bool output_hidden_state) {
 
   // auto start_in_neuralnet = std::chrono::high_resolution_clock::now();
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Clear the per-tensor image2d pool between inference passes. Tensor-pool
+  // memory reuse means the same SVM pointer can back different logical
+  // tensors across passes, so stale pool entries could return an image2d
+  // holding data from a previous pass.
+  GpuImagePool::Global().clear();
+#endif
 
   sharedConstTensors input_tensors, output_tensors;
   auto in_dim = getInputDimension();
