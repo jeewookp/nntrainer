@@ -2653,7 +2653,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   static unsigned int s_last_in_M = 0, s_last_in_K = 0;
   static cl_mem s_last_in_img = nullptr;
   const uintptr_t in_key = reinterpret_cast<uintptr_t>(input);
-  const bool reformat_hit =
+  // Reformat cache temporarily disabled while debugging deterministic
+  // garbage output. The shared-input pattern (q/k/v + gate/up) made
+  // 108/252 hits but the cache's "same ptr + same shape" key doesn't
+  // account for tensor_pool reusing SVM regions across layer edges,
+  // so a hit can read back a stale src_img. Re-enable once we
+  // understand which invariant was wrong.
+  const bool reformat_hit = false &&
     (s_last_in_ptr == in_key) && (s_last_in_M == M) && (s_last_in_K == K) &&
     (s_last_in_img == s_src_img);  // invalidate if src_img was recreated
   if (!reformat_hit) {
