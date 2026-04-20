@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <unordered_map>
 #include <vector>
 
@@ -2715,9 +2716,33 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int ol[3] = {16, 16, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
   }
-  // Sync output to host (SVM coherence — drains full pipeline)
-  blas_cc->command_queue_inst_.enqueueSVMMap(
-    output, (size_t)M * N * sizeof(uint16_t), true);
+  // The unittest (DelegateConvWaveTest.ModelShapes_DelegateFp16)
+  // clocks this kernel at 2.72 TFLOPS on Qwen3-4B shapes — 1165 ms
+  // for the 252 prefill GEMMs. The old blocking SVMMap at the end
+  // of every call drained the whole GPU pipeline host-side per
+  // call and dropped the effective rate to 1.03 TFLOPS (readback
+  // = 97% of the dotQInteger time).
+  //
+  // Use a NON-blocking SVMMap. It still enqueues the coherence
+  // command, so any subsequent command on this in-order queue (the
+  // next gemm, the next layer's clEnqueueWriteBuffer against the
+  // same SVM host_ptr, etc.) is serialised after image2d_to_svm
+  // above and sees coherent data — but the host thread never
+  // waits here. All 252 conv dispatches can run back-to-back on
+  // the GPU, approaching the raw 2.72 TFLOPS kernel rate.
+  //
+  // The wrapper forces blocking=CL_TRUE internally, so we call
+  // clEnqueueSVMMap directly to pass CL_FALSE.
+  //
+  // Kill-switch: NNTRAINER_DELEGATE_SVMMAP=1 reverts to the old
+  // blocking behaviour if we see correctness regressions.
+  static const bool s_force_blocking_svmmap =
+    std::getenv("NNTRAINER_DELEGATE_SVMMAP") != nullptr;
+  {
+    const cl_bool blk = s_force_blocking_svmmap ? CL_TRUE : CL_FALSE;
+    clEnqueueSVMMap(clq, blk, CL_MAP_READ, output,
+                    (size_t)M * N * sizeof(uint16_t), 0, nullptr, nullptr);
+  }
   const uint64_t t4 = now_ns();
 
   // GPU event timing for conv kernel
