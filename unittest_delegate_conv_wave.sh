@@ -52,6 +52,7 @@ if [ $RUN_ONLY -eq 0 ]; then
   $ADB_CMD push "${UNITTEST_BIN}" "${DEVICE_DIR}/"
   $ADB_CMD push "${KERNEL_CL}" "${DEVICE_DIR}/"
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl" "${DEVICE_DIR}/"
+  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl" "${DEVICE_DIR}/"
 
   # Push libc++_shared if available
   for so in libc++_shared.so; do

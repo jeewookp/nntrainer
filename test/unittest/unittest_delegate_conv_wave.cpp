@@ -789,6 +789,134 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
           (total_gflops / (total_us/1e6)) / 1000.0);
 }
 
+// ============================================================================
+// Benchmark: int4_gemm_adreno (existing kernel) with model shapes
+// ============================================================================
+TEST_F(DelegateConvWaveTest, ModelShapes_Int4Adreno) {
+  fprintf(stderr, "\n=== Int4 Adreno kernel — model shapes ===\n");
+
+  // Load int4_gemm_adreno kernel
+  const char *paths[] = {
+    "int4_gemm_adreno.cl",
+    "nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl",
+    "/data/local/tmp/nntr_android_test/int4_gemm_adreno.cl",
+  };
+  std::string ksrc;
+  for (auto p : paths) {
+    std::ifstream f(p);
+    if (f.good()) {
+      ksrc = std::string((std::istreambuf_iterator<char>(f)),
+                         std::istreambuf_iterator<char>());
+      break;
+    }
+  }
+  if (ksrc.empty()) { fprintf(stderr, "SKIP: int4_gemm_adreno.cl not found\n"); return; }
+
+  cl_int e;
+  const char *sp = ksrc.c_str(); size_t sl = ksrc.size();
+  cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+  ASSERT_EQ(e, 0);
+  e = cl.clBuildProgram(prog, 1, &dev, "-cl-fast-relaxed-math", nullptr, nullptr);
+  if (e) {
+    size_t sz = 0;
+    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+    std::vector<char> log(sz+1, 0);
+    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz, log.data(), nullptr);
+    fprintf(stderr, "BUILD: %s\n", log.data());
+    FAIL() << "int4 kernel build failed";
+  }
+  cl_kernel kern = cl.clCreateKernel(prog, "gpu_int4_gemm_adreno", &e);
+  ASSERT_EQ(e, 0);
+
+  double total_gflops = 0, total_us = 0;
+
+  for (const auto& s : kModelShapes) {
+    const int M = s.M, N = s.N, K = s.K;
+    const int M_4 = (M + 3) / 4;
+    const int alignK = K;
+    const double gflops = 2.0 * M * N * K / 1e9;
+
+    // Weights: __global ushort*, packed int4 [(K/4)*N]
+    size_t w_bytes = (size_t)(K/4) * N * sizeof(uint16_t);
+    cl_mem w_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &e);
+    { std::vector<uint16_t> d(w_bytes/2, 0x0088); // dummy packed
+      cl.clEnqueueWriteBuffer(queue, w_buf, 1, 0, w_bytes, d.data(), 0, 0, 0); }
+
+    // Scales: __global half* [N]
+    size_t sc_bytes = N * sizeof(uint16_t);
+    cl_mem sc_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, sc_bytes, nullptr, &e);
+    { std::vector<uint16_t> d(N, f32_to_f16(0.01f));
+      cl.clEnqueueWriteBuffer(queue, sc_buf, 1, 0, sc_bytes, d.data(), 0, 0, 0); }
+
+    // Output: __global half* [M*N]
+    size_t out_bytes = (size_t)M * N * sizeof(uint16_t);
+    cl_mem out_buf = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE, out_bytes, nullptr, &e);
+
+    // Input: image1d_buffer_t from buffer [M * alignK] fp16
+    size_t in_bytes = (size_t)M * alignK * sizeof(uint16_t);
+    cl_mem in_raw = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, in_bytes, nullptr, &e);
+    { std::vector<uint16_t> d(M * alignK, f32_to_f16(1.0f));
+      cl.clEnqueueWriteBuffer(queue, in_raw, 1, 0, in_bytes, d.data(), 0, 0, 0); }
+
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc id = {};
+    id.image_type = 0x10F0; // CL_MEM_OBJECT_IMAGE1D_BUFFER
+    id.image_width = (size_t)M * alignK / 4;
+    id.buffer = in_raw;
+    cl_mem in_img = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &id, nullptr, &e);
+    if (e) { fprintf(stderr, "  SKIP %dx%dx%d: image1d_buffer failed %d\n", M, N, K, e);
+      cl.clReleaseMemObject(in_raw); cl.clReleaseMemObject(w_buf);
+      cl.clReleaseMemObject(sc_buf); cl.clReleaseMemObject(out_buf);
+      continue; }
+
+    // Kernel args: (input_img, scales, output, weights, K, N, M, qg)
+    int size_k = K, size_n = N, size_m = M, qg = K;
+    cl.clSetKernelArg(kern, 0, sizeof(cl_mem), &in_img);
+    cl.clSetKernelArg(kern, 1, sizeof(cl_mem), &sc_buf);
+    cl.clSetKernelArg(kern, 2, sizeof(cl_mem), &out_buf);
+    cl.clSetKernelArg(kern, 3, sizeof(cl_mem), &w_buf);
+    cl.clSetKernelArg(kern, 4, sizeof(int), &size_k);
+    cl.clSetKernelArg(kern, 5, sizeof(int), &size_n);
+    cl.clSetKernelArg(kern, 6, sizeof(int), &size_m);
+    cl.clSetKernelArg(kern, 7, sizeof(int), &qg);
+
+    // Dispatch: global=(ceilDiv(M,8), N/4), local=(1, 128)
+    size_t global[3] = {(size_t)((M+7)/8), (size_t)(N/4), 1};
+    size_t local[3] = {1, 128, 1};
+
+    // Warmup
+    for (int i = 0; i < 3; ++i)
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+    cl.clFinish(queue);
+
+    // Bench
+    int iters = 5;
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iters; ++i)
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+    cl.clFinish(queue);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double us = std::chrono::duration<double, std::micro>(t1-t0).count() / iters;
+    double tflops = (gflops / (us / 1e6)) / 1000.0;
+
+    fprintf(stderr, "  M=%d N=%d K=%d: %.1f us = %.3f TFLOPS (×%d = %.1f ms)\n",
+            M, N, K, us, tflops, s.count, us * s.count / 1000.0);
+    total_gflops += gflops * s.count;
+    total_us += us * s.count;
+
+    cl.clReleaseMemObject(in_img); cl.clReleaseMemObject(in_raw);
+    cl.clReleaseMemObject(w_buf); cl.clReleaseMemObject(sc_buf);
+    cl.clReleaseMemObject(out_buf);
+  }
+
+  fprintf(stderr, "  TOTAL: %.1f GFLOP in %.1f ms = %.3f TFLOPS (kernel only)\n",
+          total_gflops, total_us/1000.0,
+          (total_gflops / (total_us/1e6)) / 1000.0);
+
+  cl.clReleaseKernel(kern);
+  cl.clReleaseProgram(prog);
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
