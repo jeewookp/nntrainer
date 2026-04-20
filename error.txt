@@ -1,96 +1,64 @@
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7262 ms, 60.1763 TPS
-generation: 32 tokens, 5957 ms, 5.37183 TPS
-total: 13224 ms
-peak memory: 2725588 KB
-==========================================================
-[e2e time]: 15443 ms 
-Max Resident Set Size: 2725588 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        10.1 ms ( 0.3%)
-  reformat_in:     3.2 ms ( 0.1%)
-  conv:            2.4 ms ( 0.1%)  1296.649 TFLOPS
-  readback:     3015.7 ms (99.5%)
-  total:        3031.5 ms            1.047 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=16.13 ms calls=1 avg=16.133 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.55 ms calls=1 avg=2.547 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1098.06 ms calls=36 avg=30.502 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=515.95 ms calls=73 avg=7.068 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.36 ms calls=72 avg=4.977 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1096.03 ms calls=36 avg=30.445 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4074.98 ms calls=252
-  in_stage    :    77.23 ms (  1.9%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3858.58 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   139.17 ms (  3.4%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7262 ms, 60.1763 TPS
-generation: 32 tokens, 5957 ms, 5.37183 TPS
-total: 13224 ms
-peak memory: 2725588 KB
-==========================================================
-[e2e time]: 15443 ms 
-Max Resident Set Size: 2725588 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        10.1 ms ( 0.3%)
-  reformat_in:     3.2 ms ( 0.1%)
-  conv:         
-
---- Perf summary ---
-prefill: 437 tokens, 7262 ms, 60.1763 TPS
-generation: 32 tokens, 5957 ms, 5.37183 TPS
-total: 13224 ms
-peak memory: 2725588 KB
-[e2e time]: 15443 ms 
-  total:        3031.5 ms            1.047 TFLOPS
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4074.98 ms calls=252
-  in_stage    :    77.23 ms (  1.9%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3858.58 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   139.17 ms (  3.4%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=16.13 ms calls=1 avg=16.133 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.55 ms calls=1 avg=2.547 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1098.06 ms calls=36 avg=30.502 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=515.95 ms calls=73 avg=7.068 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.36 ms calls=72 avg=4.977 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1096.03 ms calls=36 avg=30.445 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
+[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.cpp:65:25: warning: data argument not used by format string [-Wformat-extra-args]
+            error_code, OpenCLErrorCodeToString(error_code));
+                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
+  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
+                                                   ^~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2700:7: error: use of undeclared identifier 'conv_ev'
+  if (conv_ev) {
+      ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2702:29: error: use of undeclared identifier 'conv_ev'
+    clGetEventProfilingInfo(conv_ev, 0x1282, sizeof(ev_start), &ev_start, nullptr);
+                            ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2703:29: error: use of undeclared identifier 'conv_ev'
+    clGetEventProfilingInfo(conv_ev, 0x1283, sizeof(ev_end), &ev_end, nullptr);
+                            ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2706:20: error: use of undeclared identifier 'conv_ev'
+    clReleaseEvent(conv_ev);
+                   ^
+4 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
+[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile++      : nntrainer <= connection.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
+ninja: build stopped: subcommand failed.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
