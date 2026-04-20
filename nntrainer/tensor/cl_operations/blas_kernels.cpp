@@ -2530,6 +2530,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   static cl_mem s_dst_img = nullptr;
   static int s_dst_w = 0, s_dst_h = 0;
   static ClContext::SharedPtrClKernel s_dq_kern, s_conv_kern;
+  static ClContext::SharedPtrClKernel s_in_kern, s_out_kern;
 
   // Ensure fp16 weight buffer is large enough
   size_t w_halfs = (size_t)n_z * iters * 256;
@@ -2584,6 +2585,12 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (!s_conv_kern)
     s_conv_kern = blas_cc->registerClKernel(
       delegate_conv_wave_kernel, "main_function");
+  if (!s_in_kern)
+    s_in_kern = blas_cc->registerClKernel(
+      image_reformat_kernel, "svm_to_image2d");
+  if (!s_out_kern)
+    s_out_kern = blas_cc->registerClKernel(
+      image_reformat_kernel, "image2d_to_svm");
 
   // === Step 1: GPU dequant (SVM → fp16 buffer) ===
   const uint64_t t0 = now_ns();
@@ -2603,19 +2610,19 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
   const uint64_t t1 = now_ns();
 
-  // === Step 2: Input reformat [M][K] → image2d ===
+  // === Step 2: GPU input reformat: SVM [M][K] → image2d ===
   {
-    std::vector<uint16_t> ib((size_t)src_slices * M * 4);
-    for (int m = 0; m < (int)M; ++m)
-      for (int s = 0; s < src_slices; ++s)
-        for (int c = 0; c < 4; ++c) {
-          int k = s*4+c;
-          ib[((size_t)s*M+m)*4+c] = (k<(int)K) ? input[m*K+k] : 0;
-        }
-    size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
-    clEnqueueWriteImage(clq, s_src_img, CL_FALSE, o, r, 0, 0, ib.data(), 0,0,0);
+    int a = 0;
+    s_in_kern->SetKernelSVMArguments(a++, input);
+    s_in_kern->SetKernelArguments(a++, &s_src_img, sizeof(cl_mem));
+    int sm = (int)M, sk = (int)K;
+    s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+    s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+    const int ig[3] = {(int)((M+15)/16)*16, (int)((src_slices+15)/16)*16, 1};
+    const int il[3] = {16, 16, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
   }
-  // clFinish to ensure dequant + image write complete before conv
+  // Single clFinish: dequant + input reformat both complete
   clFinish(clq);
   const uint64_t t2 = now_ns();
 
@@ -2639,19 +2646,21 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
   }
 
-  // === Step 4: Output readback + reformat ===
+  // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
   {
-    std::vector<uint16_t> ob((size_t)dst_slices * M * 4);
-    size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
-    clEnqueueReadImage(clq, s_dst_img, CL_TRUE, o, r, 0, 0, ob.data(), 0,0,0);
-    for (int m = 0; m < (int)M; ++m)
-      for (int s = 0; s < dst_slices; ++s)
-        for (int c = 0; c < 4; ++c) {
-          int n = s*4+c;
-          if (n < (int)N)
-            output[m*N+n] = ob[((size_t)s*M+m)*4+c];
-        }
+    int a = 0;
+    s_out_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+    s_out_kern->SetKernelSVMArguments(a++, output);
+    int sm = (int)M, sn = (int)N;
+    s_out_kern->SetKernelArguments(a++, &sm, sizeof(int));
+    s_out_kern->SetKernelArguments(a++, &sn, sizeof(int));
+    const int og[3] = {(int)((M+15)/16)*16, (int)((dst_slices+15)/16)*16, 1};
+    const int ol[3] = {16, 16, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
   }
+  // Sync output to host (SVM coherence)
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, (size_t)M * N * sizeof(uint16_t), true);
   const uint64_t t3 = now_ns();
 
   t_dequant += (t1 - t0);
