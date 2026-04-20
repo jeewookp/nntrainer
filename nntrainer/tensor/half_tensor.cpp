@@ -27,6 +27,7 @@
 #include <CL/cl.h>
 #include "blas_kernels.h"
 #include <cl_context.h>
+#include <gpu_image_pool.h>
 #endif
 
 namespace nntrainer {
@@ -951,30 +952,34 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const bool use_delegate =
       !s_disable_delegate && (N % 32) == 0 && (K % 8) == 0;
 
-    // Staging both sides. Bisect results: zero-copy output (kernel
-    // writes directly to tensor_pool SVM) produced deterministic
-    // garbage whether or not the allocation was fine-grained —
-    // something in the SetKernelSVMArguments→tensor_pool write path
-    // is racing with downstream consumers. Staging through svm_out
-    // and then a CPU scalar copy sidesteps it. Blocking SVMMap on
-    // svm_out is still needed before the scalar read; on the
-    // fine-grained SVM allocation we now request, this SVMMap only
-    // waits for the actual GPU kernel (no extra cache-flush cost),
-    // so the per-gemm sync is much cheaper than it was on the
-    // coarse-grained default.
+    // Phase A: if an upstream image2d-aware layer (rmsnorm_image2d)
+    // registered an image2d for this tensor pointer in the
+    // GpuImagePool, gemm_delegate_fp16_cl will pick it up and skip
+    // svm_to_image2d entirely — provided we pass the TENSOR pointer,
+    // not the clbuffInstance staging buffer. Pool hit: no scalar
+    // staging needed for the input side either. Pool miss: fall back
+    // to the staging copy (which doubles as an Adreno SVM-coherence
+    // trick — the scalar read of in_u16 triggers the cache invalidate
+    // that makes subsequent GPU reads see coherent data).
+    const bool pool_has_input =
+      use_delegate && GpuImagePool::Global().get(in_u16) != nullptr;
+
     uint16_t *svm_in_T =
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
     const size_t in_total = (size_t)M * K;
     const size_t out_total = (size_t)M * N;
 
     const uint64_t t0 = now_ns();
-    for (size_t i = 0; i < in_total; ++i) {
-      svm_in[i] = in_u16[i];
+    if (!pool_has_input) {
+      for (size_t i = 0; i < in_total; ++i) {
+        svm_in[i] = in_u16[i];
+      }
     }
     const uint64_t t1 = now_ns();
     if (use_delegate) {
-      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
-                            M, N, K);
+      uint16_t *delegate_in = pool_has_input ? in_u16 : svm_in;
+      gemm_delegate_fp16_cl(delegate_in, svm_in_T, weight_u16, scale_u16,
+                            svm_out, M, N, K);
       auto *cl_ctx = static_cast<ClContext *>(
         Engine::Global().getRegisteredContext("gpu"));
       if (cl_ctx) {
