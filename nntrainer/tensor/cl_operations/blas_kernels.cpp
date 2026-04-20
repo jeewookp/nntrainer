@@ -2496,27 +2496,14 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (err) throw std::runtime_error("delegate: fp16 weight buf failed");
 
   {
-    size_t int4_bytes = (size_t)(K / 4) * N * sizeof(uint16_t);
-    cl_mem int4_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
-                                      int4_bytes, nullptr, &err);
-    if (err) throw std::runtime_error("delegate: int4 buf failed");
-    clEnqueueWriteBuffer(clq, int4_buf, CL_TRUE, 0, int4_bytes, weights,
-                         0, nullptr, nullptr);
-
-    size_t sc_bytes = N * sizeof(uint16_t);
-    cl_mem sc_buf = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
-                                    sc_bytes, nullptr, &err);
-    if (err) throw std::runtime_error("delegate: scales buf failed");
-    clEnqueueWriteBuffer(clq, sc_buf, CL_TRUE, 0, sc_bytes, scales,
-                         0, nullptr, nullptr);
-
+    // Use SVM pointers directly — no host→device copy needed
     ClContext::SharedPtrClKernel dq_kern = blas_cc->registerClKernel(
       dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
     if (!dq_kern) throw std::runtime_error("delegate: dequant kernel failed");
 
     int dq_arg = 0;
-    dq_kern->SetKernelArguments(dq_arg++, &int4_buf, sizeof(cl_mem));
-    dq_kern->SetKernelArguments(dq_arg++, &sc_buf, sizeof(cl_mem));
+    dq_kern->SetKernelSVMArguments(dq_arg++, weights);
+    dq_kern->SetKernelSVMArguments(dq_arg++, scales);
     dq_kern->SetKernelArguments(dq_arg++, &w_cl, sizeof(cl_mem));
     int size_n = (int)N, size_k = (int)K;
     dq_kern->SetKernelArguments(dq_arg++, &size_n, sizeof(int));
@@ -2526,10 +2513,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int dq_global[3] = {((total_items + 255) / 256) * 256, 1, 1};
     const int dq_local[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(dq_kern, dq_global, dq_local);
-    clFinish(clq);
-
-    clReleaseMemObject(int4_buf);
-    clReleaseMemObject(sc_buf);
+    // No clFinish — let dequant pipeline with subsequent conv dispatch
   }
 
   // --- 2. Static resources ---
@@ -2585,7 +2569,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (!kern) throw std::runtime_error("delegate: conv kernel failed");
 
   struct { int x, y, z, w; } s0 = {1, dst_slices, (int)M, 32};
-  struct { int x, y, z, w; } s1 = {iters, 0, 0, src_slices};
+  struct { int x, y, z, w; } s1 = {src_slices, 0, 0, src_slices};
   struct { int x, y, z, w; } s2 = {1, 1, 0, 0};
 
   int arg = 0;
