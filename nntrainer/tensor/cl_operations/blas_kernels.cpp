@@ -1185,10 +1185,11 @@ void gemm_int4_adreno_cl(uint16_t *input, uint16_t *input_transposed,
 
   const uint64_t t_svm_start = now_ns_phase6();
 
-  // sync output back to host
-  blas_cc->command_queue_inst_.enqueueSVMMap(
-    output, static_cast<size_t>(M) * static_cast<size_t>(N) * sizeof(uint16_t),
-    true);
+  // Lightweight sync: clFinish drains the command queue but doesn't
+  // trigger SVM coherence overhead. The caller reads svm_out via a
+  // host-side loop which is safe because clFinish guarantees the GPU
+  // kernels have completed and SVM writes are visible to the host.
+  clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
 
   const uint64_t t_svm_end = now_ns_phase6();
   g_int4_gemm_profile.ns_svm_map_sync += t_svm_end - t_svm_start;
