@@ -52,6 +52,11 @@
 #include <profiler.h>
 #include <recurrent_realizer.h>
 #include <remap_realizer.h>
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
 #include <slice_realizer.h>
 #include <util_func.h>
 
@@ -1205,6 +1210,22 @@ std::vector<float *> NeuralNetwork::incremental_inference(
     }
     const size_t buf_size = batch_size * out_t.getDim().getFeatureLen();
     last_out_buf_data = new float[buf_size];
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // The scopy/memcpy below reads the tensor's SVM memory host-side.
+    // Any upstream OpenCL kernel (notably the lm_head gemm_delegate
+    // path, which only enqueues a non-blocking SVMMap) may still have
+    // in-flight writes. Issue a blocking SVMMap(CL_MAP_READ) here so
+    // the host view of the output tensor is coherent before the copy.
+    if (out_t.getMemoryData() && out_t.getMemoryData()->isSVM()) {
+      auto *cl_ctx = static_cast<ClContext *>(
+        Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          out_t.getData<char>(), out_t.bytes(), /*read_only=*/true);
+      }
+    }
+#endif
 
     if (out->getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
