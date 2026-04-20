@@ -12,31 +12,31 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7747 ms, 56.4089 TPS
-generation: 32 tokens, 5959 ms, 5.37003 TPS
-total: 13711 ms
-peak memory: 2724772 KB
+prefill: 437 tokens, 7262 ms, 60.1763 TPS
+generation: 32 tokens, 5957 ms, 5.37183 TPS
+total: 13224 ms
+peak memory: 2725588 KB
 ==========================================================
-[e2e time]: 16051 ms 
-Max Resident Set Size: 2724772 KB
+[e2e time]: 15443 ms 
+Max Resident Set Size: 2725588 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:         8.4 ms ( 0.3%)
-  reformat_in:   811.5 ms (25.5%)
-  conv:         2136.1 ms (67.1%)  1.486 TFLOPS
-  readback:      225.5 ms ( 7.1%)
-  total:        3181.5 ms            0.998 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.81 ms calls=1 avg=18.815 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.98 ms calls=1 avg=2.979 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1148.82 ms calls=36 avg=31.912 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=661.59 ms calls=73 avg=9.063 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=359.33 ms calls=72 avg=4.991 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1144.20 ms calls=36 avg=31.783 ms
+  dequant:        10.1 ms ( 0.3%)
+  reformat_in:     3.2 ms ( 0.1%)
+  conv:            2.4 ms ( 0.1%)  1296.649 TFLOPS
+  readback:     3015.7 ms (99.5%)
+  total:        3031.5 ms            1.047 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=16.13 ms calls=1 avg=16.133 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.55 ms calls=1 avg=2.547 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1098.06 ms calls=36 avg=30.502 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=515.95 ms calls=73 avg=7.068 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.36 ms calls=72 avg=4.977 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1096.03 ms calls=36 avg=30.445 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4306.26 ms calls=252
-  in_stage    :    85.51 ms (  2.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4068.18 ms ( 94.5%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   152.57 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4074.98 ms calls=252
+  in_stage    :    77.23 ms (  1.9%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3858.58 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   139.17 ms (  3.4%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -52,41 +52,41 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7747 ms, 56.4089 TPS
-generation: 32 tokens, 5959 ms, 5.37003 TPS
-total: 13711 ms
-peak memory: 2724772 KB
+prefill: 437 tokens, 7262 ms, 60.1763 TPS
+generation: 32 tokens, 5957 ms, 5.37183 TPS
+total: 13224 ms
+peak memory: 2725588 KB
 ==========================================================
-[e2e time]: 16051 ms 
-Max Resident Set Size: 2724772 KB
+[e2e time]: 15443 ms 
+Max Resident Set Size: 2725588 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:         8.4 ms ( 0.3%)
-  reformat_in:   811.5 ms (25.5%)
+  dequant:        10.1 ms ( 0.3%)
+  reformat_in:     3.2 ms ( 0.1%)
   conv:         
 
 --- Perf summary ---
-prefill: 437 tokens, 7747 ms, 56.4089 TPS
-generation: 32 tokens, 5959 ms, 5.37003 TPS
-total: 13711 ms
-peak memory: 2724772 KB
-[e2e time]: 16051 ms 
-  total:        3181.5 ms            0.998 TFLOPS
+prefill: 437 tokens, 7262 ms, 60.1763 TPS
+generation: 32 tokens, 5957 ms, 5.37183 TPS
+total: 13224 ms
+peak memory: 2725588 KB
+[e2e time]: 15443 ms 
+  total:        3031.5 ms            1.047 TFLOPS
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4306.26 ms calls=252
-  in_stage    :    85.51 ms (  2.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4068.18 ms ( 94.5%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   152.57 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4074.98 ms calls=252
+  in_stage    :    77.23 ms (  1.9%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3858.58 ms ( 94.7%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   139.17 ms (  3.4%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.81 ms calls=1 avg=18.815 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.98 ms calls=1 avg=2.979 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1148.82 ms calls=36 avg=31.912 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=661.59 ms calls=73 avg=9.063 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=359.33 ms calls=72 avg=4.991 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1144.20 ms calls=36 avg=31.783 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=16.13 ms calls=1 avg=16.133 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.55 ms calls=1 avg=2.547 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1098.06 ms calls=36 avg=30.502 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=515.95 ms calls=73 avg=7.068 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.36 ms calls=72 avg=4.977 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1096.03 ms calls=36 avg=30.445 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
