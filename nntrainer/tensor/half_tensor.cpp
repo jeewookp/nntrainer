@@ -951,30 +951,21 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const bool use_delegate =
       !s_disable_delegate && (N % 32) == 0 && (K % 8) == 0;
 
-    // Hybrid path: input staged via scalar copy, output zero-copy.
-    //
-    // - Input copy `svm_in[i] = in_u16[i]` works fine without any
-    //   explicit SVMMap: by the time this runs, the upstream GPU
-    //   writes to in_u16 are committed (the CPU-heavy layers in the
-    //   chain — MHA, ReshapedRMSNorm — already took tens of ms, and
-    //   Adreno's implicit CPU-SVM access pulls the latest data when
-    //   we touch it). Reading in_u16 first also primes the cache.
-    // - Output: pass out_u16 (the tensor's own SVM pointer) directly
-    //   as the delegate's output. The svm_out scalar copy that was
-    //   there before forced a host-read of an SVM region whose GPU
-    //   write might still be in flight and produced deterministic
-    //   "! noexcept違い" garbage. Downstream consumers are
-    //   queue-ordered (RMSNorm's clEnqueueWriteBuffer, next gemm's
-    //   SVM kernel arg) or already issue a blocking SVMMap of their
-    //   own (MHA / ReshapedRMSNorm entry fences, neuralnet.cpp
-    //   epilogue) so coherence is covered elsewhere without a
-    //   per-gemm blocking sync here.
-    // The int4 fallback still needs the old two-sided staging because
-    // its kernel wraps svm_out as CL_MEM_USE_HOST_PTR on a scratch
-    // that requires its own SVMMap.
+    // Staging both sides. Bisect results: zero-copy output (kernel
+    // writes directly to tensor_pool SVM) produced deterministic
+    // garbage whether or not the allocation was fine-grained —
+    // something in the SetKernelSVMArguments→tensor_pool write path
+    // is racing with downstream consumers. Staging through svm_out
+    // and then a CPU scalar copy sidesteps it. Blocking SVMMap on
+    // svm_out is still needed before the scalar read; on the
+    // fine-grained SVM allocation we now request, this SVMMap only
+    // waits for the actual GPU kernel (no extra cache-flush cost),
+    // so the per-gemm sync is much cheaper than it was on the
+    // coarse-grained default.
     uint16_t *svm_in_T =
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
     const size_t in_total = (size_t)M * K;
+    const size_t out_total = (size_t)M * N;
 
     const uint64_t t0 = now_ns();
     for (size_t i = 0; i < in_total; ++i) {
@@ -982,27 +973,28 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     }
     const uint64_t t1 = now_ns();
     if (use_delegate) {
-      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16,
-                            /*output=*/out_u16, M, N, K);
-      const uint64_t t2 = now_ns();
-      g_half_dotq_profile.ns_in_stage += t1 - t0;
-      g_half_dotq_profile.ns_gpu_call += t2 - t1;
-      g_half_dotq_profile.calls++;
+      gemm_delegate_fp16_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out,
+                            M, N, K);
+      auto *cl_ctx = static_cast<ClContext *>(
+        Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          svm_out, out_total * sizeof(uint16_t), /*read_only=*/true);
+      }
     } else {
-      const size_t out_total = (size_t)M * N;
       gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                           N, K);
-      const uint64_t t2 = now_ns();
-      for (size_t i = 0; i < out_total; ++i) {
-        out_u16[i] = svm_out[i];
-      }
-      const uint64_t t3 = now_ns();
-
-      g_half_dotq_profile.ns_in_stage += t1 - t0;
-      g_half_dotq_profile.ns_gpu_call += t2 - t1;
-      g_half_dotq_profile.ns_out_stage += t3 - t2;
-      g_half_dotq_profile.calls++;
     }
+    const uint64_t t2 = now_ns();
+    for (size_t i = 0; i < out_total; ++i) {
+      out_u16[i] = svm_out[i];
+    }
+    const uint64_t t3 = now_ns();
+
+    g_half_dotq_profile.ns_in_stage += t1 - t0;
+    g_half_dotq_profile.ns_gpu_call += t2 - t1;
+    g_half_dotq_profile.ns_out_stage += t3 - t2;
+    g_half_dotq_profile.calls++;
   }
 #else
   throw std::invalid_argument(
