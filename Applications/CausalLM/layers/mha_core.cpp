@@ -285,24 +285,28 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   // MHACore reads q/k/v via getData<>() (CPU NEON loops for RoPE,
-  // softmax, KV-compute). Upstream q_proj/k_proj/v_proj enqueued only
-  // a non-blocking SVMMap, so their image2d_to_svm writes may still be
-  // in flight. Drain the queue now so the CPU reads below are
-  // coherent. One blocking map per MHA call replaces 3 per-gemm maps.
-  {
-    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
-      nntrainer::Engine::Global().getRegisteredContext("gpu"));
-    if (cl_ctx) {
-      auto map_if_svm = [&](nntrainer::Tensor &t) {
-        if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
-          cl_ctx->command_queue_inst_.enqueueSVMMap(
-            t.getData<char>(), t.bytes(), /*read_only=*/true);
-        }
-      };
-      map_if_svm(query);
-      map_if_svm(key);
-      map_if_svm(value);
-    }
+  // softmax, KV-compute) and writes `output` via CPU too. Downstream
+  // o_proj is a GPU gemm that consumes this output as an SVM kernel
+  // arg. Upstream q_proj/k_proj/v_proj enqueued only a non-blocking
+  // SVMMap, so their image2d_to_svm writes may still be in flight.
+  //
+  // Handshake: map(READ) q/k/v and map(WRITE) output with blocking=true
+  // here, drains the queue AND announces the CPU access window. The
+  // matching SVMUnmap(output) at the bottom of incremental_forwarding
+  // commits the CPU writes back so the o_proj kernel sees them.
+  auto *mha_sync_cl_ctx = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  if (mha_sync_cl_ctx) {
+    auto map_if_svm = [&](nntrainer::Tensor &t, bool ro) {
+      if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
+        mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
+          t.getData<char>(), t.bytes(), /*read_only=*/ro);
+      }
+    };
+    map_if_svm(query, /*read_only=*/true);
+    map_if_svm(key, /*read_only=*/true);
+    map_if_svm(value, /*read_only=*/true);
+    map_if_svm(output, /*read_only=*/false);  // CPU will write here
   }
 #endif
 
@@ -409,6 +413,19 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 
   // increase cache size
   cache_index += step_size;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Matching unmap for the map(WRITE) on `output` at the top — commits
+  // the CPU writes in this layer back to SVM so the o_proj gemm that
+  // follows (reading `output` as an SVM kernel arg) sees the right
+  // data. Queue command; in-order queue guarantees the o_proj kernel
+  // runs after this unmap.
+  if (mha_sync_cl_ctx && output.getMemoryData() &&
+      output.getMemoryData()->isSVM()) {
+    mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
+      output.getData<char>());
+  }
+#endif
 
   if (profile_this_call) {
     g_mha_core_profile.ns += mha_now_ns() - t_layer_start;

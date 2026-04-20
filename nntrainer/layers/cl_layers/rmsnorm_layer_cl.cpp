@@ -133,47 +133,32 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
     _FP16 *rdata = result.getData<_FP16>();
     const _FP16 *gdata = gamma.getData<_FP16>();
 
-    // SVM fast path — same pattern as SwiGLULayerCl::swiglu_cl_fp16's SVM
-    // branch. When the input, output, and weight tensors all live in the
-    // tensor_pool's SVM region, we can bind them directly as SVM kernel
-    // arguments instead of doing a host<->cl_mem WriteDataRegion /
-    // ReadDataRegion roundtrip. This keeps the layer entirely on the
-    // in-order GPU queue, so an upstream gemm's image2d_to_svm write is
-    // naturally serialised before this kernel reads `data` — no
-    // per-layer blocking SVMMap needed.
-    const bool use_svm =
-      input.getMemoryData() && input.getMemoryData()->isSVM() &&
-      result.getMemoryData() && result.getMemoryData()->isSVM() &&
-      gamma.getMemoryData() && gamma.getMemoryData()->isSVM();
+    // NOTE: the SVM fast-path tried in a previous commit (SetKernelSVMArguments
+    // on input/output/gamma) produced garbage output even though the layers
+    // around it were correctly synced; rolled back to the original
+    // WriteDataRegion -> cl_mem kernel dispatch -> ReadDataRegion pattern.
+    // This path is queue-ordered (clEnqueueWriteBuffer is an in-order
+    // queue command) so it composes correctly with gemm_delegate's
+    // non-blocking SVMMap: the write buffer command runs after the map
+    // and the kernel after the write.
+    ret = clbuffInstance.getInBufferA()->WriteDataRegion(
+      global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), data);
+    if (!ret) break;
 
-    if (use_svm) {
-      ret = kernel_rmsnorm_ptr->SetKernelSVMArguments(0, (void *)data);
-      if (!ret) break;
-      ret = kernel_rmsnorm_ptr->SetKernelSVMArguments(1, rdata);
-      if (!ret) break;
-      ret = kernel_rmsnorm_ptr->SetKernelSVMArguments(2, (void *)gdata);
-      if (!ret) break;
-    } else {
-      ret = clbuffInstance.getInBufferA()->WriteDataRegion(
-        global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), data);
-      if (!ret) break;
+    ret = clbuffInstance.getInBufferB()->WriteDataRegion(
+      global_cl_context->command_queue_inst_, input.width() * sizeof(cl_half),
+      gdata);
+    if (!ret) break;
 
-      ret = clbuffInstance.getInBufferB()->WriteDataRegion(
-        global_cl_context->command_queue_inst_, input.width() * sizeof(cl_half),
-        gdata);
-      if (!ret) break;
-
-      ret = kernel_rmsnorm_ptr->SetKernelArguments(
-        0, clbuffInstance.getInBufferA()->GetBuffer(), sizeof(cl_mem));
-      if (!ret) break;
-      ret = kernel_rmsnorm_ptr->SetKernelArguments(
-        1, clbuffInstance.getOutBufferA()->GetBuffer(), sizeof(cl_mem));
-      if (!ret) break;
-      ret = kernel_rmsnorm_ptr->SetKernelArguments(
-        2, clbuffInstance.getInBufferB()->GetBuffer(), sizeof(cl_mem));
-      if (!ret) break;
-    }
-
+    ret = kernel_rmsnorm_ptr->SetKernelArguments(
+      0, clbuffInstance.getInBufferA()->GetBuffer(), sizeof(cl_mem));
+    if (!ret) break;
+    ret = kernel_rmsnorm_ptr->SetKernelArguments(
+      1, clbuffInstance.getOutBufferA()->GetBuffer(), sizeof(cl_mem));
+    if (!ret) break;
+    ret = kernel_rmsnorm_ptr->SetKernelArguments(
+      2, clbuffInstance.getInBufferB()->GetBuffer(), sizeof(cl_mem));
+    if (!ret) break;
     ret = kernel_rmsnorm_ptr->SetKernelArguments(3, &epsilon, sizeof(cl_half));
     if (!ret) break;
     ret = kernel_rmsnorm_ptr->SetKernelArguments(4, &b, sizeof(int));
@@ -193,17 +178,9 @@ void RMSNormLayerCl::rmsnormProcess_fp16(Tensor const &input, Tensor &result,
       kernel_rmsnorm_ptr, work_groups_count, work_group_size);
     if (!ret) break;
 
-    if (!use_svm) {
-      ret = clbuffInstance.getOutBufferA()->ReadDataRegion(
-        global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), rdata);
-      if (!ret) break;
-    }
-    // SVM path: no readback. Data lives in SVM; next consumer on this
-    // in-order queue (another gemm, another layer) will see it. Host
-    // readers (e.g. the sampler at lm_head) must issue their own
-    // blocking SVMMap before accessing SVM memory directly — the
-    // existing gemm_delegate_fp16_cl epilogue's non-blocking SVMMap
-    // covers queue-side ordering, not host cache coherence.
+    ret = clbuffInstance.getOutBufferA()->ReadDataRegion(
+      global_cl_context->command_queue_inst_, dim1 * sizeof(cl_half), rdata);
+    if (!ret) break;
   } while (false);
 }
 #endif
