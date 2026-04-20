@@ -3052,6 +3052,58 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
   t_weights_total += count;
 }
 
+// ============================================================================
+// Phase A helper — svm_to_image2d + GpuImagePool publish.
+// ============================================================================
+void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
+  if (!svm_ptr || M == 0 || K == 0 || (K % 4) != 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int slices = (int)K / 4;
+  cl_int err = 0;
+
+  struct Cached { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, Cached> s_cache;
+  const uintptr_t key = reinterpret_cast<uintptr_t>(svm_ptr);
+  cl_mem img = nullptr;
+  auto it = s_cache.find(key);
+  if (it != s_cache.end() && it->second.M == (int)M &&
+      it->second.slices == slices) {
+    img = it->second.img;
+  } else {
+    if (it != s_cache.end() && it->second.img)
+      clReleaseMemObject(it->second.img);
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc d = {};
+    d.image_type = CL_MEM_OBJECT_IMAGE2D;
+    d.image_width = M; d.image_height = slices;
+    img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+    s_cache[key] = {img, (int)M, slices};
+  }
+  if (!img) return;
+
+  static ClContext::SharedPtrClKernel s_in_kern;
+  if (!s_in_kern) {
+    s_in_kern = blas_cc->registerClKernel(image_reformat_kernel,
+                                          "svm_to_image2d");
+  }
+  int a = 0;
+  s_in_kern->SetKernelSVMArguments(a++, svm_ptr);
+  s_in_kern->SetKernelArguments(a++, &img, sizeof(cl_mem));
+  int sm = (int)M, sk = (int)K;
+  s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+  s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+  const int ig[3] = {((int)M + 15) / 16 * 16,
+                      (slices + 15) / 16 * 16, 1};
+  const int il[3] = {16, 16, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+
+  GpuImagePool::Global().set(svm_ptr, img, (int)M, slices);
+}
+
 } // namespace nntrainer
 #if 0 // OLD — duplicate removed
   if (((N % 32) != 0) || ((K % 8) != 0))

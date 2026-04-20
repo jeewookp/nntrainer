@@ -17,8 +17,16 @@
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <unordered_map>
 
 #include "rms_norm.h"
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
+#include <cl_context.h>
+#include <engine.h>
+#include <gpu_image_pool.h>
+#endif
 
 namespace causallm {
 
@@ -162,6 +170,29 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
               << "output:" << out_step << "gamma:" << gamma << std::endl;
 #endif
   }
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Phase A publish: RMSNorm's output has just been written to SVM by the
+  // CPU path above. If we also convert it to an image2d and register the
+  // image2d in GpuImagePool, the immediate next gemm_delegate call
+  // (q_proj / k_proj / v_proj for rmsnorm_1, gate_proj / up_proj for
+  // rmsnorm_2) picks it up and skips its own svm_to_image2d reformat.
+  // Adds one image_reformat::svm_to_image2d dispatch per RMSNorm
+  // (73/prefill), but saves ~5 per-decoder-layer reformats (180/prefill),
+  // net positive.
+  //
+  // The current RMSNormLayer output shape is (B, 1, H, W) with
+  // hidden_dim = W. Pool image2d layout: width = B*H (total positions),
+  // height = W/4 (RGBA half slices). This matches gemm_delegate's
+  // src image expectation.
+  if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      (out.width() % 4) == 0) {
+    const int rms_W = (int)out.width();
+    const int rms_M = (int)(out.batch() * out.channel() * out.height());
+    nntrainer::svm_to_image2d_publish(out.getData<char>(), rms_M, rms_W);
+  }
+#endif
 
   if (profile_this_call) {
     g_rms_norm_profile.ns += now_ns() - t_layer_start;

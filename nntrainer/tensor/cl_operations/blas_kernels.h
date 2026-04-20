@@ -217,6 +217,19 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
                                    unsigned int M, unsigned int K);
 
 /**
+ * @brief Phase A helper — copy a fp16 SVM [M][K] buffer into an image2d
+ * (width=M, height=K/4, CL_RGBA|CL_HALF_FLOAT) and register that image2d
+ * in GpuImagePool keyed by `svm_ptr`, so a downstream image2d-aware
+ * consumer (e.g. gemm_delegate_fp16_cl) can read it directly and skip
+ * its own svm_to_image2d reformat. The image2d allocation is cached
+ * per svm_ptr across calls; shape changes trigger a re-alloc.
+ *
+ * Enqueues one svm_to_image2d kernel dispatch on the global OpenCL
+ * command queue; caller does not need to sync.
+ */
+void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K);
+
+/**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
  *        read through image texture).
  *
