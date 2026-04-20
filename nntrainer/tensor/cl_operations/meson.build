@@ -8,6 +8,7 @@ cl_op_sources = [
 
 cl_op_headers = [
   'blas_kernel_interface.h',
+  'blas_kernels.h',
   'attention_kernel_interface.h',
   'clblast_interface.h'
 ]
