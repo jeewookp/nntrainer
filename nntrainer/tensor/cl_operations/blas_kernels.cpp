@@ -2491,23 +2491,28 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   static std::atomic<uint64_t> t_dequant{0}, t_in_reformat{0}, t_conv{0},
     t_out_reformat{0}, t_calls{0};
+  static std::atomic<uint64_t> t_total_gflops_x1000{0};
   static struct DelegateProfileDump {
     ~DelegateProfileDump() {
       uint64_t c = t_calls.load();
       if (c == 0) return;
+      double total_ms = (t_dequant+t_in_reformat+t_conv+t_out_reformat)/1e6;
+      double gflops = t_total_gflops_x1000.load() / 1000.0;
       fprintf(stderr,
-        "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu\n"
-        "  dequant:       %7.1f ms (%5.1f%%)\n"
+        "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu  total_gflops=%.1f\n"
+        "  dequant:       %7.1f ms (%5.1f%%)  %.3f TFLOPS\n"
         "  in_reformat:   %7.1f ms (%5.1f%%)\n"
-        "  conv:          %7.1f ms (%5.1f%%)\n"
+        "  conv:          %7.1f ms (%5.1f%%)  %.3f TFLOPS\n"
         "  out_reformat:  %7.1f ms (%5.1f%%)\n"
-        "  total:         %7.1f ms\n",
-        (unsigned long)c,
+        "  total:         %7.1f ms           %.3f TFLOPS (effective)\n",
+        (unsigned long)c, gflops,
         t_dequant/1e6, t_dequant*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+          gflops / (t_dequant/1e9) / 1000.0,
         t_in_reformat/1e6, t_in_reformat*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
         t_conv/1e6, t_conv*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+          gflops / (t_conv/1e9) / 1000.0,
         t_out_reformat/1e6, t_out_reformat*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
-        (t_dequant+t_in_reformat+t_conv+t_out_reformat)/1e6);
+        total_ms, gflops / (total_ms/1e3) / 1000.0);
     }
   } s_delegate_profile_dump;
 
@@ -2661,6 +2666,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   t_conv += (t3 - t2);
   t_out_reformat += (t4 - t3);
   t_calls++;
+  t_total_gflops_x1000 += (uint64_t)(2.0 * M * N * K / 1e6);  // GFLOPS * 1000
 
   clReleaseMemObject(w_cl);
   clReleaseMemObject(dst_img);
