@@ -2489,6 +2489,36 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   const int iters = src_slices / 2;
   cl_int err;
 
+  static std::atomic<uint64_t> t_dequant{0}, t_in_reformat{0}, t_conv{0},
+    t_out_reformat{0}, t_calls{0};
+  static struct DelegateProfileDump {
+    ~DelegateProfileDump() {
+      uint64_t c = t_calls.load();
+      if (c == 0) return;
+      fprintf(stderr,
+        "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu\n"
+        "  dequant:       %7.1f ms (%5.1f%%)\n"
+        "  in_reformat:   %7.1f ms (%5.1f%%)\n"
+        "  conv:          %7.1f ms (%5.1f%%)\n"
+        "  out_reformat:  %7.1f ms (%5.1f%%)\n"
+        "  total:         %7.1f ms\n",
+        (unsigned long)c,
+        t_dequant/1e6, t_dequant*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+        t_in_reformat/1e6, t_in_reformat*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+        t_conv/1e6, t_conv*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+        t_out_reformat/1e6, t_out_reformat*100.0/(t_dequant+t_in_reformat+t_conv+t_out_reformat),
+        (t_dequant+t_in_reformat+t_conv+t_out_reformat)/1e6);
+    }
+  } s_delegate_profile_dump;
+
+  auto now_ns = []() -> uint64_t {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  };
+
+  const uint64_t t0 = now_ns();
+
   // --- 1. Weight dequant on GPU (per-call, no cache) ---
   size_t out_halfs = (size_t)n_z * iters * 256;
   size_t out_bytes = out_halfs * sizeof(uint16_t);
@@ -2513,8 +2543,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const int dq_global[3] = {((total_items + 255) / 256) * 256, 1, 1};
     const int dq_local[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(dq_kern, dq_global, dq_local);
-    // No clFinish — let dequant pipeline with subsequent conv dispatch
+    clFinish(clq);  // need sync before reading w_cl in conv
   }
+  const uint64_t t1 = now_ns();
 
   // --- 2. Static resources ---
   static cl_mem s_xmem = nullptr;
@@ -2577,6 +2608,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                                   nullptr, &err);
   if (err) throw std::runtime_error("delegate: dst image failed");
 
+  const uint64_t t2 = now_ns();
+
   // --- 5. Dispatch delegate conv kernel ---
   ClContext::SharedPtrClKernel kern = blas_cc->registerClKernel(
     delegate_conv_wave_kernel, "main_function");
@@ -2601,6 +2634,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   const int local[3] = {128, 1, 4};
 
   blas_cc->command_queue_inst_.DispatchCommand(kern, global, local);
+  clFinish(clq);
+  const uint64_t t3 = now_ns();
 
   // --- 6. Read output and reformat from image [slice][M][4] to [M][N] ---
   {
@@ -2618,6 +2653,14 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       }
     }
   }
+
+  const uint64_t t4 = now_ns();
+
+  t_dequant += (t1 - t0);
+  t_in_reformat += (t2 - t1);
+  t_conv += (t3 - t2);
+  t_out_reformat += (t4 - t3);
+  t_calls++;
 
   clReleaseMemObject(w_cl);
   clReleaseMemObject(dst_img);
