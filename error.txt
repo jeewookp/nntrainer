@@ -1,114 +1,73 @@
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
-[nntr_delegate_bench] Engine::Global() done
-[nntr_delegate_bench] factory.registerModel done
-[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=4] M=437 N=4096 K=2560: 5679.8 us = 1.614 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=1024 K=2560: 1711.6 us = 1.339 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=2560 K=4096: 5795.5 us = 1.581 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=9728 K=2560: 13140.2 us = 1.656 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=2560 K=9728: 13586.3 us = 1.602 TFLOPS
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
-
-==========================================
- [BISECT 3x] stage 3 with varying NNTR_INIT_LEVEL
-==========================================
 
 --- stage=3 NNTR_INIT_LEVEL=0 ---
 [nntr_delegate_bench] STAGE=3
 [nntr_delegate_bench] Engine::Global() done
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3114.8 us = 2.942 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 861.9 us = 2.658 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3233.3 us = 2.834 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7279.0 us = 2.990 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7483.1 us = 2.909 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3202.6 us = 2.862 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 868.4 us = 2.638 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3150.1 us = 2.909 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7290.9 us = 2.985 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7505.0 us = 2.900 TFLOPS
 
 --- stage=3 NNTR_INIT_LEVEL=1 ---
 [nntr_delegate_bench] STAGE=3
 [nntr_delegate_bench] Engine::Global() done
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5659.3 us = 1.619 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1707.6 us = 1.342 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5718.2 us = 1.603 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13059.5 us = 1.667 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13577.5 us = 1.603 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5614.9 us = 1.632 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1663.9 us = 1.377 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5798.9 us = 1.580 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13144.6 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13577.9 us = 1.603 TFLOPS
 
 [BISECT blas-kernel-count]
 
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=0 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3101.2 us = 2.955 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 871.3 us = 2.630 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3228.7 us = 2.838 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7280.0 us = 2.990 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7488.6 us = 2.907 TFLOPS
-
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=1 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3184.4 us = 2.878 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 961.7 us = 2.382 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3234.7 us = 2.833 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7211.1 us = 3.018 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7483.6 us = 2.908 TFLOPS
-
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=2 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3104.4 us = 2.952 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 966.9 us = 2.369 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3230.0 us = 2.837 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7274.8 us = 2.992 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7485.8 us = 2.908 TFLOPS
-
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=5 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3187.5 us = 2.875 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 867.3 us = 2.642 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3233.0 us = 2.835 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7282.5 us = 2.989 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7490.0 us = 2.906 TFLOPS
-
 --- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=10 ---
 [nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3184.1 us = 2.878 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 867.9 us = 2.640 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3236.1 us = 2.832 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7279.2 us = 2.990 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7483.2 us = 2.909 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3108.2 us = 2.948 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 873.8 us = 2.622 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3158.8 us = 2.901 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7296.3 us = 2.983 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7501.1 us = 2.902 TFLOPS
+
+--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=11 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5608.7 us = 1.634 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1583.1 us = 1.447 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5725.3 us = 1.601 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13144.2 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 14479.5 us = 1.503 TFLOPS
+
+--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=12 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 6179.3 us = 1.483 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1723.9 us = 1.329 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 6223.8 us = 1.473 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 14373.9 us = 1.514 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 16655.5 us = 1.307 TFLOPS
+
+--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=13 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 6934.9 us = 1.322 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 2024.3 us = 1.132 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 7132.6 us = 1.285 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 16215.0 us = 1.342 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 16676.7 us = 1.305 TFLOPS
+
+--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=14 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 6926.5 us = 1.323 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 2025.3 us = 1.131 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 7060.9 us = 1.298 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 16137.8 us = 1.349 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 16756.9 us = 1.299 TFLOPS
 
 --- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=15 ---
 [nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5693.9 us = 1.610 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1582.7 us = 1.448 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5797.4 us = 1.581 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13146.0 us = 1.656 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13516.4 us = 1.610 TFLOPS
-
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=20 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5701.2 us = 1.607 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1661.3 us = 1.379 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5854.9 us = 1.565 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13142.1 us = 1.656 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13589.4 us = 1.602 TFLOPS
-
---- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=27 ---
-[nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 6192.6 us = 1.480 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1796.6 us = 1.275 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 6421.2 us = 1.427 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 14738.1 us = 1.477 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 14870.7 us = 1.464 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 6918.7 us = 1.325 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 2025.7 us = 1.131 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 7119.1 us = 1.287 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 16211.6 us = 1.343 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 16774.9 us = 1.298 TFLOPS
 
 ==========================================
  Run summary
@@ -117,36 +76,37 @@
 --- Generation snippet (post-assistant tag) ---
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.13 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.59 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5559.81 us (1.648 TFLOPS)  max=5566.98 us (1.646 TFLOPS)
-  first-half avg=5563.81 us (1.647 TFLOPS)  last-half avg=5562.61
+  min=5560.83 us (1.648 TFLOPS)  max=5568.00 us (1.646 TFLOPS)
+  first-half avg=5564.43 us (1.647 TFLOPS)  last-half avg=5564.18
 
 --- Perf summary ---
-prefill: 437 tokens, 7593 ms, 57.553 TPS
-generation: 32 tokens, 7642 ms, 4.18739 TPS
-total: 15245 ms
-peak memory: 2681532 KB
-[e2e time]: 26571 ms 
+prefill: 437 tokens, 7398 ms, 59.07 TPS
+generation: 32 tokens, 7853 ms, 4.07488 TPS
+total: 15258 ms
+peak memory: 2673024 KB
+[e2e time]: 26663 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4217.18 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4230.35 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4217.11 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  gpu_call    :  4230.28 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=33.28 ms calls=1 avg=33.284 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.13 ms calls=1 avg=3.128 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=14.28 ms calls=36 avg=0.397 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=831.93 ms calls=73 avg=11.396 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=496.67 ms calls=72 avg=6.898 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1710.10 ms calls=36 avg=47.503 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=34.75 ms calls=1 avg=34.749 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.27 ms calls=1 avg=3.273 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=11.10 ms calls=36 avg=0.308 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=663.33 ms calls=73 avg=9.087 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=452.30 ms calls=72 avg=6.282 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1708.45 ms calls=36 avg=47.457 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
