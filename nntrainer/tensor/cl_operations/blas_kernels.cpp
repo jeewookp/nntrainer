@@ -3513,6 +3513,101 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
 }
 
 // ============================================================================
+// Standalone delegate bench — reproduces unittest setup inside this
+// process at arbitrary lifecycle points (before model load, after, etc.).
+// ============================================================================
+void run_delegate_standalone_bench(const char *label) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
+  cl_int err = 0;
+  cl_context ctx = clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+  if (!ctx) { fprintf(stderr, "[BENCH %s] ctx create failed: %d\n", label, err); return; }
+  cl_queue_properties qp[] = {CL_QUEUE_PROPERTIES,
+    (cl_queue_properties)(CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+                          CL_QUEUE_PROFILING_ENABLE),
+    0};
+  cl_command_queue q = clCreateCommandQueueWithProperties(ctx, dev, qp, &err);
+
+  const std::string &src = delegate_conv_wave_kernel;
+  const char *sp = src.c_str(); size_t sl = src.size();
+  cl_program prog = clCreateProgramWithSource(ctx, 1, &sp, &sl, &err);
+  err = clBuildProgram(prog, 1, &dev,
+                       "-qcom-accelerate-16-bit=true -cl-std=CL2.0",
+                       nullptr, nullptr);
+  cl_kernel k = clCreateKernel(prog, "main_function", &err);
+  if (!k) { fprintf(stderr, "[BENCH %s] kernel failed: %d\n", label, err);
+            clReleaseProgram(prog); clReleaseCommandQueue(q);
+            clReleaseContext(ctx); return; }
+
+  // Shape: M=437 N=4096 K=2560 (Qwen3 q_proj).
+  const unsigned int M = 437, N = 4096, K = 2560;
+  const int src_slices = K / 4, dst_slices = N / 4;
+  const int n_z = (dst_slices + 7) / 8, iters = src_slices / 2;
+  const size_t w_halfs = (size_t)n_z * iters * 256;
+  const size_t w_bytes = w_halfs * 2;
+
+  cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
+  cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  sd.image_width = M; sd.image_height = src_slices;
+  cl_mem si = clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &err);
+  cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dd.image_width = M; dd.image_height = dst_slices;
+  cl_mem di = clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &err);
+  cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  bd.image_width = dst_slices; bd.image_height = 1;
+  cl_mem bias = clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt_h, &bd, 0, &err);
+  cl_mem w = clCreateBuffer(ctx, CL_MEM_READ_ONLY, w_bytes, nullptr, &err);
+  cl_mem xm = clCreateBuffer(ctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+
+  struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+  struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
+  struct { int x,y,z,w; } s2={1,1,0,0};
+  clSetKernelArg(k, 0, sizeof(cl_mem), &w);
+  clSetKernelArg(k, 1, sizeof(cl_mem), &xm);
+  clSetKernelArg(k, 2, sizeof(cl_mem), &bias);
+  clSetKernelArg(k, 3, sizeof(cl_mem), &di);
+  clSetKernelArg(k, 4, sizeof(cl_mem), &si);
+  clSetKernelArg(k, 5, sizeof(s0), &s0);
+  clSetKernelArg(k, 6, sizeof(s1), &s1);
+  clSetKernelArg(k, 7, sizeof(s2), &s2);
+
+  size_t gz = ((dst_slices+7)/8+3)/4;
+  size_t gs[3] = {(size_t)(gz*128), (size_t)((M+127)/128), 4};
+  size_t ls[3] = {128, 1, 4};
+
+  for (int i = 0; i < 50; ++i)
+    clEnqueueNDRangeKernel(q, k, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+  clFinish(q);
+  const int N_ITER = 32;
+  std::vector<cl_event> evs(N_ITER);
+  for (int i = 0; i < N_ITER; ++i)
+    clEnqueueNDRangeKernel(q, k, 3, nullptr, gs, ls, 0, nullptr, &evs[i]);
+  clFinish(q);
+  uint64_t tot = 0;
+  for (int i = 0; i < N_ITER; ++i) {
+    cl_ulong s = 0, e = 0;
+    clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_START, sizeof(s), &s, 0);
+    clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_END,   sizeof(e), &e, 0);
+    if (e > s) tot += (e - s);
+    clReleaseEvent(evs[i]);
+  }
+  const double avg_us = (tot / 1000.0) / (double)N_ITER;
+  const double gflops = 2.0 * (double)M * (double)N * (double)K / 1.0e9;
+  fprintf(stderr,
+    "[BENCH %s] avg=%.2f us (%.3f TFLOPS)  "
+    "(unittest same shape = 3256.7 us / 2.81 TFLOPS)\n",
+    label, avg_us,
+    avg_us > 0 ? gflops / (avg_us / 1.0e6) / 1000.0 : 0);
+
+  clReleaseMemObject(si); clReleaseMemObject(di);
+  clReleaseMemObject(bias); clReleaseMemObject(w); clReleaseMemObject(xm);
+  clReleaseKernel(k); clReleaseProgram(prog);
+  clReleaseCommandQueue(q); clReleaseContext(ctx);
+}
+
+// ============================================================================
 // Phase B helper — fp16 residual add on SVM.
 // ============================================================================
 void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total) {

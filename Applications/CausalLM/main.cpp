@@ -27,6 +27,7 @@
 
 #include "json.hpp"
 #include <app_context.h>
+#include <blas_kernels.h>
 #include <factory.h>
 
 #include "causal_lm.h"
@@ -274,7 +275,9 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     model->initialize();
+    nntrainer::run_delegate_standalone_bench("before_weight_load");
     model->load_weight(weight_file);
+    nntrainer::run_delegate_standalone_bench("after_weight_load");
 
     bool do_sample = generation_cfg.value("do_sample", false);
 
@@ -287,6 +290,7 @@ int main(int argc, char *argv[]) {
 #else
     model->run(input_text, do_sample, system_head_prompt, system_tail_prompt);
 #endif
+    nntrainer::run_delegate_standalone_bench("after_run");
 #ifdef PROFILE
     stop_and_print_peak();
 #endif
