@@ -20,6 +20,11 @@
 
 #include "swiglu.h"
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
+
 namespace causallm {
 
 namespace {
@@ -80,6 +85,27 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   nntrainer::Tensor &in1 = context.getInput(INPUT_IDX_1);
   nntrainer::Tensor &in2 = context.getInput(INPUT_IDX_2);
   nntrainer::Tensor &out = context.getOutput(OUT_IDX);
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Drain the GPU queue before CPU reads in1/in2 (gate_proj/up_proj
+  // output). Upstream gemm_delegate may have skipped its per-call
+  // blocking SVMMap under Phase B, so do it here for the two inputs
+  // this layer actually reads host-side via NEON below.
+  {
+    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      auto map_if_svm = [&](nntrainer::Tensor &t) {
+        if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            t.getData<char>(), t.bytes(), /*read_only=*/true);
+        }
+      };
+      map_if_svm(in1);
+      map_if_svm(in2);
+    }
+  }
+#endif
 
   unsigned int _from = from;
 
