@@ -164,9 +164,14 @@ echo "=========================================="
 adb push nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl \
   /data/local/tmp/nntrainer/test/ >/dev/null
 for stage in 0 1 2; do
-  BIN=Applications/CausalLM/jni/libs/arm64-v8a/nntr_delegate_bench_stage${stage}
-  if [ ! -f "$BIN" ]; then
-    echo "[BISECT] $BIN not built, skipping"
+  LIBS_BIN=Applications/CausalLM/jni/libs/arm64-v8a/nntr_delegate_bench_stage${stage}
+  OBJ_BIN=Applications/CausalLM/jni/obj/local/arm64-v8a/nntr_delegate_bench_stage${stage}
+  if [ -f "$LIBS_BIN" ]; then
+    BIN=$LIBS_BIN
+  elif [ -f "$OBJ_BIN" ]; then
+    BIN=$OBJ_BIN
+  else
+    echo "[BISECT] nntr_delegate_bench_stage${stage} not built (checked $LIBS_BIN and $OBJ_BIN)"
     continue
   fi
   adb push "$BIN" /data/local/tmp/nntrainer/test/ >/dev/null
