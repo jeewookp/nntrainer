@@ -3583,9 +3583,7 @@ void run_delegate_standalone_bench(const char *label) {
   const int N_ITER = 32;
   std::vector<cl_event> evs(N_ITER);
   // Measure wall-clock the same way the unittest does: chrono-bracket the
-  // whole enqueue batch including the terminal clFinish. If wall-clock
-  // says 2.81 TFLOPS but events say 1.65 TFLOPS for the same run, the
-  // gap is a profiling-event reporting bug, not a real slowdown.
+  // whole enqueue batch including the terminal clFinish.
   auto t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < N_ITER; ++i)
     clEnqueueNDRangeKernel(q, k, 3, nullptr, gs, ls, 0, nullptr, &evs[i]);
@@ -3609,10 +3607,43 @@ void run_delegate_standalone_bench(const char *label) {
   const double wall_tflops =
     wall_us_avg > 0 ? gflops / (wall_us_avg / 1.0e6) / 1000.0 : 0;
   fprintf(stderr,
-    "[BENCH %s] event avg=%.2f us (%.3f TFLOPS)  "
-    "WALL avg=%.2f us (%.3f TFLOPS)  "
-    "(unittest same shape = 3256.7 us / 2.81 TFLOPS)\n",
+    "[BENCH %s PROFILING+OOO] event avg=%.2f us (%.3f TFLOPS)  "
+    "WALL avg=%.2f us (%.3f TFLOPS)\n",
     label, avg_us, ev_tflops, wall_us_avg, wall_tflops);
+
+  // ==========================================================================
+  // Second bench on a queue that matches the unittest EXACTLY:
+  //   clCreateCommandQueue(ctx, dev, 0, &err)   <- legacy API, flags=0,
+  //                                                 in-order, NO profiling.
+  // Hypothesis: the 2.81→1.65 TFLOPS gap is caused by CL_QUEUE_PROFILING_ENABLE
+  // on the production queue. Adreno's comment in opencl_command_queue_manager
+  // claims "negligible overhead when events are not queried" but that was
+  // never measured. If this bench reports ~2.81 TFLOPS with the same kernel,
+  // buffers, args, and WGS, the fix is to drop PROFILING_ENABLE (or put it
+  // behind an env-var-gated diagnostic-only queue).
+  // ==========================================================================
+  cl_command_queue q_plain = clCreateCommandQueue(ctx, dev, 0, &err);
+  if (q_plain) {
+    for (int i = 0; i < 50; ++i)
+      clEnqueueNDRangeKernel(q_plain, k, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_plain);
+    auto p0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N_ITER; ++i)
+      clEnqueueNDRangeKernel(q_plain, k, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_plain);
+    auto p1 = std::chrono::high_resolution_clock::now();
+    const double plain_us =
+      std::chrono::duration<double, std::micro>(p1 - p0).count() /
+      (double)N_ITER;
+    const double plain_tflops =
+      plain_us > 0 ? gflops / (plain_us / 1.0e6) / 1000.0 : 0;
+    fprintf(stderr,
+      "[BENCH %s PLAIN (flags=0, unittest-match)] WALL avg=%.2f us (%.3f TFLOPS)\n",
+      label, plain_us, plain_tflops);
+    clReleaseCommandQueue(q_plain);
+  } else {
+    fprintf(stderr, "[BENCH %s] plain queue create failed: %d\n", label, err);
+  }
 
   clReleaseMemObject(si); clReleaseMemObject(di);
   clReleaseMemObject(bias); clReleaseMemObject(w); clReleaseMemObject(xm);
