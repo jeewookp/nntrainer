@@ -2792,15 +2792,49 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
     struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
     struct { int x,y,z,w; } s2={1,1,0,0};
-    int a = 0;
-    s_conv_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &bias_img, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &src_img_for_conv, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
-    s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
-    s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
+    // Arg cache: skip clSetKernelArg when the slot's value hasn't changed
+    // since the last call. Saves ~5 driver entries per call for the
+    // common q/k/v-in-a-row and gate/up-in-a-row patterns where only the
+    // weight arg actually moves. Each clSetKernelArg is tens of us on
+    // Adreno — for 252 conv dispatches this can be >10 ms.
+    static cl_mem last_w = nullptr, last_xmem = nullptr;
+    static cl_mem last_bias = nullptr, last_dst = nullptr, last_src = nullptr;
+    static decltype(s0) last_s0{0,0,0,0}, last_s1{0,0,0,0}, last_s2{0,0,0,0};
+    auto same4 = [](const auto &a, const auto &b) {
+      return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    };
+    if (w_cl_use != last_w) {
+      s_conv_kern->SetKernelArguments(0, &w_cl_use, sizeof(cl_mem));
+      last_w = w_cl_use;
+    }
+    if (s_xmem != last_xmem) {
+      s_conv_kern->SetKernelArguments(1, &s_xmem, sizeof(cl_mem));
+      last_xmem = s_xmem;
+    }
+    if (bias_img != last_bias) {
+      s_conv_kern->SetKernelArguments(2, &bias_img, sizeof(cl_mem));
+      last_bias = bias_img;
+    }
+    if (s_dst_img != last_dst) {
+      s_conv_kern->SetKernelArguments(3, &s_dst_img, sizeof(cl_mem));
+      last_dst = s_dst_img;
+    }
+    if (src_img_for_conv != last_src) {
+      s_conv_kern->SetKernelArguments(4, &src_img_for_conv, sizeof(cl_mem));
+      last_src = src_img_for_conv;
+    }
+    if (!same4(s0, last_s0)) {
+      s_conv_kern->SetKernelArguments(5, &s0, sizeof(s0));
+      last_s0 = s0;
+    }
+    if (!same4(s1, last_s1)) {
+      s_conv_kern->SetKernelArguments(6, &s1, sizeof(s1));
+      last_s1 = s1;
+    }
+    if (!same4(s2, last_s2)) {
+      s_conv_kern->SetKernelArguments(7, &s2, sizeof(s2));
+      last_s2 = s2;
+    }
     size_t gz = ((dst_slices+7)/8+3)/4;
     const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
     const int l[3] = {128, 1, 4};
