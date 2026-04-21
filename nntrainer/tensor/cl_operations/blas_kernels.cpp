@@ -2504,7 +2504,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0},
     t_reformat_hits{0}, t_resource_setup{0}, t_fn_total{0},
     t_dequant_gpu_ns{0}, t_reformat_gpu_ns{0}, t_readback_gpu_ns{0},
-    t_svmmap_gpu_ns{0}, t_dequant_calls{0};
+    t_svmmap_gpu_ns{0}, t_dequant_calls{0},
+    t_dq_alloc{0}, t_dq_svmarg{0}, t_dq_arg{0}, t_dq_dispatch{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
@@ -2524,6 +2525,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
         "  resource_setup: %7.1f ms\n"
         "  dequant(host):  %7.1f ms (%4.1f%%)  cache-miss=%lu/%lu\n"
+        "    .alloc:       %7.1f ms  (clCreateBuffer + cache insert)\n"
+        "    .svmarg:      %7.1f ms  (2x clSetKernelArgSVMPointer)\n"
+        "    .arg:         %7.1f ms  (3x clSetKernelArg)\n"
+        "    .dispatch:    %7.1f ms  (DispatchCommand = clEnqueueNDRangeKernel)\n"
         "  dequant(gpu):   %7.1f ms\n"
         "  reformat_in(host):%5.1f ms (%4.1f%%)  pool-hits=%lu/%lu\n"
         "  reformat_in(gpu):%6.1f ms\n"
@@ -2540,6 +2545,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         setup_ms,
         t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         (unsigned long)t_dequant_calls.load(), (unsigned long)c,
+        t_dq_alloc/1e6,
+        t_dq_svmarg/1e6,
+        t_dq_arg/1e6,
+        t_dq_dispatch/1e6,
         dq_gpu_ms,
         t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         (unsigned long)t_reformat_hits.load(), (unsigned long)c,
@@ -2693,6 +2702,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     w_cl_use = cache_it->second;  // cache hit — skip dequant entirely
   } else {
     // Cache miss: allocate + dequant
+    const uint64_t tA = now_ns();
     cl_mem new_w = nullptr;
     if (s_dq_cache_bytes + w_bytes <= kMaxCacheBytes) {
       new_w = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
@@ -2711,18 +2721,26 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       }
       w_cl_use = s_w_cl;
     }
+    const uint64_t tB = now_ns();
     int a = 0;
     s_dq_kern->SetKernelSVMArguments(a++, weights);
     s_dq_kern->SetKernelSVMArguments(a++, scales);
+    const uint64_t tC = now_ns();
     s_dq_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
     int sn = (int)N, sk = (int)K;
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
+    const uint64_t tD = now_ns();
     // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
     int tot = (int)(w_halfs / 16);
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
+    const uint64_t tE = now_ns();
+    t_dq_alloc    += tB - tA;
+    t_dq_svmarg   += tC - tB;
+    t_dq_arg      += tD - tC;
+    t_dq_dispatch += tE - tD;
     t_dequant_calls++;
   }
   const uint64_t t1 = now_ns();
@@ -2789,53 +2807,18 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // === Step 3: Conv dispatch ===
   cl_event conv_ev = nullptr;
   {
-    struct Int4Arg { int x, y, z, w; };
-    Int4Arg s0 = {1, dst_slices, (int)M, 32};
-    Int4Arg s1 = {src_slices, 0, 0, src_slices};
-    Int4Arg s2 = {1, 1, 0, 0};
-    // Arg cache: skip clSetKernelArg when the slot's value hasn't changed
-    // since the last call. Saves ~5 driver entries per call for the
-    // common q/k/v-in-a-row and gate/up-in-a-row patterns where only the
-    // weight arg actually moves. Each clSetKernelArg is tens of us on
-    // Adreno — for 252 conv dispatches this can be >10 ms.
-    static cl_mem last_w = nullptr, last_xmem = nullptr;
-    static cl_mem last_bias = nullptr, last_dst = nullptr, last_src = nullptr;
-    static Int4Arg last_s0{0,0,0,0}, last_s1{0,0,0,0}, last_s2{0,0,0,0};
-    auto same4 = [](const Int4Arg &a, const Int4Arg &b) {
-      return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-    };
-    if (w_cl_use != last_w) {
-      s_conv_kern->SetKernelArguments(0, &w_cl_use, sizeof(cl_mem));
-      last_w = w_cl_use;
-    }
-    if (s_xmem != last_xmem) {
-      s_conv_kern->SetKernelArguments(1, &s_xmem, sizeof(cl_mem));
-      last_xmem = s_xmem;
-    }
-    if (bias_img != last_bias) {
-      s_conv_kern->SetKernelArguments(2, &bias_img, sizeof(cl_mem));
-      last_bias = bias_img;
-    }
-    if (s_dst_img != last_dst) {
-      s_conv_kern->SetKernelArguments(3, &s_dst_img, sizeof(cl_mem));
-      last_dst = s_dst_img;
-    }
-    if (src_img_for_conv != last_src) {
-      s_conv_kern->SetKernelArguments(4, &src_img_for_conv, sizeof(cl_mem));
-      last_src = src_img_for_conv;
-    }
-    if (!same4(s0, last_s0)) {
-      s_conv_kern->SetKernelArguments(5, &s0, sizeof(s0));
-      last_s0 = s0;
-    }
-    if (!same4(s1, last_s1)) {
-      s_conv_kern->SetKernelArguments(6, &s1, sizeof(s1));
-      last_s1 = s1;
-    }
-    if (!same4(s2, last_s2)) {
-      s_conv_kern->SetKernelArguments(7, &s2, sizeof(s2));
-      last_s2 = s2;
-    }
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
+    struct { int x,y,z,w; } s2={1,1,0,0};
+    int a = 0;
+    s_conv_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &bias_img, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &src_img_for_conv, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
+    s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
+    s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
     size_t gz = ((dst_slices+7)/8+3)/4;
     const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
     const int l[3] = {128, 1, 4};
