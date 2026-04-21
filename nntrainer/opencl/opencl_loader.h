@@ -189,6 +189,12 @@ typedef cl_int(CL_API_CALL *PFN_clFlush)(
 typedef cl_int(CL_API_CALL *PFN_clFinish)(
   cl_command_queue /**< command_queue */);
 
+typedef cl_int(CL_API_CALL *PFN_clEnqueueBarrierWithWaitList)(
+  cl_command_queue /**< command_queue */,
+  cl_uint /**< num_events_in_wait_list */,
+  const cl_event * /**< event_wait_list */,
+  cl_event * /**< event */);
+
 typedef void *(CL_API_CALL *PFN_clSVMAlloc)(cl_context /**< context */,
                                             cl_svm_mem_flags /**< flags */,
                                             size_t /**< size */,
@@ -248,6 +254,7 @@ extern PFN_clReleaseCommandQueue clReleaseCommandQueue;
 extern PFN_clReleaseMemObject clReleaseMemObject;
 extern PFN_clFlush clFlush;
 extern PFN_clFinish clFinish;
+extern PFN_clEnqueueBarrierWithWaitList clEnqueueBarrierWithWaitList;
 extern PFN_clSVMAlloc clSVMAlloc;
 extern PFN_clSVMFree clSVMFree;
 extern PFN_clEnqueueSVMMap clEnqueueSVMMap;

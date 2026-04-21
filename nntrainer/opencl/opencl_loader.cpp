@@ -201,6 +201,7 @@ void LoadOpenCLFunctions(void *libopencl) {
   LoadFunction(clReleaseMemObject);
   LoadFunction(clFlush);
   LoadFunction(clFinish);
+  LoadFunction(clEnqueueBarrierWithWaitList);
   LoadFunction(clSVMAlloc);
   LoadFunction(clSVMFree);
   LoadFunction(clEnqueueSVMMap);
@@ -241,6 +242,7 @@ PFN_clReleaseCommandQueue clReleaseCommandQueue;
 PFN_clReleaseMemObject clReleaseMemObject;
 PFN_clFlush clFlush;
 PFN_clFinish clFinish;
+PFN_clEnqueueBarrierWithWaitList clEnqueueBarrierWithWaitList;
 PFN_clSVMAlloc clSVMAlloc;
 PFN_clSVMFree clSVMFree;
 PFN_clEnqueueSVMMap clEnqueueSVMMap;
