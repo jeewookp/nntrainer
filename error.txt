@@ -1,148 +1,320 @@
-Configuring transpose_axis_1.h using configuration
-Configuring transpose_axis_2.cpp using configuration
-Configuring transpose_axis_2.h using configuration
-Configuring add2_fp16_svm.cpp using configuration
-Configuring add2_fp16_svm.h using configuration
-Configuring addition_fp16.cpp using configuration
-Configuring addition_fp16.h using configuration
-Configuring concat_axis_1_fp16.cpp using configuration
-Configuring concat_axis_1_fp16.h using configuration
-Configuring concat_axis_2_fp16.cpp using configuration
-Configuring concat_axis_2_fp16.h using configuration
-Configuring concat_axis_3_fp16.cpp using configuration
-Configuring concat_axis_3_fp16.h using configuration
-Configuring copy_fp16.cpp using configuration
-Configuring copy_fp16.h using configuration
-Configuring dot_fp16.cpp using configuration
-Configuring dot_fp16.h using configuration
-Configuring embedding_fp16.cpp using configuration
-Configuring embedding_fp16.h using configuration
-Configuring hgemm_no_trans.cpp using configuration
-Configuring hgemm_no_trans.h using configuration
-Configuring hgemm_trans_a.cpp using configuration
-Configuring hgemm_trans_a.h using configuration
-Configuring hgemm_trans_ab.cpp using configuration
-Configuring hgemm_trans_ab.h using configuration
-Configuring hgemm_trans_b.cpp using configuration
-Configuring hgemm_trans_b.h using configuration
-Configuring hgemv_no_trans.cpp using configuration
-Configuring hgemv_no_trans.h using configuration
-Configuring hgemv.cpp using configuration
-Configuring hgemv.h using configuration
-Configuring hscal.cpp using configuration
-Configuring hscal.h using configuration
-Configuring rmsnorm_fp16.cpp using configuration
-Configuring rmsnorm_fp16.h using configuration
-Configuring rotary_emb_fp16.cpp using configuration
-Configuring rotary_emb_fp16.h using configuration
-Configuring swiglu_fp16.cpp using configuration
-Configuring swiglu_fp16.h using configuration
-Configuring transpose_axis_0_fp16.cpp using configuration
-Configuring transpose_axis_0_fp16.h using configuration
-Configuring transpose_axis_1_fp16.cpp using configuration
-Configuring transpose_axis_1_fp16.h using configuration
-Configuring transpose_axis_2_fp16.cpp using configuration
-Configuring transpose_axis_2_fp16.h using configuration
-Configuring cl_kernels.h using configuration
-Configuring ccapi-ml-training.pc using configuration
-Configuring capi-ml-training.pc using configuration
-meson.build:761: WARNING: test is not supported in android build, test skipped
-meson.build:773: WARNING: android app is not supported for now, building app skipped
-meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
-Message: compile flags are:-march=armv8.2-a+fp16+dotprod+i8mm -O3
-Configuring Android.mk using configuration
-jni/meson.build:101: WARNING: The variable(s) 'MESON_TFLITE_ROOT' in the input file 'jni/Android.mk.in' are not present in the given configuration data.
-Program ndk-build found: YES (/home/jwhero94/neo/android-ndk-r26d/ndk-build)
-Message: building for android
-Build targets in project: 1
-WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features which were added in newer versions:
- * 0.57.0: {'fs.read'}
- * 0.58.0: {'format strings'}
-NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.source_root', 'meson.build_root'}
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+[BENCH maps entry] ---
+[BENCH maps entry] /vendor/lib64/libOpenCL.so
+[BENCH process_start PROFILING+OOO] event avg=5559.17 us (1.649 TFLOPS)  WALL avg=5680.93 us (1.613 TFLOPS)
+[BENCH maps after-kernel] ---
+[BENCH maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[BENCH maps after-kernel] /vendor/lib64/libadreno_utils.so
+[BENCH maps after-kernel] /vendor/lib64/libCB.so
+[BENCH maps after-kernel] /vendor/lib64/libgsl.so
+[BENCH maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[BENCH maps after-kernel] /vendor/lib64/libOpenCL.so
+[BENCH process_start PLAIN (flags=0, unittest-match)] WALL avg=5605.77 us (1.635 TFLOPS)
+[BENCH process_start UNITTEST_PRIMED (buffers written)] WALL avg=5678.66 us (1.614 TFLOPS)
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+[BENCH before_weight_load PROFILING+OOO] event avg=5560.82 us (1.648 TFLOPS)  WALL avg=5681.14 us (1.613 TFLOPS)
+[BENCH before_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5612.94 us (1.633 TFLOPS)
+[BENCH before_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5681.65 us (1.613 TFLOPS)
+[BENCH after_weight_load PROFILING+OOO] event avg=5553.37 us (1.650 TFLOPS)  WALL avg=5676.42 us (1.614 TFLOPS)
+[BENCH after_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5596.10 us (1.638 TFLOPS)
+[BENCH after_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5676.66 us (1.614 TFLOPS)
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-nntrainer 0.6.0
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-  User defined options
-    arm-arch                 : armv8.2-a
-    arm-march                : -march=armv8.2-a+fp16+dotprod+i8mm
-    enable-fp16              : true
-    enable-opencl            : true
-    enable-tflite-backbone   : false
-    enable-tflite-interpreter: false
-    hgemm-experimental-kernel: false
-    mmap-read                : false
-    omp-num-threads          : 1
-    openblas-num-threads     : 1
-    platform                 : android
-    thread-backend           : omp
+[DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.39 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
-Found ninja-1.10.1 at /usr/bin/ninja
-~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
-[1/2] Generating jni/ndk-build with a custom command
-FAILED: jni/arm64-v8a 
-/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
-[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
-#pragma omp parallel for num_thread(n_threads)
-                         ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
-[arm64-v8a] Compile++      : nntrainer <= manager.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/manager.cpp:92:11: error: use of undeclared identifier 'memfd_create'
-    fd_ = memfd_create("nntrainer_mmap", 0);
-          ^
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/manager.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
-[arm64-v8a] Compile++      : clblast <= common.cpp
-[arm64-v8a] Compile++      : clblast <= routine.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
-[arm64-v8a] Compile++      : clblast <= api_common.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
-[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
-[arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
-[arm64-v8a] Compile++      : clblast <= database.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= engine.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
-[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
-[arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
-[arm64-v8a] Compile++      : clblast <= tuning.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
-ninja: build stopped: subcommand failed.
+[DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
+  min=5560.83 us (1.648 TFLOPS)  max=5566.98 us (1.646 TFLOPS)
+  first-half avg=5564.24 us (1.647 TFLOPS)  last-half avg=5564.42 us (1.647 TFLOPS)
+  overall avg=5564.33 us (1.647 TFLOPS)
+  unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 N=4096 K=2560)
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+[BENCH after_run PROFILING+OOO] event avg=5554.51 us (1.650 TFLOPS)  WALL avg=5598.65 us (1.637 TFLOPS)
+[BENCH after_run PLAIN (flags=0, unittest-match)] WALL avg=5658.41 us (1.620 TFLOPS)
+[BENCH after_run UNITTEST_PRIMED (buffers written)] WALL avg=5665.44 us (1.618 TFLOPS)
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 7480 ms, 58.4225 TPS
+generation: 32 tokens, 7836 ms, 4.08372 TPS
+total: 15325 ms
+peak memory: 2679624 KB
+==========================================================
+[e2e time]: 24560 ms 
+Max Resident Set Size: 2679624 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:   111.4 ms
+  dequant:           93.5 ms ( 8.0%)
+  reformat_in:        0.1 ms ( 0.0%)  hits=252/252
+  conv(wall):      1073.7 ms (91.7%)
+  conv(gpu):       1935.1 ms            1.641 TFLOPS
+  readback:           4.1 ms ( 0.3%)
+  sum(steps):      1171.3 ms            2.711 TFLOPS
+  fn_total(wall):  4237.6 ms            (diff from sum = 2954.9 ms of arg-setup + enqueue overhead)
+
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=7392.3 ms across all forwarding_op() calls
+  fully_connected               4247.0 ms  calls=252  avg=16.853 ms
+  mha_core                      1714.2 ms  calls=36  avg=47.618 ms
+  rms_norm                       705.3 ms  calls=73  avg=9.661 ms
+  reshaped_rms_norm              540.5 ms  calls=72  avg=7.506 ms
+  swiglu                          69.6 ms  calls=36  avg=1.934 ms
+  addition                        67.8 ms  calls=72  avg=0.942 ms
+  tie_word_embeddings             47.1 ms  calls=2  avg=23.550 ms
+  multiout                         0.8 ms  calls=144  avg=0.005 ms
+  input                            0.1 ms  calls=1  avg=0.068 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=42.56 ms calls=1 avg=42.559 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.51 ms calls=1 avg=4.511 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=12.91 ms calls=36 avg=0.359 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=658.00 ms calls=73 avg=9.014 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=539.71 ms calls=72 avg=7.496 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1679.96 ms calls=36 avg=46.666 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4238.06 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4237.99 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ DT_NEEDED of pushed binaries
+==========================================
+
+--- Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm ---
+  NEEDED          libcausallm_core.so
+  NEEDED          libnntrainer.so
+  NEEDED          libccapi-nntrainer.so
+  NEEDED          liblog.so
+  NEEDED          libc.so
+  NEEDED          libm.so
+  NEEDED          libc++_shared.so
+  NEEDED          libdl.so
+
+--- Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so ---
+  NEEDED       libnntrainer.so
+  NEEDED       libccapi-nntrainer.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libcausallm_core.so
+
+--- builddir/android_build_result/lib/arm64-v8a/libnntrainer.so ---
+  NEEDED       libOpenCL.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libnntrainer.so
+
+--- builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so ---
+  NEEDED       libnntrainer.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libccapi-nntrainer.so
+
+==========================================
+ [TRUTH] running real unittest_delegate_conv_wave ModelShapes
+==========================================
+==========================================
+[Step 1] Building unittest_delegate_conv_wave (ndk-build)
+==========================================
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : googletest_main [arm64-v8a]
+[arm64-v8a] Clean          : nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : test_util [arm64-v8a]
+[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
+[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
+[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
+[arm64-v8a] Clean          : unittest_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
+[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] StaticLibrary  : libgoogletest_main.a
+[arm64-v8a] Executable     : unittest_delegate_conv_wave
+[arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
+
+==========================================
+[Step 2] Pushing to device
+==========================================
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 28.0 MB/s (353248 bytes in 0.012s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.2 MB/s (7438 bytes in 0.003s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.9 MB/s (9732 bytes in 0.003s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.3 MB/s (1822720 bytes in 0.056s)
+
+==========================================
+[Step 3] Running on device
+==========================================
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from DelegateConvWaveTest
+[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
+GPU: QUALCOMM Adreno(TM) 830
+Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
+Performance: 428.0 us/iter = 2.509 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (140 ms)
+[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
+GPU: QUALCOMM Adreno(TM) 830
+global=(1024,4,4) local=(128,1,4)
+  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
+  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
+  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
+  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
+  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
+  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
+  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
+  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
+Correctness: 128/128 pass (max err 12.9%)
+Int4 wave: 365484.8 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3322 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
+GPU: QUALCOMM Adreno(TM) 830
+
+=== Delegate fp16 kernel — model shapes ===
+[UNITTEST maps] /vendor/lib64/libadreno_compiler_cl.so
+[UNITTEST maps] /vendor/lib64/libadreno_utils.so
+[UNITTEST maps] /vendor/lib64/libCB.so
+[UNITTEST maps] /vendor/lib64/libgsl.so
+[UNITTEST maps] /vendor/lib64/libOpenCL_adreno.so
+[UNITTEST maps] /vendor/lib64/libOpenCL.so
+  M=437 N=4096 K=2560: 3290.3 us = 2.785 TFLOPS (×36 = 118.5 ms)
+  M=437 N=1024 K=2560: 914.5 us = 2.505 TFLOPS (×36 = 32.9 ms)
+  M=437 N=1024 K=2560: 890.6 us = 2.572 TFLOPS (×36 = 32.1 ms)
+  M=437 N=2560 K=4096: 3818.9 us = 2.400 TFLOPS (×36 = 137.5 ms)
+  M=437 N=9728 K=2560: 7411.9 us = 2.937 TFLOPS (×36 = 266.8 ms)
+  M=437 N=9728 K=2560: 7389.6 us = 2.945 TFLOPS (×36 = 266.0 ms)
+  M=437 N=2560 K=9728: 7564.8 us = 2.877 TFLOPS (×36 = 272.3 ms)
+  TOTAL: 3175.5 GFLOP in 1126.1 ms = 2.820 TFLOPS (conv only)
+[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1121 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
+GPU: QUALCOMM Adreno(TM) 830
+
+=== Int4 Adreno kernel — model shapes ===
+  SKIP 437x4096x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x2560x4096: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x2560x9728: image1d_buffer failed -6
+  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (124 ms)
+[----------] 4 tests from DelegateConvWaveTest (4708 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (4708 ms total)
+[  PASSED  ] 4 tests.
+
+Log: unittest_delegate_conv_wave.log
+
+--- Unittest ModelShapes lines (ground truth TFLOPS per shape) ---
+grep: unittest_delegate_conv_wave.log: binary file matches
+
+==========================================
+ Run summary
+==========================================
+
+--- Generation snippet (post-assistant tag) ---
+
+[DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.39 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+
+[DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
+  min=5560.83 us (1.648 TFLOPS)  max=5566.98 us (1.646 TFLOPS)
+  first-half avg=5564.24 us (1.647 TFLOPS)  last-half avg=5564.42
+
+--- Perf summary ---
+prefill: 437 tokens, 7480 ms, 58.4225 TPS
+generation: 32 tokens, 7836 ms, 4.08372 TPS
+total: 15325 ms
+peak memory: 2679624 KB
+[e2e time]: 24560 ms 
+
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4238.06 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4237.99 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=42.56 ms calls=1 avg=42.559 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.51 ms calls=1 avg=4.511 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=12.91 ms calls=36 avg=0.359 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=658.00 ms calls=73 avg=9.014 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=539.71 ms calls=72 avg=7.496 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1679.96 ms calls=36 avg=46.666 ms
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
