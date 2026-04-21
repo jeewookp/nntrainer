@@ -154,6 +154,17 @@ bool Program::CreateCLProgram(const cl_context &context,
     return false;
   }
 
+  // Caller can pass "@@OVERRIDE_DEFAULT@@" as the leading token to
+  // skip GetDefaultCompilerOptions() entirely and use only the
+  // remaining flags. Needed for the delegate conv kernel, whose
+  // Qualcomm-specific fast path is degraded by some of the default
+  // flags (-cl-fast-relaxed-math / CL3.0 mismatch).
+  const std::string kOverride = "@@OVERRIDE_DEFAULT@@";
+  if (compiler_options.compare(0, kOverride.size(), kOverride) == 0) {
+    return BuildProgram(device_id,
+                        compiler_options.substr(kOverride.size()));
+  }
+
   // building the created program
   return BuildProgram(device_id,
                       GetDefaultCompilerOptions() + compiler_options);
