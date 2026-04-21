@@ -2818,11 +2818,20 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
   const uint64_t t4 = now_ns();
 
-  // GPU event timing for conv kernel
+  // GPU event timing for conv kernel.
+  // clGetEventProfilingInfo returns CL_PROFILING_INFO_NOT_AVAILABLE if
+  // the event hasn't reached CL_COMPLETE yet. With the non-blocking
+  // SVMMap above this is still in flight on the queue — wait for the
+  // conv event specifically so the timestamps are valid. Cheap in
+  // wall-clock terms; in per-layer clFinish profile mode the queue
+  // is about to be drained anyway.
   if (conv_ev) {
+    clWaitForEvents(1, &conv_ev);
     cl_ulong ev_start = 0, ev_end = 0;
-    clGetEventProfilingInfo(conv_ev, 0x1282, sizeof(ev_start), &ev_start, nullptr);
-    clGetEventProfilingInfo(conv_ev, 0x1283, sizeof(ev_end), &ev_end, nullptr);
+    clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_START,
+                            sizeof(ev_start), &ev_start, nullptr);
+    clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_END,
+                            sizeof(ev_end), &ev_end, nullptr);
     if (ev_end > ev_start)
       t_conv_gpu_ns += (ev_end - ev_start);
     clReleaseEvent(conv_ev);
