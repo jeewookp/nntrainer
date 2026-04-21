@@ -39,15 +39,13 @@ const cl_context &ContextManager::GetContext() {
     return context_;
   }
 
+  // context_ is created + retained exactly once inside CreateCLContext()
+  // (called from the branch below on first access) and kept alive until
+  // ~ContextManager() runs at process exit. Every callsite of GetContext()
+  // just borrows the pointer — they never balance it with clReleaseContext,
+  // so the old per-call clRetainContext here was a ref-count leak AND a
+  // per-call driver-lock cost (~290us on Adreno 830). Skip it.
   if (context_) {
-    // increments the context reference count
-    auto error_code = clRetainContext(context_);
-    if (error_code != CL_SUCCESS) {
-      ml_loge("Failed to specify the OpenCL context to retain. OpenCL error "
-              "code: %d : %s",
-              error_code, OpenCLErrorCodeToString(error_code));
-    }
-
     return context_;
   }
 
