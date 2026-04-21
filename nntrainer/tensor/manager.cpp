@@ -32,6 +32,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef __ANDROID__
+#include <sys/syscall.h>
+#endif
+
 #include <activation_layer.h>
 #include <basic_planner.h>
 #include <bn_layer.h>
@@ -85,11 +89,12 @@ MMapedMemory::MMapedMemory(size_t size, bool allocate_fd_) :
     // but that DT_NEEDED pulled libEGL + libGLESv1_CM/v2/v3 into every
     // process that links libnntrainer — which on Adreno 830 made the CL
     // runtime share GPU timeslice with an implicit GL context and
-    // dropped delegate conv from 2.36 TFLOPS to ~1.61 TFLOPS. memfd_create
-    // is in libc since Android API 30 (11+), which covers every device
-    // new enough to reach this code path, so use it here and drop the
-    // libandroid dependency.
-    fd_ = memfd_create("nntrainer_mmap", 0);
+    // dropped delegate conv from 2.36 TFLOPS to ~1.61 TFLOPS. Use the
+    // memfd_create syscall via libc's syscall() so the call is available
+    // regardless of APP_PLATFORM (bionic only declares memfd_create in
+    // <sys/mman.h> from API 30+; we're on API 29). The syscall itself
+    // exists in the kernel on every arm64 Android device we ship to.
+    fd_ = (int)syscall(SYS_memfd_create, "nntrainer_mmap", 0);
     if (fd_ < 0) {
       throw std::runtime_error("[MMapedMemory] creating mem fd failed");
     }
