@@ -55,7 +55,12 @@ LOCAL_CFLAGS += -pthread -fexceptions -fopenmp -static-openmp -DENABLE_FP16=1 -D
 LOCAL_LDFLAGS += -fexceptions -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1 -mtune=cortex-a76 -O3 -ffast-math
 LOCAL_ARM_MODE := arm
 LOCAL_MODULE := causallm_core
-LOCAL_LDLIBS := -llog -landroid -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
+# Drop -landroid: see commentary on the nntrainer_causallm executable
+# below. Neither this shared library nor anything that links against it
+# uses libandroid.so's APIs, so listing it here only forces the runtime
+# loader to pull in libandroid and its transitive libGLESv*.so deps
+# (which throttle Adreno CL).
+LOCAL_LDLIBS := -llog -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
 
 LOCAL_SRC_FILES := \
     ../models/causal_lm.cpp \
@@ -133,7 +138,15 @@ LOCAL_LDFLAGS += -fexceptions -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_O
 LOCAL_MODULE_TAGS := optional
 LOCAL_ARM_MODE := arm
 LOCAL_MODULE := nntrainer_causallm
-LOCAL_LDLIBS := -llog -landroid -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
+# Drop -landroid: nntrainer_causallm only uses __android_log_print (from
+# liblog.so via -llog) and has no need for libandroid.so. Keeping it made
+# the executable DT_NEEDED libandroid.so, which transitively pulls in
+# libGLESv1_CM/v2/v3.so — and on Adreno those GLES libs cause the CL
+# runtime to share GPU timeslices with implicit GL contexts, dropping
+# kernel throughput from the unittest-measured 2.36 TFLOPS to ~1.61
+# TFLOPS for M=437x4096x2560. The unittest_delegate_conv_wave binary uses
+# LOCAL_LDLIBS := -llog -ldl (no -landroid) and hits 2.36 TFLOPS.
+LOCAL_LDLIBS := -llog -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
 
 LOCAL_SRC_FILES := ../main.cpp
 
