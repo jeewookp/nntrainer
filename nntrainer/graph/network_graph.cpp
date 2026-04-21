@@ -16,6 +16,11 @@
 #include <CL/cl.h>
 #include <cl_context.h>
 #include <engine.h>
+
+#include <algorithm>
+#include <time.h>
+#include <unordered_map>
+#include <vector>
 #endif
 #include <activation_layer.h>
 #include <addition_layer.h>
@@ -436,10 +441,52 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   unsigned int from, unsigned int to, bool training,
   std::function<void(std::shared_ptr<LayerNode>, bool)> forwarding_op,
   std::function<bool(void *userdata)> stop_cb, void *userdata) {
+  // Per-layer-type wall-clock accumulator. This profiles whatever a
+  // specific layer type burned end-to-end inside forwarding_op —
+  // includes the incremental_forwarding body AND the graph runner's
+  // tensor bookkeeping around it. Existing PROFILE_TIME_START / END
+  // feeds nntrainer's internal profiler; this one prints directly to
+  // stderr at process exit so we can compare against the per-layer
+  // profilers the Applications code publishes (MHACoreLayer,
+  // RMSNormLayer, SwiGLULayer, …) and see where the unaccounted
+  // wall time in a prefill is hiding.
+  struct LayerWallProfile {
+    std::unordered_map<std::string, uint64_t> ns;
+    std::unordered_map<std::string, uint64_t> calls;
+    uint64_t total_ns{0};
+    ~LayerWallProfile() {
+      if (!total_ns) return;
+      std::vector<std::pair<uint64_t, std::string>> ordered;
+      for (auto &p : ns) ordered.emplace_back(p.second, p.first);
+      std::sort(ordered.begin(), ordered.end(),
+                std::greater<std::pair<uint64_t, std::string>>());
+      fprintf(stderr,
+        "\n[PROFILE NetworkGraph per-layer wall clock (prefill+decode)]\n"
+        "  total=%.1f ms across all forwarding_op() calls\n",
+        total_ns / 1e6);
+      for (auto &p : ordered) {
+        fprintf(stderr,
+          "  %-28s %7.1f ms  calls=%lu  avg=%.3f ms\n",
+          p.second.c_str(), p.first / 1e6,
+          (unsigned long)calls[p.second],
+          (p.first / 1e6) / std::max<uint64_t>(1, calls[p.second]));
+      }
+    }
+  };
+  static LayerWallProfile g_graph_wall_profile;
+
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
+    struct timespec ts0, ts1;
+    clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
+    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
+                        (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
+    g_graph_wall_profile.ns[ln->getType()] += dt;
+    g_graph_wall_profile.calls[ln->getType()] += 1;
+    g_graph_wall_profile.total_ns += dt;
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
 
