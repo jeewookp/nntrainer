@@ -102,6 +102,25 @@ adb pull /data/local/tmp/nntrainer/test/logs/. ./logs/ || true
 adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 # ----------------------------------------------------------------------------
+# Ground-truth: run the real delegate-conv-wave unittest to measure what the
+# Adreno 830 actually achieves on M=437 N=4096 K=2560 in a fresh process.
+# All of our in-process benches (PROFILING+OOO / PLAIN / UNITTEST_PRIMED)
+# converge on ~1.65 TFLOPS, but the "2.81 TFLOPS" comparison target was
+# never re-measured in this session. This runs the real unittest so we get
+# a direct apples-to-apples number from the same device + driver + kernel.
+# ----------------------------------------------------------------------------
+echo ""
+echo "=========================================="
+echo " [TRUTH] running real unittest_delegate_conv_wave ModelShapes"
+echo "=========================================="
+sh unittest_delegate_conv_wave.sh 2>&1 | tee unittest_delegate_conv_wave.log || true
+
+echo ""
+echo "--- Unittest ModelShapes lines (ground truth TFLOPS per shape) ---"
+grep -E "M=437|Delegate fp16|conv only|TOTAL:" unittest_delegate_conv_wave.log \
+  || echo "(no ModelShapes lines found)"
+
+# ----------------------------------------------------------------------------
 # Diagnostic summary (extracted from temp_run.log for quick scanning)
 # ----------------------------------------------------------------------------
 RUN_LOG=temp_run.log
