@@ -2849,16 +2849,33 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       s_conv_kern->SetKernelArguments(aa++, &s1, sizeof(s1));
       s_conv_kern->SetKernelArguments(aa++, &s2, sizeof(s2));
 
+      // A/B variant 2: also create a FRESH command queue via
+      // clCreateCommandQueueWithProperties (unittest uses this newer
+      // API; production's command_queue_manager uses deprecated
+      // clCreateCommandQueue). If Adreno's driver treats the two
+      // APIs differently (e.g. different scheduler, queue depth,
+      // clock policy), using the newer API here will close the gap.
+      cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
+      cl_queue_properties qprops[] = {
+        CL_QUEUE_PROPERTIES,
+        (cl_queue_properties)(CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+                              CL_QUEUE_PROFILING_ENABLE),
+        0};
+      cl_int qerr = 0;
+      cl_command_queue fresh_q =
+        clCreateCommandQueueWithProperties(clctx, dev, qprops, &qerr);
+      cl_command_queue use_q = fresh_q ? fresh_q : raw_q;
+
       // Long warmup (DVFS) on the fresh buffers.
       for (int i = 0; i < 50; ++i)
-        clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
+        clEnqueueNDRangeKernel(use_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
                                nullptr);
-      clFinish(raw_q);
+      clFinish(use_q);
       std::vector<cl_event> evs(n_iter);
       for (int i = 0; i < n_iter; ++i)
-        clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
+        clEnqueueNDRangeKernel(use_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
                                &evs[i]);
-      clFinish(raw_q);
+      clFinish(use_q);
       uint64_t total_ns = 0;
       uint64_t min_ns = UINT64_MAX, max_ns = 0, last_ns = 0;
       uint64_t first_half_ns = 0, last_half_ns = 0;
@@ -2889,15 +2906,16 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         return us > 0 ? gflops / (us / 1.0e6) / 1000.0 : 0;
       };
       fprintf(stderr,
-        "\n[DELEGATE BENCH in production context, FRESH buffers] "
-        "M=%u N=%u K=%u  iters=%d  (50 warmup)\n"
+        "\n[DELEGATE BENCH in production context, FRESH buffers+queue] "
+        "M=%u N=%u K=%u  iters=%d  (50 warmup) queue=%s\n"
         "  min=%.2f us (%.3f TFLOPS)  max=%.2f us (%.3f TFLOPS)\n"
         "  first-half avg=%.2f us (%.3f TFLOPS)  last-half avg=%.2f us "
         "(%.3f TFLOPS)\n"
         "  overall avg=%.2f us (%.3f TFLOPS)\n"
         "  unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 "
         "N=4096 K=2560)\n",
-        M, N, K, n_iter, min_us, tfl(min_us), max_us, tfl(max_us),
+        M, N, K, n_iter, fresh_q ? "FRESH" : "shared",
+        min_us, tfl(min_us), max_us, tfl(max_us),
         fh_us, tfl(fh_us), lh_us, tfl(lh_us),
         avg_us, tfl(avg_us));
 
@@ -2907,6 +2925,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       clReleaseMemObject(fresh_bias);
       clReleaseMemObject(fresh_w);
       clReleaseMemObject(fresh_xmem);
+      if (fresh_q) clReleaseCommandQueue(fresh_q);
     }
   }
   const uint64_t t3 = now_ns();
