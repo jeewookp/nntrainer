@@ -5,35 +5,37 @@
 // (dlopen libOpenCL, flags=0 queue, same kernel / shape / build flags /
 // priming). Unlike the unittest, this binary is LINKED against libnntrainer,
 // libccapi-nntrainer, and libcausallm_core (i.e. every shared library that
-// nntrainer_causallm loads). The NNTR_BENCH_STAGE env var controls how much
-// nntrainer code actually runs before the bench:
+// nntrainer_causallm loads). The NNTR_BENCH_STAGE preprocessor symbol
+// (driven by LOCAL_CFLAGS in Android.mk) controls how much nntrainer code
+// actually runs before the bench:
 //
 //   NNTR_BENCH_STAGE=0
 //     Libraries are loaded via DT_NEEDED and their static initializers run,
 //     but no nntrainer symbol is referenced from main().
-//     Previous run: 2.87 TFLOPS on M=437 N=4096 K=2560 — matches unittest.
+//     Prior measurement: 2.87 TFLOPS on M=437 N=4096 K=2560 — matches unittest.
 //
 //   NNTR_BENCH_STAGE=1
-//     Stage 0 + opencl::ContextManager::Global().GetContext(). Creates
-//     nntrainer's cl_context with the Qualcomm HIGH perf / HIGH priority
-//     hints. Nothing else (no queue, no kernel compile).
+//     + opencl::ContextManager::Global().GetContext(). Creates nntrainer's
+//     cl_context with the Qualcomm HIGH perf / HIGH priority hints.
 //
 //   NNTR_BENCH_STAGE=2
-//     Stage 1 + opencl::CommandQueueManager::Global().CreateCommandQueue().
-//     Adds nntrainer's CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
-//     CL_QUEUE_PROFILING_ENABLE queue on that context.
+//     + opencl::CommandQueueManager::Global().CreateCommandQueue(). Adds
+//     nntrainer's OOO+PROFILING command queue.
 //
 //   NNTR_BENCH_STAGE=3
-//     Stage 2 + nntrainer::Engine::Global() — full ClContext::initialize():
-//     compiles all blas / attention CL kernels, registers layer factories,
-//     etc. Previous stage 1 measurement: 1.62 TFLOPS. This is what
-//     nntrainer_causallm does.
+//     + nntrainer::Engine::Global() — full ClContext::initialize():
+//     compiles all blas / attention CL kernels, registers layer factories.
+//     Prior stage-1-with-this-call measurement: 1.62 TFLOPS.
 //
 //   NNTR_BENCH_STAGE=4
-//     Stage 3 + Factory::registerModel call.
+//     + Factory::registerModel call.
 //
 // Bisection: whichever stage first drops from 2.87 to 1.62 TFLOPS is the
 // culprit.
+//
+// NOTE: All local OpenCL types are prefixed with `dl_` to avoid symbol
+// clashes with <CL/cl.h>, which is transitively pulled in from <engine.h>
+// at STAGE >= 3.
 
 #include <algorithm>
 #include <chrono>
@@ -68,40 +70,43 @@
 namespace {
 
 // ---------------------------------------------------------------------------
-// Minimal CL types / constants (no CL headers — all via dlopen, same as the
-// unittest so we don't share anything with nntrainer's opencl_loader).
+// Minimal CL types / constants, under a local `dl_` prefix so they don't
+// collide with the real <CL/cl.h> that nntrainer headers pull in at higher
+// stages. We dlopen /vendor/lib64/libOpenCL.so directly — none of these
+// types ever cross the nntrainer boundary, so using void* for handles is
+// fine.
 // ---------------------------------------------------------------------------
-using cl_int = int32_t;
-using cl_uint = uint32_t;
-using cl_ulong = uint64_t;
-using cl_mem = void *;
-using cl_context = void *;
-using cl_command_queue = void *;
-using cl_program = void *;
-using cl_kernel = void *;
-using cl_device_id = void *;
-using cl_platform_id = void *;
-using cl_event = void *;
+using dl_int = int32_t;
+using dl_uint = uint32_t;
+using dl_ulong = uint64_t;
+using dl_mem = void *;
+using dl_context = void *;
+using dl_command_queue = void *;
+using dl_program = void *;
+using dl_kernel = void *;
+using dl_device_id = void *;
+using dl_platform_id = void *;
+using dl_event = void *;
 
-constexpr cl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
-constexpr cl_uint CL_MEM_READ_ONLY = (1 << 2);
-constexpr cl_uint CL_MEM_READ_WRITE = (1 << 0);
-constexpr cl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
-constexpr cl_uint CL_DEVICE_NAME = 0x102B;
-constexpr cl_uint CL_RGBA = 0x10B5;
-constexpr cl_uint CL_HALF_FLOAT = 0x10DD;
-constexpr cl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
+constexpr dl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
+constexpr dl_uint CL_MEM_READ_ONLY = (1 << 2);
+constexpr dl_uint CL_MEM_READ_WRITE = (1 << 0);
+constexpr dl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
+constexpr dl_uint CL_DEVICE_NAME = 0x102B;
+constexpr dl_uint CL_RGBA = 0x10B5;
+constexpr dl_uint CL_HALF_FLOAT = 0x10DD;
+constexpr dl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
 
-struct cl_image_format {
-  cl_uint image_channel_order;
-  cl_uint image_channel_data_type;
+struct dl_image_format {
+  dl_uint image_channel_order;
+  dl_uint image_channel_data_type;
 };
-struct cl_image_desc {
-  cl_uint image_type;
+struct dl_image_desc {
+  dl_uint image_type;
   size_t image_width, image_height, image_depth;
   size_t image_array_size, image_row_pitch, image_slice_pitch;
-  cl_uint num_mip_levels, num_samples;
-  cl_mem buffer;
+  dl_uint num_mip_levels, num_samples;
+  dl_mem buffer;
 };
 struct int4 {
   int32_t x, y, z, w;
@@ -124,45 +129,45 @@ static uint16_t f32_to_f16(float v) {
 
 struct CLFuncs {
   void *lib = nullptr;
-  DECL(cl_int, clGetPlatformIDs, (cl_uint, cl_platform_id *, cl_uint *));
-  DECL(cl_int, clGetDeviceIDs,
-       (cl_platform_id, uint64_t, cl_uint, cl_device_id *, cl_uint *));
-  DECL(cl_int, clGetDeviceInfo,
-       (cl_device_id, cl_uint, size_t, void *, size_t *));
-  DECL(cl_context, clCreateContext,
-       (const intptr_t *, cl_uint, const cl_device_id *, void *, void *,
-        cl_int *));
-  DECL(cl_command_queue, clCreateCommandQueue,
-       (cl_context, cl_device_id, uint64_t, cl_int *));
-  DECL(cl_mem, clCreateBuffer,
-       (cl_context, uint64_t, size_t, void *, cl_int *));
-  DECL(cl_mem, clCreateImage,
-       (cl_context, uint64_t, const cl_image_format *, const cl_image_desc *,
-        void *, cl_int *));
-  DECL(cl_program, clCreateProgramWithSource,
-       (cl_context, cl_uint, const char **, const size_t *, cl_int *));
-  DECL(cl_int, clBuildProgram,
-       (cl_program, cl_uint, const cl_device_id *, const char *, void *,
+  DECL(dl_int, clGetPlatformIDs, (dl_uint, dl_platform_id *, dl_uint *));
+  DECL(dl_int, clGetDeviceIDs,
+       (dl_platform_id, uint64_t, dl_uint, dl_device_id *, dl_uint *));
+  DECL(dl_int, clGetDeviceInfo,
+       (dl_device_id, dl_uint, size_t, void *, size_t *));
+  DECL(dl_context, clCreateContext,
+       (const intptr_t *, dl_uint, const dl_device_id *, void *, void *,
+        dl_int *));
+  DECL(dl_command_queue, clCreateCommandQueue,
+       (dl_context, dl_device_id, uint64_t, dl_int *));
+  DECL(dl_mem, clCreateBuffer,
+       (dl_context, uint64_t, size_t, void *, dl_int *));
+  DECL(dl_mem, clCreateImage,
+       (dl_context, uint64_t, const dl_image_format *, const dl_image_desc *,
+        void *, dl_int *));
+  DECL(dl_program, clCreateProgramWithSource,
+       (dl_context, dl_uint, const char **, const size_t *, dl_int *));
+  DECL(dl_int, clBuildProgram,
+       (dl_program, dl_uint, const dl_device_id *, const char *, void *,
         void *));
-  DECL(cl_int, clGetProgramBuildInfo,
-       (cl_program, cl_device_id, cl_uint, size_t, void *, size_t *));
-  DECL(cl_kernel, clCreateKernel, (cl_program, const char *, cl_int *));
-  DECL(cl_int, clSetKernelArg, (cl_kernel, cl_uint, size_t, const void *));
-  DECL(cl_int, clEnqueueNDRangeKernel,
-       (cl_command_queue, cl_kernel, cl_uint, const size_t *, const size_t *,
-        const size_t *, cl_uint, const cl_event *, cl_event *));
-  DECL(cl_int, clEnqueueWriteBuffer,
-       (cl_command_queue, cl_mem, cl_uint, size_t, size_t, const void *,
-        cl_uint, const cl_event *, cl_event *));
-  DECL(cl_int, clEnqueueWriteImage,
-       (cl_command_queue, cl_mem, cl_uint, const size_t *, const size_t *,
-        size_t, size_t, const void *, cl_uint, const cl_event *, cl_event *));
-  DECL(cl_int, clFinish, (cl_command_queue));
-  DECL(cl_int, clReleaseMemObject, (cl_mem));
-  DECL(cl_int, clReleaseKernel, (cl_kernel));
-  DECL(cl_int, clReleaseProgram, (cl_program));
-  DECL(cl_int, clReleaseCommandQueue, (cl_command_queue));
-  DECL(cl_int, clReleaseContext, (cl_context));
+  DECL(dl_int, clGetProgramBuildInfo,
+       (dl_program, dl_device_id, dl_uint, size_t, void *, size_t *));
+  DECL(dl_kernel, clCreateKernel, (dl_program, const char *, dl_int *));
+  DECL(dl_int, clSetKernelArg, (dl_kernel, dl_uint, size_t, const void *));
+  DECL(dl_int, clEnqueueNDRangeKernel,
+       (dl_command_queue, dl_kernel, dl_uint, const size_t *, const size_t *,
+        const size_t *, dl_uint, const dl_event *, dl_event *));
+  DECL(dl_int, clEnqueueWriteBuffer,
+       (dl_command_queue, dl_mem, dl_uint, size_t, size_t, const void *,
+        dl_uint, const dl_event *, dl_event *));
+  DECL(dl_int, clEnqueueWriteImage,
+       (dl_command_queue, dl_mem, dl_uint, const size_t *, const size_t *,
+        size_t, size_t, const void *, dl_uint, const dl_event *, dl_event *));
+  DECL(dl_int, clFinish, (dl_command_queue));
+  DECL(dl_int, clReleaseMemObject, (dl_mem));
+  DECL(dl_int, clReleaseKernel, (dl_kernel));
+  DECL(dl_int, clReleaseProgram, (dl_program));
+  DECL(dl_int, clReleaseCommandQueue, (dl_command_queue));
+  DECL(dl_int, clReleaseContext, (dl_context));
 
   bool Load() {
     lib = dlopen("libOpenCL.so", RTLD_NOW);
@@ -234,8 +239,7 @@ int main(int, char **) {
 
 #if NNTR_BENCH_STAGE >= 1
   // Stage 1+: create nntrainer's cl_context via opencl::ContextManager.
-  // This applies Qualcomm HIGH perf / HIGH priority context hints. No
-  // command queue, no kernel compile beyond that.
+  // This applies Qualcomm HIGH perf / HIGH priority context hints.
   {
     auto cl_ctx = nntrainer::opencl::ContextManager::Global().GetContext();
     fprintf(stderr, "[nntr_delegate_bench] ContextManager.GetContext() = %p\n",
@@ -244,8 +248,7 @@ int main(int, char **) {
 #endif
 
 #if NNTR_BENCH_STAGE >= 2
-  // Stage 2+: additionally create nntrainer's OOO+PROFILING command queue
-  // on top of that context.
+  // Stage 2+: add nntrainer's OOO+PROFILING command queue on top.
   {
     bool ok =
       nntrainer::opencl::CommandQueueManager::Global().CreateCommandQueue();
@@ -263,7 +266,6 @@ int main(int, char **) {
 #endif
 
 #if NNTR_BENCH_STAGE >= 4
-  // Stage 4+: register a CausalLM model (mirrors main.cpp).
   causallm::Factory::Instance().registerModel(
     "Qwen3ForCausalLM",
     [](nlohmann::json cfg, nlohmann::json gen, nlohmann::json nntr) {
@@ -278,23 +280,23 @@ int main(int, char **) {
     return 1;
   }
 
-  cl_uint np;
-  cl_platform_id plat;
+  dl_uint np;
+  dl_platform_id plat;
   cl.clGetPlatformIDs(1, &plat, &np);
-  cl_uint nd;
-  cl_device_id dev;
+  dl_uint nd;
+  dl_device_id dev;
   cl.clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 1, &dev, &nd);
   char name[256] = {};
   cl.clGetDeviceInfo(dev, CL_DEVICE_NAME, sizeof(name), name, nullptr);
   fprintf(stderr, "[nntr_delegate_bench] GPU: %s\n", name);
 
-  cl_int err;
-  cl_context ctx = cl.clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
+  dl_int err;
+  dl_context ctx = cl.clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &err);
   if (!ctx) {
     fprintf(stderr, "[nntr_delegate_bench] clCreateContext failed: %d\n", err);
     return 1;
   }
-  cl_command_queue queue = cl.clCreateCommandQueue(ctx, dev, 0, &err);
+  dl_command_queue queue = cl.clCreateCommandQueue(ctx, dev, 0, &err);
 
   std::string ksrc = LoadKernelSource();
   if (ksrc.empty()) {
@@ -304,7 +306,7 @@ int main(int, char **) {
 
   const char *sp_ = ksrc.c_str();
   size_t sl_ = ksrc.size();
-  cl_program prog =
+  dl_program prog =
     cl.clCreateProgramWithSource(ctx, 1, &sp_, &sl_, &err);
   err = cl.clBuildProgram(prog, 1, &dev,
                           "-qcom-accelerate-16-bit=true -cl-std=CL2.0",
@@ -318,11 +320,8 @@ int main(int, char **) {
     fprintf(stderr, "[nntr_delegate_bench] build failed: %s\n", log.data());
     return 1;
   }
-  cl_kernel kern = cl.clCreateKernel(prog, "main_function", &err);
+  dl_kernel kern = cl.clCreateKernel(prog, "main_function", &err);
 
-  // ModelShapes_DelegateFp16 shape: Qwen3-4B q_proj (also k/v/o, gate/up/down
-  // at different N/K). Bench them all the same way as the unittest so we get
-  // directly comparable numbers.
   struct ShapeConfig { int M, N, K; };
   static const ShapeConfig kShapes[] = {
     {437, 4096, 2560},
@@ -338,21 +337,21 @@ int main(int, char **) {
     const double gflops = 2.0 * M * N * K / 1e9;
 
     size_t wbytes = (size_t)N * K * 2;
-    cl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &err);
+    dl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &err);
     {
       uint16_t v = f32_to_f16(0.01f);
       std::vector<uint16_t> d(wbytes / 2, v);
       cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, nullptr,
                               nullptr);
     }
-    cl_mem xm = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+    dl_mem xm = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
 
-    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
-    cl_image_desc bd = {};
+    dl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    dl_image_desc bd = {};
     bd.image_type = CL_MEM_OBJECT_IMAGE2D;
     bd.image_width = dst_slices;
     bd.image_height = 1;
-    cl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &err);
+    dl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &err);
     {
       std::vector<uint16_t> z(dst_slices * 4, 0);
       size_t o[3] = {0, 0, 0}, r[3] = {(size_t)dst_slices, 1, 1};
@@ -360,11 +359,11 @@ int main(int, char **) {
                              nullptr);
     }
 
-    cl_image_desc sd = {};
+    dl_image_desc sd = {};
     sd.image_type = CL_MEM_OBJECT_IMAGE2D;
     sd.image_width = M;
     sd.image_height = src_slices;
-    cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &err);
+    dl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &err);
     {
       uint16_t one = f32_to_f16(1.0f);
       std::vector<uint16_t> d((size_t)M * src_slices * 4, one);
@@ -373,20 +372,20 @@ int main(int, char **) {
                              nullptr);
     }
 
-    cl_image_desc dd = {};
+    dl_image_desc dd = {};
     dd.image_type = CL_MEM_OBJECT_IMAGE2D;
     dd.image_width = M;
     dd.image_height = dst_slices;
-    cl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &err);
+    dl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &err);
 
     int4 s0 = {1, dst_slices, M, 32};
     int4 s1 = {src_slices, 0, 0, src_slices};
     int4 s2 = {1, 1, 0, 0};
-    cl.clSetKernelArg(kern, 0, sizeof(cl_mem), &w);
-    cl.clSetKernelArg(kern, 1, sizeof(cl_mem), &xm);
-    cl.clSetKernelArg(kern, 2, sizeof(cl_mem), &bias);
-    cl.clSetKernelArg(kern, 3, sizeof(cl_mem), &di);
-    cl.clSetKernelArg(kern, 4, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(kern, 0, sizeof(dl_mem), &w);
+    cl.clSetKernelArg(kern, 1, sizeof(dl_mem), &xm);
+    cl.clSetKernelArg(kern, 2, sizeof(dl_mem), &bias);
+    cl.clSetKernelArg(kern, 3, sizeof(dl_mem), &di);
+    cl.clSetKernelArg(kern, 4, sizeof(dl_mem), &si);
     cl.clSetKernelArg(kern, 5, sizeof(int4), &s0);
     cl.clSetKernelArg(kern, 6, sizeof(int4), &s1);
     cl.clSetKernelArg(kern, 7, sizeof(int4), &s2);
