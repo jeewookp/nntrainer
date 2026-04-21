@@ -3520,15 +3520,17 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
 // process at arbitrary lifecycle points (before model load, after, etc.).
 // ============================================================================
 void run_delegate_standalone_bench(const char *label) {
-  // Diagnostic (once per process): print every shared lib the process has
-  // mapped in whose name hints at OpenCL or the Adreno GPU driver.
-  // Unittest binary measures 2.36 TFLOPS, nntrainer_causallm in-process
-  // bench measures 1.61 TFLOPS for the SAME kernel / shape / flags — the
-  // only variable is the process. If the two binaries have different
-  // libOpenCL.so paths mapped, /proc/self/maps reveals it immediately.
-  static bool printed_maps = false;
-  if (!printed_maps) {
-    printed_maps = true;
+  // Diagnostic: dump every mapped shared lib whose name hints at OpenCL /
+  // GLES / Adreno. Earlier run showed nntrainer_causallm had ONLY
+  // libOpenCL.so + libGLESv1/2/3_CM mapped (soft GLES-compute CL path),
+  // while the unittest had the full Adreno ICD (libOpenCL_adreno,
+  // libadreno_compiler_cl, libadreno_utils, libCB, libgsl) — which is
+  // almost certainly the 1.43x perf gap. But libOpenCL's backend .so is
+  // dlopen'd lazily, so dumping before the first kernel launch was too
+  // early. Dump twice: once at entry (should match prior run), once
+  // after the PROFILING+OOO bench has actually executed the kernel.
+  auto dump_maps = [](const char *phase) {
+    fprintf(stderr, "[BENCH maps %s] ---\n", phase);
     std::ifstream maps("/proc/self/maps");
     std::string line;
     std::set<std::string> seen;
@@ -3539,14 +3541,21 @@ void run_delegate_standalone_bench(const char *label) {
         (line.find("libadreno") != std::string::npos) ||
         (line.find("libCB") != std::string::npos) ||
         (line.find("libgsl") != std::string::npos) ||
-        (line.find("libllvm-qgl") != std::string::npos);
+        (line.find("libllvm-qgl") != std::string::npos) ||
+        (line.find("libLLVM_QGL") != std::string::npos) ||
+        (line.find("libq3dtools") != std::string::npos);
       if (!hit) continue;
       auto sp = line.find_last_of(' ');
       std::string path = sp == std::string::npos ? line : line.substr(sp + 1);
       if (!path.empty() && path[0] == '/' && seen.insert(path).second) {
-        fprintf(stderr, "[BENCH maps] %s\n", path.c_str());
+        fprintf(stderr, "[BENCH maps %s] %s\n", phase, path.c_str());
       }
     }
+  };
+  static bool printed_maps_entry = false;
+  if (!printed_maps_entry) {
+    printed_maps_entry = true;
+    dump_maps("entry");
   }
 
   auto *blas_cc =
@@ -3642,6 +3651,16 @@ void run_delegate_standalone_bench(const char *label) {
     "[BENCH %s PROFILING+OOO] event avg=%.2f us (%.3f TFLOPS)  "
     "WALL avg=%.2f us (%.3f TFLOPS)\n",
     label, avg_us, ev_tflops, wall_us_avg, wall_tflops);
+
+  // Now that at least one CL kernel has actually executed, any lazy-loaded
+  // vendor backend should be mapped. Dump maps again — if Adreno backend
+  // libs still aren't here but are in the unittest process, the cl runtime
+  // chose a different (slower) backend path for this process.
+  static bool printed_maps_after = false;
+  if (!printed_maps_after) {
+    printed_maps_after = true;
+    dump_maps("after-kernel");
+  }
 
   // ==========================================================================
   // Second bench on a queue that matches the unittest EXACTLY:
