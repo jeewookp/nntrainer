@@ -185,35 +185,17 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // hidden_dim = W. Pool image2d layout: width = B*H (total positions),
   // height = W/4 (RGBA half slices). This matches gemm_delegate's
   // src image expectation.
-  {
-    static int s_rms_diag = 0;
-    bool has_md = out.getMemoryData() != nullptr;
-    bool is_svm = has_md && out.getMemoryData()->isSVM();
-    auto dt = out.getDataType();
-    bool is_fp16 = dt == ml::train::TensorDim::DataType::FP16;
-    int w_val = (int)out.width();
-    if (s_rms_diag < 4) {
-      fprintf(stderr,
-        "[RMS] call=%d has_md=%d is_svm=%d is_fp16=%d dt=%d W=%d "
-        "ptr=%p\n",
-        s_rms_diag, has_md ? 1 : 0, is_svm ? 1 : 0, is_fp16 ? 1 : 0,
-        (int)dt, w_val, (void *)out.getData<char>());
-      s_rms_diag++;
-    }
-    if (is_svm && is_fp16 && (w_val % 4) == 0) {
-      const int rms_W = w_val;
-      // Use the step size (the number of rows we actually just wrote),
-      // not the tensor's allocated height — for prefill the tensor is
-      // sized to init_seq_len (1024 on Qwen3-4B here) but only (to - from)
-      // rows were normalised this pass. Using the full height would have
-      // the publish kernel copy junk from rows [to-from..init_seq_len)
-      // into the image2d, and worse the downstream gemm's M-based shape
-      // check would not match.
-      const int step_M =
-        (int)out.batch() * (int)out.channel() * (int)(to - from);
-      nntrainer::svm_to_image2d_publish(
-        out.getData<char>(), step_M, rms_W);
-    }
+  if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      (out.width() % 4) == 0) {
+    // Use the step size (rows we actually just wrote). The tensor is
+    // allocated for init_seq_len but prefill only normalises
+    // (to - from) rows — the full-height path would copy junk rows
+    // and the downstream gemm's shape check would fail.
+    const int step_M =
+      (int)out.batch() * (int)out.channel() * (int)(to - from);
+    nntrainer::svm_to_image2d_publish(
+      out.getData<char>(), step_M, (unsigned int)out.width());
   }
 #endif
 

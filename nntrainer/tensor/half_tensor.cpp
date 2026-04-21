@@ -964,17 +964,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const bool pool_has_input =
       use_delegate && GpuImagePool::Global().get(in_u16) != nullptr;
 
-    {
-      static int s_diag_calls = 0;
-      if (s_diag_calls < 6) {
-        fprintf(stderr,
-          "[DOT] call=%d use_delegate=%d in_ptr=%p pool_hit=%d M=%u K=%u N=%u\n",
-          s_diag_calls, use_delegate ? 1 : 0, (void *)in_u16,
-          pool_has_input ? 1 : 0, M, K, N);
-        s_diag_calls++;
-      }
-    }
-
     uint16_t *svm_in_T =
       reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
     const size_t in_total = (size_t)M * K;
