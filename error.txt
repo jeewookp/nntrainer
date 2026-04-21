@@ -1,841 +1,366 @@
-./include/nntrainer/tensor_wrap_specs.h
-./include/nntrainer/tizen_error.h
-./include/nntrainer/nntr_ggml_impl_utils.h
-./include/nntrainer/fallback_kleidiai.h
-./include/nntrainer/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h
-./include/nntrainer/opencl_context_manager.h
-./include/nntrainer/nntr_threads.h
-./include/nntrainer/util_simd.h
-./include/nntrainer/layer_node.h
-./include/nntrainer/optimizer_context.h
-./include/nntrainer/weight_layer.h
-./include/nntrainer/hgemm_common.h
-./include/nntrainer/task_executor.h
-./include/nntrainer/nntrainer_logger.h
-./include/nntrainer/cpu_backend.h
-./include/nntrainer/matrix_transpose_neon.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
-./include/nntrainer/fp16.h
-./include/nntrainer/quantizer.h
-./include/nntrainer/util_func.h
-./include/nntrainer/var_grad.h
-./include/nntrainer/memory_pool.h
-./include/nntrainer/nntrainer_log.h
-./include/nntrainer/connection.h
-./include/nntrainer/common.h
-./include/nntrainer/nntrainer_error.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
-./include/nntrainer/node_exporter.h
-./include/nntrainer/optimizer_wrapped.h
-./include/nntrainer/mman_windows.h
-./include/nntrainer/CL/
-./include/nntrainer/CL/opencl.h
-./include/nntrainer/CL/cl_version.h
-./include/nntrainer/CL/cl.h
-./include/nntrainer/CL/cl_platform.h
-./include/nntrainer/task.h
-./include/nntrainer/hgemm_pack.h
-./include/nntrainer/bs_thread_pool_manager.hpp
-./include/nntrainer/hgemm_kernel.h
-./include/nntrainer/hgemm_padding_b.h
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
-~/projects/nntrainer ~/projects/nntrainer
-~/projects/nntrainer
-build_android.sh: 79: Bad substitution
--e 
-========================================
--e  Build CausalLM Android Application 
--e ========================================
--e [INFO] NNTRAINER_ROOT: /home/jwhero94/projects/nntrainer
--e [INFO] ANDROID_NDK: /home/jwhero94/neo/android-ndk-r26d/
--e [INFO] Working directory: /home/jwhero94/projects/nntrainer/Applications/CausalLM
--e 
-[Step 1/4] Build nntrainer for Android
--e ----------------------------------------
--e [INFO] nntrainer for Android already built (skipping)
--e [SUCCESS] nntrainer ready
--e 
-[Step 2/4] Build Tokenizer Library
--e ----------------------------------------
--e [INFO] Tokenizer library already built (skipping)
--e [SUCCESS] Tokenizer library ready
--e 
-[Step 3/4] Prepare json.hpp
--e ----------------------------------------
--e [INFO] json.hpp already exists (skipping)
--e [SUCCESS] json.hpp ready
--e 
-[Step 4/4] Build CausalLM Core (library + executable)
--e ----------------------------------------
--e [INFO] Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize, nntr_delegate_bench_stage{0..4})...
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
-[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
-In file included from ./../models/qwen2/qwen2_causallm.cpp:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
-In file included from ./../models/qwen3_moe/qwen3_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
-In file included from ./../models/qwen3/qwen3_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_slim_moe/qwen3_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_cached_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_cached_slim_moe/qwen3_cached_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
-In file included from ./../models/causal_lm.cpp:26:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= embedding_pooling_layer.cpp
-./../layers/embedding_pooling_layer.cpp:46:7: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
-      input_dim.width(), word_embed_dim);
-      ^~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/nntrainer_log.h:47:51: note: expanded from macro 'ml_logw'
-  __android_log_print(ANDROID_LOG_WARN, TAG_NAME, __VA_ARGS__)
-                                                  ^~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= embedding_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gptoss_causallm.cpp
-In file included from ./../models/gpt_oss/gptoss_causallm.cpp:29:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= embedding_gemma.cpp
-In file included from ./../models/gemma3/embedding_gemma.cpp:13:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= gptoss_cached_slim_causallm.cpp
-In file included from ./../models/gpt_oss_cached_slim/gptoss_cached_slim_causallm.cpp:29:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
-In file included from ./../models/sentence_transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= embedding_normalize_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= function.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= lm_head.cpp
-[arm64-v8a] Compile++      : causallm_core <= rms_norm.cpp
-In file included from ./../layers/rms_norm.cpp:25:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= reshaped_rms_norm.cpp
-In file included from ./../layers/reshaped_rms_norm.cpp:23:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= swiglu.cpp
-In file included from ./../layers/swiglu.cpp:24:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= tie_word_embedding.cpp
-In file included from ./../layers/tie_word_embedding.cpp:30:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= embedding_normalize_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen2_causallm.cpp
-In file included from ./../models/qwen2/qwen2_causallm.cpp:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= embedding_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= embedding_pooling_layer.cpp
-./../layers/embedding_pooling_layer.cpp:46:7: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
-      input_dim.width(), word_embed_dim);
-      ^~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/nntrainer_log.h:47:51: note: expanded from macro 'ml_logw'
-  __android_log_print(ANDROID_LOG_WARN, TAG_NAME, __VA_ARGS__)
-                                                  ^~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen3_causallm.cpp
-In file included from ./../models/qwen3/qwen3_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_delegate_bench_stage1 <= delegate_bench_main.cpp
-In file included from ./delegate_bench_main.cpp:53:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_context_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./delegate_bench_main.cpp:91:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:28: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                           ^
-./delegate_bench_main.cpp:92:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_ONLY = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:26: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                         ^
-./delegate_bench_main.cpp:93:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_WRITE = (1 << 0);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:27: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                          ^
-./delegate_bench_main.cpp:94:19: error: expected unqualified-id
-constexpr dl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:726:30: note: expanded from macro 'CL_PROGRAM_BUILD_LOG'
-#define CL_PROGRAM_BUILD_LOG 0x1183
-                             ^
-./delegate_bench_main.cpp:95:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_NAME = 0x102B;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:358:24: note: expanded from macro 'CL_DEVICE_NAME'
-#define CL_DEVICE_NAME 0x102B
-                       ^
-./delegate_bench_main.cpp:96:19: error: expected unqualified-id
-constexpr dl_uint CL_RGBA = 0x10B5;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:569:17: note: expanded from macro 'CL_RGBA'
-#define CL_RGBA 0x10B5
-                ^
-./delegate_bench_main.cpp:97:19: error: expected unqualified-id
-constexpr dl_uint CL_HALF_FLOAT = 0x10DD;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:602:23: note: expanded from macro 'CL_HALF_FLOAT'
-#define CL_HALF_FLOAT 0x10DD
-                      ^
-./delegate_bench_main.cpp:98:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:610:31: note: expanded from macro 'CL_MEM_OBJECT_IMAGE2D'
-#define CL_MEM_OBJECT_IMAGE2D 0x10F1
-                              ^
-1 warning and 11 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_delegate_bench_stage1/delegate_bench_main.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntr_quantize <= qwen3_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_slim_moe/qwen3_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_delegate_bench_stage0 <= delegate_bench_main.cpp
-[arm64-v8a] Compile++      : causallm_core <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-In file included from ./../models/gemma3/gemma3_causallm.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-2 warnings generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen3_moe_causallm.cpp
-In file included from ./../models/qwen3_moe/qwen3_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen3_cached_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_cached_slim_moe/qwen3_cached_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_delegate_bench_stage2 <= delegate_bench_main.cpp
-In file included from ./delegate_bench_main.cpp:53:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_context_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./delegate_bench_main.cpp:91:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:28: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                           ^
-./delegate_bench_main.cpp:92:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_ONLY = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:26: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                         ^
-./delegate_bench_main.cpp:93:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_WRITE = (1 << 0);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:27: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                          ^
-./delegate_bench_main.cpp:94:19: error: expected unqualified-id
-constexpr dl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:726:30: note: expanded from macro 'CL_PROGRAM_BUILD_LOG'
-#define CL_PROGRAM_BUILD_LOG 0x1183
-                             ^
-./delegate_bench_main.cpp:95:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_NAME = 0x102B;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:358:24: note: expanded from macro 'CL_DEVICE_NAME'
-#define CL_DEVICE_NAME 0x102B
-                       ^
-./delegate_bench_main.cpp:96:19: error: expected unqualified-id
-constexpr dl_uint CL_RGBA = 0x10B5;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:569:17: note: expanded from macro 'CL_RGBA'
-#define CL_RGBA 0x10B5
-                ^
-./delegate_bench_main.cpp:97:19: error: expected unqualified-id
-constexpr dl_uint CL_HALF_FLOAT = 0x10DD;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:602:23: note: expanded from macro 'CL_HALF_FLOAT'
-#define CL_HALF_FLOAT 0x10DD
-                      ^
-./delegate_bench_main.cpp:98:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:610:31: note: expanded from macro 'CL_MEM_OBJECT_IMAGE2D'
-#define CL_MEM_OBJECT_IMAGE2D 0x10F1
-                              ^
-1 warning and 11 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_delegate_bench_stage2/delegate_bench_main.o] Error 1
-[arm64-v8a] Compile++      : nntr_quantize <= causal_lm.cpp
-In file included from ./../models/causal_lm.cpp:26:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= embedding_gemma.cpp
-In file included from ./../models/gemma3/embedding_gemma.cpp:13:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gptoss_cached_slim_causallm.cpp
-In file included from ./../models/gpt_oss_cached_slim/gptoss_cached_slim_causallm.cpp:29:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= reshaped_rms_norm.cpp
-In file included from ./../layers/reshaped_rms_norm.cpp:23:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= rms_norm.cpp
-In file included from ./../layers/rms_norm.cpp:25:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= swiglu.cpp
-In file included from ./../layers/swiglu.cpp:24:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gptoss_causallm.cpp
-In file included from ./../models/gpt_oss/gptoss_causallm.cpp:29:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= transformer.cpp
-In file included from ./../models/transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= lm_head.cpp
-[arm64-v8a] Compile++      : nntr_delegate_bench_stage3 <= delegate_bench_main.cpp
-In file included from ./delegate_bench_main.cpp:53:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_context_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./delegate_bench_main.cpp:91:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:29: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                            ^
-./delegate_bench_main.cpp:91:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:304:28: note: expanded from macro 'CL_DEVICE_TYPE_GPU'
-#define CL_DEVICE_TYPE_GPU (1 << 2)
-                           ^
-./delegate_bench_main.cpp:92:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_ONLY = (1 << 2);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:27: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                          ^
-./delegate_bench_main.cpp:92:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:538:26: note: expanded from macro 'CL_MEM_READ_ONLY'
-#define CL_MEM_READ_ONLY (1 << 2)
-                         ^
-./delegate_bench_main.cpp:93:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_READ_WRITE = (1 << 0);
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: error: expected ')'
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:28: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                           ^
-./delegate_bench_main.cpp:93:19: note: to match this '('
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:536:27: note: expanded from macro 'CL_MEM_READ_WRITE'
-#define CL_MEM_READ_WRITE (1 << 0)
-                          ^
-./delegate_bench_main.cpp:94:19: error: expected unqualified-id
-constexpr dl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:726:30: note: expanded from macro 'CL_PROGRAM_BUILD_LOG'
-#define CL_PROGRAM_BUILD_LOG 0x1183
-                             ^
-./delegate_bench_main.cpp:95:19: error: expected unqualified-id
-constexpr dl_uint CL_DEVICE_NAME = 0x102B;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:358:24: note: expanded from macro 'CL_DEVICE_NAME'
-#define CL_DEVICE_NAME 0x102B
-                       ^
-./delegate_bench_main.cpp:96:19: error: expected unqualified-id
-constexpr dl_uint CL_RGBA = 0x10B5;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:569:17: note: expanded from macro 'CL_RGBA'
-#define CL_RGBA 0x10B5
-                ^
-./delegate_bench_main.cpp:97:19: error: expected unqualified-id
-constexpr dl_uint CL_HALF_FLOAT = 0x10DD;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:602:23: note: expanded from macro 'CL_HALF_FLOAT'
-#define CL_HALF_FLOAT 0x10DD
-                      ^
-./delegate_bench_main.cpp:98:19: error: expected unqualified-id
-constexpr dl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
-                  ^
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:610:31: note: expanded from macro 'CL_MEM_OBJECT_IMAGE2D'
-#define CL_MEM_OBJECT_IMAGE2D 0x10F1
-                              ^
-1 warning and 11 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_delegate_bench_stage3/delegate_bench_main.o] Error 1
-[arm64-v8a] Compile++      : nntr_quantize <= sentence_transformer.cpp
-In file included from ./../models/sentence_transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= tie_word_embedding.cpp
-In file included from ./../layers/tie_word_embedding.cpp:30:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
-In file included from ./../layers/mha_core.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:30:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-In file included from ./../main.cpp:34:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-2 warnings generated.
-[arm64-v8a] Compile++      : nntr_quantize <= quantize.cpp
-In file included from ./../quantize.cpp:70:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
-In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-In file included from ./../models/gemma3/gemma3_causallm.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-2 warnings generated.
-[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
-In file included from ./../layers/mha_core.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
--e [ERROR] Build failed
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 7475 ms, 58.4615 TPS
+generation: 32 tokens, 7413 ms, 4.31674 TPS
+total: 14897 ms
+peak memory: 2695312 KB
+==========================================================
+[e2e time]: 26376 ms 
+Max Resident Set Size: 2695312 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:   116.5 ms
+  dequant:           87.6 ms ( 7.6%)
+  reformat_in:        0.1 ms ( 0.0%)  hits=252/252
+  conv(wall):      1064.6 ms (92.1%)
+  conv(gpu):       1934.3 ms            1.642 TFLOPS
+  readback:           3.5 ms ( 0.3%)
+  sum(steps):      1155.7 ms            2.748 TFLOPS
+  fn_total(wall):  4207.9 ms            (diff from sum = 2935.7 ms of arg-setup + enqueue overhead)
+
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=7399.3 ms across all forwarding_op() calls
+  fully_connected               4216.8 ms  calls=252  avg=16.733 ms
+  mha_core                      1742.4 ms  calls=36  avg=48.401 ms
+  rms_norm                       732.7 ms  calls=73  avg=10.037 ms
+  reshaped_rms_norm              530.1 ms  calls=72  avg=7.362 ms
+  swiglu                          67.6 ms  calls=36  avg=1.877 ms
+  addition                        63.9 ms  calls=72  avg=0.888 ms
+  tie_word_embeddings             45.0 ms  calls=2  avg=22.514 ms
+  multiout                         0.8 ms  calls=144  avg=0.005 ms
+  input                            0.1 ms  calls=1  avg=0.073 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=41.89 ms calls=1 avg=41.887 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.13 ms calls=1 avg=3.129 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=11.01 ms calls=36 avg=0.306 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=684.35 ms calls=73 avg=9.375 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=529.38 ms calls=72 avg=7.352 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1710.04 ms calls=36 avg=47.501 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4208.38 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4208.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ DT_NEEDED of pushed binaries
+==========================================
+
+--- Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm ---
+  NEEDED          libcausallm_core.so
+  NEEDED          libnntrainer.so
+  NEEDED          libccapi-nntrainer.so
+  NEEDED          liblog.so
+  NEEDED          libc.so
+  NEEDED          libm.so
+  NEEDED          libc++_shared.so
+  NEEDED          libdl.so
+
+--- Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so ---
+  NEEDED       libnntrainer.so
+  NEEDED       libccapi-nntrainer.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libcausallm_core.so
+
+--- builddir/android_build_result/lib/arm64-v8a/libnntrainer.so ---
+  NEEDED       libOpenCL.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libnntrainer.so
+
+--- builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so ---
+  NEEDED       libnntrainer.so
+  NEEDED       liblog.so
+  NEEDED       libc.so
+  NEEDED       libm.so
+  NEEDED       libc++_shared.so
+  NEEDED       libdl.so
+  SONAME       libccapi-nntrainer.so
+
+==========================================
+ [TRUTH] running real unittest_delegate_conv_wave ModelShapes
+==========================================
+==========================================
+[Step 1] Building unittest_delegate_conv_wave (ndk-build)
+==========================================
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : googletest_main [arm64-v8a]
+[arm64-v8a] Clean          : nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : test_util [arm64-v8a]
+[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
+[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
+[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
+[arm64-v8a] Clean          : unittest_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
+[arm64-v8a] StaticLibrary  : libgoogletest_main.a
+[arm64-v8a] Executable     : unittest_delegate_conv_wave
+[arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
+
+==========================================
+[Step 2] Pushing to device
+==========================================
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 28.3 MB/s (353248 bytes in 0.012s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.0 MB/s (7438 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.2 MB/s (9732 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in 0.055s)
+
+==========================================
+[Step 3] Running on device
+==========================================
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from DelegateConvWaveTest
+[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
+GPU: QUALCOMM Adreno(TM) 830
+Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
+Performance: 426.1 us/iter = 2.520 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (151 ms)
+[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
+GPU: QUALCOMM Adreno(TM) 830
+global=(1024,4,4) local=(128,1,4)
+  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
+  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
+  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
+  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
+  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
+  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
+  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
+  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
+Correctness: 128/128 pass (max err 12.9%)
+Int4 wave: 358225.1 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3279 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
+GPU: QUALCOMM Adreno(TM) 830
+
+=== Delegate fp16 kernel — model shapes ===
+[UNITTEST maps] /vendor/lib64/libadreno_compiler_cl.so
+[UNITTEST maps] /vendor/lib64/libCB.so
+[UNITTEST maps] /vendor/lib64/libadreno_utils.so
+[UNITTEST maps] /vendor/lib64/libgsl.so
+[UNITTEST maps] /vendor/lib64/libOpenCL_adreno.so
+[UNITTEST maps] /vendor/lib64/libOpenCL.so
+  M=437 N=4096 K=2560: 3620.7 us = 2.531 TFLOPS (×36 = 130.3 ms)
+  M=437 N=1024 K=2560: 882.2 us = 2.597 TFLOPS (×36 = 31.8 ms)
+  M=437 N=1024 K=2560: 904.0 us = 2.534 TFLOPS (×36 = 32.5 ms)
+  M=437 N=2560 K=4096: 3918.8 us = 2.339 TFLOPS (×36 = 141.1 ms)
+  M=437 N=9728 K=2560: 7895.4 us = 2.757 TFLOPS (×36 = 284.2 ms)
+  M=437 N=9728 K=2560: 7876.0 us = 2.764 TFLOPS (×36 = 283.5 ms)
+  M=437 N=2560 K=9728: 8103.8 us = 2.686 TFLOPS (×36 = 291.7 ms)
+  TOTAL: 3175.5 GFLOP in 1195.2 ms = 2.657 TFLOPS (conv only)
+[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1070 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
+GPU: QUALCOMM Adreno(TM) 830
+
+=== Int4 Adreno kernel — model shapes ===
+  SKIP 437x4096x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x1024x2560: image1d_buffer failed -6
+  SKIP 437x2560x4096: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x9728x2560: image1d_buffer failed -6
+  SKIP 437x2560x9728: image1d_buffer failed -6
+  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (130 ms)
+[----------] 4 tests from DelegateConvWaveTest (4632 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (4633 ms total)
+[  PASSED  ] 4 tests.
+
+Log: unittest_delegate_conv_wave.log
+
+--- Unittest ModelShapes lines (ground truth TFLOPS per shape) ---
+grep: unittest_delegate_conv_wave.log: binary file matches
+
+==========================================
+ [BISECT] nntr_delegate_bench stages 0 / 1 / 2
+==========================================
+
+--- nntr_delegate_bench stage=0 ---
+[nntr_delegate_bench] STAGE=0
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=0] M=437 N=4096 K=2560: 3200.4 us = 2.864 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=1024 K=2560: 870.5 us = 2.632 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=2560 K=4096: 3155.4 us = 2.904 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=9728 K=2560: 7289.6 us = 2.986 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=2560 K=9728: 7400.6 us = 2.941 TFLOPS
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+
+--- nntr_delegate_bench stage=1 ---
+[nntr_delegate_bench] STAGE=1
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=1] M=437 N=4096 K=2560: 3189.0 us = 2.874 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=1024 K=2560: 868.4 us = 2.638 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=2560 K=4096: 3234.3 us = 2.834 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=9728 K=2560: 7288.1 us = 2.987 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=2560 K=9728: 7559.0 us = 2.879 TFLOPS
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+
+--- nntr_delegate_bench stage=2 ---
+[nntr_delegate_bench] STAGE=2
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=2] M=437 N=4096 K=2560: 3194.7 us = 2.869 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=1024 K=2560: 867.5 us = 2.641 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=2560 K=4096: 3231.5 us = 2.836 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=9728 K=2560: 7281.7 us = 2.989 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=2560 K=9728: 7484.5 us = 2.908 TFLOPS
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+
+--- nntr_delegate_bench stage=3 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5738.9 us = 1.597 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1694.8 us = 1.352 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5792.4 us = 1.582 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13137.0 us = 1.657 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13575.5 us = 1.603 TFLOPS
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+
+--- nntr_delegate_bench stage=4 ---
+[nntr_delegate_bench] STAGE=4
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] factory.registerModel done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=4] M=437 N=4096 K=2560: 5742.6 us = 1.596 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=1024 K=2560: 1631.1 us = 1.405 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=2560 K=4096: 5805.2 us = 1.579 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=9728 K=2560: 13140.2 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=2560 K=9728: 13579.6 us = 1.603 TFLOPS
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+
+==========================================
+ Run summary
+==========================================
+
+--- Generation snippet (post-assistant tag) ---
+
+[DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.00 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+
+[DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
+  min=5561.09 us (1.648 TFLOPS)  max=5571.84 us (1.645 TFLOPS)
+  first-half avg=5566.24 us (1.646 TFLOPS)  last-half avg=5565.78
+
+--- Perf summary ---
+prefill: 437 tokens, 7475 ms, 58.4615 TPS
+generation: 32 tokens, 7413 ms, 4.31674 TPS
+total: 14897 ms
+peak memory: 2695312 KB
+[e2e time]: 26376 ms 
+
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4208.38 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4208.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=41.89 ms calls=1 avg=41.887 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.13 ms calls=1 avg=3.129 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=11.01 ms calls=36 avg=0.306 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=684.35 ms calls=73 avg=9.375 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=529.38 ms calls=72 avg=7.352 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1710.04 ms calls=36 avg=47.501 ms
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
