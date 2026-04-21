@@ -2617,26 +2617,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_w_size = kPreallocWBytes;
   }
 
-  // Secondary command queue for dequant. The dequant kernel produces
-  // an fp16 weight buffer that conv then consumes, but between two
-  // consecutive gemm calls (layer N / layer N+1) the dequant for
-  // layer N+1 has no data dependency on conv / readback of layer N —
-  // they touch entirely independent weights. Dispatching dequant on
-  // its own queue lets layer N+1's dequant run in parallel with
-  // layer N's conv on the GPU, hiding the ~172 ms of dequant wall
-  // clock under the ~1065 ms of conv wall clock. A cross-queue
-  // event is set on the dequant enqueue and passed as an explicit
-  // wait_list to the conv enqueue on the main queue.
-  static cl_command_queue s_dq_queue = nullptr;
-  if (!s_dq_queue) {
-    cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
-    cl_int qerr = 0;
-    s_dq_queue = clCreateCommandQueue(
-      clctx, dev,
-      CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
-      &qerr);
-  }
-
   // Shape-keyed caches for bias / src_img / dst_img. Qwen3 prefill
   // cycles through ~4 distinct K values and ~4 distinct N values per
   // decoder layer; a single-slot cache was clReleaseMemObject +
@@ -2778,17 +2758,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const uint64_t tD = now_ns();
     // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
     int tot = (int)(w_halfs / 16);
-    const size_t dg_s[3] = {(size_t)(((tot+255)/256)*256), 1, 1};
-    const size_t dl_s[3] = {256, 1, 1};
-    // Dispatch on the dedicated dequant queue so it can execute in
-    // parallel with the previous layer's conv on the main queue.
-    // clFlush pushes it out of the driver's per-queue buffer so the
-    // cross-queue wait (from the main-queue conv a few lines down)
-    // actually sees the dequant as in-flight, not merely enqueued.
-    cl_kernel dq_raw = s_dq_kern->GetKernel();
-    clEnqueueNDRangeKernel(s_dq_queue, dq_raw, 3, nullptr, dg_s, dl_s,
-                            0, nullptr, &dequant_ev);
-    clFlush(s_dq_queue);
+    const int dg[3] = {((tot+255)/256)*256, 1, 1};
+    const int dl[3] = {256, 1, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
     const uint64_t tE = now_ns();
     t_dq_alloc    += tB - tA;
     t_dq_svmarg   += tC - tB;
@@ -2883,14 +2855,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     cl_kernel raw_k = s_conv_kern->GetKernel();
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
     size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
-    // Wait for the dequant event from the secondary queue (cross-queue
-    // dep) so conv sees the fp16 weights written by dequant. With the
-    // dequant on its own queue we still get serialized consumption here
-    // but the *next* layer's dequant has already started in parallel.
-    const cl_event *conv_wait_list = dequant_ev ? &dequant_ev : nullptr;
-    const cl_uint conv_wait_count = dequant_ev ? 1 : 0;
-    clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls,
-                            conv_wait_count, conv_wait_list, &conv_ev);
+    clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
 
   }
   const uint64_t t3 = now_ns();
