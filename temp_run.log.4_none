@@ -1,0 +1,98 @@
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 6425 ms, 68.0156 TPS
+generation: 32 tokens, 7345 ms, 4.35671 TPS
+total: 13774 ms
+peak memory: 2768468 KB
+==========================================================
+[e2e time]: 17303 ms 
+Max Resident Set Size: 2768468 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  dequant:        88.8 ms (93.4%)
+  reformat_in:     0.6 ms ( 0.7%)  hits=180/252
+  conv(wall):      2.9 ms ( 3.0%)
+  conv(gpu):       0.0 ms            inf TFLOPS
+  readback:        2.7 ms ( 2.9%)
+  total:          95.1 ms            33.400 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=20.44 ms calls=1 avg=20.438 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.31 ms calls=1 avg=5.308 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=0.27 ms calls=36 avg=0.007 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=805.53 ms calls=73 avg=11.035 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=793.83 ms calls=72 avg=11.025 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1347.25 ms calls=36 avg=37.424 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=944.54 ms calls=252
+  in_stage    :    30.40 ms (  3.2%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :   914.12 ms ( 96.8%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
