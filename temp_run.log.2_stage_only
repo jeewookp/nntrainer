@@ -37,33 +37,47 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-gateS다ハQQLSTSTGSPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPT
+[SWIGLU DIAG call=0 total=4251136]
+  idx=0  in1=-0.5815  in2=-0.5239  expect=+0.1093  gpu_got=+0.1093  diff=-4.2468e-07
+  idx=1  in1=-0.0729  in2=+0.1199  expect=-0.0042  gpu_got=-0.0042  diff=+8.1025e-07
+  idx=100  in1=+0.5752  in2=-0.3833  expect=-0.1411  gpu_got=-0.1411  diff=-1.9252e-05
+  idx=1000  in1=+0.0159  in2=-0.0657  expect=-0.0005  gpu_got=-0.0005  diff=-1.8202e-07
+  idx=2125568  in1=+0.1022  in2=-0.1053  expect=-0.0057  gpu_got=-0.0057  diff=-9.8534e-07
+  idx=4251135  in1=-0.0308  in2=-0.1711  expect=+0.0026  gpu_got=+0.0026  diff=-3.5460e-07
+[SWIGLU DIAG call=1 total=4251136]
+  idx=0  in1=-10.2578  in2=+0.6357  expect=-0.0002  gpu_got=-0.0002  diff=+1.2718e-08
+  idx=1  in1=-0.7354  in2=+0.8960  expect=-0.2135  gpu_got=-0.2135  diff=-1.2264e-05
+  idx=100  in1=-2.3438  in2=-0.2294  expect=+0.0471  gpu_got=+0.0471  diff=-1.5005e-05
+  idx=1000  in1=-4.4453  in2=-0.5039  expect=+0.0260  gpu_got=+0.0260  diff=+7.3891e-06
+  idx=2125568  in1=-8.6250  in2=+0.4399  expect=-0.0007  gpu_got=-0.0007  diff=-1.8242e-07
+  idx=4251135  in1=-10.8047  in2=-0.4536  expect=+0.0001  gpu_got=+0.0001  diff=+2.8318e-08
+WindowSizeilitary频道霸道xAFxAF=edge=edge=out=out=out=out=out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7005 ms, 62.384 TPS
-generation: 32 tokens, 7338 ms, 4.36086 TPS
-total: 14352 ms
-peak memory: 2777440 KB
+prefill: 437 tokens, 7015 ms, 62.2951 TPS
+generation: 32 tokens, 7331 ms, 4.36503 TPS
+total: 14351 ms
+peak memory: 2773704 KB
 ==========================================================
-[e2e time]: 16680 ms 
-Max Resident Set Size: 2777440 KB
+[e2e time]: 16594 ms 
+Max Resident Set Size: 2773704 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        99.1 ms (92.5%)
-  reformat_in:     0.9 ms ( 0.8%)  hits=180/252
-  conv(wall):      3.9 ms ( 3.6%)
+  dequant:        88.8 ms (92.2%)
+  reformat_in:     0.9 ms ( 0.9%)  hits=180/252
+  conv(wall):      3.6 ms ( 3.8%)
   conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        3.2 ms ( 3.0%)
-  total:         107.1 ms            29.648 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.20 ms calls=1 avg=17.197 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.44 ms calls=1 avg=2.443 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=3.16 ms calls=36 avg=0.088 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=744.31 ms calls=73 avg=10.196 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=392.48 ms calls=72 avg=5.451 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1190.09 ms calls=36 avg=33.058 ms
+  readback:        3.0 ms ( 3.1%)
+  total:          96.4 ms            32.956 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.56 ms calls=1 avg=21.565 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.49 ms calls=1 avg=3.495 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=7.80 ms calls=36 avg=0.217 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=756.48 ms calls=73 avg=10.363 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=436.73 ms calls=72 avg=6.066 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1146.73 ms calls=36 avg=31.854 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4534.40 ms calls=252
-  in_stage    :    73.79 ms (  1.6%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4321.84 ms ( 95.3%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   138.76 ms (  3.1%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4523.00 ms calls=252
+  in_stage    :    78.36 ms (  1.7%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4306.53 ms ( 95.2%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   138.10 ms (  3.1%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]

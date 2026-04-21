@@ -66,33 +66,47 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-gateS다ハQQLSTSTGSPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPT
+[SWIGLU DIAG call=0 total=4251136]
+  idx=0  in1=-0.5815  in2=-0.5239  expect=+0.1093  gpu_got=+0.1093  diff=-4.2468e-07
+  idx=1  in1=-0.0729  in2=+0.1199  expect=-0.0042  gpu_got=-0.0042  diff=+8.1025e-07
+  idx=100  in1=+0.5752  in2=-0.3833  expect=-0.1411  gpu_got=-0.1411  diff=-1.9252e-05
+  idx=1000  in1=+0.0159  in2=-0.0657  expect=-0.0005  gpu_got=-0.0005  diff=-1.8202e-07
+  idx=2125568  in1=+0.1022  in2=-0.1053  expect=-0.0057  gpu_got=-0.0057  diff=-9.8534e-07
+  idx=4251135  in1=-0.0308  in2=-0.1711  expect=+0.0026  gpu_got=+0.0026  diff=-3.5460e-07
+[SWIGLU DIAG call=1 total=4251136]
+  idx=0  in1=-10.2578  in2=+0.6357  expect=-0.0002  gpu_got=-0.0002  diff=+1.2718e-08
+  idx=1  in1=-0.7354  in2=+0.8960  expect=-0.2135  gpu_got=-0.2135  diff=-1.2264e-05
+  idx=100  in1=-2.3438  in2=-0.2294  expect=+0.0471  gpu_got=+0.0471  diff=-1.5005e-05
+  idx=1000  in1=-4.4453  in2=-0.5039  expect=+0.0260  gpu_got=+0.0260  diff=+7.3891e-06
+  idx=2125568  in1=-8.6250  in2=+0.4399  expect=-0.0007  gpu_got=-0.0007  diff=-1.8242e-07
+  idx=4251135  in1=-10.8047  in2=-0.4536  expect=+0.0001  gpu_got=+0.0001  diff=+2.8318e-08
+WindowSizeilitary频道霸道xAFxAF=edge=edge=out=out=out=out=out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out,out
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 6182 ms, 70.6891 TPS
-generation: 32 tokens, 6900 ms, 4.63768 TPS
-total: 13088 ms
-peak memory: 2809664 KB
+prefill: 437 tokens, 6293 ms, 69.4422 TPS
+generation: 32 tokens, 6939 ms, 4.61162 TPS
+total: 13235 ms
+peak memory: 2662940 KB
 ==========================================================
-[e2e time]: 15461 ms 
-Max Resident Set Size: 2809664 KB
+[e2e time]: 16505 ms 
+Max Resident Set Size: 2662940 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        59.2 ms (91.3%)
-  reformat_in:     0.6 ms ( 0.9%)  hits=180/252
-  conv(wall):      2.6 ms ( 4.1%)
+  dequant:        81.0 ms (92.9%)
+  reformat_in:     0.6 ms ( 0.7%)  hits=180/252
+  conv(wall):      2.9 ms ( 3.3%)
   conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        2.4 ms ( 3.7%)
-  total:          64.9 ms            48.951 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.26 ms calls=1 avg=19.258 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.95 ms calls=1 avg=4.951 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=0.25 ms calls=36 avg=0.007 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=783.28 ms calls=73 avg=10.730 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=738.27 ms calls=72 avg=10.254 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1304.29 ms calls=36 avg=36.230 ms
+  readback:        2.7 ms ( 3.1%)
+  total:          87.2 ms            36.420 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.95 ms calls=1 avg=19.946 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=7.51 ms calls=1 avg=7.508 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=78.55 ms calls=36 avg=2.182 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=777.58 ms calls=73 avg=10.652 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=810.60 ms calls=72 avg=11.258 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1292.93 ms calls=36 avg=35.915 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=833.14 ms calls=252
-  in_stage    :    28.71 ms (  3.4%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   804.41 ms ( 96.6%)  [wrapper + clEnqueue + SVMMap sync]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=897.42 ms calls=252
+  in_stage    :    29.60 ms (  3.3%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :   867.80 ms ( 96.7%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
