@@ -92,8 +92,37 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
+  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
+
+# ----------------------------------------------------------------------------
+# Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
+# auto-tunes local[3] across 13 candidates and picks the fastest per shape.
+# We're hardcoded to (128,1,4); set NNTR_CONV_LOCAL_SWEEP=1 to rerun the
+# model under each candidate and print the resulting prefill TPS and
+# conv(gpu) ms, then manually pick the best and bake it in.
+if [ -n "$NNTR_CONV_LOCAL_SWEEP" ]; then
+  echo ""
+  echo "=========================================="
+  echo " [SWEEP] conv kernel local-size candidates"
+  echo "=========================================="
+  SWEEP_LOG=../../temp_sweep.log
+  > $SWEEP_LOG
+  for L in "128,1,4" "64,1,4" "32,1,4" "64,2,4" "32,2,4" "128,1,2" "256,1,1"; do
+    echo ""
+    echo "--- local=${L} ---" | tee -a $SWEEP_LOG
+    adb shell "cd /data/local/tmp/nntrainer/test; \
+      export LD_LIBRARY_PATH=.; \
+      export ${DELEGATE_ENV}; \
+      export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+      export NNTR_DELEGATE_CONV_LOCAL=${L}; \
+      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
+      | grep -E "prefill:|conv\(gpu\)" | tee -a $SWEEP_LOG
+  done
+  echo ""
+  echo "Sweep log: $SWEEP_LOG"
+fi
 
 cd ../..
 

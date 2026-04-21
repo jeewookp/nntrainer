@@ -2844,9 +2844,30 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
     s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
     s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
-    size_t gz = ((dst_slices+7)/8+3)/4;
-    const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
-    const int l[3] = {128, 1, 4};
+    // Default local = (128, 1, 4). litert_lm's delegate_kernel_bench
+    // auto-tunes over 13 candidate local sizes — for some shapes a
+    // different choice wins. Env var NNTR_DELEGATE_CONV_LOCAL=X,Y,Z
+    // overrides the default so we can sweep without rebuilding.
+    // Kernel mapping (from litert_lm's tune loop):
+    //   X = group_id(1) * local[0] + local_id(0)   needs M values
+    //   Y = group_id(2) * local[1] + local_id(1)   needs 1 value (h=1)
+    //   Z = group_id(0) * local[2] + local_id(2)   needs (dst_slices+7)/8
+    int lx = 128, ly = 1, lz = 4;
+    if (const char *env = std::getenv("NNTR_DELEGATE_CONV_LOCAL")) {
+      int a_, b_, c_;
+      if (std::sscanf(env, "%d,%d,%d", &a_, &b_, &c_) == 3 &&
+          a_ > 0 && b_ > 0 && c_ > 0) {
+        lx = a_; ly = b_; lz = c_;
+      }
+    }
+    const size_t need_z = (size_t)(dst_slices + 7) / 8;
+    const size_t groups_z = (need_z + (size_t)lz - 1) / (size_t)lz;
+    const size_t groups_x = ((size_t)M + (size_t)lx - 1) / (size_t)lx;
+    const size_t groups_y = (1 + (size_t)ly - 1) / (size_t)ly;
+    const int g[3] = {(int)(groups_z * (size_t)lx),
+                      (int)(groups_x * (size_t)ly),
+                      (int)(groups_y * (size_t)lz)};
+    const int l[3] = {lx, ly, lz};
     // Dispatch with event for GPU-side timing. DO NOT redeclare
     // conv_ev here — the outer-scope variable (declared just above)
     // is what clGetEventProfilingInfo reads, and a shadowed inner
