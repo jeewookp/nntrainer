@@ -3222,48 +3222,6 @@ void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total) {
   const int g[3] = {gcount, 1, 1};
   const int l[3] = {chosen_local, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
-
-  // DIAG: on first two calls, drain the queue, read the CPU-side
-  // values of a/b/out, compute the expected sum in fp16 arithmetic,
-  // and print alongside the GPU output so we can see whether the
-  // kernel is mathematically correct.
-  static int s_diag = 0;
-  if (s_diag < 2) {
-    s_diag++;
-    const uint16_t *ha = reinterpret_cast<const uint16_t *>(a);
-    const uint16_t *hb = reinterpret_cast<const uint16_t *>(b);
-    uint16_t *ho = reinterpret_cast<uint16_t *>(out);
-    const size_t bytes = total * sizeof(uint16_t);
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      const_cast<uint16_t *>(ha), bytes, /*read_only=*/true);
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      const_cast<uint16_t *>(hb), bytes, /*read_only=*/true);
-    blas_cc->command_queue_inst_.enqueueSVMMap(ho, bytes, /*read_only=*/true);
-    auto h2f = [](uint16_t h) -> float {
-      uint32_t u = (uint32_t)h;
-      uint32_t sign = (u & 0x8000) << 16;
-      uint32_t exp5 = (u >> 10) & 0x1F;
-      uint32_t mant = u & 0x3FF;
-      uint32_t bits;
-      if (exp5 == 0) {
-        if (mant == 0) bits = sign;
-        else { while (!(mant & 0x400)) { mant <<= 1; exp5--; }
-               exp5++; mant &= 0x3FF;
-               bits = sign | ((exp5 - 15 + 127) << 23) | (mant << 13); }
-      } else if (exp5 == 31) bits = sign | 0x7F800000 | (mant << 13);
-      else bits = sign | ((exp5 - 15 + 127) << 23) | (mant << 13);
-      float f; __builtin_memcpy(&f, &bits, 4); return f;
-    };
-    const size_t idxs[] = {0, 1, 100, total / 2, total - 1};
-    fprintf(stderr, "[ADD2 DIAG call=%d total=%zu]\n", s_diag - 1, total);
-    for (auto i : idxs) {
-      if (i >= total) continue;
-      float av = h2f(ha[i]), bv = h2f(hb[i]), ov = h2f(ho[i]);
-      fprintf(stderr,
-        "  idx=%zu  a=%+.4f  b=%+.4f  expect=%+.4f  gpu_got=%+.4f  "
-        "diff=%+.4e\n", i, av, bv, av + bv, ov, ov - (av + bv));
-    }
-  }
 }
 
 } // namespace nntrainer

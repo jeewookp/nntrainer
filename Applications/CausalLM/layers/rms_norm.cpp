@@ -107,6 +107,21 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   nntrainer::Tensor &out = context.getOutput(SINGLE_INOUT_IDX);
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // RMSNorm's CPU NEON path reads `in` host-side. Upstream layers
+  // (AdditionLayer's add2_fp16_svm GPU kernel, or Phase B Q/K/V gemm
+  // writes) enqueue their output with no blocking SVMMap, so drain
+  // the queue here so the host sees coherent data.
+  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
+    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      cl_ctx->command_queue_inst_.enqueueSVMMap(
+        in.getData<char>(), in.bytes(), /*read_only=*/true);
+    }
+  }
+#endif
+
   ml::train::TensorDim in_dim = in.getDim();
   ml::train::TensorDim out_dim = out.getDim();
 
