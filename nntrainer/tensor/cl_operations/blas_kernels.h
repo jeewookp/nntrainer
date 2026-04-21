@@ -255,19 +255,6 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
 void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total);
 
 /**
- * @brief Standalone delegate conv benchmark. Creates a fresh
- * cl_context + program + buffers in the current process and runs
- * the captured wave-memory kernel 32 times (+ 50 warmup) at shape
- * M=437 N=4096 K=2560. Prints the achieved TFLOPS to stderr,
- * tagged with `label`. Call this at different points in an
- * application's lifetime (before model load, after model load,
- * after first inference, ...) to see whether something about the
- * process state — not the cl_context it happens to be in — is
- * changing the kernel's achievable throughput.
- */
-void run_delegate_standalone_bench(const char *label);
-
-/**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
  *        read through image texture).
  *

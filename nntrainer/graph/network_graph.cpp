@@ -441,76 +441,10 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   unsigned int from, unsigned int to, bool training,
   std::function<void(std::shared_ptr<LayerNode>, bool)> forwarding_op,
   std::function<bool(void *userdata)> stop_cb, void *userdata) {
-  // Per-layer-type wall-clock accumulator. This profiles whatever a
-  // specific layer type burned end-to-end inside forwarding_op —
-  // includes the incremental_forwarding body AND the graph runner's
-  // tensor bookkeeping around it. Existing PROFILE_TIME_START / END
-  // feeds nntrainer's internal profiler; this one prints directly to
-  // stderr at process exit so we can compare against the per-layer
-  // profilers the Applications code publishes (MHACoreLayer,
-  // RMSNormLayer, SwiGLULayer, …) and see where the unaccounted
-  // wall time in a prefill is hiding.
-  struct LayerWallProfile {
-    std::unordered_map<std::string, uint64_t> ns;
-    std::unordered_map<std::string, uint64_t> calls;
-    uint64_t total_ns{0};
-    ~LayerWallProfile() {
-      if (!total_ns) return;
-      std::vector<std::pair<uint64_t, std::string>> ordered;
-      for (auto &p : ns) ordered.emplace_back(p.second, p.first);
-      std::sort(ordered.begin(), ordered.end(),
-                std::greater<std::pair<uint64_t, std::string>>());
-      fprintf(stderr,
-        "\n[PROFILE NetworkGraph per-layer wall clock (prefill only, "
-        "step_size>1)]\n"
-        "  total=%.1f ms across all forwarding_op() calls\n",
-        total_ns / 1e6);
-      for (auto &p : ordered) {
-        fprintf(stderr,
-          "  %-28s %7.1f ms  calls=%lu  avg=%.3f ms\n",
-          p.second.c_str(), p.first / 1e6,
-          (unsigned long)calls[p.second],
-          (p.first / 1e6) / std::max<uint64_t>(1, calls[p.second]));
-      }
-    }
-  };
-  static LayerWallProfile g_graph_wall_profile;
-
-  // Optional: clFinish after every layer to attribute GPU work to the
-  // layer that issued it, instead of letting it pile up on the queue
-  // and get billed to a later CPU layer's entry SVMMap fence.
-  // Slows wall time down (~serializes CPU and GPU) but makes the
-  // breakdown honest.
-  //
-  //   NNTRAINER_PROFILE_LAYER_SYNC=1  -> enable per-layer clFinish
-  static const bool s_profile_layer_sync =
-    std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
-  static cl_command_queue s_sync_q = nullptr;
-  if (s_profile_layer_sync && !s_sync_q) {
-    auto *cc = static_cast<ClContext *>(
-      Engine::Global().getRegisteredContext("gpu"));
-    if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
-  }
-
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
-    // Only accumulate wall-clock stats for prefill steps (to - from > 1).
-    // Decode (M == 1) amortisation is dominated by per-call overhead and
-    // drowns out the prefill breakdown we actually care about.
-    const bool profile_this_call = (to - from) > 1;
-    struct timespec ts0, ts1;
-    if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
-    if (profile_this_call) {
-      if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
-      clock_gettime(CLOCK_MONOTONIC, &ts1);
-      const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
-                          (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
-      g_graph_wall_profile.ns[ln->getType()] += dt;
-      g_graph_wall_profile.calls[ln->getType()] += 1;
-      g_graph_wall_profile.total_ns += dt;
-    }
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
 
