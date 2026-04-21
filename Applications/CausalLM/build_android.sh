@@ -152,9 +152,9 @@ cd "$SCRIPT_DIR/jni"
 # Clean previous builds
 rm -rf libs obj
 
-log_info "Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize, nntr_delegate_bench_stage{0,1,2})..."
+log_info "Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize, nntr_delegate_bench_stage{0..4})..."
 # We explicitly set paths to ensure outputs are predictable
-if ndk-build NDK_PROJECT_PATH=. NDK_LIBS_OUT=./libs NDK_OUT=./obj APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk causallm_core nntrainer_causallm nntr_quantize nntr_delegate_bench_stage0 nntr_delegate_bench_stage1 nntr_delegate_bench_stage2 -j $(nproc); then
+if ndk-build NDK_PROJECT_PATH=. NDK_LIBS_OUT=./libs NDK_OUT=./obj APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk causallm_core nntrainer_causallm nntr_quantize nntr_delegate_bench_stage0 nntr_delegate_bench_stage1 nntr_delegate_bench_stage2 nntr_delegate_bench_stage3 nntr_delegate_bench_stage4 -j $(nproc); then
     log_success "Build completed successfully"
 else
     log_error "Build failed"

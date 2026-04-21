@@ -163,7 +163,7 @@ echo " [BISECT] nntr_delegate_bench stages 0 / 1 / 2"
 echo "=========================================="
 adb push nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl \
   /data/local/tmp/nntrainer/test/ >/dev/null
-for stage in 0 1 2; do
+for stage in 0 1 2 3 4; do
   LIBS_BIN=Applications/CausalLM/jni/libs/arm64-v8a/nntr_delegate_bench_stage${stage}
   OBJ_BIN=Applications/CausalLM/jni/obj/local/arm64-v8a/nntr_delegate_bench_stage${stage}
   if [ -f "$LIBS_BIN" ]; then

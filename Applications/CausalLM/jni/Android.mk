@@ -281,3 +281,5 @@ endef
 $(eval $(call NNTR_DELEGATE_BENCH_template,0))
 $(eval $(call NNTR_DELEGATE_BENCH_template,1))
 $(eval $(call NNTR_DELEGATE_BENCH_template,2))
+$(eval $(call NNTR_DELEGATE_BENCH_template,3))
+$(eval $(call NNTR_DELEGATE_BENCH_template,4))

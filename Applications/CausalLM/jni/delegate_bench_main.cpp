@@ -8,22 +8,32 @@
 // nntrainer_causallm loads). The NNTR_BENCH_STAGE env var controls how much
 // nntrainer code actually runs before the bench:
 //
-//   NNTR_BENCH_STAGE=0 (default)
+//   NNTR_BENCH_STAGE=0
 //     Libraries are loaded via DT_NEEDED and their static initializers run,
-//     but no nntrainer symbol is referenced from main(). Baseline for
-//     "just linking nntrainer slows Adreno CL".
+//     but no nntrainer symbol is referenced from main().
+//     Previous run: 2.87 TFLOPS on M=437 N=4096 K=2560 — matches unittest.
 //
 //   NNTR_BENCH_STAGE=1
-//     Calls nntrainer::Engine::Global(). This constructs the Engine singleton,
-//     which in turn constructs nntrainer's ClContext singleton and creates
-//     its own cl_context + compiles all blas / attention CL kernels. Baseline
-//     for "ClContext init slows Adreno CL".
+//     Stage 0 + opencl::ContextManager::Global().GetContext(). Creates
+//     nntrainer's cl_context with the Qualcomm HIGH perf / HIGH priority
+//     hints. Nothing else (no queue, no kernel compile).
 //
 //   NNTR_BENCH_STAGE=2
-//     Stage 1 + registers all CausalLM models the way main.cpp does.
+//     Stage 1 + opencl::CommandQueueManager::Global().CreateCommandQueue().
+//     Adds nntrainer's CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+//     CL_QUEUE_PROFILING_ENABLE queue on that context.
 //
-// Bisection: whichever stage first drops from the unittest's 2.36 TFLOPS to
-// nntrainer_causallm's 1.61 TFLOPS is the culprit.
+//   NNTR_BENCH_STAGE=3
+//     Stage 2 + nntrainer::Engine::Global() — full ClContext::initialize():
+//     compiles all blas / attention CL kernels, registers layer factories,
+//     etc. Previous stage 1 measurement: 1.62 TFLOPS. This is what
+//     nntrainer_causallm does.
+//
+//   NNTR_BENCH_STAGE=4
+//     Stage 3 + Factory::registerModel call.
+//
+// Bisection: whichever stage first drops from 2.87 to 1.62 TFLOPS is the
+// culprit.
 
 #include <algorithm>
 #include <chrono>
@@ -38,10 +48,18 @@
 #include <vector>
 
 #if NNTR_BENCH_STAGE >= 1
-#include <engine.h>
+#include <opencl_context_manager.h>
 #endif
 
 #if NNTR_BENCH_STAGE >= 2
+#include <opencl_command_queue_manager.h>
+#endif
+
+#if NNTR_BENCH_STAGE >= 3
+#include <engine.h>
+#endif
+
+#if NNTR_BENCH_STAGE >= 4
 #include <factory.h>
 #include "causal_lm.h"
 #include "qwen3_causallm.h"
@@ -215,18 +233,37 @@ int main(int, char **) {
   dump_maps("entry");
 
 #if NNTR_BENCH_STAGE >= 1
-  // Stage 1+: touch nntrainer::Engine::Global(). This triggers ClContext
-  // construction (singleton initializes OpenCL through nntrainer's own
-  // opencl_loader, creates its own cl_context, compiles all blas +
-  // attention CL kernels). After this call the process should hold at
-  // least one nntrainer cl_context.
+  // Stage 1+: create nntrainer's cl_context via opencl::ContextManager.
+  // This applies Qualcomm HIGH perf / HIGH priority context hints. No
+  // command queue, no kernel compile beyond that.
+  {
+    auto cl_ctx = nntrainer::opencl::ContextManager::Global().GetContext();
+    fprintf(stderr, "[nntr_delegate_bench] ContextManager.GetContext() = %p\n",
+            (void *)cl_ctx);
+  }
+#endif
+
+#if NNTR_BENCH_STAGE >= 2
+  // Stage 2+: additionally create nntrainer's OOO+PROFILING command queue
+  // on top of that context.
+  {
+    bool ok =
+      nntrainer::opencl::CommandQueueManager::Global().CreateCommandQueue();
+    fprintf(stderr, "[nntr_delegate_bench] CreateCommandQueue() = %d\n",
+            (int)ok);
+  }
+#endif
+
+#if NNTR_BENCH_STAGE >= 3
+  // Stage 3+: full Engine::Global() — triggers ClContext::initialize()
+  // which compiles all blas/attention CL kernels, registers layer
+  // factories, and sets the MemAllocator.
   (void)nntrainer::Engine::Global();
   fprintf(stderr, "[nntr_delegate_bench] Engine::Global() done\n");
 #endif
 
-#if NNTR_BENCH_STAGE >= 2
-  // Stage 2+: register one CausalLM model entry (mirrors main.cpp's
-  // Factory::registerModel calls, without actually loading any weight).
+#if NNTR_BENCH_STAGE >= 4
+  // Stage 4+: register a CausalLM model (mirrors main.cpp).
   causallm::Factory::Instance().registerModel(
     "Qwen3ForCausalLM",
     [](nlohmann::json cfg, nlohmann::json gen, nlohmann::json nntr) {
