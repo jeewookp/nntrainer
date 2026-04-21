@@ -19,6 +19,11 @@
 
 #include <layer_context.h>
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cl_context.h>
+#include <engine.h>
+#endif
+
 namespace nntrainer {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
@@ -45,6 +50,30 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
                                            unsigned int from, unsigned int to,
                                            bool training) {
   Tensor &hidden_ = context.getOutput(SINGLE_INOUT_IDX);
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Residual add reads each input via host pointers inside
+  // Tensor::copy / Tensor::add_i (NEON). Upstream gemm_delegate in
+  // Phase B doesn't block-sync on its SVM output anymore, so drain
+  // the queue here before the CPU touches the data.
+  {
+    auto *cl_ctx = static_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      auto map_if_svm = [&](const Tensor &t) {
+        if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            const_cast<char *>(t.getData<char>()), t.bytes(),
+            /*read_only=*/true);
+        }
+      };
+      for (unsigned int idx = 0; idx < context.getNumInputs(); ++idx) {
+        map_if_svm(context.getInput(idx));
+      }
+    }
+  }
+#endif
+
   TensorDim hidden_dim = hidden_.getDim();
   TensorDim hidden_step_dim = hidden_dim;
 
