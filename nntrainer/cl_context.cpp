@@ -27,6 +27,7 @@
 #include <swiglu_cl.h>
 #include <transpose_cl.h>
 
+#include <climits>
 #include <cstdlib>
 #include <filesystem>
 
@@ -216,41 +217,57 @@ void ClContext::initBlasClKernels() {
     return;
   }
 
-  registerClKernel(sgemv_kernel, "sgemv_cl");
-  registerClKernel(sgemv_no_trans_kernel, "sgemv_cl_noTrans");
-  registerClKernel(dot_kernel, "dot_cl");
-  registerClKernel(sgemm_no_trans_kernel, "sgemm_cl_noTrans");
-  registerClKernel(sgemm_trans_a_kernel, "sgemm_cl_transA");
-  registerClKernel(sgemm_trans_b_kernel, "sgemm_cl_transB");
-  registerClKernel(sgemm_trans_ab_kernel, "sgemm_cl_transAB");
-  registerClKernel(addition_kernel, "addition_cl");
-  registerClKernel(sscal_kernel, "sscal_cl");
-  registerClKernel(q6_k_sgemv_kernel, "kernel_mul_mv_q6_K_f32");
+  // Diagnostic: NNTR_BLAS_KERNEL_COUNT caps how many kernels get compiled
+  // here so we can binary-search which one (or how many) trips the Adreno
+  // driver into the 1.60 TFLOPS mode. Unset = compile all. Values are
+  // 0..count_of_registered_kernels.
+  int max_count = INT_MAX;
+  if (const char *env = std::getenv("NNTR_BLAS_KERNEL_COUNT")) {
+    max_count = std::atoi(env);
+    ml_logi("initBlasClKernels NNTR_BLAS_KERNEL_COUNT=%d", max_count);
+  }
+  int compiled = 0;
+#define REG(src, name) do { \
+    if (compiled >= max_count) { blas_kernels_initialized = true; return; } \
+    registerClKernel((src), (name)); \
+    ++compiled; \
+  } while (0)
+
+  REG(sgemv_kernel, "sgemv_cl");
+  REG(sgemv_no_trans_kernel, "sgemv_cl_noTrans");
+  REG(dot_kernel, "dot_cl");
+  REG(sgemm_no_trans_kernel, "sgemm_cl_noTrans");
+  REG(sgemm_trans_a_kernel, "sgemm_cl_transA");
+  REG(sgemm_trans_b_kernel, "sgemm_cl_transB");
+  REG(sgemm_trans_ab_kernel, "sgemm_cl_transAB");
+  REG(addition_kernel, "addition_cl");
+  REG(sscal_kernel, "sscal_cl");
+  REG(q6_k_sgemv_kernel, "kernel_mul_mv_q6_K_f32");
 
   // register Q4_0 kernels
-  registerClKernel(convert_block_q4_0_kernel,
-                   "kernel_convert_block_q4_0_noshuffle");
-  registerClKernel(restore_block_q4_0_kernel, "kernel_restore_block_q4_0");
-  registerClKernel(transpose_16bit_kernel, "kernel_transpose_16");
-  registerClKernel(transpose_32bit_16bit_kernel, "kernel_transpose_32_16");
-  registerClKernel(q4_0_ab_bi_8x4_kernel, "kernel_mul_mat_Ab_Bi_8x4");
+  REG(convert_block_q4_0_kernel, "kernel_convert_block_q4_0_noshuffle");
+  REG(restore_block_q4_0_kernel, "kernel_restore_block_q4_0");
+  REG(transpose_16bit_kernel, "kernel_transpose_16");
+  REG(transpose_32bit_16bit_kernel, "kernel_transpose_32_16");
+  REG(q4_0_ab_bi_8x4_kernel, "kernel_mul_mat_Ab_Bi_8x4");
 
   // register INT4 computation kernels
-  registerClKernel(int4_gemv_kernel, "fully_connected_gpu_int4_gemv");
-  registerClKernel(int4_quantize_input_kernel, "quantize_input_int4");
-  registerClKernel(int4_quantize_input_kernel, "quantize_input_int4_pad");
+  REG(int4_gemv_kernel, "fully_connected_gpu_int4_gemv");
+  REG(int4_quantize_input_kernel, "quantize_input_int4");
+  REG(int4_quantize_input_kernel, "quantize_input_int4_pad");
 
 #ifdef ENABLE_FP16
-  registerClKernel(hgemv_kernel, "sgemv_cl_fp16");
-  registerClKernel(hgemv_no_trans_kernel, "sgemv_cl_noTrans_fp16");
-  registerClKernel(dot_fp16_kernel, "dot_cl_fp16");
-  registerClKernel(hgemm_no_trans_kernel, "sgemm_cl_noTrans_fp16");
-  registerClKernel(hgemm_trans_a_kernel, "sgemm_cl_transA_fp16");
-  registerClKernel(hgemm_trans_b_kernel, "sgemm_cl_transB_fp16");
-  registerClKernel(hgemm_trans_ab_kernel, "sgemm_cl_transAB_fp16");
-  registerClKernel(addition_fp16_kernel, "addition_cl_fp16");
-  registerClKernel(hscal_kernel, "sscal_cl_fp16");
+  REG(hgemv_kernel, "sgemv_cl_fp16");
+  REG(hgemv_no_trans_kernel, "sgemv_cl_noTrans_fp16");
+  REG(dot_fp16_kernel, "dot_cl_fp16");
+  REG(hgemm_no_trans_kernel, "sgemm_cl_noTrans_fp16");
+  REG(hgemm_trans_a_kernel, "sgemm_cl_transA_fp16");
+  REG(hgemm_trans_b_kernel, "sgemm_cl_transB_fp16");
+  REG(hgemm_trans_ab_kernel, "sgemm_cl_transAB_fp16");
+  REG(addition_fp16_kernel, "addition_cl_fp16");
+  REG(hscal_kernel, "sscal_cl_fp16");
 #endif
+#undef REG
   blas_kernels_initialized = true;
 }
 

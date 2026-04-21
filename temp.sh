@@ -204,7 +204,9 @@ elif [ -f "$STAGE3_OBJ" ]; then STAGE3=$STAGE3_OBJ
 else STAGE3=
 fi
 if [ -n "$STAGE3" ]; then
-  for lvl in 0 1 2 3; do
+  # Confirm sub-bisection: init_level=0 should stay fast (clInit only),
+  # init_level=1+ drops to 1.60 TFLOPS because initBlasClKernels runs.
+  for lvl in 0 1; do
     echo ""
     echo "--- stage=3 NNTR_INIT_LEVEL=${lvl} ---"
     adb shell "cd /data/local/tmp/nntrainer/test; \
@@ -212,6 +214,21 @@ if [ -n "$STAGE3" ]; then
       export NNTR_INIT_LEVEL=${lvl}; \
       taskset f0 ./nntr_delegate_bench_stage3" 2>&1 \
       | grep -E "STAGE|M=437|NNTR_INIT_LEVEL|Engine::Global|GPU:"
+  done
+  # Binary-search which kernel inside initBlasClKernels tips the driver.
+  # NNTR_INIT_LEVEL=1 restricts to exactly initBlasClKernels;
+  # NNTR_BLAS_KERNEL_COUNT caps how many REG() calls actually execute.
+  echo ""
+  echo "[BISECT blas-kernel-count]"
+  for cnt in 0 1 2 5 10 15 20 27; do
+    echo ""
+    echo "--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=${cnt} ---"
+    adb shell "cd /data/local/tmp/nntrainer/test; \
+      export LD_LIBRARY_PATH=.; \
+      export NNTR_INIT_LEVEL=1; \
+      export NNTR_BLAS_KERNEL_COUNT=${cnt}; \
+      taskset f0 ./nntr_delegate_bench_stage3" 2>&1 \
+      | grep -E "STAGE|M=437|BLAS_KERNEL_COUNT|initBlasClKernels"
   done
 fi
 
