@@ -81,18 +81,22 @@ MMapedMemory::MMapedMemory(size_t size, bool allocate_fd_) :
 
   if (allocate_fd) {
 #ifdef __ANDROID__
-    /// unfortunately, memfd_create is not supported before android level 30
-    fd_ = ASharedMemory_create("", size);
+    // Previously used ASharedMemory_create / _setProt from libandroid.so,
+    // but that DT_NEEDED pulled libEGL + libGLESv1_CM/v2/v3 into every
+    // process that links libnntrainer — which on Adreno 830 made the CL
+    // runtime share GPU timeslice with an implicit GL context and
+    // dropped delegate conv from 2.36 TFLOPS to ~1.61 TFLOPS. memfd_create
+    // is in libc since Android API 30 (11+), which covers every device
+    // new enough to reach this code path, so use it here and drop the
+    // libandroid dependency.
+    fd_ = memfd_create("nntrainer_mmap", 0);
     if (fd_ < 0) {
       throw std::runtime_error("[MMapedMemory] creating mem fd failed");
     }
-
-    if (ASharedMemory_setProt(fd_, PROT_READ | PROT_WRITE) < 0) {
-      // unlink / close the given fd here
+    if (ftruncate(fd_, size) < 0) {
       close(fd_);
-      throw std::runtime_error("[MMapedMemory] Setting prot failed");
+      throw std::runtime_error("[MMapedMemory] ftruncate failed");
     }
-
     buf_ = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
 #endif
   } else {
