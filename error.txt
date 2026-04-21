@@ -1,13 +1,3 @@
-MEMTAG_OPTIONS
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
@@ -19,21 +9,21 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [RMS] call=0 has_md=1 is_svm=1 is_fp16=1 dt=11 W=2560 ptr=0x3f82978000
 [DOT] call=0 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=4096
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=1 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=1024
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=2 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=1024
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=3 use_delegate=1 in_ptr=0x3f82e78000 pool_hit=0 M=437 K=4096 N=2560
 [GEMM] in=0x3ffe000000 pool=0x0 w=0/437 h=0/1024 hit=0
 [RMS] call=1 has_md=1 is_svm=1 is_fp16=1 dt=11 W=2560 ptr=0x3f82978000
 [DOT] call=4 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=9728
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=5 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=9728
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [GEMM] in=0x3ffe000000 pool=0x0 w=0/437 h=0/2432 hit=0
 [RMS] call=2 has_md=1 is_svm=1 is_fp16=1 dt=11 W=2560 ptr=0x3f82978000
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [RMS] call=3 has_md=1 is_svm=1 is_fp16=1 dt=11 W=2560 ptr=0x3f82978000
 <think>
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
@@ -41,32 +31,32 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7697 ms, 56.7754 TPS
-generation: 32 tokens, 7182 ms, 4.45558 TPS
-total: 14884 ms
-peak memory: 2715328 KB
+prefill: 437 tokens, 7625 ms, 57.3115 TPS
+generation: 32 tokens, 6487 ms, 4.93294 TPS
+total: 14117 ms
+peak memory: 2745004 KB
 ==========================================================
-[e2e time]: 17151 ms 
-Max Resident Set Size: 2715328 KB
+[e2e time]: 16269 ms 
+Max Resident Set Size: 2745004 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  dequant:        96.4 ms (92.0%)
-  reformat_in:     1.6 ms ( 1.6%)  hits=0/252
-  conv(wall):      3.8 ms ( 3.6%)
+  dequant:        75.4 ms (89.5%)
+  reformat_in:     2.0 ms ( 2.4%)  hits=180/252
+  conv(wall):      3.7 ms ( 4.4%)
   conv(gpu):       0.0 ms            inf TFLOPS
-  readback:        3.0 ms ( 2.9%)
-  total:         104.8 ms            30.296 TFLOPS
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.78 ms calls=1 avg=18.783 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.73 ms calls=1 avg=5.728 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1112.41 ms calls=36 avg=30.900 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=701.83 ms calls=73 avg=9.614 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=431.18 ms calls=72 avg=5.989 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1146.56 ms calls=36 avg=31.849 ms
+  readback:        3.1 ms ( 3.7%)
+  total:          84.3 ms            37.658 TFLOPS
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=22.55 ms calls=1 avg=22.555 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=8.12 ms calls=1 avg=8.121 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1100.86 ms calls=36 avg=30.579 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=651.25 ms calls=73 avg=8.921 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=336.53 ms calls=72 avg=4.674 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1185.19 ms calls=36 avg=32.922 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4180.10 ms calls=252
-  in_stage    :    35.46 ms (  0.8%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3997.01 ms ( 95.6%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   147.63 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4129.93 ms calls=252
+  in_stage    :    32.64 ms (  0.8%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3965.40 ms ( 96.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   131.89 ms (  3.2%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -78,39 +68,37 @@ Max Resident Set Size: 2715328 KB
 
 [RMS] call=0 has_md=1 is_svm=1 is_fp16=1 dt=11 W=2560 ptr=0x3f82978000
 [DOT] call=0 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=4096
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=1 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=1024
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
 [DOT] call=2 use_delegate=1 in_ptr=0x3f82978000 pool_hit=1 M=437 K=2560 N=1024
-[GEMM] in=0x3f82978000 pool=0xb40000718e09cd70 w=1024/437 h=640/640 hit=0
-[DOT] call=3 use_delegate=1 in_ptr=0x3f82e78000 pool_hit=0 M=437 K=40
+[GEMM] in=0x3f82978000 pool=0xb40000779c320730 w=437/437 h=640/640 hit=1
+[DOT] call=3 use_delegate=1 in_ptr=0x3f82e78000 pool_hit=0 M=437 K=4096 
 
 --- Perf summary ---
-prefill: 437 tokens, 7697 ms, 56.7754 TPS
-generation: 32 tokens, 7182 ms, 4.45558 TPS
-total: 14884 ms
-peak memory: 2715328 KB
-[e2e time]: 17151 ms 
-  total:         104.8 ms            30.296 TFLOPS
+prefill: 437 tokens, 7625 ms, 57.3115 TPS
+generation: 32 tokens, 6487 ms, 4.93294 TPS
+total: 14117 ms
+peak memory: 2745004 KB
+[e2e time]: 16269 ms 
+  total:          84.3 ms            37.658 TFLOPS
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4180.10 ms calls=252
-  in_stage    :    35.46 ms (  0.8%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3997.01 ms ( 95.6%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :   147.63 ms (  3.5%)  [svm_out -> fp16 scalar loop]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4129.93 ms calls=252
+  in_stage    :    32.64 ms (  0.8%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  3965.40 ms ( 96.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :   131.89 ms (  3.2%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.78 ms calls=1 avg=18.783 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.73 ms calls=1 avg=5.728 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=1112.41 ms calls=36 avg=30.900 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=701.83 ms calls=73 avg=9.614 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=431.18 ms calls=72 avg=5.989 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1146.56 ms calls=36 avg=31.849 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=22.55 ms calls=1 avg=22.555 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=8.12 ms calls=1 avg=8.121 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=1100.86 ms calls=36 avg=30.579 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=651.25 ms calls=73 avg=8.921 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=336.53 ms calls=72 avg=4.674 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1185.19 ms calls=36 avg=32.922 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
