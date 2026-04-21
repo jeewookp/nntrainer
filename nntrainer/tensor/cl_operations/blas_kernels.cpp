@@ -2797,6 +2797,29 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       s_bench_done = true;
       const int n_iter = std::max(1, atoi(s_bench_n_env));
 
+      // Dump platform / device / driver info so we can rule out
+      // libOpenCL identity. Unittest and production should be running
+      // on the same vendor driver; if these strings differ between
+      // the two runs, a bundled libOpenCL.so is still shadowing the
+      // system one.
+      cl_device_id dev_info = blas_cc->context_inst_.GetDeviceId();
+      char vendor[256] = {0}, dev_name[256] = {0}, driver_ver[256] = {0},
+           dev_ver[256] = {0};
+      clGetDeviceInfo(dev_info, CL_DEVICE_VENDOR, sizeof(vendor), vendor, 0);
+      clGetDeviceInfo(dev_info, CL_DEVICE_NAME, sizeof(dev_name), dev_name, 0);
+      clGetDeviceInfo(dev_info, CL_DRIVER_VERSION, sizeof(driver_ver),
+                      driver_ver, 0);
+      clGetDeviceInfo(dev_info, CL_DEVICE_VERSION, sizeof(dev_ver), dev_ver, 0);
+      cl_uint compute_units = 0, max_freq = 0;
+      clGetDeviceInfo(dev_info, CL_DEVICE_MAX_COMPUTE_UNITS,
+                      sizeof(compute_units), &compute_units, 0);
+      clGetDeviceInfo(dev_info, CL_DEVICE_MAX_CLOCK_FREQUENCY,
+                      sizeof(max_freq), &max_freq, 0);
+      fprintf(stderr,
+        "[DELEGATE BENCH device] vendor='%s' name='%s' driver='%s' "
+        "version='%s' CU=%u max_freq=%u MHz\n",
+        vendor, dev_name, driver_ver, dev_ver, compute_units, max_freq);
+
       // A/B variant: allocate FRESH buffers for the bench (new cl_mem
       // handles, different GPU addresses) and rebind the kernel to
       // them. If the unittest is faster because it uses fresh buffers
