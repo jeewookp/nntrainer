@@ -3094,6 +3094,13 @@ void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
     s_in_kern = blas_cc->registerClKernel(image_reformat_kernel,
                                           "svm_to_image2d");
   }
+
+  // The caller has just CPU-written to svm_ptr (e.g. RMSNorm NEON
+  // compute). On Adreno coarse-grained SVM those writes live in the
+  // CPU cache until an SVMUnmap commits them; without the unmap the
+  // GPU kernel we dispatch below reads stale data.
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(svm_ptr);
+
   int a = 0;
   s_in_kern->SetKernelSVMArguments(a++, svm_ptr);
   s_in_kern->SetKernelArguments(a++, &img, sizeof(cl_mem));
