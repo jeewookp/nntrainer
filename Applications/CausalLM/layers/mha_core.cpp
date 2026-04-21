@@ -32,6 +32,7 @@ static std::mutex rope_init_mtx;
 #include <node_exporter.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #endif
 
@@ -424,6 +425,18 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       output.getMemoryData()->isSVM()) {
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
+    // Phase B publish: put MHA output into GpuImagePool so o_proj
+    // can pool-hit. Skips its svm_to_image2d and — crucially — the
+    // blocking SVMMap the HalfTensor wrapper would otherwise need
+    // to drain MHA's in-flight writes. Publish matches o_proj's
+    // expected shape: M = step_size, K = output.width() (hidden_dim).
+    const int pub_W = (int)output.width();
+    if ((pub_W % 4) == 0) {
+      const int pub_M = (int)(output.batch() * output.channel() *
+                                (int)step_size);
+      nntrainer::svm_to_image2d_publish(output.getData<char>(),
+                                        pub_M, pub_W);
+    }
   }
 #endif
 

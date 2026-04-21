@@ -118,6 +118,16 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     nntrainer::swiglu_fp16_svm_cl(
       in1.getData<_FP16>(), in2.getData<_FP16>(), out.getData<_FP16>(),
       step_total);
+    // Phase B publish: SwiGLU output → GpuImagePool so the
+    // following down_proj pool-hits, dropping its per-gemm blocking
+    // SVMMap + scalar staging copy. out shape here is
+    // (1, C, iter, W); publish M = C*iter, K = W.
+    if ((out.width() % 4) == 0) {
+      const int pub_M =
+        (int)out.channel() * (int)iter;
+      nntrainer::svm_to_image2d_publish(
+        out.getData<char>(), pub_M, (unsigned int)out.width());
+    }
     if (profile_this_call) {
       g_swiglu_profile.ns += now_ns() - t_layer_start;
       g_swiglu_profile.calls++;
