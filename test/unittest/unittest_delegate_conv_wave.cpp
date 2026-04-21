@@ -790,6 +790,112 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
 }
 
 // ============================================================================
+// Auto-tune work-group size per Qwen3 shape. Same setup as
+// ModelShapes_DelegateFp16 above but loops through 7 candidate local
+// sizes (the ones litert_lm's delegate_kernel_bench tries first) and
+// prints TFLOPS for each, plus the winner per shape.
+// ============================================================================
+TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
+  fprintf(stderr, "\n=== Delegate fp16 kernel — local-size tune ===\n");
+
+  struct LocalCand { int lx, ly, lz; };
+  static const LocalCand kLocals[] = {
+    {128, 1, 4}, {64, 1, 4}, {32, 1, 4},
+    {64, 2, 4},  {32, 2, 4},
+    {128, 1, 2}, {256, 1, 1},
+  };
+
+  for (const auto& s : kModelShapes) {
+    const int M = s.M, N = s.N, K = s.K;
+    const int src_slices = K / 4, dst_slices = N / 4;
+    const double gflops = 2.0 * M * N * K / 1e9;
+
+    std::string ksrc = LoadKernelSource();
+    if (ksrc.empty()) { fprintf(stderr, "SKIP: no kernel\n"); continue; }
+
+    cl_int e;
+    const char *sp = ksrc.c_str(); size_t sl = ksrc.size();
+    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+    e = cl.clBuildProgram(prog, 1, &dev,
+        "-qcom-accelerate-16-bit=true -cl-std=CL2.0", nullptr, nullptr);
+    if (e) { fprintf(stderr, "BUILD FAIL for %dx%dx%d\n", M, N, K); continue; }
+    cl_kernel kern = cl.clCreateKernel(prog, "main_function", &e);
+
+    size_t wbytes = (size_t)N * K * 2;
+    cl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &e);
+    { uint16_t v = f32_to_f16(0.01f);
+      std::vector<uint16_t> d(wbytes/2, v);
+      cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, 0, 0); }
+    cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = dst_slices; bd.image_height = 1;
+    cl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &e);
+    { std::vector<uint16_t> z(dst_slices*4, 0);
+      size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+      cl.clEnqueueWriteImage(queue, bias, 1, o, r, 0, 0, z.data(), 0, 0, 0); }
+    cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_width = M; sd.image_height = src_slices;
+    cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &e);
+    { uint16_t one = f32_to_f16(1.0f);
+      std::vector<uint16_t> d((size_t)M*src_slices*4, one);
+      size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+      cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, d.data(), 0, 0, 0); }
+    cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = dst_slices;
+    cl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+
+    int4 s0 = {1, dst_slices, M, 32};
+    int4 s1 = {src_slices, 0, 0, src_slices};
+    int4 s2 = {1, 1, 0, 0};
+    cl.clSetKernelArg(kern, 0, sizeof(cl_mem), &w);
+    cl.clSetKernelArg(kern, 1, sizeof(cl_mem), &xm);
+    cl.clSetKernelArg(kern, 2, sizeof(cl_mem), &bias);
+    cl.clSetKernelArg(kern, 3, sizeof(cl_mem), &di);
+    cl.clSetKernelArg(kern, 4, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(kern, 5, sizeof(int4), &s0);
+    cl.clSetKernelArg(kern, 6, sizeof(int4), &s1);
+    cl.clSetKernelArg(kern, 7, sizeof(int4), &s2);
+
+    fprintf(stderr, "\n  M=%d N=%d K=%d\n", M, N, K);
+    double best_us = 1e18;
+    LocalCand best = kLocals[0];
+    for (const auto& c : kLocals) {
+      size_t need_z = (dst_slices + 7) / 8;
+      size_t groups_z = (need_z + c.lz - 1) / c.lz;
+      size_t groups_x = ((size_t)M + c.lx - 1) / c.lx;
+      size_t groups_y = (1 + c.ly - 1) / c.ly;
+      size_t local[3]  = {(size_t)c.lx, (size_t)c.ly, (size_t)c.lz};
+      size_t global[3] = {groups_z * c.lx, groups_x * c.ly, groups_y * c.lz};
+
+      for (int i = 0; i < 3; ++i)
+        cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+      cl.clFinish(queue);
+
+      int iters = 5;
+      auto t0 = std::chrono::high_resolution_clock::now();
+      for (int i = 0; i < iters; ++i)
+        cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+      cl.clFinish(queue);
+      auto t1 = std::chrono::high_resolution_clock::now();
+      double us = std::chrono::duration<double, std::micro>(t1-t0).count() / iters;
+      double tflops = (gflops / (us / 1e6)) / 1000.0;
+      fprintf(stderr, "    local=(%d,%d,%d)  %7.1f us  %.3f TFLOPS\n",
+              c.lx, c.ly, c.lz, us, tflops);
+      if (us < best_us) { best_us = us; best = c; }
+    }
+    fprintf(stderr, "    → best=(%d,%d,%d)  %.1f us  %.3f TFLOPS\n",
+            best.lx, best.ly, best.lz, best_us,
+            (gflops / (best_us / 1e6)) / 1000.0);
+
+    cl.clReleaseMemObject(w); cl.clReleaseMemObject(xm);
+    cl.clReleaseMemObject(bias); cl.clReleaseMemObject(si);
+    cl.clReleaseMemObject(di); cl.clReleaseKernel(kern);
+    cl.clReleaseProgram(prog);
+  }
+}
+
+// ============================================================================
 // Benchmark: int4_gemm_adreno (existing kernel) with model shapes
 // ============================================================================
 TEST_F(DelegateConvWaveTest, ModelShapes_Int4Adreno) {
