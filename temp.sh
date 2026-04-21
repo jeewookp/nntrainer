@@ -150,6 +150,36 @@ grep -E "M=437|Delegate fp16|conv only|TOTAL:" unittest_delegate_conv_wave.log \
   || echo "(no ModelShapes lines found)"
 
 # ----------------------------------------------------------------------------
+# Bisection bench: nntr_delegate_bench_stage{0,1,2}. Same kernel / shape /
+# setup as the unittest, but linked against libnntrainer + libccapi-nntrainer
+# + libcausallm_core. Stage 0 only links them (DT_NEEDED, static init runs),
+# Stage 1 additionally calls nntrainer::Engine::Global(), Stage 2 additionally
+# registers a CausalLM model in the factory. Whichever stage first reports
+# ~1.61 TFLOPS (instead of unittest's 2.36) is the culprit.
+# ----------------------------------------------------------------------------
+echo ""
+echo "=========================================="
+echo " [BISECT] nntr_delegate_bench stages 0 / 1 / 2"
+echo "=========================================="
+adb push nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl \
+  /data/local/tmp/nntrainer/test/ >/dev/null
+for stage in 0 1 2; do
+  BIN=Applications/CausalLM/jni/libs/arm64-v8a/nntr_delegate_bench_stage${stage}
+  if [ ! -f "$BIN" ]; then
+    echo "[BISECT] $BIN not built, skipping"
+    continue
+  fi
+  adb push "$BIN" /data/local/tmp/nntrainer/test/ >/dev/null
+  adb shell chmod +x /data/local/tmp/nntrainer/test/nntr_delegate_bench_stage${stage}
+  echo ""
+  echo "--- nntr_delegate_bench stage=${stage} ---"
+  adb shell "cd /data/local/tmp/nntrainer/test; \
+    export LD_LIBRARY_PATH=.; \
+    taskset f0 ./nntr_delegate_bench_stage${stage}" 2>&1 \
+    | grep -E "STAGE|M=437|maps|Engine::Global|registerModel|GPU:"
+done
+
+# ----------------------------------------------------------------------------
 # Diagnostic summary (extracted from temp_run.log for quick scanning)
 # ----------------------------------------------------------------------------
 RUN_LOG=temp_run.log

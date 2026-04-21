@@ -245,3 +245,39 @@ LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES) \
     $(LOCAL_PATH)/../models/gemma3 \
 
 include $(BUILD_EXECUTABLE)
+
+# =========================================================================
+# Bisection bench: unittest_delegate_conv_wave's delegate fp16 kernel
+# test, but built as a plain executable that LINKS the same shared libs
+# nntrainer_causallm does (libnntrainer.so, libccapi-nntrainer.so,
+# libcausallm_core.so). NNTR_BENCH_STAGE picks how much nntrainer code
+# is actually called before the kernel bench:
+#   0 = libs loaded via DT_NEEDED, no nntrainer symbol referenced
+#   1 = + nntrainer::Engine::Global()
+#   2 = + one Factory::registerModel call
+# Three binaries are built so we can run all three from one push and
+# see which stage first drops us from unittest's 2.36 TFLOPS to
+# nntrainer_causallm's 1.61 TFLOPS.
+# =========================================================================
+define NNTR_DELEGATE_BENCH_template
+include $(CLEAR_VARS)
+
+LOCAL_ARM_NEON := true
+LOCAL_CFLAGS += -std=c++17 -O3 -march=armv8.2-a+fp16+dotprod -DNNTR_BENCH_STAGE=$(1)
+LOCAL_CXXFLAGS += -std=c++17 -frtti -fexceptions
+LOCAL_ARM_MODE := arm
+LOCAL_MODULE := nntr_delegate_bench_stage$(1)
+LOCAL_LDLIBS := -llog -ldl
+
+LOCAL_SRC_FILES := delegate_bench_main.cpp
+
+LOCAL_SHARED_LIBRARIES := causallm_core nntrainer ccapi-nntrainer
+
+LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES) $(CAUSALLM_COMMON_INCLUDES)
+
+include $(BUILD_EXECUTABLE)
+endef
+
+$(eval $(call NNTR_DELEGATE_BENCH_template,0))
+$(eval $(call NNTR_DELEGATE_BENCH_template,1))
+$(eval $(call NNTR_DELEGATE_BENCH_template,2))
