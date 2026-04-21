@@ -83,14 +83,14 @@ RUN_LOG=../../temp_run.log
 # NNTR_DELEGATE_FP16=1 enables the delegate conv_wave_memory kernel path
 # (dequant int4→fp16 + wave memory dispatch). Unset to use default int4 path.
 DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
-# NNTRAINER_PROFILE_LAYER_SYNC=1 inserts a clFinish after every layer so
-# the per-layer profile attributes time correctly (conv stays on fc
-# instead of leaking into the next CPU layer's SVMMap fence). Costs
-# ~5% prefill TPS so leave it off for production timing.
+# NNTRAINER_PROFILE_LAYER_SYNC=1 inserts a clWaitForEvents after every
+# delegate conv so conv(gpu) reads the true per-call GPU exec time, but
+# that serializes host with GPU and doubles fn_total wall time. Leave
+# it OFF for production timing — we already know conv(gpu) ≈ 2.99
+# TFLOPS, and we want the async pipeline numbers now.
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
-  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
