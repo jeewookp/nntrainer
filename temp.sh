@@ -19,11 +19,18 @@ adb push jni/libs/arm64-v8a/* /data/local/tmp/nntrainer/test
 # Applications/CausalLM/jni/libs/arm64-v8a/. Without these, libcausallm_core.so
 # on device may try to resolve symbols against a stale libnntrainer.so.
 NNTRAINER_LIB_DIR=../../builddir/android_build_result/lib/arm64-v8a
-for lib in libnntrainer.so libccapi-nntrainer.so libOpenCL.so libc++_shared.so; do
+# NOTE: libOpenCL.so deliberately dropped — the bundled nntrainer
+# libOpenCL.so runs the delegate conv kernel at 1.65 TFLOPS vs the
+# device vendor driver's 2.8 TFLOPS. Without pushing our copy, the
+# loader falls back to /system/vendor/lib64/libOpenCL.so.
+for lib in libnntrainer.so libccapi-nntrainer.so libc++_shared.so; do
   if [ -f "$NNTRAINER_LIB_DIR/$lib" ]; then
     adb push "$NNTRAINER_LIB_DIR/$lib" /data/local/tmp/nntrainer/test/
   fi
 done
+# Remove any previously-pushed bundled libOpenCL.so so `.` doesn't
+# still shadow the vendor one via prior-run residue.
+adb shell "rm -f /data/local/tmp/nntrainer/test/libOpenCL.so" || true
 
 # adb push /home/jwhero94/nntr_qwen3-4b-q6_K-qint4-idx3-fp32-arm/* /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 
@@ -82,7 +89,7 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # export NNTRAINER_PROFILE_LAYER_SYNC=1 before running. Default here is
 # the async production path so the prefill TPS number is realistic.
 adb shell "cd /data/local/tmp/nntrainer/test; \
-  export LD_LIBRARY_PATH=/system/vendor/lib64:.; \
+  export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   export NNTRAINER_DELEGATE_REPEAT_BENCH=32; \
