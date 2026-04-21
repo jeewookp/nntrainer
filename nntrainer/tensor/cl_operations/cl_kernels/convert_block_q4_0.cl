@@ -43,16 +43,20 @@ kernel void kernel_convert_block_q4_0_noshuffle(global struct block_q4_0 *src0,
     q[i + QK4_0 / 4] =
       convert_uchar((x0 & 0xF0) >> 4) | convert_uchar(x1 & 0xF0);
 
-#ifdef ADRENO_GPU
-    // Workaround for adreno - must have the following printf statement for
-    // the kernel to work properly. Otherwise it produces incorrect result.
-    // convert_uchar above also seems necessary.
-    // Compare against a large number so that it does not print anything.
-    // get_sub_group_local_id() also works.
-    if (get_global_id(0) == 65536 * 4096) {
-      printf("%04x - %02x\n", *(global ushort *)d,
-             ((x0 & 0xF0) >> 4) | (x1 & 0xF0));
-    }
-#endif
+    // Note: we previously had a dead-branch printf("...") guarded on
+    // ADRENO_GPU here as a compiler workaround ("must have the following
+    // printf statement for the kernel to work properly"). The presence of
+    // printf in any kernel compiled on an Adreno cl_context flips the
+    // driver into printf / debug-buffer mode for that context, which
+    // roughly HALVES the throughput of every subsequent kernel dispatch
+    // on that context (bisected: compiling this one kernel dropped the
+    // delegate conv from 2.95 to 1.63 TFLOPS, and compiling more printf
+    // kernels compounds to 1.33). The original "it produces incorrect
+    // result" symptom was almost certainly an Adreno compiler bug that
+    // has since been fixed — the kernel is purely byte-lane arithmetic
+    // with no subgroup-level operations, so there is nothing here for
+    // the optimizer to miscompile. If a regression shows up, introduce
+    // an opaque side-effect without printf (e.g. a conditional write
+    // into a bench-only cl_mem) instead of resurrecting printf.
   }
 }
