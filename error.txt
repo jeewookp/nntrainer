@@ -1,3 +1,8 @@
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
 ANDROID_STORAGE
 ANDROID_TZDATA_ROOT
 ASEC_MOUNTPOINT
@@ -22,6 +27,8 @@ TMPDIR
 USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+[BENCH before_weight_load] avg=5555.38 us (1.650 TFLOPS)  (unittest same shape = 3256.7 us / 2.81 TFLOPS)
+[BENCH after_weight_load] avg=5558.70 us (1.649 TFLOPS)  (unittest same shape = 3256.7 us / 2.81 TFLOPS)
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -31,60 +38,61 @@ sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.30 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5552.42 us 1.651 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5561.09 us (1.648 TFLOPS)  max=5568.00 us (1.646 TFLOPS)
-  first-half avg=5565.47 us (1.647 TFLOPS)  last-half avg=5564.80 us (1.647 TFLOPS)
-  overall avg=5565.14 us (1.647 TFLOPS)
+  min=5560.83 us (1.648 TFLOPS)  max=5569.02 us (1.646 TFLOPS)
+  first-half avg=5565.81 us (1.647 TFLOPS)  last-half avg=5566.06 us (1.647 TFLOPS)
+  overall avg=5565.94 us (1.647 TFLOPS)
   unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 N=4096 K=2560)
 <think>
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
+[BENCH after_run] avg=5556.76 us (1.649 TFLOPS)  (unittest same shape = 3256.7 us / 2.81 TFLOPS)
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 6489 ms, 67.3447 TPS
-generation: 32 tokens, 7878 ms, 4.06194 TPS
-total: 14372 ms
-peak memory: 2720508 KB
+prefill: 437 tokens, 6931 ms, 63.0501 TPS
+generation: 32 tokens, 7342 ms, 4.35849 TPS
+total: 14276 ms
+peak memory: 2832900 KB
 ==========================================================
-[e2e time]: 17270 ms 
-Max Resident Set Size: 2720508 KB
+[e2e time]: 18865 ms 
+Max Resident Set Size: 2832900 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    67.7 ms
-  dequant:           89.3 ms ( 8.1%)
+  resource_setup:    92.1 ms
+  dequant:          129.6 ms (11.2%)
   reformat_in:        0.1 ms ( 0.0%)  hits=252/252
-  conv(wall):      1016.7 ms (91.7%)
-  conv(gpu):       1935.4 ms            1.641 TFLOPS
-  readback:           2.3 ms ( 0.2%)
-  sum(steps):      1108.2 ms            2.865 TFLOPS
-  fn_total(wall):  4080.6 ms            (diff from sum = 2904.7 ms of arg-setup + enqueue overhead)
+  conv(wall):      1028.5 ms (88.6%)
+  conv(gpu):       1935.1 ms            1.641 TFLOPS
+  readback:           3.2 ms ( 0.3%)
+  sum(steps):      1161.3 ms            2.734 TFLOPS
+  fn_total(wall):  4194.4 ms            (diff from sum = 2941.0 ms of arg-setup + enqueue overhead)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=6433.3 ms across all forwarding_op() calls
-  fully_connected               4087.5 ms  calls=252  avg=16.220 ms
-  mha_core                      1363.0 ms  calls=36  avg=37.861 ms
-  rms_norm                       489.3 ms  calls=73  avg=6.703 ms
-  reshaped_rms_norm              359.5 ms  calls=72  avg=4.992 ms
-  swiglu                          61.8 ms  calls=36  avg=1.717 ms
-  addition                        54.7 ms  calls=72  avg=0.760 ms
-  tie_word_embeddings             16.9 ms  calls=2  avg=8.430 ms
-  multiout                         0.6 ms  calls=144  avg=0.004 ms
-  input                            0.1 ms  calls=1  avg=0.054 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.44 ms calls=1 avg=13.442 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.40 ms calls=1 avg=3.397 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.23 ms calls=36 avg=0.229 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=446.91 ms calls=73 avg=6.122 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.93 ms calls=72 avg=4.985 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1328.24 ms calls=36 avg=36.895 ms
+  total=6871.8 ms across all forwarding_op() calls
+  fully_connected               4202.8 ms  calls=252  avg=16.678 ms
+  mha_core                      1508.6 ms  calls=36  avg=41.907 ms
+  rms_norm                       618.1 ms  calls=73  avg=8.468 ms
+  reshaped_rms_norm              400.7 ms  calls=72  avg=5.565 ms
+  swiglu                          67.0 ms  calls=36  avg=1.862 ms
+  addition                        57.2 ms  calls=72  avg=0.795 ms
+  tie_word_embeddings             16.6 ms  calls=2  avg=8.276 ms
+  multiout                         0.7 ms  calls=144  avg=0.005 ms
+  input                            0.1 ms  calls=1  avg=0.052 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=12.83 ms calls=1 avg=12.832 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.71 ms calls=1 avg=3.711 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=10.30 ms calls=36 avg=0.286 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=571.48 ms calls=73 avg=7.829 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=400.09 ms calls=72 avg=5.557 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1474.67 ms calls=36 avg=40.963 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4081.07 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4194.85 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4080.94 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.11 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4194.79 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -95,33 +103,33 @@ Max Resident Set Size: 2720508 KB
 --- Generation snippet (post-assistant tag) ---
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.30 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5552.42 us 1.651 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5561.09 us (1.648 TFLOPS)  max=5568.00 us (1.646 TFLOPS)
-  first-half avg=5565.47 us (1.647 TFLOPS)  last-half avg=5564.80
+  min=5560.83 us (1.648 TFLOPS)  max=5569.02 us (1.646 TFLOPS)
+  first-half avg=5565.81 us (1.647 TFLOPS)  last-half avg=5566.06
 
 --- Perf summary ---
-prefill: 437 tokens, 6489 ms, 67.3447 TPS
-generation: 32 tokens, 7878 ms, 4.06194 TPS
-total: 14372 ms
-peak memory: 2720508 KB
-[e2e time]: 17270 ms 
+prefill: 437 tokens, 6931 ms, 63.0501 TPS
+generation: 32 tokens, 7342 ms, 4.35849 TPS
+total: 14276 ms
+peak memory: 2832900 KB
+[e2e time]: 18865 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4081.07 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4194.85 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4080.94 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.11 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4194.79 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.44 ms calls=1 avg=13.442 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.40 ms calls=1 avg=3.397 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.23 ms calls=36 avg=0.229 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=446.91 ms calls=73 avg=6.122 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=358.93 ms calls=72 avg=4.985 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1328.24 ms calls=36 avg=36.895 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=12.83 ms calls=1 avg=12.832 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.71 ms calls=1 avg=3.711 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=10.30 ms calls=36 avg=0.286 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=571.48 ms calls=73 avg=7.829 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=400.09 ms calls=72 avg=5.557 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1474.67 ms calls=36 avg=40.963 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
