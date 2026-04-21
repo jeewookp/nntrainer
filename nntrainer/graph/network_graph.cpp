@@ -476,6 +476,22 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   };
   static LayerWallProfile g_graph_wall_profile;
 
+  // Optional: clFinish after every layer to attribute GPU work to the
+  // layer that issued it, instead of letting it pile up on the queue
+  // and get billed to a later CPU layer's entry SVMMap fence.
+  // Slows wall time down (~serializes CPU and GPU) but makes the
+  // breakdown honest.
+  //
+  //   NNTRAINER_PROFILE_LAYER_SYNC=1  -> enable per-layer clFinish
+  static const bool s_profile_layer_sync =
+    std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
+  static cl_command_queue s_sync_q = nullptr;
+  if (s_profile_layer_sync && !s_sync_q) {
+    auto *cc = static_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+    if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
+  }
+
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
@@ -487,6 +503,7 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
     if (profile_this_call) {
+      if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
       clock_gettime(CLOCK_MONOTONIC, &ts1);
       const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
                           (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);

@@ -77,8 +77,16 @@ RUN_LOG=../../temp_run.log
 # NNTR_DELEGATE_FP16=1 enables the delegate conv_wave_memory kernel path
 # (dequant int4→fp16 + wave memory dispatch). Unset to use default int4 path.
 DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
-adb shell "cd /data/local/tmp/nntrainer/test; export LD_LIBRARY_PATH=.; export ${DELEGATE_ENV}; ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
-  | tee ${RUN_LOG}
+# NNTRAINER_PROFILE_LAYER_SYNC=1 inserts clFinish after every per-layer
+# forwarding_op() call so the graph-level wall-clock profiler attributes
+# GPU work to the layer that actually issued it. Wall time is slower
+# than the default async path, but the per-layer breakdown is honest.
+adb shell "cd /data/local/tmp/nntrainer/test; \
+  export LD_LIBRARY_PATH=.; \
+  export ${DELEGATE_ENV}; \
+  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+  ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
+  2>&1 | tee ${RUN_LOG}
 
 cd ../..
 
