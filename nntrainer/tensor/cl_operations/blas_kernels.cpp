@@ -2796,12 +2796,60 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     if (!s_bench_done && s_bench_n_env) {
       s_bench_done = true;
       const int n_iter = std::max(1, atoi(s_bench_n_env));
-      // Long warmup: 50 extra dispatches so Adreno DVFS has time to
-      // clock up fully before the measured region. If the unittest's
-      // lower shape count or simpler context isn't what's holding us
-      // back and the gap is actually DVFS, the first few measured
-      // iters will still be slow but the last ones will reach
-      // unittest TFLOPS.
+
+      // A/B variant: allocate FRESH buffers for the bench (new cl_mem
+      // handles, different GPU addresses) and rebind the kernel to
+      // them. If the unittest is faster because it uses fresh buffers
+      // that happen to land at GPU memory addresses with no cache /
+      // TLB conflict against the rest of the production allocation,
+      // this will return the unittest's TFLOPS. If it still measures
+      // 1.65 TFLOPS, buffer addressing isn't the cause.
+      cl_image_format fmt_fresh = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc src_desc = {};
+      src_desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+      src_desc.image_width = M; src_desc.image_height = src_slices;
+      cl_mem fresh_src = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_fresh,
+                                       &src_desc, 0, &err);
+      cl_image_desc dst_desc = {};
+      dst_desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+      dst_desc.image_width = M; dst_desc.image_height = dst_slices;
+      cl_mem fresh_dst = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_fresh,
+                                       &dst_desc, 0, &err);
+      cl_image_desc bias_desc = {};
+      bias_desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+      bias_desc.image_width = dst_slices; bias_desc.image_height = 1;
+      cl_mem fresh_bias = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_fresh,
+                                        &bias_desc, 0, &err);
+      { std::vector<uint16_t> z((size_t)dst_slices * 4, 0);
+        size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+        clEnqueueWriteImage(raw_q, fresh_bias, CL_TRUE, o, r, 0, 0, z.data(),
+                             0, 0, 0); }
+      { std::vector<uint16_t> d((size_t)M * src_slices * 4, 0);
+        size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+        clEnqueueWriteImage(raw_q, fresh_src, CL_TRUE, o, r, 0, 0, d.data(),
+                             0, 0, 0); }
+      cl_mem fresh_w = clCreateBuffer(clctx, CL_MEM_READ_ONLY,
+                                       w_bytes, nullptr, &err);
+      { std::vector<uint16_t> dummy(w_halfs, 0);
+        clEnqueueWriteBuffer(raw_q, fresh_w, CL_TRUE, 0, w_bytes,
+                              dummy.data(), 0, 0, 0); }
+      cl_mem fresh_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144,
+                                          nullptr, &err);
+
+      int aa = 0;
+      s_conv_kern->SetKernelArguments(aa++, &fresh_w, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(aa++, &fresh_xmem, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(aa++, &fresh_bias, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(aa++, &fresh_dst, sizeof(cl_mem));
+      s_conv_kern->SetKernelArguments(aa++, &fresh_src, sizeof(cl_mem));
+      struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+      struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
+      struct { int x,y,z,w; } s2={1,1,0,0};
+      s_conv_kern->SetKernelArguments(aa++, &s0, sizeof(s0));
+      s_conv_kern->SetKernelArguments(aa++, &s1, sizeof(s1));
+      s_conv_kern->SetKernelArguments(aa++, &s2, sizeof(s2));
+
+      // Long warmup (DVFS) on the fresh buffers.
       for (int i = 0; i < 50; ++i)
         clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
                                nullptr);
@@ -2841,8 +2889,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         return us > 0 ? gflops / (us / 1.0e6) / 1000.0 : 0;
       };
       fprintf(stderr,
-        "\n[DELEGATE BENCH in production context] M=%u N=%u K=%u  "
-        "iters=%d  (50 warmup)\n"
+        "\n[DELEGATE BENCH in production context, FRESH buffers] "
+        "M=%u N=%u K=%u  iters=%d  (50 warmup)\n"
         "  min=%.2f us (%.3f TFLOPS)  max=%.2f us (%.3f TFLOPS)\n"
         "  first-half avg=%.2f us (%.3f TFLOPS)  last-half avg=%.2f us "
         "(%.3f TFLOPS)\n"
@@ -2852,6 +2900,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         M, N, K, n_iter, min_us, tfl(min_us), max_us, tfl(max_us),
         fh_us, tfl(fh_us), lh_us, tfl(lh_us),
         avg_us, tfl(avg_us));
+
+      // Cleanup
+      clReleaseMemObject(fresh_src);
+      clReleaseMemObject(fresh_dst);
+      clReleaseMemObject(fresh_bias);
+      clReleaseMemObject(fresh_w);
+      clReleaseMemObject(fresh_xmem);
     }
   }
   const uint64_t t3 = now_ns();
