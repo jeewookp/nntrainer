@@ -2502,7 +2502,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // --- Profiling ---
   static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
     t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0},
-    t_reformat_hits{0}, t_resource_setup{0}, t_fn_total{0};
+    t_reformat_hits{0}, t_resource_setup{0}, t_fn_total{0},
+    t_dequant_gpu_ns{0}, t_reformat_gpu_ns{0}, t_readback_gpu_ns{0},
+    t_svmmap_gpu_ns{0}, t_dequant_calls{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
@@ -2510,29 +2512,46 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       double g = t_gflops_x1000.load() / 1000.0;
       double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
       double conv_gpu_ms = t_conv_gpu_ns.load() / 1e6;
+      double dq_gpu_ms = t_dequant_gpu_ns.load() / 1e6;
+      double rf_gpu_ms = t_reformat_gpu_ns.load() / 1e6;
+      double rb_gpu_ms = t_readback_gpu_ns.load() / 1e6;
+      double sm_gpu_ms = t_svmmap_gpu_ns.load() / 1e6;
+      double all_gpu_ms = conv_gpu_ms + dq_gpu_ms + rf_gpu_ms + rb_gpu_ms + sm_gpu_ms;
       double fn_total_ms = t_fn_total.load() / 1e6;
       double setup_ms = t_resource_setup.load() / 1e6;
+      double accounted_ms = setup_ms + tot + all_gpu_ms;
       fprintf(stderr,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
         "  resource_setup: %7.1f ms\n"
-        "  dequant:        %7.1f ms (%4.1f%%)\n"
-        "  reformat_in:    %7.1f ms (%4.1f%%)  hits=%lu/%lu\n"
+        "  dequant(host):  %7.1f ms (%4.1f%%)  cache-miss=%lu/%lu\n"
+        "  dequant(gpu):   %7.1f ms\n"
+        "  reformat_in(host):%5.1f ms (%4.1f%%)  pool-hits=%lu/%lu\n"
+        "  reformat_in(gpu):%6.1f ms\n"
         "  conv(wall):     %7.1f ms (%4.1f%%)\n"
         "  conv(gpu):      %7.1f ms            %.3f TFLOPS\n"
-        "  readback:       %7.1f ms (%4.1f%%)\n"
-        "  sum(steps):     %7.1f ms            %.3f TFLOPS\n"
-        "  fn_total(wall): %7.1f ms            (diff from sum = %.1f ms "
-        "of arg-setup + enqueue overhead)\n",
+        "  readback(host): %7.1f ms (%4.1f%%)\n"
+        "  readback(gpu):  %7.1f ms\n"
+        "  svmmap(gpu):    %7.1f ms\n"
+        "  sum(steps host):%7.1f ms            %.3f TFLOPS\n"
+        "  sum(gpu events):%7.1f ms\n"
+        "  fn_total(wall): %7.1f ms            "
+        "(unaccounted = %.1f ms = host overhead + non-event sync gaps)\n",
         (unsigned long)c, g,
         setup_ms,
         t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
+        (unsigned long)t_dequant_calls.load(), (unsigned long)c,
+        dq_gpu_ms,
         t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         (unsigned long)t_reformat_hits.load(), (unsigned long)c,
+        rf_gpu_ms,
         t_conv/1e6, t_conv*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         conv_gpu_ms, g/(conv_gpu_ms/1e3)/1000.0,
         t_readback/1e6, t_readback*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
+        rb_gpu_ms,
+        sm_gpu_ms,
         tot, g/(tot/1e3)/1000.0,
-        fn_total_ms, fn_total_ms - tot - setup_ms);
+        all_gpu_ms,
+        fn_total_ms, fn_total_ms - accounted_ms);
     }
   } s_prof;
 
@@ -2656,6 +2675,15 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // End of resource setup. Measure everything before this point.
   t_resource_setup += now_ns() - t_fn_entry;
 
+  // GPU-side event handles for every enqueue we may do below. Left null
+  // if the corresponding path is skipped (dequant cache hit, reformat
+  // pool hit, etc.). Queried + released together at the end of the
+  // function when NNTRAINER_PROFILE_LAYER_SYNC is set.
+  cl_event dequant_ev = nullptr;
+  cl_event reformat_ev = nullptr;
+  cl_event readback_ev = nullptr;
+  cl_event svmmap_ev = nullptr;
+
   // === Step 1: Dequant (cached per weight pointer, or fresh GPU dequant) ===
   const uint64_t t0 = now_ns();
   uintptr_t w_key = reinterpret_cast<uintptr_t>(weights);
@@ -2693,7 +2721,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     int tot = (int)w_halfs;
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
-    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);
+    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
+    t_dequant_calls++;
   }
   const uint64_t t1 = now_ns();
 
@@ -2745,7 +2774,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       const int ig[3] = {(int)((M+15)/16)*16,
                           (int)((src_slices+15)/16)*16, 1};
       const int il[3] = {16, 16, 1};
-      blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+      blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il,
+                                                   &reformat_ev);
       s_last_in_ptr = in_key;
       s_last_in_M = M; s_last_in_K = K;
       s_last_in_img = s_src_img;
@@ -2796,7 +2826,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_out_kern->SetKernelArguments(a++, &sn, sizeof(int));
     const int og[3] = {(int)((M+15)/16)*16, (int)((dst_slices+15)/16)*16, 1};
     const int ol[3] = {16, 16, 1};
-    blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
+    blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol,
+                                                 &readback_ev);
   }
   // The unittest (DelegateConvWaveTest.ModelShapes_DelegateFp16)
   // clocks this kernel at 2.72 TFLOPS on Qwen3-4B shapes — 1165 ms
@@ -2823,29 +2854,45 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   {
     const cl_bool blk = s_force_blocking_svmmap ? CL_TRUE : CL_FALSE;
     clEnqueueSVMMap(clq, blk, CL_MAP_READ, output,
-                    (size_t)M * N * sizeof(uint16_t), 0, nullptr, nullptr);
+                    (size_t)M * N * sizeof(uint16_t), 0, nullptr, &svmmap_ev);
   }
   const uint64_t t4 = now_ns();
 
-  // GPU event timing for conv kernel. Only query profiling when the
-  // user explicitly opts into it (NNTRAINER_PROFILE_LAYER_SYNC=1);
-  // otherwise the clWaitForEvents call below serializes every gemm
-  // on the host and ~doubles wall time for no production benefit.
+  // GPU event timing for EVERY sub-stage kernel. Only query profiling
+  // when the user explicitly opts into it (NNTRAINER_PROFILE_LAYER_SYNC=1);
+  // otherwise clWaitForEvents serializes the host with the GPU and
+  // ~doubles wall time. When the env var IS set, wait on the last event
+  // in the in-order queue (svmmap — or readback/conv if svmmap is null)
+  // so every kernel is guaranteed done, then read each event's GPU
+  // timestamp into its per-stage accumulator.
   static const bool s_event_profile =
     std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
-  if (conv_ev) {
-    if (s_event_profile) {
-      clWaitForEvents(1, &conv_ev);
-      cl_ulong ev_start = 0, ev_end = 0;
-      clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_START,
-                              sizeof(ev_start), &ev_start, nullptr);
-      clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_END,
-                              sizeof(ev_end), &ev_end, nullptr);
-      if (ev_end > ev_start)
-        t_conv_gpu_ns += (ev_end - ev_start);
-    }
-    clReleaseEvent(conv_ev);
+  if (s_event_profile) {
+    cl_event last_ev =
+      svmmap_ev ? svmmap_ev :
+      (readback_ev ? readback_ev : conv_ev);
+    if (last_ev) clWaitForEvents(1, &last_ev);
+
+    auto accum = [](cl_event ev, std::atomic<uint64_t> &counter) {
+      if (!ev) return;
+      cl_ulong s = 0, e = 0;
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(s),
+                              &s, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(e),
+                              &e, nullptr);
+      if (e > s) counter += (e - s);
+    };
+    accum(dequant_ev, t_dequant_gpu_ns);
+    accum(reformat_ev, t_reformat_gpu_ns);
+    accum(conv_ev, t_conv_gpu_ns);
+    accum(readback_ev, t_readback_gpu_ns);
+    accum(svmmap_ev, t_svmmap_gpu_ns);
   }
+  if (dequant_ev)  clReleaseEvent(dequant_ev);
+  if (reformat_ev) clReleaseEvent(reformat_ev);
+  if (conv_ev)     clReleaseEvent(conv_ev);
+  if (readback_ev) clReleaseEvent(readback_ev);
+  if (svmmap_ev)   clReleaseEvent(svmmap_ev);
 
   t_dequant += (t1 - t0);
   t_reformat += (t2 - t1);
