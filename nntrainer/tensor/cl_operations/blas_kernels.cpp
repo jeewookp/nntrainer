@@ -2617,25 +2617,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_w_size = kPreallocWBytes;
   }
 
-  // Secondary command queue for dequant. Lets layer N+1 dequant run in
-  // parallel with layer N conv, hiding ~172 ms of dequant wall clock
-  // under the ~1065 ms of conv wall clock. Cross-queue ordering is
-  // enforced by dropping a clEnqueueBarrierWithWaitList on the main
-  // queue right before conv — previous experiment showed that passing
-  // the dequant event directly via clEnqueueNDRangeKernel's wait_list
-  // was not enough on Adreno (conv read stale weights and produced
-  // garbage output). The barrier is a stronger synchronization point
-  // that also fences memory between queues on conforming drivers.
-  static cl_command_queue s_dq_queue = nullptr;
-  if (!s_dq_queue) {
-    cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
-    cl_int qerr = 0;
-    s_dq_queue = clCreateCommandQueue(
-      clctx, dev,
-      CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
-      &qerr);
-  }
-
   // Shape-keyed caches for bias / src_img / dst_img. Qwen3 prefill
   // cycles through ~4 distinct K values and ~4 distinct N values per
   // decoder layer; a single-slot cache was clReleaseMemObject +
@@ -2777,14 +2758,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     const uint64_t tD = now_ns();
     // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
     int tot = (int)(w_halfs / 16);
-    const size_t dg_s[3] = {(size_t)(((tot+255)/256)*256), 1, 1};
-    const size_t dl_s[3] = {256, 1, 1};
-    // Dispatch on the dedicated dequant queue + flush so the command
-    // actually reaches the GPU before conv's barrier starts waiting.
-    cl_kernel dq_raw = s_dq_kern->GetKernel();
-    clEnqueueNDRangeKernel(s_dq_queue, dq_raw, 3, nullptr, dg_s, dl_s,
-                            0, nullptr, &dequant_ev);
-    clFlush(s_dq_queue);
+    const int dg[3] = {((tot+255)/256)*256, 1, 1};
+    const int dl[3] = {256, 1, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
     const uint64_t tE = now_ns();
     t_dq_alloc    += tB - tA;
     t_dq_svmarg   += tC - tB;
@@ -2879,14 +2855,6 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     cl_kernel raw_k = s_conv_kern->GetKernel();
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
     size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
-    // Cross-queue sync: put an explicit barrier on the main queue that
-    // waits for the dequant event from s_dq_queue. On Adreno the prior
-    // "just put dequant_ev in conv's wait_list" approach produced
-    // garbage output — the driver did not honor the implicit memory
-    // fence. A barrier-with-wait-list is a stronger sync point.
-    if (dequant_ev) {
-      clEnqueueBarrierWithWaitList(raw_q, 1, &dequant_ev, nullptr);
-    }
     clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
 
   }
