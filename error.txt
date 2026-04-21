@@ -1,3 +1,5 @@
+TERM
+TMPDIR
 USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
@@ -15,35 +17,35 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3785 ms, 115.456 TPS
-generation: 32 tokens, 7639 ms, 4.18903 TPS
-total: 11429 ms
-peak memory: 2715808 KB
+prefill: 437 tokens, 4269 ms, 102.366 TPS
+generation: 32 tokens, 7539 ms, 4.24459 TPS
+total: 11812 ms
+peak memory: 2699032 KB
 ==========================================================
-[e2e time]: 14249 ms 
-Max Resident Set Size: 2715808 KB
+[e2e time]: 14571 ms 
+Max Resident Set Size: 2699032 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    67.4 ms
-  dequant:           54.8 ms (94.0%)
+  resource_setup:    68.5 ms
+  dequant:           58.4 ms (92.3%)
   reformat_in:        0.0 ms ( 0.1%)  hits=252/252
-  conv(wall):         1.9 ms ( 3.3%)
-  conv(gpu):       1065.8 ms            2.979 TFLOPS
-  readback:           1.5 ms ( 2.6%)
-  sum(steps):        58.3 ms            54.457 TFLOPS
-  fn_total(wall):  2241.6 ms            (diff from sum = 2115.9 ms of arg-setup + enqueue overhead)
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.30 ms calls=1 avg=18.300 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.34 ms calls=1 avg=2.336 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=5.27 ms calls=36 avg=0.146 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=354.93 ms calls=73 avg=4.862 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=177.08 ms calls=72 avg=2.459 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=913.14 ms calls=36 avg=25.365 ms
+  conv(wall):         2.3 ms ( 3.6%)
+  conv(gpu):          0.0 ms            inf TFLOPS
+  readback:           2.5 ms ( 4.0%)
+  sum(steps):        63.3 ms            50.192 TFLOPS
+  fn_total(wall):   132.2 ms            (diff from sum = 0.4 ms of arg-setup + enqueue overhead)
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.51 ms calls=1 avg=21.512 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.28 ms calls=1 avg=2.278 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.91 ms calls=36 avg=0.136 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=2268.67 ms calls=73 avg=31.078 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=680.22 ms calls=72 avg=9.447 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1092.68 ms calls=36 avg=30.352 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=2241.84 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=132.31 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  2241.82 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :   132.27 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -59,40 +61,40 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3785 ms, 115.456 TPS
-generation: 32 tokens, 7639 ms, 4.18903 TPS
-total: 11429 ms
-peak memory: 2715808 KB
+prefill: 437 tokens, 4269 ms, 102.366 TPS
+generation: 32 tokens, 7539 ms, 4.24459 TPS
+total: 11812 ms
+peak memory: 2699032 KB
 ==========================================================
-[e2e time]: 14249 ms 
-Max Resident Set Size: 2715808 KB
+[e2e time]: 14571 ms 
+Max Resident Set Size: 2699032 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    67.4 ms
-  dequant:           54.8 ms (94.0%)
+  resource_setup:    68.5 ms
+  dequant:           58.4 ms (92.3%)
   reformat_in:    
 
 --- Perf summary ---
-prefill: 437 tokens, 3785 ms, 115.456 TPS
-generation: 32 tokens, 7639 ms, 4.18903 TPS
-total: 11429 ms
-peak memory: 2715808 KB
-[e2e time]: 14249 ms 
+prefill: 437 tokens, 4269 ms, 102.366 TPS
+generation: 32 tokens, 7539 ms, 4.24459 TPS
+total: 11812 ms
+peak memory: 2699032 KB
+[e2e time]: 14571 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=2241.84 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=132.31 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  2241.82 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :   132.27 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.30 ms calls=1 avg=18.300 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.34 ms calls=1 avg=2.336 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=5.27 ms calls=36 avg=0.146 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=354.93 ms calls=73 avg=4.862 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=177.08 ms calls=72 avg=2.459 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=913.14 ms calls=36 avg=25.365 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.51 ms calls=1 avg=21.512 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.28 ms calls=1 avg=2.278 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.91 ms calls=36 avg=0.136 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=2268.67 ms calls=73 avg=31.078 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=680.22 ms calls=72 avg=9.447 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1092.68 ms calls=36 avg=30.352 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
