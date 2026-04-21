@@ -220,7 +220,7 @@ if [ -n "$STAGE3" ]; then
   # NNTR_BLAS_KERNEL_COUNT caps how many REG() calls actually execute.
   echo ""
   echo "[BISECT blas-kernel-count]"
-  for cnt in 0 1 2 5 10 15 20 27; do
+  for cnt in 10 11 12 13 14 15; do
     echo ""
     echo "--- stage=3 LEVEL=1 BLAS_KERNEL_COUNT=${cnt} ---"
     adb shell "cd /data/local/tmp/nntrainer/test; \
