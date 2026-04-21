@@ -2765,8 +2765,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     size_t gz = ((dst_slices+7)/8+3)/4;
     const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
     const int l[3] = {128, 1, 4};
-    // Dispatch with event for GPU-side timing
-    cl_event conv_ev = nullptr;
+    // Dispatch with event for GPU-side timing. DO NOT redeclare
+    // conv_ev here — the outer-scope variable (declared just above)
+    // is what clGetEventProfilingInfo reads, and a shadowed inner
+    // cl_event left it nullptr = inf TFLOPS in every earlier run.
     cl_command_queue raw_q = blas_cc->command_queue_inst_.GetCommandQueue();
     cl_kernel raw_k = s_conv_kern->GetKernel();
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
