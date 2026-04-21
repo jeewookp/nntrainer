@@ -1,61 +1,74 @@
-This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
- createAction.preventDefault...
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-加倍加倍加倍加倍偶加倍搠عمorthandbattlebattlebattleivelentsthprecisionsthprecisionsthsthsthsthsthsthsthsthsthsthsthsth
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3589 ms, 121.761 TPS
-generation: 32 tokens, 7461 ms, 4.28897 TPS
-total: 11058 ms
-peak memory: 2636828 KB
+prefill: 437 tokens, 3954 ms, 110.521 TPS
+generation: 32 tokens, 7552 ms, 4.23729 TPS
+total: 11510 ms
+peak memory: 2697852 KB
 ==========================================================
-[e2e time]: 13916 ms 
-Max Resident Set Size: 2636828 KB
+[e2e time]: 14356 ms 
+Max Resident Set Size: 2697852 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    77.9 ms
-  dequant(host):     19.4 ms (84.9%)  cache-miss=252/252
+  resource_setup:   112.6 ms
+  dequant(host):     18.9 ms (81.2%)  cache-miss=252/252
     .alloc:           0.0 ms  (clCreateBuffer + cache insert)
-    .svmarg:          0.5 ms  (2x clSetKernelArgSVMPointer)
-    .arg:             0.1 ms  (3x clSetKernelArg)
-    .dispatch:       18.7 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+    .svmarg:          0.6 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.2 ms  (3x clSetKernelArg)
+    .dispatch:       18.0 ms  (DispatchCommand = clEnqueueNDRangeKernel)
   dequant(gpu):       0.0 ms
   reformat_in(host):  0.0 ms ( 0.1%)  pool-hits=252/252
   reformat_in(gpu):   0.0 ms
-  conv(wall):         2.0 ms ( 8.6%)
+  conv(wall):         3.0 ms (12.8%)
   conv(gpu):          0.0 ms            inf TFLOPS
-  readback(host):     1.5 ms ( 6.4%)
+  readback(host):     1.4 ms ( 5.9%)
   readback(gpu):      0.0 ms
   svmmap(gpu):        0.0 ms
-  sum(steps host):   22.8 ms            139.104 TFLOPS
+  sum(steps host):   23.2 ms            136.601 TFLOPS
   sum(gpu events):    0.0 ms
-  fn_total(wall):   101.1 ms            (unaccounted = 0.3 ms = host overhead + non-event sync gaps)
+  fn_total(wall):   136.1 ms            (unaccounted = 0.3 ms = host overhead + non-event sync gaps)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=3525.9 ms across all forwarding_op() calls
-  rms_norm                      1761.7 ms  calls=73  avg=24.133 ms
-  mha_core                      1000.3 ms  calls=36  avg=27.785 ms
-  reshaped_rms_norm              622.5 ms  calls=72  avg=8.646 ms
-  fully_connected                103.1 ms  calls=252  avg=0.409 ms
-  tie_word_embeddings             20.9 ms  calls=2  avg=10.461 ms
-  addition                        12.9 ms  calls=72  avg=0.179 ms
-  swiglu                           4.0 ms  calls=36  avg=0.110 ms
-  multiout                         0.4 ms  calls=144  avg=0.003 ms
-  input                            0.0 ms  calls=1  avg=0.045 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.23 ms calls=1 avg=19.226 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.68 ms calls=1 avg=1.678 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=3.94 ms calls=36 avg=0.109 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=1761.35 ms calls=73 avg=24.128 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=622.26 ms calls=72 avg=8.643 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1000.13 ms calls=36 avg=27.781 ms
+  total=3906.6 ms across all forwarding_op() calls
+  rms_norm                      1877.3 ms  calls=73  avg=25.716 ms
+  mha_core                      1101.7 ms  calls=36  avg=30.603 ms
+  reshaped_rms_norm              748.0 ms  calls=72  avg=10.390 ms
+  fully_connected                138.7 ms  calls=252  avg=0.550 ms
+  tie_word_embeddings             25.0 ms  calls=2  avg=12.498 ms
+  addition                        11.8 ms  calls=72  avg=0.164 ms
+  swiglu                           3.7 ms  calls=36  avg=0.102 ms
+  multiout                         0.5 ms  calls=144  avg=0.003 ms
+  input                            0.0 ms  calls=1  avg=0.025 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.43 ms calls=1 avg=19.431 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.55 ms calls=1 avg=5.552 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=3.62 ms calls=36 avg=0.101 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=1876.90 ms calls=73 avg=25.711 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=747.65 ms calls=72 avg=10.384 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1101.57 ms calls=36 avg=30.599 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=101.19 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=136.24 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   101.16 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   136.19 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -66,44 +79,45 @@ Max Resident Set Size: 2636828 KB
 
 --- Generation snippet (post-assistant tag) ---
 
- createAction.preventDefault...
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-加倍加倍加倍加倍偶加倍搠عمorthandbattlebattlebattleivelentsthprecisionsthprecisionsthsthsthsthsthsthsthsthsthsthsthsth
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3589 ms, 121.761 TPS
-generation: 32 tokens, 7461 ms, 4.28897 TPS
-total: 11058 ms
-peak memory: 2636828 KB
+prefill: 437 tokens, 3954 ms, 110.521 TPS
+generation: 32 tokens, 7552 ms, 4.23729 TPS
+total: 11510 ms
+peak memory: 2697852 KB
 ==========================================================
-[e2e time]: 13916 ms 
-Max Resident Set Size: 2636828 KB
+[e2e time]: 14356 ms 
+Max Resident Set Size: 2697852 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    77.9 ms
-  dequant(host):     19.4 ms (84.9%)  cache-miss
+  resource_setup:   112.6 ms
+  dequant(host):     18.9 ms (81.2%)  cache-miss=252/25
 
 --- Perf summary ---
-prefill: 437 tokens, 3589 ms, 121.761 TPS
-generation: 32 tokens, 7461 ms, 4.28897 TPS
-total: 11058 ms
-peak memory: 2636828 KB
-[e2e time]: 13916 ms 
+prefill: 437 tokens, 3954 ms, 110.521 TPS
+generation: 32 tokens, 7552 ms, 4.23729 TPS
+total: 11510 ms
+peak memory: 2697852 KB
+[e2e time]: 14356 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=101.19 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=136.24 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   101.16 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   136.19 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.23 ms calls=1 avg=19.226 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.68 ms calls=1 avg=1.678 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=3.94 ms calls=36 avg=0.109 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=1761.35 ms calls=73 avg=24.128 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=622.26 ms calls=72 avg=8.643 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1000.13 ms calls=36 avg=27.781 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.43 ms calls=1 avg=19.431 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.55 ms calls=1 avg=5.552 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=3.62 ms calls=36 avg=0.101 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=1876.90 ms calls=73 avg=25.711 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=747.65 ms calls=72 avg=10.384 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1101.57 ms calls=36 avg=30.599 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
