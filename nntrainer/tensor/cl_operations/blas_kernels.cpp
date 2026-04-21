@@ -3543,7 +3543,15 @@ void run_delegate_standalone_bench(const char *label) {
         (line.find("libgsl") != std::string::npos) ||
         (line.find("libllvm-qgl") != std::string::npos) ||
         (line.find("libLLVM_QGL") != std::string::npos) ||
-        (line.find("libq3dtools") != std::string::npos);
+        (line.find("libq3dtools") != std::string::npos) ||
+        // Also expose libandroid / libEGL: if libandroid is present, a
+        // DT_NEEDED chain is still forcing it in (presumably from one of
+        // our other linked .so's — libnntrainer, libccapi-nntrainer,
+        // libc++_shared). libEGL is another known libGLES*-pulling link.
+        (line.find("libandroid") != std::string::npos) ||
+        (line.find("libEGL") != std::string::npos) ||
+        (line.find("libglcore") != std::string::npos) ||
+        (line.find("libGL") != std::string::npos);
       if (!hit) continue;
       auto sp = line.find_last_of(' ');
       std::string path = sp == std::string::npos ? line : line.substr(sp + 1);

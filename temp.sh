@@ -102,6 +102,35 @@ adb pull /data/local/tmp/nntrainer/test/logs/. ./logs/ || true
 adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 # ----------------------------------------------------------------------------
+# Diagnostic: print DT_NEEDED of every .so / executable actually pushed to
+# the device. The in-process maps dump shows libGLESv1_CM/v2/v3 loaded at
+# bench entry, but the unittest process doesn't load those. Dropping
+# -landroid from the CausalLM Android.mk didn't change this, meaning
+# something in libnntrainer.so / libccapi-nntrainer.so / libcausallm_core.so
+# (or a dep they pull in) still has libandroid.so or libGLES*.so in its
+# DT_NEEDED. Use the NDK's aarch64 objdump (required since host readelf is
+# x86_64-only) to dump the DYNAMIC section for each binary.
+echo ""
+echo "=========================================="
+echo " DT_NEEDED of pushed binaries"
+echo "=========================================="
+NDK_OBJDUMP=$(find "$ANDROID_NDK" -name llvm-objdump 2>/dev/null | head -n 1)
+if [ -n "$NDK_OBJDUMP" ]; then
+  for f in Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm \
+           Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so \
+           builddir/android_build_result/lib/arm64-v8a/libnntrainer.so \
+           builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so; do
+    if [ -f "$f" ]; then
+      echo ""
+      echo "--- $f ---"
+      "$NDK_OBJDUMP" -p "$f" 2>/dev/null | grep -E "NEEDED|SONAME" || true
+    fi
+  done
+else
+  echo "llvm-objdump not found under \$ANDROID_NDK; skipping DT_NEEDED dump"
+fi
+
+# ----------------------------------------------------------------------------
 # Ground-truth: run the real delegate-conv-wave unittest to measure what the
 # Adreno 830 actually achieves on M=437 N=4096 K=2560 in a fresh process.
 # All of our in-process benches (PROFILING+OOO / PLAIN / UNITTEST_PRIMED)
