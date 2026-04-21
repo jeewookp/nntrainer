@@ -2820,6 +2820,111 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
         "version='%s' CU=%u max_freq=%u MHz\n",
         vendor, dev_name, driver_ver, dev_ver, compute_units, max_freq);
 
+      // A/B variant 3: FRESH cl_context created exactly like unittest
+      // (clCreateContext(nullptr, 1, &dev, nullptr, ...)) + fresh
+      // program built in that context + fresh buffers + fresh queue.
+      // End-to-end reproduction of the unittest's setup inside the
+      // production process. If THIS hits 2.8 TFLOPS we've confirmed
+      // that the nntrainer cl_context's state (registered programs,
+      // SVM arena, etc.) is the slowdown source.
+      cl_int cerr = 0;
+      cl_context fresh_ctx = clCreateContext(nullptr, 1, &dev_info,
+                                              nullptr, nullptr, &cerr);
+      if (!fresh_ctx) {
+        fprintf(stderr, "[DELEGATE BENCH] clCreateContext fresh failed: %d\n",
+                cerr);
+      } else {
+        cl_queue_properties qprops2[] = {
+          CL_QUEUE_PROPERTIES,
+          (cl_queue_properties)(CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+                                CL_QUEUE_PROFILING_ENABLE),
+          0};
+        cl_command_queue fctx_q =
+          clCreateCommandQueueWithProperties(fresh_ctx, dev_info, qprops2,
+                                              &cerr);
+        // Rebuild program in fresh context with the same source +
+        // unittest flags.
+        const std::string &src = delegate_conv_wave_kernel;
+        const char *sp = src.c_str();
+        size_t sl = src.size();
+        cl_program fctx_prog =
+          clCreateProgramWithSource(fresh_ctx, 1, &sp, &sl, &cerr);
+        const char *fctx_flags =
+          "-qcom-accelerate-16-bit=true -cl-std=CL2.0";
+        cerr = clBuildProgram(fctx_prog, 1, &dev_info, fctx_flags, nullptr,
+                              nullptr);
+        cl_kernel fctx_k = nullptr;
+        if (cerr == 0) {
+          fctx_k = clCreateKernel(fctx_prog, "main_function", &cerr);
+        }
+        if (!fctx_k) {
+          fprintf(stderr, "[DELEGATE BENCH] fresh ctx kernel build failed: "
+                  "%d\n", cerr);
+        } else {
+          // Fresh buffers in fresh context.
+          cl_image_format fmt_f = {CL_RGBA, CL_HALF_FLOAT};
+          cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+          sd.image_width = M; sd.image_height = src_slices;
+          cl_mem fsrc = clCreateImage(fresh_ctx, CL_MEM_READ_ONLY, &fmt_f,
+                                       &sd, 0, &cerr);
+          cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+          dd.image_width = M; dd.image_height = dst_slices;
+          cl_mem fdst = clCreateImage(fresh_ctx, CL_MEM_READ_WRITE, &fmt_f,
+                                       &dd, 0, &cerr);
+          cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+          bd.image_width = dst_slices; bd.image_height = 1;
+          cl_mem fbias = clCreateImage(fresh_ctx, CL_MEM_READ_ONLY, &fmt_f,
+                                        &bd, 0, &cerr);
+          cl_mem fw = clCreateBuffer(fresh_ctx, CL_MEM_READ_ONLY,
+                                      w_bytes, nullptr, &cerr);
+          cl_mem fxm = clCreateBuffer(fresh_ctx, CL_MEM_READ_WRITE, 6144,
+                                       nullptr, &cerr);
+          clSetKernelArg(fctx_k, 0, sizeof(cl_mem), &fw);
+          clSetKernelArg(fctx_k, 1, sizeof(cl_mem), &fxm);
+          clSetKernelArg(fctx_k, 2, sizeof(cl_mem), &fbias);
+          clSetKernelArg(fctx_k, 3, sizeof(cl_mem), &fdst);
+          clSetKernelArg(fctx_k, 4, sizeof(cl_mem), &fsrc);
+          clSetKernelArg(fctx_k, 5, sizeof(s0), &s0);
+          clSetKernelArg(fctx_k, 6, sizeof(s1), &s1);
+          clSetKernelArg(fctx_k, 7, sizeof(s2), &s2);
+          for (int i = 0; i < 50; ++i)
+            clEnqueueNDRangeKernel(fctx_q, fctx_k, 3, nullptr, gs, ls, 0,
+                                    nullptr, nullptr);
+          clFinish(fctx_q);
+          std::vector<cl_event> fevs(n_iter);
+          for (int i = 0; i < n_iter; ++i)
+            clEnqueueNDRangeKernel(fctx_q, fctx_k, 3, nullptr, gs, ls, 0,
+                                    nullptr, &fevs[i]);
+          clFinish(fctx_q);
+          uint64_t tot = 0;
+          for (int i = 0; i < n_iter; ++i) {
+            cl_ulong s = 0, e = 0;
+            clGetEventProfilingInfo(fevs[i], CL_PROFILING_COMMAND_START,
+                                    sizeof(s), &s, nullptr);
+            clGetEventProfilingInfo(fevs[i], CL_PROFILING_COMMAND_END,
+                                    sizeof(e), &e, nullptr);
+            if (e > s) tot += (e - s);
+            clReleaseEvent(fevs[i]);
+          }
+          const double avg_us = (tot / 1000.0) / (double)n_iter;
+          const double gflops =
+            2.0 * (double)M * (double)N * (double)K / 1.0e9;
+          fprintf(stderr,
+            "[DELEGATE BENCH FRESH_CONTEXT] iters=%d avg=%.2f us "
+            "%.3f TFLOPS (fresh cl_context + fresh program + fresh "
+            "buffers, mirrors unittest setup exactly)\n",
+            n_iter, avg_us,
+            avg_us > 0 ? gflops / (avg_us / 1.0e6) / 1000.0 : 0);
+          clReleaseMemObject(fsrc); clReleaseMemObject(fdst);
+          clReleaseMemObject(fbias); clReleaseMemObject(fw);
+          clReleaseMemObject(fxm);
+          clReleaseKernel(fctx_k);
+        }
+        if (fctx_prog) clReleaseProgram(fctx_prog);
+        if (fctx_q) clReleaseCommandQueue(fctx_q);
+        clReleaseContext(fresh_ctx);
+      }
+
       // A/B variant: allocate FRESH buffers for the bench (new cl_mem
       // handles, different GPU addresses) and rebind the kernel to
       // them. If the unittest is faster because it uses fresh buffers
