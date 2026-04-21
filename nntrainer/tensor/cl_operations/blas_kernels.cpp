@@ -2718,7 +2718,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     int sn = (int)N, sk = (int)K;
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
-    int tot = (int)w_halfs;
+    // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
+    int tot = (int)(w_halfs / 16);
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
@@ -3111,7 +3112,8 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
       int sn = (int)Ni, sk = (int)K;
       s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
       s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
-      int tot = (int)w_halfs;
+      // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
+      int tot = (int)(w_halfs / 16);
       const int dg[3] = {((tot+255)/256)*256, 1, 1};
       const int dl[3] = {256, 1, 1};
       blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);
