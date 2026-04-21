@@ -22,7 +22,9 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <numeric>
+#include <set>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace {
@@ -694,6 +696,31 @@ static const ShapeConfig kModelShapes[] = {
 
 TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
   fprintf(stderr, "\n=== Delegate fp16 kernel — model shapes ===\n");
+  // Diagnostic: print every shared lib the unittest process has mapped
+  // whose name hints at OpenCL / Adreno. The same dump is printed by the
+  // in-process bench inside nntrainer_causallm; comparing the two tells
+  // us immediately whether the processes are loading different libOpenCL
+  // files (and thus different CL runtimes).
+  {
+    std::ifstream maps("/proc/self/maps");
+    std::string line;
+    std::set<std::string> seen;
+    while (std::getline(maps, line)) {
+      bool hit =
+        (line.find("libOpenCL") != std::string::npos) ||
+        (line.find("libGLES") != std::string::npos) ||
+        (line.find("libadreno") != std::string::npos) ||
+        (line.find("libCB") != std::string::npos) ||
+        (line.find("libgsl") != std::string::npos) ||
+        (line.find("libllvm-qgl") != std::string::npos);
+      if (!hit) continue;
+      auto sp = line.find_last_of(' ');
+      std::string path = sp == std::string::npos ? line : line.substr(sp + 1);
+      if (!path.empty() && path[0] == '/' && seen.insert(path).second) {
+        fprintf(stderr, "[UNITTEST maps] %s\n", path.c_str());
+      }
+    }
+  }
   double total_gflops = 0, total_us = 0;
 
   for (const auto& s : kModelShapes) {

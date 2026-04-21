@@ -23,6 +23,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -3517,6 +3520,35 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
 // process at arbitrary lifecycle points (before model load, after, etc.).
 // ============================================================================
 void run_delegate_standalone_bench(const char *label) {
+  // Diagnostic (once per process): print every shared lib the process has
+  // mapped in whose name hints at OpenCL or the Adreno GPU driver.
+  // Unittest binary measures 2.36 TFLOPS, nntrainer_causallm in-process
+  // bench measures 1.61 TFLOPS for the SAME kernel / shape / flags — the
+  // only variable is the process. If the two binaries have different
+  // libOpenCL.so paths mapped, /proc/self/maps reveals it immediately.
+  static bool printed_maps = false;
+  if (!printed_maps) {
+    printed_maps = true;
+    std::ifstream maps("/proc/self/maps");
+    std::string line;
+    std::set<std::string> seen;
+    while (std::getline(maps, line)) {
+      bool hit =
+        (line.find("libOpenCL") != std::string::npos) ||
+        (line.find("libGLES") != std::string::npos) ||
+        (line.find("libadreno") != std::string::npos) ||
+        (line.find("libCB") != std::string::npos) ||
+        (line.find("libgsl") != std::string::npos) ||
+        (line.find("libllvm-qgl") != std::string::npos);
+      if (!hit) continue;
+      auto sp = line.find_last_of(' ');
+      std::string path = sp == std::string::npos ? line : line.substr(sp + 1);
+      if (!path.empty() && path[0] == '/' && seen.insert(path).second) {
+        fprintf(stderr, "[BENCH maps] %s\n", path.c_str());
+      }
+    }
+  }
+
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
