@@ -976,22 +976,30 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       }
     }
     const uint64_t t1 = now_ns();
+    // DEBUG toggle: NNTRAINER_DEBUG_STAGE_OUT=1 forces the old staging
+    // output path (svm_out scratch + blocking SVMMap + scalar copy) so
+    // we can bisect whether zero-copy output is the cause of garbage.
+    static const bool s_debug_stage_out =
+      std::getenv("NNTRAINER_DEBUG_STAGE_OUT") != nullptr;
     if (use_delegate) {
-      // Zero-copy output: delegate writes straight into the tensor's SVM
-      // buffer (out_u16). Drops the per-gemm blocking SVMMap +
-      // scalar-copy pair that was adding ~12 ms per call. Downstream
-      // host consumers (ReshapedRMSNorm / MHA / SwiGLU) now carry
-      // their own blocking SVMMap fence at layer entry, so coherence
-      // is re-established just before the CPU actually reads.
       uint16_t *delegate_in = pool_has_input ? in_u16 : svm_in;
+      uint16_t *delegate_out = s_debug_stage_out ? svm_out : out_u16;
       gemm_delegate_fp16_cl(delegate_in, svm_in_T, weight_u16, scale_u16,
-                            out_u16, M, N, K);
+                            delegate_out, M, N, K);
+      if (s_debug_stage_out) {
+        auto *cl_ctx = static_cast<ClContext *>(
+          Engine::Global().getRegisteredContext("gpu"));
+        if (cl_ctx) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            svm_out, out_total * sizeof(uint16_t), /*read_only=*/true);
+        }
+      }
     } else {
       gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16, svm_out, M,
                           N, K);
     }
     const uint64_t t2 = now_ns();
-    if (!use_delegate) {
+    if (!use_delegate || s_debug_stage_out) {
       for (size_t i = 0; i < out_total; ++i) {
         out_u16[i] = svm_out[i];
       }
