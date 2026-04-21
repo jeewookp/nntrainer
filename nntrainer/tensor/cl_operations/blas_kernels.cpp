@@ -29,6 +29,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opencl_context_manager.h>
+
 namespace nntrainer {
 
 namespace {
@@ -3759,6 +3761,65 @@ void run_delegate_standalone_bench(const char *label) {
   clReleaseMemObject(bias); clReleaseMemObject(w); clReleaseMemObject(xm);
   clReleaseKernel(k); clReleaseProgram(prog);
   clReleaseCommandQueue(q); clReleaseContext(ctx);
+
+  // ==========================================================================
+  // Fourth bench: NNTR_CTX — run the exact same kernel / shape / args, but on
+  // nntrainer's existing cl_context (not a fresh one). The unittest process
+  // has exactly ONE cl_context; our bench so far has TWO (nntrainer's singleton
+  // ClContext + the fresh one we create above). On Adreno, a process with
+  // multiple cl_contexts may be served a smaller GPU timeslice per kernel
+  // dispatch. If NNTR_CTX reports ~2.36 TFLOPS while the FRESH-context bench
+  // above reports ~1.61, multi-context is what's clamping us to ~1.61 and
+  // the production path (which runs on nntrainer's context) should be faster
+  // if we avoid ever creating a second context.
+  // ==========================================================================
+  cl_context ctx_nn = opencl::ContextManager::Global().GetContext();
+  if (ctx_nn) {
+    cl_int e2 = 0;
+    cl_command_queue q_nn = clCreateCommandQueue(ctx_nn, dev, 0, &e2);
+    if (!q_nn) {
+      fprintf(stderr, "[BENCH %s NNTR_CTX] queue create failed: %d\n", label, e2);
+      return;
+    }
+    cl_program prog_nn = clCreateProgramWithSource(ctx_nn, 1, &sp, &sl, &e2);
+    e2 = clBuildProgram(prog_nn, 1, &dev,
+                        "-qcom-accelerate-16-bit=true -cl-std=CL2.0",
+                        nullptr, nullptr);
+    cl_kernel k_nn = clCreateKernel(prog_nn, "main_function", &e2);
+    cl_mem si_nn = clCreateImage(ctx_nn, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &e2);
+    cl_mem di_nn = clCreateImage(ctx_nn, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &e2);
+    cl_mem bias_nn = clCreateImage(ctx_nn, CL_MEM_READ_ONLY, &fmt_h, &bd, 0, &e2);
+    cl_mem w_nn = clCreateBuffer(ctx_nn, CL_MEM_READ_ONLY, w_bytes, nullptr, &e2);
+    cl_mem xm_nn = clCreateBuffer(ctx_nn, CL_MEM_READ_WRITE, 6144, nullptr, &e2);
+    clSetKernelArg(k_nn, 0, sizeof(cl_mem), &w_nn);
+    clSetKernelArg(k_nn, 1, sizeof(cl_mem), &xm_nn);
+    clSetKernelArg(k_nn, 2, sizeof(cl_mem), &bias_nn);
+    clSetKernelArg(k_nn, 3, sizeof(cl_mem), &di_nn);
+    clSetKernelArg(k_nn, 4, sizeof(cl_mem), &si_nn);
+    clSetKernelArg(k_nn, 5, sizeof(s0), &s0);
+    clSetKernelArg(k_nn, 6, sizeof(s1), &s1);
+    clSetKernelArg(k_nn, 7, sizeof(s2), &s2);
+    for (int i = 0; i < 50; ++i)
+      clEnqueueNDRangeKernel(q_nn, k_nn, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_nn);
+    auto n0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N_ITER; ++i)
+      clEnqueueNDRangeKernel(q_nn, k_nn, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_nn);
+    auto n1 = std::chrono::high_resolution_clock::now();
+    const double nn_us =
+      std::chrono::duration<double, std::micro>(n1 - n0).count() /
+      (double)N_ITER;
+    const double nn_tflops =
+      nn_us > 0 ? gflops / (nn_us / 1.0e6) / 1000.0 : 0;
+    fprintf(stderr,
+      "[BENCH %s NNTR_CTX (nntrainer's cl_context)] WALL avg=%.2f us (%.3f TFLOPS)\n",
+      label, nn_us, nn_tflops);
+    clReleaseMemObject(si_nn); clReleaseMemObject(di_nn);
+    clReleaseMemObject(bias_nn); clReleaseMemObject(w_nn); clReleaseMemObject(xm_nn);
+    clReleaseKernel(k_nn); clReleaseProgram(prog_nn);
+    clReleaseCommandQueue(q_nn);
+  }
 }
 
 // ============================================================================
