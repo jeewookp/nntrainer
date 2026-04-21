@@ -2789,9 +2789,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // === Step 3: Conv dispatch ===
   cl_event conv_ev = nullptr;
   {
-    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
-    struct { int x,y,z,w; } s1={src_slices,0,0,src_slices};
-    struct { int x,y,z,w; } s2={1,1,0,0};
+    struct Int4Arg { int x, y, z, w; };
+    Int4Arg s0 = {1, dst_slices, (int)M, 32};
+    Int4Arg s1 = {src_slices, 0, 0, src_slices};
+    Int4Arg s2 = {1, 1, 0, 0};
     // Arg cache: skip clSetKernelArg when the slot's value hasn't changed
     // since the last call. Saves ~5 driver entries per call for the
     // common q/k/v-in-a-row and gate/up-in-a-row patterns where only the
@@ -2799,8 +2800,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     // Adreno — for 252 conv dispatches this can be >10 ms.
     static cl_mem last_w = nullptr, last_xmem = nullptr;
     static cl_mem last_bias = nullptr, last_dst = nullptr, last_src = nullptr;
-    static decltype(s0) last_s0{0,0,0,0}, last_s1{0,0,0,0}, last_s2{0,0,0,0};
-    auto same4 = [](const auto &a, const auto &b) {
+    static Int4Arg last_s0{0,0,0,0}, last_s1{0,0,0,0}, last_s2{0,0,0,0};
+    auto same4 = [](const Int4Arg &a, const Int4Arg &b) {
       return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
     };
     if (w_cl_use != last_w) {
