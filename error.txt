@@ -1,3 +1,11 @@
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
 PATH
 SHELL
@@ -6,17 +14,21 @@ SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
-[BENCH process_start PROFILING+OOO] event avg=5555.98 us (1.649 TFLOPS)  WALL avg=5726.36 us (1.600 TFLOPS)
-[BENCH process_start PLAIN (flags=0, unittest-match)] WALL avg=5678.97 us (1.614 TFLOPS)
-[BENCH process_start UNITTEST_PRIMED (buffers written)] WALL avg=5682.92 us (1.613 TFLOPS)
+[BENCH maps] /system/lib64/libGLESv2.so
+[BENCH maps] /vendor/lib64/libOpenCL.so
+[BENCH maps] /system/lib64/libGLESv3.so
+[BENCH maps] /system/lib64/libGLESv1_CM.so
+[BENCH process_start PROFILING+OOO] event avg=5553.61 us (1.650 TFLOPS)  WALL avg=5675.69 us (1.615 TFLOPS)
+[BENCH process_start PLAIN (flags=0, unittest-match)] WALL avg=5658.73 us (1.620 TFLOPS)
+[BENCH process_start UNITTEST_PRIMED (buffers written)] WALL avg=5680.12 us (1.613 TFLOPS)
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-[BENCH before_weight_load PROFILING+OOO] event avg=5555.16 us (1.650 TFLOPS)  WALL avg=5677.91 us (1.614 TFLOPS)
-[BENCH before_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5601.80 us (1.636 TFLOPS)
-[BENCH before_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5675.31 us (1.615 TFLOPS)
-[BENCH after_weight_load PROFILING+OOO] event avg=5552.69 us (1.650 TFLOPS)  WALL avg=5590.12 us (1.639 TFLOPS)
-[BENCH after_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5598.84 us (1.637 TFLOPS)
-[BENCH after_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5678.96 us (1.614 TFLOPS)
+[BENCH before_weight_load PROFILING+OOO] event avg=5553.31 us (1.650 TFLOPS)  WALL avg=5678.56 us (1.614 TFLOPS)
+[BENCH before_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5598.71 us (1.637 TFLOPS)
+[BENCH before_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5671.87 us (1.616 TFLOPS)
+[BENCH after_weight_load PROFILING+OOO] event avg=5557.60 us (1.649 TFLOPS)  WALL avg=5572.86 us (1.644 TFLOPS)
+[BENCH after_weight_load PLAIN (flags=0, unittest-match)] WALL avg=5573.97 us (1.644 TFLOPS)
+[BENCH after_weight_load UNITTEST_PRIMED (buffers written)] WALL avg=5647.69 us (1.623 TFLOPS)
 <|im_start|>user
 You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
@@ -26,63 +38,63 @@ sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.86 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5552.90 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5564.93 us (1.647 TFLOPS)  max=5571.07 us (1.645 TFLOPS)
-  first-half avg=5568.27 us (1.646 TFLOPS)  last-half avg=5568.43 us (1.646 TFLOPS)
-  overall avg=5568.35 us (1.646 TFLOPS)
+  min=5561.86 us (1.648 TFLOPS)  max=5569.79 us (1.645 TFLOPS)
+  first-half avg=5566.05 us (1.647 TFLOPS)  last-half avg=5566.02 us (1.647 TFLOPS)
+  overall avg=5566.03 us (1.647 TFLOPS)
   unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 N=4096 K=2560)
 <think>
 Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-[BENCH after_run PROFILING+OOO] event avg=5555.82 us (1.650 TFLOPS)  WALL avg=5681.73 us (1.613 TFLOPS)
-[BENCH after_run PLAIN (flags=0, unittest-match)] WALL avg=5678.73 us (1.614 TFLOPS)
-[BENCH after_run UNITTEST_PRIMED (buffers written)] WALL avg=5663.23 us (1.618 TFLOPS)
+[BENCH after_run PROFILING+OOO] event avg=5555.77 us (1.650 TFLOPS)  WALL avg=5605.98 us (1.635 TFLOPS)
+[BENCH after_run PLAIN (flags=0, unittest-match)] WALL avg=5604.14 us (1.635 TFLOPS)
+[BENCH after_run UNITTEST_PRIMED (buffers written)] WALL avg=5677.80 us (1.614 TFLOPS)
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7505 ms, 58.2278 TPS
-generation: 32 tokens, 7704 ms, 4.15369 TPS
-total: 15218 ms
-peak memory: 2768216 KB
+prefill: 437 tokens, 6772 ms, 64.5304 TPS
+generation: 32 tokens, 7871 ms, 4.06556 TPS
+total: 14646 ms
+peak memory: 2720816 KB
 ==========================================================
-[e2e time]: 24349 ms 
-Max Resident Set Size: 2768216 KB
+[e2e time]: 23825 ms 
+Max Resident Set Size: 2720816 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:   112.3 ms
-  dequant:          111.7 ms ( 9.4%)
+  resource_setup:    99.4 ms
+  dequant:           86.3 ms ( 7.8%)
   reformat_in:        0.1 ms ( 0.0%)  hits=252/252
-  conv(wall):      1073.7 ms (90.3%)
-  conv(gpu):       1934.5 ms            1.641 TFLOPS
-  readback:           3.7 ms ( 0.3%)
-  sum(steps):      1189.2 ms            2.670 TFLOPS
-  fn_total(wall):  4241.4 ms            (diff from sum = 2939.9 ms of arg-setup + enqueue overhead)
+  conv(wall):      1016.0 ms (92.0%)
+  conv(gpu):       1934.6 ms            1.641 TFLOPS
+  readback:           2.3 ms ( 0.2%)
+  sum(steps):      1104.6 ms            2.875 TFLOPS
+  fn_total(wall):  4162.6 ms            (diff from sum = 2958.6 ms of arg-setup + enqueue overhead)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=7418.4 ms across all forwarding_op() calls
-  fully_connected               4250.3 ms  calls=252  avg=16.866 ms
-  mha_core                      1706.8 ms  calls=36  avg=47.412 ms
-  rms_norm                       833.6 ms  calls=73  avg=11.420 ms
-  reshaped_rms_norm              434.1 ms  calls=72  avg=6.029 ms
-  addition                        76.6 ms  calls=72  avg=1.064 ms
-  swiglu                          71.0 ms  calls=36  avg=1.971 ms
-  tie_word_embeddings             45.3 ms  calls=2  avg=22.629 ms
-  multiout                         0.7 ms  calls=144  avg=0.005 ms
-  input                            0.1 ms  calls=1  avg=0.063 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=38.10 ms calls=1 avg=38.095 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=7.15 ms calls=1 avg=7.146 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=14.22 ms calls=36 avg=0.395 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=786.21 ms calls=73 avg=10.770 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=433.42 ms calls=72 avg=6.020 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1671.20 ms calls=36 avg=46.422 ms
+  total=6668.3 ms across all forwarding_op() calls
+  fully_connected               4169.7 ms  calls=252  avg=16.546 ms
+  mha_core                      1373.1 ms  calls=36  avg=38.143 ms
+  rms_norm                       624.8 ms  calls=73  avg=8.558 ms
+  reshaped_rms_norm              323.3 ms  calls=72  avg=4.490 ms
+  swiglu                          63.8 ms  calls=36  avg=1.773 ms
+  tie_word_embeddings             58.5 ms  calls=2  avg=29.233 ms
+  addition                        54.5 ms  calls=72  avg=0.757 ms
+  multiout                         0.5 ms  calls=144  avg=0.004 ms
+  input                            0.1 ms  calls=1  avg=0.083 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=47.56 ms calls=1 avg=47.556 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=10.88 ms calls=1 avg=10.877 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=8.75 ms calls=36 avg=0.243 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=582.13 ms calls=73 avg=7.974 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=322.82 ms calls=72 avg=4.484 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1340.64 ms calls=36 avg=37.240 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4241.89 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4162.91 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4241.82 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4162.87 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -125,6 +137,7 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 [arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
 Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
 [arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : unittest_delegate_conv_wave <= unittest_delegate_conv_wave.cpp
 [arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
 [arm64-v8a] StaticLibrary  : libgoogletest_main.a
 [arm64-v8a] Executable     : unittest_delegate_conv_wave
@@ -133,11 +146,11 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.1 MB/s (350608 bytes in 0.011s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.6 MB/s (7438 bytes in 0.003s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.5 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in 0.055s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 32.2 MB/s (353248 bytes in 0.010s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 3.0 MB/s (7438 bytes in 0.002s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (9732 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.0 MB/s (4231 bytes in 0.004s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.4 MB/s (1822720 bytes in 0.055s)
 
 ==========================================
 [Step 3] Running on device
@@ -148,8 +161,8 @@ test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in
 [ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
 GPU: QUALCOMM Adreno(TM) 830
 Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 427.9 us/iter = 2.510 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (153 ms)
+Performance: 432.7 us/iter = 2.482 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (148 ms)
 [ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
 GPU: QUALCOMM Adreno(TM) 830
 global=(1024,4,4) local=(128,1,4)
@@ -162,21 +175,27 @@ global=(1024,4,4) local=(128,1,4)
   [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
   [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
 Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 358096.4 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3231 ms)
+Int4 wave: 343218.1 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3109 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
 GPU: QUALCOMM Adreno(TM) 830
 
 === Delegate fp16 kernel — model shapes ===
-  M=437 N=4096 K=2560: 3884.5 us = 2.359 TFLOPS (×36 = 139.8 ms)
-  M=437 N=1024 K=2560: 899.0 us = 2.549 TFLOPS (×36 = 32.4 ms)
-  M=437 N=1024 K=2560: 920.3 us = 2.490 TFLOPS (×36 = 33.1 ms)
-  M=437 N=2560 K=4096: 3746.9 us = 2.446 TFLOPS (×36 = 134.9 ms)
-  M=437 N=9728 K=2560: 7402.6 us = 2.940 TFLOPS (×36 = 266.5 ms)
-  M=437 N=9728 K=2560: 7911.0 us = 2.751 TFLOPS (×36 = 284.8 ms)
-  M=437 N=2560 K=9728: 8041.5 us = 2.707 TFLOPS (×36 = 289.5 ms)
-  TOTAL: 3175.5 GFLOP in 1181.0 ms = 2.689 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1015 ms)
+[UNITTEST maps] /vendor/lib64/libadreno_compiler_cl.so
+[UNITTEST maps] /vendor/lib64/libadreno_utils.so
+[UNITTEST maps] /vendor/lib64/libCB.so
+[UNITTEST maps] /vendor/lib64/libgsl.so
+[UNITTEST maps] /vendor/lib64/libOpenCL_adreno.so
+[UNITTEST maps] /vendor/lib64/libOpenCL.so
+  M=437 N=4096 K=2560: 3775.7 us = 2.427 TFLOPS (×36 = 135.9 ms)
+  M=437 N=1024 K=2560: 937.9 us = 2.443 TFLOPS (×36 = 33.8 ms)
+  M=437 N=1024 K=2560: 890.1 us = 2.574 TFLOPS (×36 = 32.0 ms)
+  M=437 N=2560 K=4096: 3844.8 us = 2.384 TFLOPS (×36 = 138.4 ms)
+  M=437 N=9728 K=2560: 7905.4 us = 2.753 TFLOPS (×36 = 284.6 ms)
+  M=437 N=9728 K=2560: 7830.4 us = 2.780 TFLOPS (×36 = 281.9 ms)
+  M=437 N=2560 K=9728: 8104.5 us = 2.686 TFLOPS (×36 = 291.8 ms)
+  TOTAL: 3175.5 GFLOP in 1198.4 ms = 2.650 TFLOPS (conv only)
+[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1101 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
 GPU: QUALCOMM Adreno(TM) 830
 
@@ -189,11 +208,11 @@ GPU: QUALCOMM Adreno(TM) 830
   SKIP 437x9728x2560: image1d_buffer failed -6
   SKIP 437x2560x9728: image1d_buffer failed -6
   TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (129 ms)
-[----------] 4 tests from DelegateConvWaveTest (4530 ms total)
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (128 ms)
+[----------] 4 tests from DelegateConvWaveTest (4487 ms total)
 
 [----------] Global test environment tear-down
-[==========] 4 tests from 1 test suite ran. (4531 ms total)
+[==========] 4 tests from 1 test suite ran. (4487 ms total)
 [  PASSED  ] 4 tests.
 
 Log: unittest_delegate_conv_wave.log
@@ -208,33 +227,33 @@ grep: unittest_delegate_conv_wave.log: binary file matches
 --- Generation snippet (post-assistant tag) ---
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.86 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5552.90 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5564.93 us (1.647 TFLOPS)  max=5571.07 us (1.645 TFLOPS)
-  first-half avg=5568.27 us (1.646 TFLOPS)  last-half avg=5568.43
+  min=5561.86 us (1.648 TFLOPS)  max=5569.79 us (1.645 TFLOPS)
+  first-half avg=5566.05 us (1.647 TFLOPS)  last-half avg=5566.02
 
 --- Perf summary ---
-prefill: 437 tokens, 7505 ms, 58.2278 TPS
-generation: 32 tokens, 7704 ms, 4.15369 TPS
-total: 15218 ms
-peak memory: 2768216 KB
-[e2e time]: 24349 ms 
+prefill: 437 tokens, 6772 ms, 64.5304 TPS
+generation: 32 tokens, 7871 ms, 4.06556 TPS
+total: 14646 ms
+peak memory: 2720816 KB
+[e2e time]: 23825 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4241.89 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4162.91 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4241.82 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4162.87 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=38.10 ms calls=1 avg=38.095 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=7.15 ms calls=1 avg=7.146 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=14.22 ms calls=36 avg=0.395 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=786.21 ms calls=73 avg=10.770 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=433.42 ms calls=72 avg=6.020 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1671.20 ms calls=36 avg=46.422 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=47.56 ms calls=1 avg=47.556 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=10.88 ms calls=1 avg=10.877 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=8.75 ms calls=36 avg=0.243 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=582.13 ms calls=73 avg=7.974 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=322.82 ms calls=72 avg=4.484 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1340.64 ms calls=36 avg=37.240 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
