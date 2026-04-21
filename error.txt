@@ -1,5 +1,3 @@
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
@@ -13,49 +11,61 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
+[ADD2 DIAG call=0 total=1118720]
+  idx=0  a=+0.0031  b=+1.2598  expect=+1.2628  gpu_got=+1.2627  diff=-1.4877e-04
+  idx=1  a=+0.0077  b=-0.3066  expect=-0.2989  gpu_got=-0.2988  diff=+1.1444e-04
+  idx=100  a=+0.0108  b=+0.3855  expect=+0.3963  gpu_got=+0.3962  diff=-3.0518e-05
+  idx=559360  a=-0.0055  b=-0.0069  expect=-0.0125  gpu_got=-0.0125  diff=-3.8147e-06
+  idx=1118719  a=+0.0138  b=-0.0302  expect=-0.0164  gpu_got=-0.0164  diff=+0.0000e+00
+[ADD2 DIAG call=1 total=1118720]
+  idx=0  a=+1.2627  b=+6.5078  expect=+7.7705  gpu_got=+7.7695  diff=-9.7656e-04
+  idx=1  a=-0.2988  b=-1.8223  expect=-2.1211  gpu_got=-2.1211  diff=+0.0000e+00
+  idx=100  a=+0.3962  b=+0.9097  expect=+1.3059  gpu_got=+1.3057  diff=-2.4414e-04
+  idx=559360  a=-0.0125  b=-0.0894  expect=-0.1019  gpu_got=-0.1019  diff=-3.0518e-05
+  idx=1118719  a=-0.0164  b=+0.0321  expect=+0.0157  gpu_got=+0.0157  diff=+0.0000e+00
 ! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4971 ms, 87.9099 TPS
-generation: 32 tokens, 6574 ms, 4.86766 TPS
-total: 11553 ms
-peak memory: 2696952 KB
+prefill: 437 tokens, 5033 ms, 86.8269 TPS
+generation: 32 tokens, 6614 ms, 4.83822 TPS
+total: 11658 ms
+peak memory: 2686532 KB
 ==========================================================
-[e2e time]: 13778 ms 
-Max Resident Set Size: 2696952 KB
+[e2e time]: 13953 ms 
+Max Resident Set Size: 2686532 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    94.0 ms
-  dequant:           84.3 ms (92.3%)
-  reformat_in:        0.0 ms ( 0.0%)  hits=252/252
-  conv(wall):         2.7 ms ( 3.0%)
+  resource_setup:   104.9 ms
+  dequant:           74.8 ms (89.9%)
+  reformat_in:        0.1 ms ( 0.1%)  hits=252/252
+  conv(wall):         3.0 ms ( 3.6%)
   conv(gpu):          0.0 ms            inf TFLOPS
-  readback:           4.2 ms ( 4.6%)
-  sum(steps):        91.3 ms            34.797 TFLOPS
-  fn_total(wall):   185.3 ms            (diff from sum = 0.1 ms of arg-setup + enqueue overhead)
+  readback:           5.4 ms ( 6.4%)
+  sum(steps):        83.3 ms            38.132 TFLOPS
+  fn_total(wall):   188.2 ms            (diff from sum = 0.1 ms of arg-setup + enqueue overhead)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=4917.4 ms across all forwarding_op() calls
-  reshaped_rms_norm             3121.7 ms  calls=72  avg=43.357 ms
-  mha_core                      1209.6 ms  calls=36  avg=33.600 ms
-  rms_norm                       314.1 ms  calls=73  avg=4.302 ms
-  fully_connected                187.9 ms  calls=252  avg=0.746 ms
-  tie_word_embeddings             66.8 ms  calls=2  avg=33.386 ms
-  addition                        13.0 ms  calls=72  avg=0.180 ms
-  swiglu                           4.2 ms  calls=36  avg=0.116 ms
-  multiout                         0.2 ms  calls=144  avg=0.001 ms
+  total=4967.9 ms across all forwarding_op() calls
+  reshaped_rms_norm             3113.0 ms  calls=72  avg=43.236 ms
+  mha_core                      1187.3 ms  calls=36  avg=32.981 ms
+  rms_norm                       331.5 ms  calls=73  avg=4.541 ms
+  fully_connected                190.8 ms  calls=252  avg=0.757 ms
+  addition                        76.8 ms  calls=72  avg=1.067 ms
+  tie_word_embeddings             64.0 ms  calls=2  avg=31.980 ms
+  swiglu                           4.3 ms  calls=36  avg=0.120 ms
+  multiout                         0.2 ms  calls=144  avg=0.002 ms
   input                            0.0 ms  calls=1  avg=0.033 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=60.74 ms calls=1 avg=60.735 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.03 ms calls=1 avg=6.031 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=4.12 ms calls=36 avg=0.114 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=313.90 ms calls=73 avg=4.300 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3121.16 ms calls=72 avg=43.350 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1209.41 ms calls=36 avg=33.595 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=61.00 ms calls=1 avg=60.999 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.96 ms calls=1 avg=2.955 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.28 ms calls=36 avg=0.119 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=331.35 ms calls=73 avg=4.539 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3112.46 ms calls=72 avg=43.229 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1187.15 ms calls=36 avg=32.976 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=185.43 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=188.30 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   185.40 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   188.26 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -66,46 +76,40 @@ Max Resident Set Size: 2696952 KB
 
 --- Generation snippet (post-assistant tag) ---
 
-! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4971 ms, 87.9099 TPS
-generation: 32 tokens, 6574 ms, 4.86766 TPS
-total: 11553 ms
-peak memory: 2696952 KB
-==========================================================
-[e2e time]: 13778 ms 
-Max Resident Set Size: 2696952 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    94.0 ms
-  dequant:           
+[ADD2 DIAG call=0 total=1118720]
+  idx=0  a=+0.0031  b=+1.2598  expect=+1.2628  gpu_got=+1.2627  diff=-1.4877e-04
+  idx=1  a=+0.0077  b=-0.3066  expect=-0.2989  gpu_got=-0.2988  diff=+1.1444e-04
+  idx=100  a=+0.0108  b=+0.3855  expect=+0.3963  gpu_got=+0.3962  diff=-3.0518e-05
+  idx=559360  a=-0.0055  b=-0.0069  expect=-0.0125  gpu_got=-0.0125  diff=-3.8147e-06
+  idx=1118719  a=+0.0138  b=-0.0302  expect=-0.0164  gpu_got=-0.0164  diff=+0.0000e+00
+[ADD2 DIAG call=1 total=1118720]
+  idx=0  a=+1.2627  b=+6.5078  expect=+7.7705  gpu_got=+7.7695  diff=-9.7656e-04
+  idx=1  a=-0.2988  b=-1.8223  exp
 
 --- Perf summary ---
-prefill: 437 tokens, 4971 ms, 87.9099 TPS
-generation: 32 tokens, 6574 ms, 4.86766 TPS
-total: 11553 ms
-peak memory: 2696952 KB
-[e2e time]: 13778 ms 
+prefill: 437 tokens, 5033 ms, 86.8269 TPS
+generation: 32 tokens, 6614 ms, 4.83822 TPS
+total: 11658 ms
+peak memory: 2686532 KB
+[e2e time]: 13953 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=185.43 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=188.30 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   185.40 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   188.26 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=60.74 ms calls=1 avg=60.735 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.03 ms calls=1 avg=6.031 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=4.12 ms calls=36 avg=0.114 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=313.90 ms calls=73 avg=4.300 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3121.16 ms calls=72 avg=43.350 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1209.41 ms calls=36 avg=33.595 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=61.00 ms calls=1 avg=60.999 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.96 ms calls=1 avg=2.955 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.28 ms calls=36 avg=0.119 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=331.35 ms calls=73 avg=4.539 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3112.46 ms calls=72 avg=43.229 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1187.15 ms calls=36 avg=32.976 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
