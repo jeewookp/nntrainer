@@ -971,6 +971,18 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
 
     const uint64_t t0 = now_ns();
     if (!pool_has_input) {
+      // Upstream may be a GPU layer (e.g. swiglu_cl_fp16 when Phase B
+      // GPU-SwiGLU is active). Its writes to in_u16 are still in
+      // flight on the OpenCL queue, so the scalar copy below would
+      // read stale host memory without a fence. Drain the queue here
+      // — same pattern as the CPU-layer entry fences in
+      // ReshapedRMSNorm / MHACore / SwiGLU.
+      auto *cl_ctx = static_cast<ClContext *>(
+        Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          in_u16, (size_t)M * K * sizeof(uint16_t), /*read_only=*/true);
+      }
       for (size_t i = 0; i < in_total; ++i) {
         svm_in[i] = in_u16[i];
       }
