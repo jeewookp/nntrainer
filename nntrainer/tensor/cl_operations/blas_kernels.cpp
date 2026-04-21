@@ -2782,6 +2782,50 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
     size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
     clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
+
+    // Cache-warmth bench: on the first call, re-dispatch the same conv
+    // N extra times with the exact same args and measure the GPU-side
+    // per-iter time via events. Same workload the unittest measures
+    // (5 back-to-back conv calls + 1 clFinish). If the averaged GPU
+    // time drops from ~7.68 ms/call toward the unittest's 3-4 ms/call,
+    // cache warmth was the real gap. Gated by
+    // NNTRAINER_DELEGATE_REPEAT_BENCH=<N> (default N=8).
+    static bool s_bench_done = false;
+    static const char *s_bench_n_env =
+      std::getenv("NNTRAINER_DELEGATE_REPEAT_BENCH");
+    if (!s_bench_done && s_bench_n_env) {
+      s_bench_done = true;
+      const int n_iter = std::max(1, atoi(s_bench_n_env));
+      // Warmup 3 extra dispatches (same args).
+      for (int i = 0; i < 3; ++i)
+        clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
+                               nullptr);
+      clFinish(raw_q);
+      std::vector<cl_event> evs(n_iter);
+      for (int i = 0; i < n_iter; ++i)
+        clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
+                               &evs[i]);
+      clFinish(raw_q);
+      uint64_t total_ns = 0;
+      for (int i = 0; i < n_iter; ++i) {
+        cl_ulong s = 0, e = 0;
+        clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_START, sizeof(s),
+                                &s, nullptr);
+        clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_END, sizeof(e),
+                                &e, nullptr);
+        if (e > s) total_ns += (e - s);
+        clReleaseEvent(evs[i]);
+      }
+      const double avg_us = (total_ns / 1000.0) / (double)n_iter;
+      const double gflops = 2.0 * (double)M * (double)N * (double)K / 1.0e9;
+      const double tflops = gflops / (avg_us / 1.0e6) / 1000.0;
+      fprintf(stderr,
+        "\n[DELEGATE BENCH in production context] M=%u N=%u K=%u  "
+        "iters=%d  avg=%.2f us  %.3f TFLOPS\n"
+        "  (unittest same shape was 3256.7 us / 2.814 TFLOPS for "
+        "M=437 N=4096 K=2560)\n",
+        M, N, K, n_iter, avg_us, tflops);
+    }
   }
   const uint64_t t3 = now_ns();
 
