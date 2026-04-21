@@ -2568,36 +2568,66 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (!s_xmem)
     s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
 
-  // bias image (zeros, grow as needed)
-  if (!s_bias || s_bias_slices < dst_slices) {
-    if (s_bias) clReleaseMemObject(s_bias);
-    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
-    cl_image_desc bd = {};
-    bd.image_type = CL_MEM_OBJECT_IMAGE2D;
-    bd.image_width = dst_slices; bd.image_height = 1;
-    s_bias = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &bd, nullptr, &err);
-    std::vector<uint16_t> z(dst_slices * 4, 0);
-    size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
-    clEnqueueWriteImage(clq, s_bias, CL_TRUE, o, r, 0, 0, z.data(), 0,0,0);
-    s_bias_slices = dst_slices;
-  }
-
-  // src/dst images (recreate only when shape changes)
+  // Shape-keyed caches for bias / src_img / dst_img. Qwen3 prefill
+  // cycles through ~4 distinct K values and ~4 distinct N values per
+  // decoder layer; a single-slot cache was clReleaseMemObject +
+  // clCreateImage-ing almost every call, which accounted for ~1 sec of
+  // resource_setup time across 252 calls. Look up by (M, slices) into
+  // a small map; the first ~7 calls populate it, everything after is
+  // a hash hit.
   cl_image_format fmt_h = {CL_RGBA, CL_HALF_FLOAT};
-  if (!s_src_img || s_src_w != (int)M || s_src_h != src_slices) {
-    if (s_src_img) clReleaseMemObject(s_src_img);
-    cl_image_desc sd = {};
-    sd.image_type = CL_MEM_OBJECT_IMAGE2D;
-    sd.image_width = M; sd.image_height = src_slices;
-    s_src_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &err);
+  auto key2d = [](int M_, int H_) -> uint64_t {
+    return ((uint64_t)(uint32_t)M_ << 32) | (uint64_t)(uint32_t)H_;
+  };
+  static std::unordered_map<uint64_t, cl_mem> s_src_img_cache;
+  static std::unordered_map<uint64_t, cl_mem> s_dst_img_cache;
+  static std::unordered_map<int, cl_mem> s_bias_cache;
+
+  cl_mem bias_img = nullptr;
+  {
+    auto it = s_bias_cache.find(dst_slices);
+    if (it != s_bias_cache.end()) {
+      bias_img = it->second;
+    } else {
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc bd = {};
+      bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+      bd.image_width = dst_slices; bd.image_height = 1;
+      bias_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &bd,
+                                nullptr, &err);
+      std::vector<uint16_t> z((size_t)dst_slices * 4, 0);
+      size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+      clEnqueueWriteImage(clq, bias_img, CL_TRUE, o, r, 0, 0, z.data(),
+                           0, 0, 0);
+      s_bias_cache[dst_slices] = bias_img;
+    }
+  }
+  {
+    const uint64_t k = key2d((int)M, src_slices);
+    auto it = s_src_img_cache.find(k);
+    if (it != s_src_img_cache.end()) {
+      s_src_img = it->second;
+    } else {
+      cl_image_desc sd = {};
+      sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+      sd.image_width = M; sd.image_height = src_slices;
+      s_src_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt_h, &sd, 0, &err);
+      s_src_img_cache[k] = s_src_img;
+    }
     s_src_w = M; s_src_h = src_slices;
   }
-  if (!s_dst_img || s_dst_w != (int)M || s_dst_h != dst_slices) {
-    if (s_dst_img) clReleaseMemObject(s_dst_img);
-    cl_image_desc dd = {};
-    dd.image_type = CL_MEM_OBJECT_IMAGE2D;
-    dd.image_width = M; dd.image_height = dst_slices;
-    s_dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &err);
+  {
+    const uint64_t k = key2d((int)M, dst_slices);
+    auto it = s_dst_img_cache.find(k);
+    if (it != s_dst_img_cache.end()) {
+      s_dst_img = it->second;
+    } else {
+      cl_image_desc dd = {};
+      dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+      dd.image_width = M; dd.image_height = dst_slices;
+      s_dst_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_h, &dd, 0, &err);
+      s_dst_img_cache[k] = s_dst_img;
+    }
     s_dst_w = M; s_dst_h = dst_slices;
   }
 
@@ -2726,7 +2756,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     int a = 0;
     s_conv_kern->SetKernelArguments(a++, &w_cl_use, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_xmem, sizeof(cl_mem));
-    s_conv_kern->SetKernelArguments(a++, &s_bias, sizeof(cl_mem));
+    s_conv_kern->SetKernelArguments(a++, &bias_img, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &src_img_for_conv, sizeof(cl_mem));
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
