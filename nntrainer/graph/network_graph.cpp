@@ -441,10 +441,62 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   unsigned int from, unsigned int to, bool training,
   std::function<void(std::shared_ptr<LayerNode>, bool)> forwarding_op,
   std::function<bool(void *userdata)> stop_cb, void *userdata) {
+
+  // Per-layer-type honest wall clock. Accumulates ns spent INSIDE each
+  // layer's forwarding_op() (plus the GPU tail if NNTRAINER_PROFILE_LAYER_SYNC
+  // is set), prints a sorted summary at process exit. Turn it on with
+  //   NNTRAINER_PROFILE_LAYER_SYNC=1
+  // which also makes blas_kernels' delegate-conv call clWaitForEvents so
+  // its fn_total stops leaking into whatever layer next SVMMap-fences on
+  // its output.
+  struct LayerWallProfile {
+    std::unordered_map<std::string, uint64_t> ns;
+    std::unordered_map<std::string, uint64_t> calls;
+    uint64_t total_ns{0};
+    ~LayerWallProfile() {
+      if (!total_ns) return;
+      std::vector<std::pair<uint64_t, std::string>> ordered;
+      for (auto &p : ns) ordered.emplace_back(p.second, p.first);
+      std::sort(ordered.begin(), ordered.end(),
+                std::greater<std::pair<uint64_t, std::string>>());
+      fprintf(stderr,
+        "\n[PROFILE NetworkGraph per-layer wall clock (prefill only, "
+        "step_size>1)]\n  total=%.1f ms across all forwarding_op() calls\n",
+        total_ns / 1e6);
+      for (auto &p : ordered) {
+        fprintf(stderr, "  %-28s %7.1f ms  calls=%lu  avg=%.3f ms\n",
+          p.second.c_str(), p.first / 1e6,
+          (unsigned long)calls[p.second],
+          (p.first / 1e6) / std::max<uint64_t>(1, calls[p.second]));
+      }
+    }
+  };
+  static LayerWallProfile g_graph_wall_profile;
+  static const bool s_profile_layer_sync =
+    std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
+  static cl_command_queue s_sync_q = nullptr;
+  if (s_profile_layer_sync && !s_sync_q) {
+    auto *cc = static_cast<ClContext *>(
+      Engine::Global().getRegisteredContext("gpu"));
+    if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
+  }
+
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
+    const bool profile_this_call = (to - from) > 1;
+    struct timespec ts0, ts1;
+    if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
+    if (profile_this_call) {
+      if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
+      clock_gettime(CLOCK_MONOTONIC, &ts1);
+      const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
+                          (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
+      g_graph_wall_profile.ns[ln->getType()] += dt;
+      g_graph_wall_profile.calls[ln->getType()] += 1;
+      g_graph_wall_profile.total_ns += dt;
+    }
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
 
