@@ -40,7 +40,6 @@ const std::string Program::DEFAULT_KERNEL_PATH = stringify(OPENCL_KERNEL_PATH);
 bool Program::BuildProgram(cl_device_id device_id,
                            const std::string &compiler_options,
                            bool binaryCreated) {
-  fprintf(stderr, "[clBuildProgram] opts=%s\n", compiler_options.c_str());
   // clBuildProgram returns NULL with error code if fails
   const int error_code = clBuildProgram(
     program_, 0, nullptr, compiler_options.c_str(), nullptr, nullptr);
