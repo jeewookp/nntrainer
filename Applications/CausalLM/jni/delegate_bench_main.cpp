@@ -88,14 +88,18 @@ using dl_device_id = void *;
 using dl_platform_id = void *;
 using dl_event = void *;
 
-constexpr dl_uint CL_DEVICE_TYPE_GPU = (1 << 2);
-constexpr dl_uint CL_MEM_READ_ONLY = (1 << 2);
-constexpr dl_uint CL_MEM_READ_WRITE = (1 << 0);
-constexpr dl_uint CL_PROGRAM_BUILD_LOG = 0x1183;
-constexpr dl_uint CL_DEVICE_NAME = 0x102B;
-constexpr dl_uint CL_RGBA = 0x10B5;
-constexpr dl_uint CL_HALF_FLOAT = 0x10DD;
-constexpr dl_uint CL_MEM_OBJECT_IMAGE2D = 0x10F1;
+// CL_* names are #defined in real <CL/cl.h> (pulled in transitively from
+// nntrainer headers at higher stages), so any identifier named CL_FOO here
+// gets token-replaced to the macro value and breaks the declaration. Prefix
+// ours with DL_ to dodge the macro namespace.
+constexpr dl_uint DL_CL_DEVICE_TYPE_GPU = (1u << 2);
+constexpr dl_uint DL_CL_MEM_READ_ONLY = (1u << 2);
+constexpr dl_uint DL_CL_MEM_READ_WRITE = (1u << 0);
+constexpr dl_uint DL_CL_PROGRAM_BUILD_LOG = 0x1183;
+constexpr dl_uint DL_CL_DEVICE_NAME = 0x102B;
+constexpr dl_uint DL_CL_RGBA = 0x10B5;
+constexpr dl_uint DL_CL_HALF_FLOAT = 0x10DD;
+constexpr dl_uint DL_CL_MEM_OBJECT_IMAGE2D = 0x10F1;
 
 struct dl_image_format {
   dl_uint image_channel_order;
@@ -285,9 +289,9 @@ int main(int, char **) {
   cl.clGetPlatformIDs(1, &plat, &np);
   dl_uint nd;
   dl_device_id dev;
-  cl.clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 1, &dev, &nd);
+  cl.clGetDeviceIDs(plat, DL_CL_DEVICE_TYPE_GPU, 1, &dev, &nd);
   char name[256] = {};
-  cl.clGetDeviceInfo(dev, CL_DEVICE_NAME, sizeof(name), name, nullptr);
+  cl.clGetDeviceInfo(dev, DL_CL_DEVICE_NAME, sizeof(name), name, nullptr);
   fprintf(stderr, "[nntr_delegate_bench] GPU: %s\n", name);
 
   dl_int err;
@@ -313,9 +317,9 @@ int main(int, char **) {
                           nullptr, nullptr);
   if (err != 0) {
     size_t sz = 0;
-    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+    cl.clGetProgramBuildInfo(prog, dev, DL_CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
     std::vector<char> log(sz + 1, 0);
-    cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz, log.data(),
+    cl.clGetProgramBuildInfo(prog, dev, DL_CL_PROGRAM_BUILD_LOG, sz, log.data(),
                              nullptr);
     fprintf(stderr, "[nntr_delegate_bench] build failed: %s\n", log.data());
     return 1;
@@ -337,21 +341,21 @@ int main(int, char **) {
     const double gflops = 2.0 * M * N * K / 1e9;
 
     size_t wbytes = (size_t)N * K * 2;
-    dl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &err);
+    dl_mem w = cl.clCreateBuffer(ctx, DL_CL_MEM_READ_ONLY, wbytes, nullptr, &err);
     {
       uint16_t v = f32_to_f16(0.01f);
       std::vector<uint16_t> d(wbytes / 2, v);
       cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, nullptr,
                               nullptr);
     }
-    dl_mem xm = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+    dl_mem xm = cl.clCreateBuffer(ctx, DL_CL_MEM_READ_WRITE, 6144, nullptr, &err);
 
-    dl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    dl_image_format fmt = {DL_CL_RGBA, DL_CL_HALF_FLOAT};
     dl_image_desc bd = {};
-    bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_type = DL_CL_MEM_OBJECT_IMAGE2D;
     bd.image_width = dst_slices;
     bd.image_height = 1;
-    dl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &err);
+    dl_mem bias = cl.clCreateImage(ctx, DL_CL_MEM_READ_ONLY, &fmt, &bd, 0, &err);
     {
       std::vector<uint16_t> z(dst_slices * 4, 0);
       size_t o[3] = {0, 0, 0}, r[3] = {(size_t)dst_slices, 1, 1};
@@ -360,10 +364,10 @@ int main(int, char **) {
     }
 
     dl_image_desc sd = {};
-    sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_type = DL_CL_MEM_OBJECT_IMAGE2D;
     sd.image_width = M;
     sd.image_height = src_slices;
-    dl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &err);
+    dl_mem si = cl.clCreateImage(ctx, DL_CL_MEM_READ_ONLY, &fmt, &sd, 0, &err);
     {
       uint16_t one = f32_to_f16(1.0f);
       std::vector<uint16_t> d((size_t)M * src_slices * 4, one);
@@ -373,10 +377,10 @@ int main(int, char **) {
     }
 
     dl_image_desc dd = {};
-    dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_type = DL_CL_MEM_OBJECT_IMAGE2D;
     dd.image_width = M;
     dd.image_height = dst_slices;
-    dl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &err);
+    dl_mem di = cl.clCreateImage(ctx, DL_CL_MEM_READ_WRITE, &fmt, &dd, 0, &err);
 
     int4 s0 = {1, dst_slices, M, 32};
     int4 s1 = {src_slices, 0, 0, src_slices};
