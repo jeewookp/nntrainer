@@ -2572,13 +2572,25 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   // --- Static resources (allocated once, reused across calls) ---
   // Dequant cache: weight_ptr → cl_mem (first call per layer does dequant,
-  // subsequent calls reuse). Limited to ~200MB total GPU memory.
+  // subsequent calls reuse). With the first prefill touching every weight
+  // exactly once, the cache is pure overhead — each of the ~5-8 entries
+  // that fit under the cap makes its own clCreateBuffer (~5 ms on Adreno),
+  // contributing 50 ms/prefill of pure alloc time. Disabled by default
+  // (kMaxCacheBytes = 0), so every call falls through to the single
+  // preallocated reusable buffer below. Set kMaxCacheBytes > 0 to
+  // re-enable if multi-prefill process warm-up benefits outweigh the
+  // first-prefill cost.
   static std::unordered_map<uintptr_t, cl_mem> s_dq_cache;
   static size_t s_dq_cache_bytes = 0;
-  static constexpr size_t kMaxCacheBytes = 200 * 1024 * 1024;
+  static constexpr size_t kMaxCacheBytes = 0;
 
-  static cl_mem s_w_cl = nullptr;  // fallback if cache full
+  // Single reusable dequant buffer. Preallocated lazily on first call to
+  // a size large enough for every delegate weight we will ever see in a
+  // prefill (Qwen3-4B max: down_proj 2560 × 9728 fp16 = 47.5 MB), so the
+  // "grow on demand" resize path never re-runs inside the prefill loop.
+  static cl_mem s_w_cl = nullptr;
   static size_t s_w_size = 0;
+  static constexpr size_t kPreallocWBytes = 64 * 1024 * 1024;
   static cl_mem s_xmem = nullptr;
   static cl_mem s_bias = nullptr;
   static int s_bias_slices = 0;
@@ -2595,6 +2607,15 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // xmem (6144 bytes, constant)
   if (!s_xmem)
     s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
+
+  // Preallocate the reusable dequant-output buffer once, at the max size
+  // any delegate weight could need. Done here so the cost lands in
+  // resource_setup (one-time) rather than dequant.alloc (per-call).
+  if (!s_w_cl) {
+    s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, kPreallocWBytes,
+                            nullptr, &err);
+    s_w_size = kPreallocWBytes;
+  }
 
   // Shape-keyed caches for bias / src_img / dst_img. Qwen3 prefill
   // cycles through ~4 distinct K values and ~4 distinct N values per
@@ -2703,9 +2724,11 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   } else {
     // Cache miss: allocate + dequant
     const uint64_t tA = now_ns();
-    cl_mem new_w = nullptr;
-    if (s_dq_cache_bytes + w_bytes <= kMaxCacheBytes) {
-      new_w = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+    // Default path: use the preallocated reusable buffer. Only take the
+    // cache path if the static cap is enabled (see kMaxCacheBytes above).
+    if (kMaxCacheBytes > 0 && s_dq_cache_bytes + w_bytes <= kMaxCacheBytes) {
+      cl_mem new_w =
+        clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
       if (!err) {
         s_dq_cache[w_key] = new_w;
         s_dq_cache_bytes += w_bytes;
@@ -2713,10 +2736,12 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       }
     }
     if (!w_cl_use) {
-      // Cache full or alloc failed — use reusable buffer
-      if (!s_w_cl || s_w_size < w_bytes) {
-        if (s_w_cl) clReleaseMemObject(s_w_cl);
-        s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
+      // s_w_cl was preallocated in resource_setup at kPreallocWBytes;
+      // grow only if the current weight happens to exceed that bound.
+      if (s_w_size < w_bytes) {
+        clReleaseMemObject(s_w_cl);
+        s_w_cl =
+          clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
         s_w_size = w_bytes;
       }
       w_cl_use = s_w_cl;
