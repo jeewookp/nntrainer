@@ -1,3 +1,71 @@
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+2 warnings generated.
+[arm64-v8a] Compile++      : nntr_quantize <= mha_core.cpp
+In file included from ./../layers/mha_core.cpp:27:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+1 warning generated.
+[arm64-v8a] Executable     : nntr_quantize
+-e [SUCCESS] Build completed successfully
+-e [INFO] Build artifacts:
+-e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
+-e   [OK] libcausallm_core.so (44M) (Copied from obj)
+-e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
+-e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
+-e   [WARN] nntr_quantize found in obj but not in libs. Copying...
+-e   [OK] nntr_quantize (43M) (Copied from obj)
+-e 
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.9 MB/s (45237768 bytes in 1.312s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.8 MB/s (44762024 bytes in 1.302s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.8 MB/s (3960088 bytes in 0.119s)
+3 files pushed. 32.7 MB/s (93959880 bytes in 2.736s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 31.9 MB/s (11127336 bytes in 0.333s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 24.3 MB/s (129336 bytes in 0.005s)
+../../builddir/android_build_result/lib/arm64-v8a/libOpenCL.so: 1 file pushed. 25.0 MB/s (163320 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.5 MB/s (1822720 bytes in 0.055s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
 ANDROID_TZDATA_ROOT
 ASEC_MOUNTPOINT
 BOOTCLASSPATH
@@ -19,70 +87,7 @@ SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-
-[DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5562.11 us (1.648 TFLOPS)  max=5569.02 us (1.646 TFLOPS)
-  first-half avg=5565.31 us (1.647 TFLOPS)  last-half avg=5565.86 us (1.647 TFLOPS)
-  overall avg=5565.58 us (1.647 TFLOPS)
-  unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 N=4096 K=2560)
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 5600 ms, 78.0357 TPS
-generation: 32 tokens, 7088 ms, 4.51467 TPS
-total: 12693 ms
-peak memory: 2771784 KB
-==========================================================
-[e2e time]: 14878 ms 
-Max Resident Set Size: 2771784 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    81.1 ms
-  dequant:           72.9 ms (12.4%)
-  reformat_in:        0.1 ms ( 0.0%)  hits=252/252
-  conv(wall):       514.2 ms (87.3%)
-  conv(gpu):       1935.6 ms            1.641 TFLOPS
-  readback:           2.0 ms ( 0.3%)
-  sum(steps):       589.1 ms            5.390 TFLOPS
-  fn_total(wall):  3626.2 ms            (diff from sum = 2956.0 ms of arg-setup + enqueue overhead)
-
-[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=5518.9 ms across all forwarding_op() calls
-  fully_connected               3632.7 ms  calls=252  avg=14.416 ms
-  mha_core                      1027.1 ms  calls=36  avg=28.530 ms
-  rms_norm                       501.9 ms  calls=73  avg=6.876 ms
-  reshaped_rms_norm              224.9 ms  calls=72  avg=3.124 ms
-  swiglu                          61.6 ms  calls=36  avg=1.712 ms
-  addition                        50.1 ms  calls=72  avg=0.695 ms
-  tie_word_embeddings             20.1 ms  calls=2  avg=10.027 ms
-  multiout                         0.5 ms  calls=144  avg=0.003 ms
-  input                            0.0 ms  calls=1  avg=0.045 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.15 ms calls=1 avg=17.154 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.89 ms calls=1 avg=2.891 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=7.52 ms calls=36 avg=0.209 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=458.08 ms calls=73 avg=6.275 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=224.49 ms calls=72 avg=3.118 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=999.96 ms calls=36 avg=27.777 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3626.56 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3626.53 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+CANNOT LINK EXECUTABLE "./nntrainer_causallm": cannot locate symbol "SetProcessProfilesCached" referenced by "/system/lib64/libandroid_runtime.so"...
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -92,40 +97,14 @@ Max Resident Set Size: 2771784 KB
 --- Generation snippet (post-assistant tag) ---
 
 
-[DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5562.11 us (1.648 TFLOPS)  max=5569.02 us (1.646 TFLOPS)
-  first-half avg=5565.31 us (1.647 TFLOPS)  last-half avg=5565.86 us (1.647 TFLOPS)
-  overall avg=5565.58 us (1.647 TFLOPS)
-  unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 N=4096 K=2560)
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-pref
-
 --- Perf summary ---
-prefill: 437 tokens, 5600 ms, 78.0357 TPS
-generation: 32 tokens, 7088 ms, 4.51467 TPS
-total: 12693 ms
-peak memory: 2771784 KB
-[e2e time]: 14878 ms 
+(no perf lines)
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=3626.56 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  3626.53 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+(no PROFILE lines found)
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.15 ms calls=1 avg=17.154 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.89 ms calls=1 avg=2.891 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=7.52 ms calls=36 avg=0.209 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=458.08 ms calls=73 avg=6.275 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=224.49 ms calls=72 avg=3.118 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=999.96 ms calls=36 avg=27.777 ms
+(no layer PROFILE lines found)
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
