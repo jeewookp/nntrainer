@@ -28,13 +28,14 @@ __kernel void image2d_to_svm(
     __global half* restrict output,
     const int M,
     const int N) {
-  int m = get_global_id(0);
-  int s = get_global_id(1);
-  if (m >= M || s >= N/4) return;
-  half4 v = read_imageh(src, smp, (int2)(m, s));
-  int base = m * N + s * 4;
-  output[base] = v.x;
-  if (s*4+1 < N) output[base+1] = v.y;
-  if (s*4+2 < N) output[base+2] = v.z;
-  if (s*4+3 < N) output[base+3] = v.w;
+  const int m = get_global_id(0);
+  const int s = get_global_id(1);
+  if (m >= M || s >= N / 4) return;
+  const half4 v = read_imageh(src, smp, (int2)(m, s));
+  // N % 4 == 0 is guaranteed (delegate requires N % 32 == 0), so base is
+  // always a 4-half-aligned offset and we can vector-store. This cuts the
+  // SVM write from 4 scalar half stores (= 4 coherent-SVM transactions on
+  // Adreno's coarse-grained SVM) to one half4 store.
+  __global half4 *out4 = (__global half4 *)(output + (m * N + s * 4));
+  *out4 = v;
 }
