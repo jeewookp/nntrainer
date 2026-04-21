@@ -1,45 +1,21 @@
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 7475 ms, 58.4615 TPS
-generation: 32 tokens, 7413 ms, 4.31674 TPS
-total: 14897 ms
-peak memory: 2695312 KB
-==========================================================
-[e2e time]: 26376 ms 
-Max Resident Set Size: 2695312 KB
+  reshaped_rms_norm              471.0 ms  calls=72  avg=6.541 ms
+  swiglu                          69.8 ms  calls=36  avg=1.938 ms
+  addition                        58.9 ms  calls=72  avg=0.818 ms
+  tie_word_embeddings             37.9 ms  calls=2  avg=18.972 ms
+  multiout                         0.7 ms  calls=144  avg=0.005 ms
+  input                            0.1 ms  calls=1  avg=0.062 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=34.73 ms calls=1 avg=34.728 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.21 ms calls=1 avg=3.205 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=10.62 ms calls=36 avg=0.295 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=842.93 ms calls=73 avg=11.547 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=470.34 ms calls=72 avg=6.532 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1677.38 ms calls=36 avg=46.594 ms
 
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:   116.5 ms
-  dequant:           87.6 ms ( 7.6%)
-  reformat_in:        0.1 ms ( 0.0%)  hits=252/252
-  conv(wall):      1064.6 ms (92.1%)
-  conv(gpu):       1934.3 ms            1.642 TFLOPS
-  readback:           3.5 ms ( 0.3%)
-  sum(steps):      1155.7 ms            2.748 TFLOPS
-  fn_total(wall):  4207.9 ms            (diff from sum = 2935.7 ms of arg-setup + enqueue overhead)
-
-[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=7399.3 ms across all forwarding_op() calls
-  fully_connected               4216.8 ms  calls=252  avg=16.733 ms
-  mha_core                      1742.4 ms  calls=36  avg=48.401 ms
-  rms_norm                       732.7 ms  calls=73  avg=10.037 ms
-  reshaped_rms_norm              530.1 ms  calls=72  avg=7.362 ms
-  swiglu                          67.6 ms  calls=36  avg=1.877 ms
-  addition                        63.9 ms  calls=72  avg=0.888 ms
-  tie_word_embeddings             45.0 ms  calls=2  avg=22.514 ms
-  multiout                         0.8 ms  calls=144  avg=0.005 ms
-  input                            0.1 ms  calls=1  avg=0.073 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=41.89 ms calls=1 avg=41.887 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.13 ms calls=1 avg=3.129 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=11.01 ms calls=36 avg=0.306 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=684.35 ms calls=73 avg=9.375 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=529.38 ms calls=72 avg=7.352 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1710.04 ms calls=36 avg=47.501 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4208.38 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4243.69 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4208.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  gpu_call    :  4243.63 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -132,11 +108,11 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 28.3 MB/s (353248 bytes in 0.012s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.0 MB/s (7438 bytes in 0.004s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 25.0 MB/s (353248 bytes in 0.013s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.9 MB/s (7438 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.2 MB/s (9732 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in 0.055s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 30.1 MB/s (1822720 bytes in 0.058s)
 
 ==========================================
 [Step 3] Running on device
@@ -147,8 +123,8 @@ test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in
 [ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
 GPU: QUALCOMM Adreno(TM) 830
 Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 426.1 us/iter = 2.520 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (151 ms)
+Performance: 428.8 us/iter = 2.504 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (142 ms)
 [ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
 GPU: QUALCOMM Adreno(TM) 830
 global=(1024,4,4) local=(128,1,4)
@@ -161,27 +137,27 @@ global=(1024,4,4) local=(128,1,4)
   [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
   [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
 Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 358225.1 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3279 ms)
+Int4 wave: 341363.2 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
+[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3109 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
 GPU: QUALCOMM Adreno(TM) 830
 
 === Delegate fp16 kernel — model shapes ===
 [UNITTEST maps] /vendor/lib64/libadreno_compiler_cl.so
-[UNITTEST maps] /vendor/lib64/libCB.so
 [UNITTEST maps] /vendor/lib64/libadreno_utils.so
+[UNITTEST maps] /vendor/lib64/libCB.so
 [UNITTEST maps] /vendor/lib64/libgsl.so
 [UNITTEST maps] /vendor/lib64/libOpenCL_adreno.so
 [UNITTEST maps] /vendor/lib64/libOpenCL.so
-  M=437 N=4096 K=2560: 3620.7 us = 2.531 TFLOPS (×36 = 130.3 ms)
-  M=437 N=1024 K=2560: 882.2 us = 2.597 TFLOPS (×36 = 31.8 ms)
-  M=437 N=1024 K=2560: 904.0 us = 2.534 TFLOPS (×36 = 32.5 ms)
-  M=437 N=2560 K=4096: 3918.8 us = 2.339 TFLOPS (×36 = 141.1 ms)
-  M=437 N=9728 K=2560: 7895.4 us = 2.757 TFLOPS (×36 = 284.2 ms)
-  M=437 N=9728 K=2560: 7876.0 us = 2.764 TFLOPS (×36 = 283.5 ms)
-  M=437 N=2560 K=9728: 8103.8 us = 2.686 TFLOPS (×36 = 291.7 ms)
-  TOTAL: 3175.5 GFLOP in 1195.2 ms = 2.657 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1070 ms)
+  M=437 N=4096 K=2560: 3818.2 us = 2.400 TFLOPS (×36 = 137.5 ms)
+  M=437 N=1024 K=2560: 978.5 us = 2.341 TFLOPS (×36 = 35.2 ms)
+  M=437 N=1024 K=2560: 906.9 us = 2.526 TFLOPS (×36 = 32.6 ms)
+  M=437 N=2560 K=4096: 3777.0 us = 2.426 TFLOPS (×36 = 136.0 ms)
+  M=437 N=9728 K=2560: 7898.6 us = 2.756 TFLOPS (×36 = 284.4 ms)
+  M=437 N=9728 K=2560: 7886.6 us = 2.760 TFLOPS (×36 = 283.9 ms)
+  M=437 N=2560 K=9728: 8045.4 us = 2.705 TFLOPS (×36 = 289.6 ms)
+  TOTAL: 3175.5 GFLOP in 1199.2 ms = 2.648 TFLOPS (conv only)
+[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1143 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
 GPU: QUALCOMM Adreno(TM) 830
 
@@ -194,11 +170,11 @@ GPU: QUALCOMM Adreno(TM) 830
   SKIP 437x9728x2560: image1d_buffer failed -6
   SKIP 437x2560x9728: image1d_buffer failed -6
   TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (130 ms)
-[----------] 4 tests from DelegateConvWaveTest (4632 ms total)
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (127 ms)
+[----------] 4 tests from DelegateConvWaveTest (4522 ms total)
 
 [----------] Global test environment tear-down
-[==========] 4 tests from 1 test suite ran. (4633 ms total)
+[==========] 4 tests from 1 test suite ran. (4522 ms total)
 [  PASSED  ] 4 tests.
 
 Log: unittest_delegate_conv_wave.log
@@ -212,60 +188,60 @@ grep: unittest_delegate_conv_wave.log: binary file matches
 
 --- nntr_delegate_bench stage=0 ---
 [nntr_delegate_bench] STAGE=0
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=0] M=437 N=4096 K=2560: 3200.4 us = 2.864 TFLOPS
-[nntr_delegate_bench STAGE=0] M=437 N=1024 K=2560: 870.5 us = 2.632 TFLOPS
-[nntr_delegate_bench STAGE=0] M=437 N=2560 K=4096: 3155.4 us = 2.904 TFLOPS
-[nntr_delegate_bench STAGE=0] M=437 N=9728 K=2560: 7289.6 us = 2.986 TFLOPS
-[nntr_delegate_bench STAGE=0] M=437 N=2560 K=9728: 7400.6 us = 2.941 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=4096 K=2560: 3187.3 us = 2.875 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=1024 K=2560: 873.4 us = 2.623 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=2560 K=4096: 3241.9 us = 2.827 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=9728 K=2560: 7288.6 us = 2.986 TFLOPS
+[nntr_delegate_bench STAGE=0] M=437 N=2560 K=9728: 7492.1 us = 2.905 TFLOPS
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
 
 --- nntr_delegate_bench stage=1 ---
 [nntr_delegate_bench] STAGE=1
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=1] M=437 N=4096 K=2560: 3189.0 us = 2.874 TFLOPS
-[nntr_delegate_bench STAGE=1] M=437 N=1024 K=2560: 868.4 us = 2.638 TFLOPS
-[nntr_delegate_bench STAGE=1] M=437 N=2560 K=4096: 3234.3 us = 2.834 TFLOPS
-[nntr_delegate_bench STAGE=1] M=437 N=9728 K=2560: 7288.1 us = 2.987 TFLOPS
-[nntr_delegate_bench STAGE=1] M=437 N=2560 K=9728: 7559.0 us = 2.879 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=4096 K=2560: 3194.7 us = 2.869 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=1024 K=2560: 862.6 us = 2.656 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=2560 K=4096: 3245.3 us = 2.824 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=9728 K=2560: 7288.4 us = 2.986 TFLOPS
+[nntr_delegate_bench STAGE=1] M=437 N=2560 K=9728: 7487.9 us = 2.907 TFLOPS
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
 
 --- nntr_delegate_bench stage=2 ---
 [nntr_delegate_bench] STAGE=2
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=2] M=437 N=4096 K=2560: 3194.7 us = 2.869 TFLOPS
-[nntr_delegate_bench STAGE=2] M=437 N=1024 K=2560: 867.5 us = 2.641 TFLOPS
-[nntr_delegate_bench STAGE=2] M=437 N=2560 K=4096: 3231.5 us = 2.836 TFLOPS
-[nntr_delegate_bench STAGE=2] M=437 N=9728 K=2560: 7281.7 us = 2.989 TFLOPS
-[nntr_delegate_bench STAGE=2] M=437 N=2560 K=9728: 7484.5 us = 2.908 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=4096 K=2560: 3190.7 us = 2.872 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=1024 K=2560: 866.6 us = 2.644 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=2560 K=4096: 3234.3 us = 2.834 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=9728 K=2560: 7204.5 us = 3.021 TFLOPS
+[nntr_delegate_bench STAGE=2] M=437 N=2560 K=9728: 7481.2 us = 2.909 TFLOPS
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
@@ -273,55 +249,99 @@ grep: unittest_delegate_conv_wave.log: binary file matches
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
 
 --- nntr_delegate_bench stage=3 ---
 [nntr_delegate_bench] STAGE=3
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench] Engine::Global() done
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5738.9 us = 1.597 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1694.8 us = 1.352 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5792.4 us = 1.582 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13137.0 us = 1.657 TFLOPS
-[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13575.5 us = 1.603 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5739.7 us = 1.597 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1714.3 us = 1.337 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5793.0 us = 1.582 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13141.6 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13579.9 us = 1.603 TFLOPS
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
 
 --- nntr_delegate_bench stage=4 ---
 [nntr_delegate_bench] STAGE=4
-[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
-[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps entry] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps entry] /vendor/lib64/libOpenCL.so
 [nntr_delegate_bench] Engine::Global() done
 [nntr_delegate_bench] factory.registerModel done
 [nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
-[nntr_delegate_bench STAGE=4] M=437 N=4096 K=2560: 5742.6 us = 1.596 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=1024 K=2560: 1631.1 us = 1.405 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=2560 K=4096: 5805.2 us = 1.579 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=9728 K=2560: 13140.2 us = 1.656 TFLOPS
-[nntr_delegate_bench STAGE=4] M=437 N=2560 K=9728: 13579.6 us = 1.603 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=4096 K=2560: 5732.7 us = 1.599 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=1024 K=2560: 1698.1 us = 1.349 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=2560 K=4096: 5804.5 us = 1.579 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=9728 K=2560: 13145.5 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=4] M=437 N=2560 K=9728: 13505.9 us = 1.612 TFLOPS
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_compiler_cl.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libadreno_utils.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libCB.so
 [nntr_delegate_bench maps after-kernel] /vendor/lib64/libgsl.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
-[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
-[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libnntrainer.so
+[nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libcausallm_core.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL_adreno.so
 [nntr_delegate_bench maps after-kernel] /data/local/tmp/nntrainer/test/libccapi-nntrainer.so
+[nntr_delegate_bench maps after-kernel] /vendor/lib64/libOpenCL.so
+
+==========================================
+ [BISECT 3x] stage 3 with varying NNTR_INIT_LEVEL
+==========================================
+
+--- stage=3 NNTR_INIT_LEVEL=0 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 3192.8 us = 2.870 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 862.3 us = 2.657 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 3210.5 us = 2.855 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 7278.7 us = 2.990 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 7468.0 us = 2.915 TFLOPS
+
+--- stage=3 NNTR_INIT_LEVEL=1 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5687.3 us = 1.611 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1580.2 us = 1.450 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5792.8 us = 1.582 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13058.0 us = 1.667 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13587.5 us = 1.602 TFLOPS
+
+--- stage=3 NNTR_INIT_LEVEL=2 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5694.6 us = 1.609 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1662.2 us = 1.378 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5788.3 us = 1.583 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13135.1 us = 1.657 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13496.1 us = 1.613 TFLOPS
+
+--- stage=3 NNTR_INIT_LEVEL=3 ---
+[nntr_delegate_bench] STAGE=3
+[nntr_delegate_bench] Engine::Global() done
+[nntr_delegate_bench] GPU: QUALCOMM Adreno(TM) 830
+[nntr_delegate_bench STAGE=3] M=437 N=4096 K=2560: 5657.3 us = 1.620 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=1024 K=2560: 1625.3 us = 1.410 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=4096: 5800.6 us = 1.580 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=9728 K=2560: 13141.3 us = 1.656 TFLOPS
+[nntr_delegate_bench STAGE=3] M=437 N=2560 K=9728: 13580.9 us = 1.603 TFLOPS
 
 ==========================================
  Run summary
@@ -330,37 +350,36 @@ grep: unittest_delegate_conv_wave.log: binary file matches
 --- Generation snippet (post-assistant tag) ---
 
 [DELEGATE BENCH device] vendor='QUALCOMM' name='QUALCOMM Adreno(TM) 830' driver='OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13' version='OpenCL 3.0 Adreno(TM) 830' CU=12 max_freq=1 MHz
-[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.00 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
+[DELEGATE BENCH FRESH_CONTEXT] iters=32 avg=5553.58 us 1.650 TFLOPS (fresh cl_context + fresh program + fresh buffers, mirrors unittest setup exactly)
 
 [DELEGATE BENCH in production context, FRESH buffers+queue] M=437 N=4096 K=2560  iters=32  (50 warmup) queue=FRESH
-  min=5561.09 us (1.648 TFLOPS)  max=5571.84 us (1.645 TFLOPS)
-  first-half avg=5566.24 us (1.646 TFLOPS)  last-half avg=5565.78
+  min=5561.86 us (1.648 TFLOPS)  max=5568.77 us (1.646 TFLOPS)
+  first-half avg=5564.58 us (1.647 TFLOPS)  last-half avg=5565.36
 
 --- Perf summary ---
-prefill: 437 tokens, 7475 ms, 58.4615 TPS
-generation: 32 tokens, 7413 ms, 4.31674 TPS
-total: 14897 ms
-peak memory: 2695312 KB
-[e2e time]: 26376 ms 
+prefill: 437 tokens, 7578 ms, 57.6669 TPS
+generation: 32 tokens, 7740 ms, 4.13437 TPS
+total: 15328 ms
+peak memory: 2603488 KB
+[e2e time]: 26916 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4208.38 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4243.69 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  4208.31 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  gpu_call    :  4243.63 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=41.89 ms calls=1 avg=41.887 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.13 ms calls=1 avg=3.129 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=11.01 ms calls=36 avg=0.306 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=684.35 ms calls=73 avg=9.375 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=529.38 ms calls=72 avg=7.352 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1710.04 ms calls=36 avg=47.501 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=34.73 ms calls=1 avg=34.728 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.21 ms calls=1 avg=3.205 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=10.62 ms calls=36 avg=0.295 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=842.93 ms calls=73 avg=11.547 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=470.34 ms calls=72 avg=6.532 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1677.38 ms calls=36 avg=46.594 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
