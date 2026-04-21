@@ -3582,9 +3582,18 @@ void run_delegate_standalone_bench(const char *label) {
   clFinish(q);
   const int N_ITER = 32;
   std::vector<cl_event> evs(N_ITER);
+  // Measure wall-clock the same way the unittest does: chrono-bracket the
+  // whole enqueue batch including the terminal clFinish. If wall-clock
+  // says 2.81 TFLOPS but events say 1.65 TFLOPS for the same run, the
+  // gap is a profiling-event reporting bug, not a real slowdown.
+  auto t0 = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < N_ITER; ++i)
     clEnqueueNDRangeKernel(q, k, 3, nullptr, gs, ls, 0, nullptr, &evs[i]);
   clFinish(q);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  const double wall_us_avg =
+    std::chrono::duration<double, std::micro>(t1 - t0).count() /
+    (double)N_ITER;
   uint64_t tot = 0;
   for (int i = 0; i < N_ITER; ++i) {
     cl_ulong s = 0, e = 0;
@@ -3595,11 +3604,15 @@ void run_delegate_standalone_bench(const char *label) {
   }
   const double avg_us = (tot / 1000.0) / (double)N_ITER;
   const double gflops = 2.0 * (double)M * (double)N * (double)K / 1.0e9;
+  const double ev_tflops =
+    avg_us > 0 ? gflops / (avg_us / 1.0e6) / 1000.0 : 0;
+  const double wall_tflops =
+    wall_us_avg > 0 ? gflops / (wall_us_avg / 1.0e6) / 1000.0 : 0;
   fprintf(stderr,
-    "[BENCH %s] avg=%.2f us (%.3f TFLOPS)  "
+    "[BENCH %s] event avg=%.2f us (%.3f TFLOPS)  "
+    "WALL avg=%.2f us (%.3f TFLOPS)  "
     "(unittest same shape = 3256.7 us / 2.81 TFLOPS)\n",
-    label, avg_us,
-    avg_us > 0 ? gflops / (avg_us / 1.0e6) / 1000.0 : 0);
+    label, avg_us, ev_tflops, wall_us_avg, wall_tflops);
 
   clReleaseMemObject(si); clReleaseMemObject(di);
   clReleaseMemObject(bias); clReleaseMemObject(w); clReleaseMemObject(xm);

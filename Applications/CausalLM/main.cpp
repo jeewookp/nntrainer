@@ -134,6 +134,14 @@ int main(int argc, char *argv[]) {
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
+  // Lifecycle bench point 0: absolute start of process, before ANY
+  // nntrainer OpenCL context or kernel has been touched. If this already
+  // measures 1.65 TFLOPS (instead of the unittest's 2.81) then the gap
+  // is caused by something in the process image itself (linked libs,
+  // static initializers, loader-time OpenCL driver state) and is
+  // independent of anything nntrainer's runtime does.
+  nntrainer::run_delegate_standalone_bench("process_start");
+
   /** Register all runnable causallm models to factory */
   causallm::Factory::Instance().registerModel(
     "LlamaForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
