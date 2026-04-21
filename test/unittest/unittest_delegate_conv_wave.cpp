@@ -798,11 +798,14 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
 TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
   fprintf(stderr, "\n=== Delegate fp16 kernel — local-size tune ===\n");
 
+  // Identical candidate list to litert_lm's delegate_kernel_bench tune.
   struct LocalCand { int lx, ly, lz; };
   static const LocalCand kLocals[] = {
     {128, 1, 4}, {64, 1, 4}, {32, 1, 4},
     {64, 2, 4},  {32, 2, 4},
-    {128, 1, 2}, {256, 1, 1},
+    {128, 1, 2}, {64, 1, 2}, {32, 1, 2},
+    {128, 1, 1}, {64, 1, 1}, {32, 1, 1},
+    {256, 1, 2}, {256, 1, 1},
   };
 
   for (const auto& s : kModelShapes) {
@@ -868,11 +871,13 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       size_t local[3]  = {(size_t)c.lx, (size_t)c.ly, (size_t)c.lz};
       size_t global[3] = {groups_z * c.lx, groups_x * c.ly, groups_y * c.lz};
 
-      for (int i = 0; i < 3; ++i)
+      // Match litert_lm delegate_kernel_bench: 50 warmup + 50 timed
+      // iters so DVFS has stabilized and noise is minimized.
+      for (int i = 0; i < 50; ++i)
         cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
       cl.clFinish(queue);
 
-      int iters = 5;
+      int iters = 50;
       auto t0 = std::chrono::high_resolution_clock::now();
       for (int i = 0; i < iters; ++i)
         cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
