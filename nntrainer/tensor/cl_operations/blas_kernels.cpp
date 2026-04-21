@@ -3108,6 +3108,35 @@ void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
   GpuImagePool::Global().set(svm_ptr, img, (int)M, slices);
 }
 
+// ============================================================================
+// Phase B helper — fp16 SwiGLU on SVM buffers via swiglu_cl_fp16 kernel.
+// ============================================================================
+void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
+                        size_t total) {
+  if (!in1 || !in2 || !out || total == 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(swiglu_fp16_kernel, "swiglu_cl_fp16");
+  }
+  if (!s_kern) return;
+
+  s_kern->SetKernelSVMArguments(0, in1);
+  s_kern->SetKernelSVMArguments(1, in2);
+  s_kern->SetKernelSVMArguments(2, out);
+
+  const int total_i = (int)total;
+  const int32_t desired_local = 64;
+  const int32_t chosen_local = total_i >= desired_local ? desired_local
+                                                        : total_i;
+  const int g[3] = {total_i, 1, 1};
+  const int l[3] = {chosen_local, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 } // namespace nntrainer
 #if 0 // OLD — duplicate removed
   if (((N % 32) != 0) || ((K % 8) != 0))

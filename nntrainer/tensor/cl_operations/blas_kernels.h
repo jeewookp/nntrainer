@@ -230,6 +230,21 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
 void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K);
 
 /**
+ * @brief Phase B helper — fp16 SwiGLU on an SVM in1/in2/out via a GPU
+ * kernel dispatch. Enqueues `swiglu_cl_fp16` (a file-scope kernel
+ * already bundled in the OpenCL build) with the three tensor SVM
+ * pointers bound as kernel args. No host-side work, no per-call
+ * SVMMap — the downstream consumer's own fence (e.g. the next gemm
+ * on the same in-order queue, or the next CPU layer's entry
+ * SVMMap) handles coherence.
+ *
+ * `total` is the flat element count (batch * channel * height *
+ * width) — matches what swiglu_cl_fp16's global_id indexing expects.
+ */
+void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
+                        size_t total);
+
+/**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
  *        read through image texture).
  *

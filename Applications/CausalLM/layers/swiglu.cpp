@@ -21,6 +21,7 @@
 #include "swiglu.h"
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
 #endif
@@ -86,30 +87,45 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   nntrainer::Tensor &in2 = context.getInput(INPUT_IDX_2);
   nntrainer::Tensor &out = context.getOutput(OUT_IDX);
 
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Drain the GPU queue before CPU reads in1/in2 (gate_proj/up_proj
-  // output). Upstream gemm_delegate may have skipped its per-call
-  // blocking SVMMap under Phase B, so do it here for the two inputs
-  // this layer actually reads host-side via NEON below.
-  {
-    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
-      nntrainer::Engine::Global().getRegisteredContext("gpu"));
-    if (cl_ctx) {
-      auto map_if_svm = [&](nntrainer::Tensor &t) {
-        if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
-          cl_ctx->command_queue_inst_.enqueueSVMMap(
-            t.getData<char>(), t.bytes(), /*read_only=*/true);
-        }
-      };
-      map_if_svm(in1);
-      map_if_svm(in2);
-    }
-  }
-#endif
-
   unsigned int _from = from;
 
   int iter = to - from;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Phase B fast path: if all three tensors are fp16 SVM and the
+  // flat element count is a safe multiple of the dispatch local size,
+  // run swiglu_cl_fp16 on the GPU queue instead of the NEON CPU
+  // path. This eliminates the blocking SVMMap fence that used to
+  // drain the upstream gemm_delegate output, since the GPU kernel
+  // reads the SVM directly in queue order.
+  if (in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
+      in2.getMemoryData() && in2.getMemoryData()->isSVM() &&
+      out.getMemoryData() && out.getMemoryData()->isSVM() &&
+      in1.batch() == 1) {
+    const size_t step_total =
+      (size_t)iter * (size_t)in1.channel() * (size_t)in1.width();
+    const size_t off_elems = (size_t)0 * 0; // batch 0 only
+    (void)off_elems;
+    // For batch=1 + from=0 + step-at-start we can skip the per-row
+    // pointer arithmetic and dispatch one kernel covering the full
+    // step.
+    if (_from == 0) {
+#ifdef ENABLE_FP16
+      nntrainer::swiglu_fp16_svm_cl(
+        in1.getData<_FP16>(), in2.getData<_FP16>(), out.getData<_FP16>(),
+        step_total);
+      if (profile_this_call) {
+        g_swiglu_profile.ns += now_ns() - t_layer_start;
+        g_swiglu_profile.calls++;
+      }
+      return;
+#endif
+    }
+  }
+#endif
 
   if (in1.getDataType() == ml::train::TensorDim::DataType::FP32) {
     for (unsigned int b = 0; b < in1.batch(); b++) {
