@@ -190,7 +190,14 @@ LOCAL_CFLAGS        += -pthread -fexceptions -fopenmp -static-openmp @MESON_CFLA
 LOCAL_CXXFLAGS      += -std=c++17 -frtti -fexceptions @ML_API_COMMON@ @MESON_CXXFLAGS@
 LOCAL_MODULE_TAGS   := optional
 
-LOCAL_LDLIBS        := -llog -landroid -fopenmp -static-openmp
+# -landroid dropped: libnntrainer only uses __android_log_print (from
+# liblog via -llog). Keeping libandroid as DT_NEEDED transitively pulls in
+# libEGL, libGLESv1_CM/v2/v3, libandroid_runtime*, libandroidfw,
+# libandroidicu. On Adreno 830 those libGLES* presence makes the CL
+# runtime timeslice GPU with implicit GL contexts and drops delegate
+# conv from 2.36 TFLOPS (unittest baseline) to ~1.61 TFLOPS in any
+# process that links libnntrainer.
+LOCAL_LDLIBS        := -llog -fopenmp -static-openmp
 LOCAL_LDFLAGS 	    += "-Wl,-z,max-page-size=16384"
 
 LOCAL_STATIC_LIBRARIES += iniparser openblas
@@ -218,7 +225,8 @@ LOCAL_CFLAGS        += -pthread -fexceptions -fopenmp -static-openmp @MESON_CFLA
 LOCAL_CXXFLAGS      += -std=c++17 -frtti -fexceptions @ML_API_COMMON@ -DVERSION_MAJOR=@VERSION_MAJOR@ -DVERSION_MINOR=@VERSION_MINOR@ -DVERSION_MICRO=@VERSION_MICRO@ @MESON_CXXFLAGS@
 LOCAL_MODULE_TAGS   := optional
 
-LOCAL_LDLIBS        := -llog -landroid -fopenmp -static-openmp
+# -landroid dropped — see commentary on libnntrainer above.
+LOCAL_LDLIBS        := -llog -fopenmp -static-openmp
 LOCAL_LDFLAGS 	    += "-Wl,-z,max-page-size=16384"
 
 LOCAL_SHARED_LIBRARIES += nntrainer
@@ -237,7 +245,8 @@ LOCAL_CFLAGS        += -pthread -fexceptions -fopenmp -static-openmp @MESON_CFLA
 LOCAL_CXXFLAGS      += -std=c++17 -frtti -fexceptions @ML_API_COMMON@ @MESON_CXXFLAGS@
 LOCAL_MODULE_TAGS   := optional
 
-LOCAL_LDLIBS        := -llog -landroid -fopenmp -static-openmp
+# -landroid dropped — see commentary on libnntrainer above.
+LOCAL_LDLIBS        := -llog -fopenmp -static-openmp
 LOCAL_LDFLAGS 	    += "-Wl,-z,max-page-size=16384"
 
 LOCAL_SHARED_LIBRARIES += ccapi-nntrainer nntrainer ml-api-inference
