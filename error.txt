@@ -1,16 +1,4 @@
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+e execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
@@ -20,55 +8,55 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3954 ms, 110.521 TPS
-generation: 32 tokens, 7552 ms, 4.23729 TPS
-total: 11510 ms
-peak memory: 2697852 KB
+prefill: 437 tokens, 3865 ms, 113.066 TPS
+generation: 32 tokens, 7960 ms, 4.0201 TPS
+total: 11830 ms
+peak memory: 2693304 KB
 ==========================================================
-[e2e time]: 14356 ms 
-Max Resident Set Size: 2697852 KB
+[e2e time]: 14691 ms 
+Max Resident Set Size: 2693304 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:   112.6 ms
-  dequant(host):     18.9 ms (81.2%)  cache-miss=252/252
+  resource_setup:   101.5 ms
+  dequant(host):      5.8 ms (51.5%)  cache-miss=252/252
     .alloc:           0.0 ms  (clCreateBuffer + cache insert)
     .svmarg:          0.6 ms  (2x clSetKernelArgSVMPointer)
     .arg:             0.2 ms  (3x clSetKernelArg)
-    .dispatch:       18.0 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+    .dispatch:        4.9 ms  (DispatchCommand = clEnqueueNDRangeKernel)
   dequant(gpu):       0.0 ms
-  reformat_in(host):  0.0 ms ( 0.1%)  pool-hits=252/252
+  reformat_in(host):  0.0 ms ( 0.3%)  pool-hits=252/252
   reformat_in(gpu):   0.0 ms
-  conv(wall):         3.0 ms (12.8%)
+  conv(wall):         2.7 ms (24.0%)
   conv(gpu):          0.0 ms            inf TFLOPS
-  readback(host):     1.4 ms ( 5.9%)
+  readback(host):     2.7 ms (24.2%)
   readback(gpu):      0.0 ms
   svmmap(gpu):        0.0 ms
-  sum(steps host):   23.2 ms            136.601 TFLOPS
+  sum(steps host):   11.3 ms            280.122 TFLOPS
   sum(gpu events):    0.0 ms
-  fn_total(wall):   136.1 ms            (unaccounted = 0.3 ms = host overhead + non-event sync gaps)
+  fn_total(wall):   113.3 ms            (unaccounted = 0.5 ms = host overhead + non-event sync gaps)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=3906.6 ms across all forwarding_op() calls
-  rms_norm                      1877.3 ms  calls=73  avg=25.716 ms
-  mha_core                      1101.7 ms  calls=36  avg=30.603 ms
-  reshaped_rms_norm              748.0 ms  calls=72  avg=10.390 ms
-  fully_connected                138.7 ms  calls=252  avg=0.550 ms
-  tie_word_embeddings             25.0 ms  calls=2  avg=12.498 ms
-  addition                        11.8 ms  calls=72  avg=0.164 ms
-  swiglu                           3.7 ms  calls=36  avg=0.102 ms
+  total=3816.6 ms across all forwarding_op() calls
+  rms_norm                      1754.8 ms  calls=73  avg=24.038 ms
+  mha_core                      1119.7 ms  calls=36  avg=31.102 ms
+  reshaped_rms_norm              780.0 ms  calls=72  avg=10.833 ms
+  fully_connected                116.0 ms  calls=252  avg=0.460 ms
+  tie_word_embeddings             27.8 ms  calls=2  avg=13.902 ms
+  addition                        12.7 ms  calls=72  avg=0.176 ms
+  swiglu                           5.2 ms  calls=36  avg=0.144 ms
   multiout                         0.5 ms  calls=144  avg=0.003 ms
-  input                            0.0 ms  calls=1  avg=0.025 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.43 ms calls=1 avg=19.431 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.55 ms calls=1 avg=5.552 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=3.62 ms calls=36 avg=0.101 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=1876.90 ms calls=73 avg=25.711 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=747.65 ms calls=72 avg=10.384 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1101.57 ms calls=36 avg=30.599 ms
+  input                            0.0 ms  calls=1  avg=0.048 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.41 ms calls=1 avg=19.406 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=8.39 ms calls=1 avg=8.387 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=5.14 ms calls=36 avg=0.143 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=1754.38 ms calls=73 avg=24.033 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=779.55 ms calls=72 avg=10.827 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1119.51 ms calls=36 avg=31.097 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=136.24 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=113.41 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   136.19 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   113.37 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -85,43 +73,41 @@ Okay, the user wants a summary of this abstract in three sentences, in English. 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3954 ms, 110.521 TPS
-generation: 32 tokens, 7552 ms, 4.23729 TPS
-total: 11510 ms
-peak memory: 2697852 KB
+prefill: 437 tokens, 3865 ms, 113.066 TPS
+generation: 32 tokens, 7960 ms, 4.0201 TPS
+total: 11830 ms
+peak memory: 2693304 KB
 ==========================================================
-[e2e time]: 14356 ms 
-Max Resident Set Size: 2697852 KB
+[e2e time]: 14691 ms 
+Max Resident Set Size: 2693304 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:   112.6 ms
-  dequant(host):     18.9 ms (81.2%)  cache-miss=252/25
+  resource_setup:   101.5 ms
+  dequant(host):      5.8 ms (51.5%)  cache-miss=252/252
 
 --- Perf summary ---
-prefill: 437 tokens, 3954 ms, 110.521 TPS
-generation: 32 tokens, 7552 ms, 4.23729 TPS
-total: 11510 ms
-peak memory: 2697852 KB
-[e2e time]: 14356 ms 
+prefill: 437 tokens, 3865 ms, 113.066 TPS
+generation: 32 tokens, 7960 ms, 4.0201 TPS
+total: 11830 ms
+peak memory: 2693304 KB
+[e2e time]: 14691 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=136.24 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=113.41 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   136.19 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   113.37 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.43 ms calls=1 avg=19.431 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.55 ms calls=1 avg=5.552 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=3.62 ms calls=36 avg=0.101 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=1876.90 ms calls=73 avg=25.711 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=747.65 ms calls=72 avg=10.384 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1101.57 ms calls=36 avg=30.599 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.41 ms calls=1 avg=19.406 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=8.39 ms calls=1 avg=8.387 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=5.14 ms calls=36 avg=0.143 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=1754.38 ms calls=73 avg=24.033 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=779.55 ms calls=72 avg=10.827 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1119.51 ms calls=36 avg=31.097 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
