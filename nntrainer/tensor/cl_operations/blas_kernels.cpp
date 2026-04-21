@@ -2636,8 +2636,16 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_dq_kern = blas_cc->registerClKernel(
       dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
   if (!s_conv_kern)
+    // Match the unittest build flags for the delegate conv kernel.
+    // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
+    // not enable fp16 acceleration for the captured wave-memory
+    // kernel and effective throughput drops from ~2.72 TFLOPS
+    // (unittest_delegate_conv_wave ModelShapes_DelegateFp16) to
+    // ~1.64 TFLOPS (measured via event-profiled conv(gpu) in the
+    // production path).
     s_conv_kern = blas_cc->registerClKernel(
-      delegate_conv_wave_kernel, "main_function");
+      delegate_conv_wave_kernel, "main_function",
+      "-qcom-accelerate-16-bit=true");
   if (!s_in_kern)
     s_in_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "svm_to_image2d");
@@ -2818,22 +2826,23 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
   const uint64_t t4 = now_ns();
 
-  // GPU event timing for conv kernel.
-  // clGetEventProfilingInfo returns CL_PROFILING_INFO_NOT_AVAILABLE if
-  // the event hasn't reached CL_COMPLETE yet. With the non-blocking
-  // SVMMap above this is still in flight on the queue — wait for the
-  // conv event specifically so the timestamps are valid. Cheap in
-  // wall-clock terms; in per-layer clFinish profile mode the queue
-  // is about to be drained anyway.
+  // GPU event timing for conv kernel. Only query profiling when the
+  // user explicitly opts into it (NNTRAINER_PROFILE_LAYER_SYNC=1);
+  // otherwise the clWaitForEvents call below serializes every gemm
+  // on the host and ~doubles wall time for no production benefit.
+  static const bool s_event_profile =
+    std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
   if (conv_ev) {
-    clWaitForEvents(1, &conv_ev);
-    cl_ulong ev_start = 0, ev_end = 0;
-    clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_START,
-                            sizeof(ev_start), &ev_start, nullptr);
-    clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_END,
-                            sizeof(ev_end), &ev_end, nullptr);
-    if (ev_end > ev_start)
-      t_conv_gpu_ns += (ev_end - ev_start);
+    if (s_event_profile) {
+      clWaitForEvents(1, &conv_ev);
+      cl_ulong ev_start = 0, ev_end = 0;
+      clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_START,
+                              sizeof(ev_start), &ev_start, nullptr);
+      clGetEventProfilingInfo(conv_ev, CL_PROFILING_COMMAND_END,
+                              sizeof(ev_end), &ev_end, nullptr);
+      if (ev_end > ev_start)
+        t_conv_gpu_ns += (ev_end - ev_start);
+    }
     clReleaseEvent(conv_ev);
   }
 
@@ -2979,8 +2988,16 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     s_dq_kern = blas_cc->registerClKernel(
       dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
   if (!s_conv_kern)
+    // Match the unittest build flags for the delegate conv kernel.
+    // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
+    // not enable fp16 acceleration for the captured wave-memory
+    // kernel and effective throughput drops from ~2.72 TFLOPS
+    // (unittest_delegate_conv_wave ModelShapes_DelegateFp16) to
+    // ~1.64 TFLOPS (measured via event-profiled conv(gpu) in the
+    // production path).
     s_conv_kern = blas_cc->registerClKernel(
-      delegate_conv_wave_kernel, "main_function");
+      delegate_conv_wave_kernel, "main_function",
+      "-qcom-accelerate-16-bit=true");
   if (!s_in_kern)
     s_in_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "svm_to_image2d");
@@ -3380,7 +3397,8 @@ void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total) {
 
   // --- 5. Dispatch delegate conv kernel ---
   ClContext::SharedPtrClKernel kern = blas_cc->registerClKernel(
-    delegate_conv_wave_kernel, "main_function");
+    delegate_conv_wave_kernel, "main_function",
+    "-qcom-accelerate-16-bit=true");
   if (!kern) throw std::runtime_error("delegate: conv kernel failed");
 
   struct { int x, y, z, w; } s0 = {1, dst_slices, (int)M, 32};
@@ -3614,7 +3632,8 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
 
   // --- 6. Dispatch delegate kernel ---
   ClContext::SharedPtrClKernel kern = blas_cc->registerClKernel(
-    delegate_conv_wave_kernel, "main_function");
+    delegate_conv_wave_kernel, "main_function",
+    "-qcom-accelerate-16-bit=true");
   if (!kern) throw std::runtime_error("delegate: kernel registration failed");
 
   struct { int x, y, z, w; } s0 = {1, dst_slices, (int)M, 32};
