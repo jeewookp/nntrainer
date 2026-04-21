@@ -2828,8 +2828,27 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       // that the nntrainer cl_context's state (registered programs,
       // SVM arena, etc.) is the slowdown source.
       cl_int cerr = 0;
-      cl_context fresh_ctx = clCreateContext(nullptr, 1, &dev_info,
+      // Qualcomm performance + priority hints — not in standard
+      // cl headers. Ask the driver for HIGH perf + HIGH priority so
+      // the Adreno power governor isn't keeping the GPU clocked down
+      // for this context. If nntrainer startup inadvertently made the
+      // process-default 'NORMAL/LOW' and that's the 1.7x gap, this
+      // unlocks it.
+      constexpr cl_context_properties CL_CONTEXT_PERF_HINT_QCOM     = 0x40040007;
+      constexpr cl_context_properties CL_CONTEXT_PRIORITY_HINT_QCOM = 0x40040008;
+      constexpr cl_context_properties CL_PERF_HINT_HIGH_QCOM        = 0x40040001;
+      constexpr cl_context_properties CL_PRIORITY_HINT_HIGH_QCOM    = 0x40040004;
+      cl_context_properties ctx_props[] = {
+        CL_CONTEXT_PERF_HINT_QCOM,     CL_PERF_HINT_HIGH_QCOM,
+        CL_CONTEXT_PRIORITY_HINT_QCOM, CL_PRIORITY_HINT_HIGH_QCOM,
+        0};
+      cl_context fresh_ctx = clCreateContext(ctx_props, 1, &dev_info,
                                               nullptr, nullptr, &cerr);
+      if (!fresh_ctx && cerr != 0) {
+        // Retry without hints in case the driver doesn't support them.
+        fresh_ctx = clCreateContext(nullptr, 1, &dev_info, nullptr,
+                                     nullptr, &cerr);
+      }
       if (!fresh_ctx) {
         fprintf(stderr, "[DELEGATE BENCH] clCreateContext fresh failed: %d\n",
                 cerr);

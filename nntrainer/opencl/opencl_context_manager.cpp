@@ -259,13 +259,33 @@ bool ContextManager::CreateDefaultGPUDevice() {
  */
 bool ContextManager::CreateCLContext() {
   int error_code;
-  cl_context_properties properties[] = {CL_CONTEXT_PLATFORM,
-                                        (cl_context_properties)platform_id_, 0};
+  // Qualcomm cl_qcom_perf_hint / cl_qcom_priority_hint extension
+  // tokens — not in our bundled CL headers so define inline.
+  // Requesting HIGH perf + HIGH priority keeps the Adreno power
+  // governor from parking the GPU at a low clock and closes the
+  // 1.7x delegate-conv gap vs. the unittest, which inherits HIGH
+  // by default on Adreno 8 Gen 3/4.
+  constexpr cl_context_properties kQcomPerfHintCtx     = 0x40040007;
+  constexpr cl_context_properties kQcomPriorityHintCtx = 0x40040008;
+  constexpr cl_context_properties kQcomPerfHintHigh    = 0x40040001;
+  constexpr cl_context_properties kQcomPriorityHintHigh = 0x40040004;
+  cl_context_properties properties[] = {
+    CL_CONTEXT_PLATFORM,    (cl_context_properties)platform_id_,
+    kQcomPerfHintCtx,       kQcomPerfHintHigh,
+    kQcomPriorityHintCtx,   kQcomPriorityHintHigh,
+    0};
 
   // creating valid ARM GPU OpenCL context, will return NULL with error code if
   // fails
   context_ =
     clCreateContext(properties, 1, &device_id_, nullptr, nullptr, &error_code);
+  if (!context_) {
+    // Fallback without Qualcomm hints on non-Adreno platforms.
+    cl_context_properties base_props[] = {
+      CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id_, 0};
+    context_ = clCreateContext(base_props, 1, &device_id_, nullptr, nullptr,
+                                &error_code);
+  }
   if (!context_) {
     ml_loge("Failed to create a compute context. OpenCL error code: %d : %s",
             error_code, OpenCLErrorCodeToString(error_code));
