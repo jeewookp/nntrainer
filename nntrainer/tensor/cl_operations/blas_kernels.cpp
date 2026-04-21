@@ -2481,6 +2481,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (((N % 32) != 0) || ((K % 8) != 0))
     throw std::runtime_error("gemm_delegate_fp16_cl requires N%32==0 K%8==0");
 
+  auto now_ns_outer = []() -> uint64_t {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  };
+  const uint64_t t_fn_entry = now_ns_outer();
+
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   cl_context clctx = blas_cc->context_inst_.GetContext();
@@ -2495,7 +2502,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // --- Profiling ---
   static std::atomic<uint64_t> t_dequant{0}, t_reformat{0}, t_conv{0},
     t_readback{0}, t_calls{0}, t_gflops_x1000{0}, t_conv_gpu_ns{0},
-    t_reformat_hits{0};
+    t_reformat_hits{0}, t_resource_setup{0}, t_fn_total{0};
   static struct DelegateProfileDump2 {
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
@@ -2503,22 +2510,29 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       double g = t_gflops_x1000.load() / 1000.0;
       double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
       double conv_gpu_ms = t_conv_gpu_ns.load() / 1e6;
+      double fn_total_ms = t_fn_total.load() / 1e6;
+      double setup_ms = t_resource_setup.load() / 1e6;
       fprintf(stderr,
         "\n[PROFILE gemm_delegate_fp16_cl] calls=%lu gflops=%.0f\n"
-        "  dequant:     %7.1f ms (%4.1f%%)\n"
-        "  reformat_in: %7.1f ms (%4.1f%%)  hits=%lu/%lu\n"
-        "  conv(wall):  %7.1f ms (%4.1f%%)\n"
-        "  conv(gpu):   %7.1f ms            %.3f TFLOPS\n"
-        "  readback:    %7.1f ms (%4.1f%%)\n"
-        "  total:       %7.1f ms            %.3f TFLOPS\n",
+        "  resource_setup: %7.1f ms\n"
+        "  dequant:        %7.1f ms (%4.1f%%)\n"
+        "  reformat_in:    %7.1f ms (%4.1f%%)  hits=%lu/%lu\n"
+        "  conv(wall):     %7.1f ms (%4.1f%%)\n"
+        "  conv(gpu):      %7.1f ms            %.3f TFLOPS\n"
+        "  readback:       %7.1f ms (%4.1f%%)\n"
+        "  sum(steps):     %7.1f ms            %.3f TFLOPS\n"
+        "  fn_total(wall): %7.1f ms            (diff from sum = %.1f ms "
+        "of arg-setup + enqueue overhead)\n",
         (unsigned long)c, g,
+        setup_ms,
         t_dequant/1e6, t_dequant*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         t_reformat/1e6, t_reformat*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         (unsigned long)t_reformat_hits.load(), (unsigned long)c,
         t_conv/1e6, t_conv*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
         conv_gpu_ms, g/(conv_gpu_ms/1e3)/1000.0,
         t_readback/1e6, t_readback*100.0/((t_dequant+t_reformat+t_conv+t_readback) ?: 1),
-        tot, g/(tot/1e3)/1000.0);
+        tot, g/(tot/1e3)/1000.0,
+        fn_total_ms, fn_total_ms - tot - setup_ms);
     }
   } s_prof;
 
@@ -2600,6 +2614,9 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (!s_out_kern)
     s_out_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "image2d_to_svm");
+
+  // End of resource setup. Measure everything before this point.
+  t_resource_setup += now_ns() - t_fn_entry;
 
   // === Step 1: Dequant (cached per weight pointer, or fresh GPU dequant) ===
   const uint64_t t0 = now_ns();
@@ -2785,6 +2802,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   t_readback += (t4 - t3);
   t_calls++;
   t_gflops_x1000 += (uint64_t)(2.0 * M * N * K / 1e6);
+  t_fn_total += now_ns_outer() - t_fn_entry;
   // No per-call release — buffers are reused
 }
 

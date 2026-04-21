@@ -461,7 +461,8 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
       std::sort(ordered.begin(), ordered.end(),
                 std::greater<std::pair<uint64_t, std::string>>());
       fprintf(stderr,
-        "\n[PROFILE NetworkGraph per-layer wall clock (prefill+decode)]\n"
+        "\n[PROFILE NetworkGraph per-layer wall clock (prefill only, "
+        "step_size>1)]\n"
         "  total=%.1f ms across all forwarding_op() calls\n",
         total_ns / 1e6);
       for (auto &p : ordered) {
@@ -478,15 +479,21 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
+    // Only accumulate wall-clock stats for prefill steps (to - from > 1).
+    // Decode (M == 1) amortisation is dominated by per-call overhead and
+    // drowns out the prefill breakdown we actually care about.
+    const bool profile_this_call = (to - from) > 1;
     struct timespec ts0, ts1;
-    clock_gettime(CLOCK_MONOTONIC, &ts0);
+    if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
-    clock_gettime(CLOCK_MONOTONIC, &ts1);
-    const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
-                        (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
-    g_graph_wall_profile.ns[ln->getType()] += dt;
-    g_graph_wall_profile.calls[ln->getType()] += 1;
-    g_graph_wall_profile.total_ns += dt;
+    if (profile_this_call) {
+      clock_gettime(CLOCK_MONOTONIC, &ts1);
+      const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
+                          (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
+      g_graph_wall_profile.ns[ln->getType()] += dt;
+      g_graph_wall_profile.calls[ln->getType()] += 1;
+      g_graph_wall_profile.total_ns += dt;
+    }
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
 

@@ -50,6 +50,7 @@ namespace {
 struct HalfDotQInt4Profile {
   std::atomic<uint64_t> calls{0};        // M>1 (prefill) calls only
   std::atomic<uint64_t> ns_in_stage{0};  // fp16 -> page-aligned svm_in
+  std::atomic<uint64_t> ns_in_fence{0};  // blocking SVMMap before staging copy
   std::atomic<uint64_t> ns_gpu_call{0};  // gemm wrapper (incl. sync)
   std::atomic<uint64_t> ns_out_stage{0}; // svm_out -> fp16 output tensor
   std::atomic<uint64_t> ns_misc{0};      // anything outside the 3 stages
@@ -60,10 +61,11 @@ struct HalfDotQInt4Profile {
       return;
 
     const uint64_t in = ns_in_stage.load();
+    const uint64_t fence = ns_in_fence.load();
     const uint64_t gpu = ns_gpu_call.load();
     const uint64_t out = ns_out_stage.load();
     const uint64_t misc = ns_misc.load();
-    const uint64_t total = in + gpu + out + misc;
+    const uint64_t total = in + fence + gpu + out + misc;
     const double total_ms = total / 1.0e6;
 
     auto pct = [&](uint64_t v) -> double {
@@ -75,6 +77,10 @@ struct HalfDotQInt4Profile {
                  "\n[PROFILE HalfTensor::dotQInteger prefill (M>1)] "
                  "total=%.2f ms calls=%llu\n",
                  total_ms, (unsigned long long)c);
+    std::fprintf(stderr,
+                 "  in_fence    : %8.2f ms (%5.1f%%)  [blocking SVMMap "
+                 "on pool-miss inputs]\n",
+                 ms(fence), pct(fence));
     std::fprintf(stderr,
                  "  in_stage    : %8.2f ms (%5.1f%%)  [fp16 -> svm_in "
                  "scalar loop]\n",
@@ -970,6 +976,7 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const size_t out_total = (size_t)M * N;
 
     const uint64_t t0 = now_ns();
+    uint64_t t_fence_end = t0;
     if (!pool_has_input) {
       // Upstream may be a GPU layer (e.g. swiglu_cl_fp16 when Phase B
       // GPU-SwiGLU is active). Its writes to in_u16 are still in
@@ -983,6 +990,7 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
         cl_ctx->command_queue_inst_.enqueueSVMMap(
           in_u16, (size_t)M * K * sizeof(uint16_t), /*read_only=*/true);
       }
+      t_fence_end = now_ns();
       for (size_t i = 0; i < in_total; ++i) {
         svm_in[i] = in_u16[i];
       }
@@ -1018,7 +1026,8 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     }
     const uint64_t t3 = now_ns();
 
-    g_half_dotq_profile.ns_in_stage += t1 - t0;
+    g_half_dotq_profile.ns_in_fence += t_fence_end - t0;
+    g_half_dotq_profile.ns_in_stage += t1 - t_fence_end;
     g_half_dotq_profile.ns_gpu_call += t2 - t1;
     g_half_dotq_profile.ns_out_stage += t3 - t2;
     g_half_dotq_profile.calls++;
