@@ -1,111 +1,100 @@
-generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4019 ms, 108.734 TPS
-generation: 32 tokens, 7372 ms, 4.34075 TPS
-total: 11395 ms
-peak memory: 2708772 KB
-==========================================================
-[e2e time]: 14167 ms 
-Max Resident Set Size: 2708772 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    60.6 ms
-  dequant(host):     60.5 ms (89.4%)  cache-miss=252/252
-  dequant(gpu):     172.2 ms
-  reformat_in(host):  0.1 ms ( 0.1%)  pool-hits=252/252
-  reformat_in(gpu):   0.0 ms
-  conv(wall):         4.2 ms ( 6.1%)
-  conv(gpu):       1064.8 ms            2.982 TFLOPS
-  readback(host):     3.0 ms ( 4.4%)
-  readback(gpu):     33.9 ms
-  svmmap(gpu):        0.4 ms
-  sum(steps host):   67.7 ms            46.919 TFLOPS
-  sum(gpu events): 1271.3 ms
-  fn_total(wall):  1573.7 ms            (unaccounted = 174.1 ms = host overhead + non-event sync gaps)
-
-[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=3974.1 ms across all forwarding_op() calls
-  fully_connected               1579.7 ms  calls=252  avg=6.269 ms
-  mha_core                      1040.4 ms  calls=36  avg=28.899 ms
-  rms_norm                       654.6 ms  calls=73  avg=8.967 ms
-  reshaped_rms_norm              542.9 ms  calls=72  avg=7.540 ms
-  swiglu                          68.3 ms  calls=36  avg=1.898 ms
-  addition                        54.5 ms  calls=72  avg=0.757 ms
-  tie_word_embeddings             32.9 ms  calls=2  avg=16.451 ms
-  multiout                         0.7 ms  calls=144  avg=0.005 ms
-  input                            0.1 ms  calls=1  avg=0.053 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=28.45 ms calls=1 avg=28.450 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.43 ms calls=1 avg=4.433 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=7.18 ms calls=36 avg=0.199 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=607.93 ms calls=73 avg=8.328 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=542.14 ms calls=72 avg=7.530 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1013.81 ms calls=36 avg=28.161 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1574.02 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1573.97 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 4019 ms, 108.734 TPS
-generation: 32 tokens, 7372 ms, 4.34075 TPS
-total: 11395 ms
-peak memory: 2708772 KB
-==========================================================
-[e2e time]: 14167 ms 
-Max Resident Set Size: 2708772 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    60.6 ms
-  dequant(host):     60.5 ms (89.4%)  cache-miss=252/25
-
---- Perf summary ---
-prefill: 437 tokens, 4019 ms, 108.734 TPS
-generation: 32 tokens, 7372 ms, 4.34075 TPS
-total: 11395 ms
-peak memory: 2708772 KB
-[e2e time]: 14167 ms 
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1574.02 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1573.97 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=28.45 ms calls=1 avg=28.450 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.43 ms calls=1 avg=4.433 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=7.18 ms calls=36 avg=0.199 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=607.93 ms calls=73 avg=8.328 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=542.14 ms calls=72 avg=7.530 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1013.81 ms calls=36 avg=28.161 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
+[arm64-v8a] Compile++      : nntrainer <= sscal.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_32bit_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0.cpp
+[arm64-v8a] Compile++      : nntrainer <= lion.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1.cpp
+[arm64-v8a] Compile++      : nntrainer <= add2_fp16_svm.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= copy_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= embedding_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_ab.cpp
+[arm64-v8a] Compile++      : nntrainer <= dot_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hscal.cpp
+[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
+[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.cpp:65:25: warning: data argument not used by format string [-Wformat-extra-args]
+            error_code, OpenCLErrorCodeToString(error_code));
+                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
+  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
+                                                   ^~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2832:15: error: no viable overloaded '='
+      last_s1 = s1;
+      ~~~~~~~ ^ ~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5: note: candidate function (the implicit copy assignment operator) not viable: no known conversion from 'struct (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2793:5)' to 'const (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5)' for 1st argument
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5: note: candidate function (the implicit move assignment operator) not viable: no known conversion from 'struct (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2793:5)' to '(unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5)' for 1st argument
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2836:15: error: no viable overloaded '='
+      last_s2 = s2;
+      ~~~~~~~ ^ ~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5: note: candidate function (the implicit copy assignment operator) not viable: no known conversion from 'struct (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2794:5)' to 'const (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5)' for 1st argument
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    ^
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5: note: candidate function (the implicit move assignment operator) not viable: no known conversion from 'struct (unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2794:5)' to '(unnamed struct at /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2792:5)' for 1st argument
+    struct { int x,y,z,w; } s0={1,dst_slices,(int)M,32};
+    ^
+2 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
+[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= connection.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
+ninja: build stopped: subcommand failed.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
