@@ -184,6 +184,37 @@ for stage in 0 1 2 3 4; do
     | grep -E "STAGE|M=437|maps|Engine::Global|registerModel|GPU:"
 done
 
+# Stage 3 drop sub-bisection. We keep nntr_delegate_bench_stage3 (which
+# calls Engine::Global() -> ClContext::initialize()) but vary the
+# NNTR_INIT_LEVEL env var that ClContext::initialize() now reads to
+# short-circuit its post-clInit sub-steps:
+#   NNTR_INIT_LEVEL=0 : clInit() only (cl_ctx + cl_queue + initBuffers)
+#   NNTR_INIT_LEVEL=1 : + initBlasClKernels()
+#   NNTR_INIT_LEVEL=2 : + initAttentionClKernels()
+#   NNTR_INIT_LEVEL=3 : + add_default_object() + setMemAllocator() [default]
+# Whichever level first reproduces the 1.60 TFLOPS drop is the culprit.
+echo ""
+echo "=========================================="
+echo " [BISECT 3x] stage 3 with varying NNTR_INIT_LEVEL"
+echo "=========================================="
+STAGE3_LIBS=Applications/CausalLM/jni/libs/arm64-v8a/nntr_delegate_bench_stage3
+STAGE3_OBJ=Applications/CausalLM/jni/obj/local/arm64-v8a/nntr_delegate_bench_stage3
+if [ -f "$STAGE3_LIBS" ]; then STAGE3=$STAGE3_LIBS
+elif [ -f "$STAGE3_OBJ" ]; then STAGE3=$STAGE3_OBJ
+else STAGE3=
+fi
+if [ -n "$STAGE3" ]; then
+  for lvl in 0 1 2 3; do
+    echo ""
+    echo "--- stage=3 NNTR_INIT_LEVEL=${lvl} ---"
+    adb shell "cd /data/local/tmp/nntrainer/test; \
+      export LD_LIBRARY_PATH=.; \
+      export NNTR_INIT_LEVEL=${lvl}; \
+      taskset f0 ./nntr_delegate_bench_stage3" 2>&1 \
+      | grep -E "STAGE|M=437|NNTR_INIT_LEVEL|Engine::Global|GPU:"
+  done
+fi
+
 # ----------------------------------------------------------------------------
 # Diagnostic summary (extracted from temp_run.log for quick scanning)
 # ----------------------------------------------------------------------------

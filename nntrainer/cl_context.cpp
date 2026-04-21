@@ -27,6 +27,7 @@
 #include <swiglu_cl.h>
 #include <transpose_cl.h>
 
+#include <cstdlib>
 #include <filesystem>
 
 #if defined(_WIN32)
@@ -80,8 +81,25 @@ void ClContext::initialize() noexcept {
       std::filesystem::create_directories(opencl::Program::DEFAULT_KERNEL_PATH);
     }
 
+    // Diagnostic short-circuit: NNTR_INIT_LEVEL bounds how many of the
+    // sub-steps below actually run, so the delegate-bench bisection can
+    // isolate which one tips Adreno from 2.87 -> 1.60 TFLOPS.
+    //   0 = clInit() only (cl_context + cl_queue + initBuffers done)
+    //   1 = + initBlasClKernels()
+    //   2 = + initAttentionClKernels()
+    //   3 (default) = + add_default_object() + setMemAllocator()
+    // Unset / >=3 keeps the original full behaviour.
+    int lvl = 3;
+    if (const char *env = std::getenv("NNTR_INIT_LEVEL")) {
+      lvl = std::atoi(env);
+      ml_logi("ClContext::initialize NNTR_INIT_LEVEL=%d", lvl);
+    }
+
+    if (lvl < 1) return;
     initBlasClKernels();
+    if (lvl < 2) return;
     initAttentionClKernels();
+    if (lvl < 3) return;
     add_default_object();
     setMemAllocator(std::make_shared<MemAllocator>());
 
