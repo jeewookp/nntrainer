@@ -3645,6 +3645,57 @@ void run_delegate_standalone_bench(const char *label) {
     fprintf(stderr, "[BENCH %s] plain queue create failed: %d\n", label, err);
   }
 
+  // ==========================================================================
+  // Third bench: UNITTEST_PRIMED — matches unittest's ModelShapes_DelegateFp16
+  // test byte-for-byte, including priming the buffers with real data via
+  // clEnqueueWriteBuffer / clEnqueueWriteImage before the warmup. The
+  // unittest reports 2.81 TFLOPS on this shape; if we cannot reproduce
+  // that number here, the 2.81 figure was either from a different thermal
+  // state or is simply outdated. If we DO reproduce 2.81, the gap is
+  // caused by launching the kernel against never-written cl_mem (driver
+  // doing lazy page allocation each kernel dispatch).
+  // ==========================================================================
+  cl_command_queue q_ut = clCreateCommandQueue(ctx, dev, 0, &err);
+  if (q_ut) {
+    // Prime weights = fp16(0.01)
+    {
+      uint16_t v = 0x211F; // fp16(0.01)
+      std::vector<uint16_t> d(w_bytes / 2, v);
+      clEnqueueWriteBuffer(q_ut, w, CL_TRUE, 0, w_bytes, d.data(), 0, nullptr, nullptr);
+    }
+    // Prime src = fp16(1.0)
+    {
+      uint16_t v = 0x3C00; // fp16(1.0)
+      std::vector<uint16_t> d((size_t)M * src_slices * 4, v);
+      size_t o[3] = {0, 0, 0}, r[3] = {(size_t)M, (size_t)src_slices, 1};
+      clEnqueueWriteImage(q_ut, si, CL_TRUE, o, r, 0, 0, d.data(), 0, nullptr, nullptr);
+    }
+    // Prime bias = 0
+    {
+      std::vector<uint16_t> d((size_t)dst_slices * 4, 0);
+      size_t o[3] = {0, 0, 0}, r[3] = {(size_t)dst_slices, 1, 1};
+      clEnqueueWriteImage(q_ut, bias, CL_TRUE, o, r, 0, 0, d.data(), 0, nullptr, nullptr);
+    }
+    clFinish(q_ut);
+    for (int i = 0; i < 50; ++i)
+      clEnqueueNDRangeKernel(q_ut, k, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_ut);
+    auto u0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N_ITER; ++i)
+      clEnqueueNDRangeKernel(q_ut, k, 3, nullptr, gs, ls, 0, nullptr, nullptr);
+    clFinish(q_ut);
+    auto u1 = std::chrono::high_resolution_clock::now();
+    const double ut_us =
+      std::chrono::duration<double, std::micro>(u1 - u0).count() /
+      (double)N_ITER;
+    const double ut_tflops =
+      ut_us > 0 ? gflops / (ut_us / 1.0e6) / 1000.0 : 0;
+    fprintf(stderr,
+      "[BENCH %s UNITTEST_PRIMED (buffers written)] WALL avg=%.2f us (%.3f TFLOPS)\n",
+      label, ut_us, ut_tflops);
+    clReleaseCommandQueue(q_ut);
+  }
+
   clReleaseMemObject(si); clReleaseMemObject(di);
   clReleaseMemObject(bias); clReleaseMemObject(w); clReleaseMemObject(xm);
   clReleaseKernel(k); clReleaseProgram(prog);
