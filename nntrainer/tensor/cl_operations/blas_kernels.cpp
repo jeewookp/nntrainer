@@ -3192,6 +3192,38 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 }
 
+// ============================================================================
+// Phase B helper — fp16 residual add on SVM.
+// ============================================================================
+void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total) {
+  if (!a || !b || !out || total == 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(add2_fp16_svm_kernel, "add2_fp16_svm");
+  }
+  if (!s_kern) return;
+
+  s_kern->SetKernelSVMArguments(0, a);
+  s_kern->SetKernelSVMArguments(1, b);
+  s_kern->SetKernelSVMArguments(2, out);
+  const int total_i = (int)total;
+  s_kern->SetKernelArguments(3, &total_i, sizeof(int));
+
+  const int32_t desired_local = 64;
+  const int32_t chosen_local = total_i >= desired_local ? desired_local
+                                                        : total_i;
+  // Round up to local size so no work-items fall outside workgroups.
+  const int gcount = ((total_i + chosen_local - 1) / chosen_local) *
+                     chosen_local;
+  const int g[3] = {gcount, 1, 1};
+  const int l[3] = {chosen_local, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 } // namespace nntrainer
 #if 0 // OLD — duplicate removed
   if (((N % 32) != 0) || ((K % 8) != 0))

@@ -20,6 +20,7 @@
 #include <layer_context.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
 #endif
@@ -52,10 +53,39 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
   Tensor &hidden_ = context.getOutput(SINGLE_INOUT_IDX);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Residual add reads each input via host pointers inside
-  // Tensor::copy / Tensor::add_i (NEON). Upstream gemm_delegate in
-  // Phase B doesn't block-sync on its SVM output anymore, so drain
-  // the queue here before the CPU touches the data.
+  // Phase B fast path: two-input SVM fp16 residual add goes to the
+  // add2_fp16_svm GPU kernel. Keeps the residual on the OpenCL queue
+  // so the upstream gemm's async writes are naturally serialised
+  // before this add, and the downstream RMSNorm (CPU) fence is the
+  // only place that has to drain. Much faster than the NEON
+  // Tensor::copy + add_i path, which also had to block on the
+  // preceding gemm output.
+  if (context.getNumInputs() == 2 &&
+      hidden_.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      hidden_.getMemoryData() && hidden_.getMemoryData()->isSVM()) {
+    const Tensor &in0 = context.getInput(0);
+    const Tensor &in1 = context.getInput(1);
+    if (in0.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+        in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+        in0.getMemoryData() && in0.getMemoryData()->isSVM() &&
+        in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
+        hidden_.batch() == 1) {
+      const size_t step_total =
+        (size_t)hidden_.channel() * (size_t)(to - from) *
+        (size_t)hidden_.width();
+      nntrainer::add2_fp16_svm_cl(in0.getData<char>(),
+                                  in1.getData<char>(),
+                                  hidden_.getData<char>(),
+                                  step_total);
+      // Publish result for the next gemm input (rmsnorm_2 will read
+      // this on CPU; rmsnorm already has its own publish downstream,
+      // so we don't need one here. If a later gemm reads `hidden_`
+      // directly, the pool entry already set by rmsnorm_2 has a
+      // different ptr and doesn't collide.)
+      return;
+    }
+  }
+
   {
     auto *cl_ctx = static_cast<ClContext *>(
       Engine::Global().getRegisteredContext("gpu"));

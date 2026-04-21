@@ -46,6 +46,7 @@ cl_op_kernels = [
 
 if get_option('enable-fp16')
   cl_op_kernels += [
+    'add2_fp16_svm.cl',
     'addition_fp16.cl',
     'concat_axis_1_fp16.cl',
     'concat_axis_2_fp16.cl',

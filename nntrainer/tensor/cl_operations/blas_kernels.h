@@ -245,6 +245,16 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
                         size_t total);
 
 /**
+ * @brief Phase B helper — fp16 residual add `out[i] = a[i] + b[i]` on
+ * SVM buffers, dispatched as add2_fp16_svm on the global OpenCL queue.
+ * Used for Qwen3-style residual connections to replace NEON CPU add_i
+ * so the residual stays on the GPU pipeline, avoids the CPU-layer
+ * entry SVMMap drain, and the result can be published into the pool
+ * for the next gemm to hit.
+ */
+void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total);
+
+/**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
  *        read through image texture).
  *
