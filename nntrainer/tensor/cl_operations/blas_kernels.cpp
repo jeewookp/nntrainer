@@ -3142,6 +3142,67 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
   const int g[3] = {total_i, 1, 1};
   const int l[3] = {chosen_local, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+
+  // DIAG: on first call, drain the queue, read a handful of input +
+  // output values, recompute the expected swish(in1) * in2 on the CPU
+  // side with the same fp32 path the kernel uses, and print side by
+  // side. Tells us immediately whether the garbage is (a) the kernel
+  // computing wrong values, (b) reading a stale SVM input, or (c)
+  // something downstream mangling a correct swiglu output.
+  static int s_diag_calls = 0;
+  if (s_diag_calls < 2) {
+    s_diag_calls++;
+    const uint16_t *i1 = reinterpret_cast<const uint16_t *>(in1);
+    const uint16_t *i2 = reinterpret_cast<const uint16_t *>(in2);
+    uint16_t *o = reinterpret_cast<uint16_t *>(out);
+    const size_t bytes = total * sizeof(uint16_t);
+    // Blocking SVMMap on all three — forces the in-flight queue
+    // (gate/up gemm image2d_to_svm + our swiglu kernel) to complete
+    // and makes the host view of in1/in2/out coherent for the reads
+    // below.
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      const_cast<uint16_t *>(i1), bytes, /*read_only=*/true);
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      const_cast<uint16_t *>(i2), bytes, /*read_only=*/true);
+    blas_cc->command_queue_inst_.enqueueSVMMap(o, bytes, /*read_only=*/true);
+
+    auto half2f = [](uint16_t h) -> float {
+      uint32_t u = (uint32_t)h;
+      uint32_t sign = (u & 0x8000) << 16;
+      uint32_t exp5 = (u >> 10) & 0x1F;
+      uint32_t mant = u & 0x3FF;
+      uint32_t bits;
+      if (exp5 == 0) {
+        if (mant == 0) bits = sign;
+        else {
+          while (!(mant & 0x400)) { mant <<= 1; exp5--; }
+          exp5++; mant &= 0x3FF;
+          bits = sign | ((exp5 - 15 + 127) << 23) | (mant << 13);
+        }
+      } else if (exp5 == 31) {
+        bits = sign | 0x7F800000 | (mant << 13);
+      } else {
+        bits = sign | ((exp5 - 15 + 127) << 23) | (mant << 13);
+      }
+      float f; __builtin_memcpy(&f, &bits, 4); return f;
+    };
+    const size_t test_idxs[] = {0, 1, 100, 1000, total / 2, total - 1};
+    fprintf(stderr, "[SWIGLU DIAG call=%d total=%zu]\n",
+            s_diag_calls - 1, total);
+    for (size_t k = 0; k < sizeof(test_idxs) / sizeof(test_idxs[0]); ++k) {
+      size_t idx = test_idxs[k];
+      if (idx >= total) continue;
+      float a = half2f(i1[idx]);
+      float b = half2f(i2[idx]);
+      float sigmoid = 1.0f / (1.0f + expf(-a));
+      float expect = a * sigmoid * b;
+      float got = half2f(o[idx]);
+      fprintf(stderr,
+        "  idx=%zu  in1=%+.4f  in2=%+.4f  expect=%+.4f  gpu_got=%+.4f  "
+        "diff=%+.4e\n",
+        idx, a, b, expect, got, got - expect);
+    }
+  }
 }
 
 } // namespace nntrainer
