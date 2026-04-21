@@ -77,41 +77,8 @@ RUN_LOG=../../temp_run.log
 # NNTR_DELEGATE_FP16=1 enables the delegate conv_wave_memory kernel path
 # (dequant int4→fp16 + wave memory dispatch). Unset to use default int4 path.
 DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
-
-# ----------------------------------------------------------------------------
-# BISECT matrix — run each configuration, extract prefill TPS + one
-# generation snippet, so we can see which toggle is the garbage source.
-#
-#   NNTRAINER_DEBUG_STAGE_OUT=1   -> delegate uses staging svm_out +
-#                                    blocking SVMMap + scalar copy
-#   NNTRAINER_DEBUG_CPU_SWIGLU=1  -> SwiGLULayer runs NEON CPU path
-#
-# The adb shell that would push results into logs/ is redirected to
-# $RUN_LOG so we can grep offline.
-# ----------------------------------------------------------------------------
-run_one() {
-  local label="$1"
-  local extra_env="$2"
-  echo ""
-  echo "########################################"
-  echo "#  [bisect] $label    env: $extra_env"
-  echo "########################################"
-  adb shell "cd /data/local/tmp/nntrainer/test; \
-    export LD_LIBRARY_PATH=.; \
-    export ${DELEGATE_ENV}; \
-    export ${extra_env}; \
-    ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
-    2>&1 | tee "${RUN_LOG}.${label}"
-}
-
-run_one "1_both_revert" "NNTRAINER_DEBUG_STAGE_OUT=1 NNTRAINER_DEBUG_CPU_SWIGLU=1"
-run_one "2_stage_only"  "NNTRAINER_DEBUG_STAGE_OUT=1"
-run_one "3_cpuswi_only" "NNTRAINER_DEBUG_CPU_SWIGLU=1"
-run_one "4_none"        ""
-
-# Keep the most recent (no-toggle) log under the canonical name for the
-# bottom-of-script summary grep to still work.
-cp "${RUN_LOG}.4_none" "${RUN_LOG}"
+adb shell "cd /data/local/tmp/nntrainer/test; export LD_LIBRARY_PATH=.; export ${DELEGATE_ENV}; ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
+  | tee ${RUN_LOG}
 
 cd ../..
 
@@ -125,25 +92,7 @@ RUN_LOG=temp_run.log
 
 echo ""
 echo "=========================================="
-echo " BISECT summary — output token + prefill TPS per configuration"
-echo "=========================================="
-for cfg in 1_both_revert 2_stage_only 3_cpuswi_only 4_none; do
-  log="${RUN_LOG}.${cfg}"
-  if [ ! -f "$log" ]; then
-    echo "[${cfg}] (no log)"
-    continue
-  fi
-  echo ""
-  echo "[${cfg}]"
-  echo "  output: $(awk '/<\|im_start\|>assistant/ { found=1; next } found && NF { print; exit }' "$log" | head -c 120)"
-  grep -E "^prefill: " "$log" | head -1 | sed 's/^/  /'
-  grep -E "PROFILE SwiGLULayer|PROFILE HalfTensor::dotQInteger" "$log" | head -2 | sed 's/^/  /'
-done
-echo ""
-
-echo ""
-echo "=========================================="
-echo " Run summary (config 4_none, current default)"
+echo " Run summary"
 echo "=========================================="
 
 echo ""
