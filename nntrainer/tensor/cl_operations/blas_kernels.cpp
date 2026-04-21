@@ -2584,13 +2584,21 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   static size_t s_dq_cache_bytes = 0;
   static constexpr size_t kMaxCacheBytes = 0;
 
-  // Single reusable dequant buffer. Preallocated lazily on first call to
-  // a size large enough for every delegate weight we will ever see in a
-  // prefill (Qwen3-4B max: down_proj 2560 × 9728 fp16 = 47.5 MB), so the
-  // "grow on demand" resize path never re-runs inside the prefill loop.
-  static cl_mem s_w_cl = nullptr;
-  static size_t s_w_size = 0;
+  // Double-buffered reusable dequant buffer pair. layer N writes buf[N%2]
+  // and conv(N) reads buf[N%2]; layer N+1 writes buf[(N+1)%2], so its
+  // dequant never clobbers the in-flight conv on the other buffer. Preallocated
+  // at 64 MB each (Qwen3-4B max fp16 weight is 47.5 MB), so the "grow on
+  // demand" resize path never re-runs inside the prefill loop. The second
+  // buffer enables overlap of layer N+1 dequant on s_dq_queue with layer N
+  // conv on the main queue without RAW/WAR conflicts on a shared buffer.
+  static cl_mem s_w_cl[2] = {nullptr, nullptr};
+  static size_t s_w_size[2] = {0, 0};
   static constexpr size_t kPreallocWBytes = 64 * 1024 * 1024;
+  // Monotonic gemm call counter — chooses which buffer this call uses.
+  static uint64_t s_gemm_call_idx = 0;
+  // Most recent conv event per buffer. dequant(N) waits on the conv from
+  // two calls ago (which last read buf[N%2]) to avoid WAR clobber.
+  static cl_event s_last_conv_ev[2] = {nullptr, nullptr};
   static cl_mem s_xmem = nullptr;
   static cl_mem s_bias = nullptr;
   static int s_bias_slices = 0;
@@ -2608,13 +2616,25 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   if (!s_xmem)
     s_xmem = clCreateBuffer(clctx, CL_MEM_READ_WRITE, 6144, nullptr, &err);
 
-  // Preallocate the reusable dequant-output buffer once, at the max size
-  // any delegate weight could need. Done here so the cost lands in
-  // resource_setup (one-time) rather than dequant.alloc (per-call).
-  if (!s_w_cl) {
-    s_w_cl = clCreateBuffer(clctx, CL_MEM_READ_WRITE, kPreallocWBytes,
-                            nullptr, &err);
-    s_w_size = kPreallocWBytes;
+  // Preallocate the two reusable dequant-output buffers once.
+  for (int i = 0; i < 2; ++i) {
+    if (!s_w_cl[i]) {
+      s_w_cl[i] = clCreateBuffer(clctx, CL_MEM_READ_WRITE, kPreallocWBytes,
+                                  nullptr, &err);
+      s_w_size[i] = kPreallocWBytes;
+    }
+  }
+
+  // Secondary command queue for dequant. See full rationale on why we
+  // need both this + the double-buffer + explicit WAR/RAW events above.
+  static cl_command_queue s_dq_queue = nullptr;
+  if (!s_dq_queue) {
+    cl_device_id dev = blas_cc->context_inst_.GetDeviceId();
+    cl_int qerr = 0;
+    s_dq_queue = clCreateCommandQueue(
+      clctx, dev,
+      CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
+      &qerr);
   }
 
   // Shape-keyed caches for bias / src_img / dst_img. Qwen3 prefill
@@ -2736,15 +2756,15 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
       }
     }
     if (!w_cl_use) {
-      // s_w_cl was preallocated in resource_setup at kPreallocWBytes;
-      // grow only if the current weight happens to exceed that bound.
-      if (s_w_size < w_bytes) {
-        clReleaseMemObject(s_w_cl);
-        s_w_cl =
+      // Double-buffer: pick based on monotonic call counter.
+      const int buf_idx = (int)(s_gemm_call_idx & 1);
+      if (s_w_size[buf_idx] < w_bytes) {
+        clReleaseMemObject(s_w_cl[buf_idx]);
+        s_w_cl[buf_idx] =
           clCreateBuffer(clctx, CL_MEM_READ_WRITE, w_bytes, nullptr, &err);
-        s_w_size = w_bytes;
+        s_w_size[buf_idx] = w_bytes;
       }
-      w_cl_use = s_w_cl;
+      w_cl_use = s_w_cl[buf_idx];
     }
     const uint64_t tB = now_ns();
     int a = 0;
@@ -2756,11 +2776,22 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
     const uint64_t tD = now_ns();
-    // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
+    // Vectorized dequant on the dedicated dequant queue. Cross-queue
+    // wait: dequant needs to wait for the conv from TWO calls ago, which
+    // is the most recent reader of buf[buf_idx] — otherwise dequant's
+    // write would clobber that buffer while the earlier conv is still
+    // reading it (WAR hazard).
     int tot = (int)(w_halfs / 16);
-    const int dg[3] = {((tot+255)/256)*256, 1, 1};
-    const int dl[3] = {256, 1, 1};
-    blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
+    const size_t dg_s[3] = {(size_t)(((tot+255)/256)*256), 1, 1};
+    const size_t dl_s[3] = {256, 1, 1};
+    cl_kernel dq_raw = s_dq_kern->GetKernel();
+    const int buf_idx = (int)(s_gemm_call_idx & 1);
+    cl_event prev_reader = s_last_conv_ev[buf_idx];
+    clEnqueueNDRangeKernel(s_dq_queue, dq_raw, 3, nullptr, dg_s, dl_s,
+                            prev_reader ? 1 : 0,
+                            prev_reader ? &prev_reader : nullptr,
+                            &dequant_ev);
+    clFlush(s_dq_queue);
     const uint64_t tE = now_ns();
     t_dq_alloc    += tB - tA;
     t_dq_svmarg   += tC - tB;
@@ -2855,8 +2886,22 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     cl_kernel raw_k = s_conv_kern->GetKernel();
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
     size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
+    // Cross-queue RAW: force the main queue to wait for dequant's fp16
+    // weight write to be fully visible before conv reads it. Barrier is
+    // strictly stronger than a per-kernel wait_list on Adreno.
+    if (dequant_ev) {
+      clEnqueueBarrierWithWaitList(raw_q, 1, &dequant_ev, nullptr);
+    }
     clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
 
+    // Remember this conv's event as the "last reader" of buf[buf_idx] so
+    // the call two ahead (which reuses the same buffer for its dequant)
+    // waits for us before clobbering.
+    const int buf_idx = (int)(s_gemm_call_idx & 1);
+    if (s_last_conv_ev[buf_idx]) clReleaseEvent(s_last_conv_ev[buf_idx]);
+    if (conv_ev) clRetainEvent(conv_ev);
+    s_last_conv_ev[buf_idx] = conv_ev;
+    s_gemm_call_idx++;
   }
   const uint64_t t3 = now_ns();
 
