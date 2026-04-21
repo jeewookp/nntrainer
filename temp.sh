@@ -85,7 +85,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
-  export NNTRAINER_DELEGATE_REPEAT_BENCH=8; \
+  export NNTRAINER_DELEGATE_REPEAT_BENCH=32; \
   ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 

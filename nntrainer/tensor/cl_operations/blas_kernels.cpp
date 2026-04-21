@@ -2796,8 +2796,13 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     if (!s_bench_done && s_bench_n_env) {
       s_bench_done = true;
       const int n_iter = std::max(1, atoi(s_bench_n_env));
-      // Warmup 3 extra dispatches (same args).
-      for (int i = 0; i < 3; ++i)
+      // Long warmup: 50 extra dispatches so Adreno DVFS has time to
+      // clock up fully before the measured region. If the unittest's
+      // lower shape count or simpler context isn't what's holding us
+      // back and the gap is actually DVFS, the first few measured
+      // iters will still be slow but the last ones will reach
+      // unittest TFLOPS.
+      for (int i = 0; i < 50; ++i)
         clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr,
                                nullptr);
       clFinish(raw_q);
@@ -2807,24 +2812,46 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
                                &evs[i]);
       clFinish(raw_q);
       uint64_t total_ns = 0;
+      uint64_t min_ns = UINT64_MAX, max_ns = 0, last_ns = 0;
+      uint64_t first_half_ns = 0, last_half_ns = 0;
+      const int half = n_iter / 2;
       for (int i = 0; i < n_iter; ++i) {
         cl_ulong s = 0, e = 0;
         clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_START, sizeof(s),
                                 &s, nullptr);
         clGetEventProfilingInfo(evs[i], CL_PROFILING_COMMAND_END, sizeof(e),
                                 &e, nullptr);
-        if (e > s) total_ns += (e - s);
+        const uint64_t dt = (e > s) ? (e - s) : 0;
+        total_ns += dt;
+        if (dt < min_ns) min_ns = dt;
+        if (dt > max_ns) max_ns = dt;
+        last_ns = dt;
+        if (i < half) first_half_ns += dt;
+        else          last_half_ns  += dt;
         clReleaseEvent(evs[i]);
       }
-      const double avg_us = (total_ns / 1000.0) / (double)n_iter;
+      const double avg_us  = (total_ns      / 1000.0) / (double)n_iter;
+      const double min_us  = min_ns / 1000.0;
+      const double max_us  = max_ns / 1000.0;
+      const double fh_us   = half > 0 ? (first_half_ns / 1000.0) / half : 0;
+      const double lh_us   = (n_iter - half) > 0
+                             ? (last_half_ns  / 1000.0) / (n_iter - half) : 0;
       const double gflops = 2.0 * (double)M * (double)N * (double)K / 1.0e9;
-      const double tflops = gflops / (avg_us / 1.0e6) / 1000.0;
+      auto tfl = [&](double us) {
+        return us > 0 ? gflops / (us / 1.0e6) / 1000.0 : 0;
+      };
       fprintf(stderr,
         "\n[DELEGATE BENCH in production context] M=%u N=%u K=%u  "
-        "iters=%d  avg=%.2f us  %.3f TFLOPS\n"
-        "  (unittest same shape was 3256.7 us / 2.814 TFLOPS for "
-        "M=437 N=4096 K=2560)\n",
-        M, N, K, n_iter, avg_us, tflops);
+        "iters=%d  (50 warmup)\n"
+        "  min=%.2f us (%.3f TFLOPS)  max=%.2f us (%.3f TFLOPS)\n"
+        "  first-half avg=%.2f us (%.3f TFLOPS)  last-half avg=%.2f us "
+        "(%.3f TFLOPS)\n"
+        "  overall avg=%.2f us (%.3f TFLOPS)\n"
+        "  unittest same shape ≈ 3256.7 us / 2.814 TFLOPS (M=437 "
+        "N=4096 K=2560)\n",
+        M, N, K, n_iter, min_us, tfl(min_us), max_us, tfl(max_us),
+        fh_us, tfl(fh_us), lh_us, tfl(lh_us),
+        avg_us, tfl(avg_us));
     }
   }
   const uint64_t t3 = now_ns();
