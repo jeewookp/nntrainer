@@ -1,19 +1,3 @@
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
-BOOTCLASSPATH
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
-KNOX_STORAGE
-LD_LIBRARY_PATH
-LOGNAME
-MEMTAG_OPTIONS
-MOUNT_SYSTEM_OK
-PATH
-SHELL
 STANDALONE_SYSTEMSERVER_JARS
 SYSTEMSERVERCLASSPATH
 TERM
@@ -29,52 +13,49 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 5625 ms, 77.6889 TPS
-generation: 32 tokens, 7291 ms, 4.38897 TPS
-total: 12922 ms
-peak memory: 2710988 KB
+prefill: 437 tokens, 4971 ms, 87.9099 TPS
+generation: 32 tokens, 6574 ms, 4.86766 TPS
+total: 11553 ms
+peak memory: 2696952 KB
 ==========================================================
-[e2e time]: 15130 ms 
-Max Resident Set Size: 2710988 KB
+[e2e time]: 13778 ms 
+Max Resident Set Size: 2696952 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    84.3 ms
-  dequant:           76.2 ms (92.3%)
-  reformat_in:        0.1 ms ( 0.1%)  hits=252/252
-  conv(wall):         3.4 ms ( 4.1%)
+  resource_setup:    94.0 ms
+  dequant:           84.3 ms (92.3%)
+  reformat_in:        0.0 ms ( 0.0%)  hits=252/252
+  conv(wall):         2.7 ms ( 3.0%)
   conv(gpu):          0.0 ms            inf TFLOPS
-  readback:           2.9 ms ( 3.5%)
-  sum(steps):        82.6 ms            38.439 TFLOPS
-  fn_total(wall):   167.0 ms            (diff from sum = 0.1 ms of arg-setup + enqueue overhead)
+  readback:           4.2 ms ( 4.6%)
+  sum(steps):        91.3 ms            34.797 TFLOPS
+  fn_total(wall):   185.3 ms            (diff from sum = 0.1 ms of arg-setup + enqueue overhead)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=5568.1 ms across all forwarding_op() calls
-  addition                      2463.7 ms  calls=72  avg=34.218 ms
-  mha_core                      1250.7 ms  calls=36  avg=34.740 ms
-  reshaped_rms_norm              924.7 ms  calls=72  avg=12.843 ms
-  rms_norm                       731.3 ms  calls=73  avg=10.017 ms
-  fully_connected                169.8 ms  calls=252  avg=0.674 ms
-  tie_word_embeddings             18.9 ms  calls=2  avg=9.473 ms
-  swiglu                           8.2 ms  calls=36  avg=0.227 ms
-  multiout                         0.8 ms  calls=144  avg=0.006 ms
-  input                            0.0 ms  calls=1  avg=0.042 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=12.93 ms calls=1 avg=12.931 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.005 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.12 ms calls=36 avg=0.225 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=730.88 ms calls=73 avg=10.012 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=924.28 ms calls=72 avg=12.837 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1250.49 ms calls=36 avg=34.736 ms
+  total=4917.4 ms across all forwarding_op() calls
+  reshaped_rms_norm             3121.7 ms  calls=72  avg=43.357 ms
+  mha_core                      1209.6 ms  calls=36  avg=33.600 ms
+  rms_norm                       314.1 ms  calls=73  avg=4.302 ms
+  fully_connected                187.9 ms  calls=252  avg=0.746 ms
+  tie_word_embeddings             66.8 ms  calls=2  avg=33.386 ms
+  addition                        13.0 ms  calls=72  avg=0.180 ms
+  swiglu                           4.2 ms  calls=36  avg=0.116 ms
+  multiout                         0.2 ms  calls=144  avg=0.001 ms
+  input                            0.0 ms  calls=1  avg=0.033 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=60.74 ms calls=1 avg=60.735 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.03 ms calls=1 avg=6.031 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.12 ms calls=36 avg=0.114 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=313.90 ms calls=73 avg=4.300 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3121.16 ms calls=72 avg=43.350 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1209.41 ms calls=36 avg=33.595 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=167.18 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=185.43 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   167.13 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   185.40 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -85,46 +66,42 @@ Max Resident Set Size: 2710988 KB
 
 --- Generation snippet (post-assistant tag) ---
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
+! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 5625 ms, 77.6889 TPS
-generation: 32 tokens, 7291 ms, 4.38897 TPS
-total: 12922 ms
-peak memory: 2710988 KB
+prefill: 437 tokens, 4971 ms, 87.9099 TPS
+generation: 32 tokens, 6574 ms, 4.86766 TPS
+total: 11553 ms
+peak memory: 2696952 KB
 ==========================================================
-[e2e time]: 15130 ms 
-Max Resident Set Size: 2710988 KB
+[e2e time]: 13778 ms 
+Max Resident Set Size: 2696952 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    84.3 ms
-  dequant:           76.2 ms (92.3%)
-  reformat_in:    
+  resource_setup:    94.0 ms
+  dequant:           
 
 --- Perf summary ---
-prefill: 437 tokens, 5625 ms, 77.6889 TPS
-generation: 32 tokens, 7291 ms, 4.38897 TPS
-total: 12922 ms
-peak memory: 2710988 KB
-[e2e time]: 15130 ms 
+prefill: 437 tokens, 4971 ms, 87.9099 TPS
+generation: 32 tokens, 6574 ms, 4.86766 TPS
+total: 11553 ms
+peak memory: 2696952 KB
+[e2e time]: 13778 ms 
 
 --- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=167.18 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=185.43 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :   167.13 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :   185.40 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
 --- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=12.93 ms calls=1 avg=12.931 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.01 ms calls=1 avg=6.005 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.12 ms calls=36 avg=0.225 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=730.88 ms calls=73 avg=10.012 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=924.28 ms calls=72 avg=12.837 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1250.49 ms calls=36 avg=34.736 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=60.74 ms calls=1 avg=60.735 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=6.03 ms calls=1 avg=6.031 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.12 ms calls=36 avg=0.114 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=313.90 ms calls=73 avg=4.300 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=3121.16 ms calls=72 avg=43.350 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1209.41 ms calls=36 avg=33.595 ms
 
 Full log: temp_run.log  (error.txt is intentionally untouched)
 
