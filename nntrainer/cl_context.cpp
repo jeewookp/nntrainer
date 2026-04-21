@@ -282,10 +282,14 @@ bool ClContext::clCreateKernel(std::string &kernel_string,
 
   opencl::Program program;
 
-  // reading binary
+  // reading binary. Hash by compile_options too so different flag sets
+  // (e.g. -qcom-accelerate-16-bit for the delegate conv kernel) don't
+  // alias into the same cached binary and silently ignore the new
+  // flags.
   std::string binary_file_path =
     opencl::Program::DEFAULT_KERNEL_PATH + "/" +
-    std::to_string(program.GetKernelHash(kernel_string, "")) + ".cl.bin";
+    std::to_string(program.GetKernelHash(kernel_string, compile_options)) +
+    ".cl.bin";
   auto binary_data = KERNEL_CACHE_ENABLED ? readBinaryFile(binary_file_path)
                                           : std::vector<std::byte>();
 
