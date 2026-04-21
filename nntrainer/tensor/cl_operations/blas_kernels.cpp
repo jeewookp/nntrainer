@@ -2645,7 +2645,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     // production path).
     s_conv_kern = blas_cc->registerClKernel(
       delegate_conv_wave_kernel, "main_function",
-      "-qcom-accelerate-16-bit=true");
+      "-cl-std=CL2.0 -qcom-accelerate-16-bit=true");
   if (!s_in_kern)
     s_in_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "svm_to_image2d");
@@ -2997,7 +2997,7 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     // production path).
     s_conv_kern = blas_cc->registerClKernel(
       delegate_conv_wave_kernel, "main_function",
-      "-qcom-accelerate-16-bit=true");
+      "-cl-std=CL2.0 -qcom-accelerate-16-bit=true");
   if (!s_in_kern)
     s_in_kern = blas_cc->registerClKernel(
       image_reformat_kernel, "svm_to_image2d");
