@@ -89,9 +89,16 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # leaking into whichever layer next SVMMap-fences. Production runs
 # should unset it — it doubles layer wall time for zero end-user
 # benefit.
+# NNTR_DELEGATE_CONV_VERIFY=X,Y,Z triggers a per-call comparison of the
+# default (128,1,4) conv vs a candidate local of the given shape on
+# the REAL production weights/input. Each gemm_delegate_fp16_cl call
+# logs [VERIFY ...] with per-call mismatch counts, max abs diff, and
+# relative L2. Unset in normal runs.
+VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
+  export ${VERIFY_ENV}; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}

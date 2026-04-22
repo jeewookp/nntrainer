@@ -2883,8 +2883,114 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     cl_kernel raw_k = s_conv_kern->GetKernel();
     size_t gs[3] = {(size_t)g[0], (size_t)g[1], (size_t)g[2]};
     size_t ls[3] = {(size_t)l[0], (size_t)l[1], (size_t)l[2]};
+
+    // Per-call verification: run a second conv with candidate local into
+    // a parallel dst image, read back samples of BOTH, and log where
+    // they diverge. Only active when NNTR_DELEGATE_CONV_VERIFY=X,Y,Z is
+    // set. The verify path uses the REAL production weights / input
+    // for this call, so it catches bugs that synthetic unittest data
+    // cannot (e.g. subgroup-level wave-memory errors that only show
+    // up with the actual dequant-layout int4->fp16 weight pattern).
+    // Adds ~one extra conv dispatch per call — enable only during
+    // debug runs.
+    static const char *s_verify_env =
+      std::getenv("NNTR_DELEGATE_CONV_VERIFY");
+    static int s_verify_x = 0, s_verify_y = 0, s_verify_z = 0;
+    static bool s_verify_parsed = false;
+    static cl_mem s_dst_img_cand = nullptr;
+    static int s_dst_img_cand_w = 0, s_dst_img_cand_h = 0;
+    static std::atomic<uint64_t> s_verify_call_idx{0};
+    if (s_verify_env && !s_verify_parsed) {
+      s_verify_parsed = true;
+      if (std::sscanf(s_verify_env, "%d,%d,%d",
+                      &s_verify_x, &s_verify_y, &s_verify_z) != 3) {
+        s_verify_x = 0;
+      }
+    }
+    if (s_verify_x > 0 && s_verify_y > 0 && s_verify_z > 0 &&
+        !(s_verify_x == lx && s_verify_y == ly && s_verify_z == lz)) {
+      // Ensure candidate dst image exists at the right shape.
+      if (!s_dst_img_cand ||
+          s_dst_img_cand_w != (int)M ||
+          s_dst_img_cand_h != dst_slices) {
+        if (s_dst_img_cand) clReleaseMemObject(s_dst_img_cand);
+        cl_image_format fmt_c = {CL_RGBA, CL_HALF_FLOAT};
+        cl_image_desc dcd = {};
+        dcd.image_type = CL_MEM_OBJECT_IMAGE2D;
+        dcd.image_width = M;
+        dcd.image_height = dst_slices;
+        cl_int cerr = 0;
+        s_dst_img_cand = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt_c,
+                                       &dcd, 0, &cerr);
+        s_dst_img_cand_w = M;
+        s_dst_img_cand_h = dst_slices;
+      }
+      // Dispatch candidate into s_dst_img_cand.
+      s_conv_kern->SetKernelArguments(3, &s_dst_img_cand, sizeof(cl_mem));
+      const size_t c_need_z = (size_t)(dst_slices + 7) / 8;
+      const size_t c_gz = (c_need_z + (size_t)s_verify_z - 1) / (size_t)s_verify_z;
+      const size_t c_gx = ((size_t)M + (size_t)s_verify_x - 1) / (size_t)s_verify_x;
+      const size_t c_gy = (1 + (size_t)s_verify_y - 1) / (size_t)s_verify_y;
+      size_t cgs[3] = {c_gz * (size_t)s_verify_x,
+                       c_gx * (size_t)s_verify_y,
+                       c_gy * (size_t)s_verify_z};
+      size_t cls[3] = {(size_t)s_verify_x, (size_t)s_verify_y,
+                       (size_t)s_verify_z};
+      clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, cgs, cls, 0,
+                              nullptr, nullptr);
+      // Restore arg 3 to the production dst image.
+      s_conv_kern->SetKernelArguments(3, &s_dst_img, sizeof(cl_mem));
+    }
+
     clEnqueueNDRangeKernel(raw_q, raw_k, 3, nullptr, gs, ls, 0, nullptr, &conv_ev);
 
+    // Sample-compare production dst vs candidate dst.
+    if (s_verify_x > 0 && s_verify_y > 0 && s_verify_z > 0 &&
+        !(s_verify_x == lx && s_verify_y == ly && s_verify_z == lz) &&
+        s_dst_img_cand) {
+      clFinish(raw_q);
+      const size_t npix = (size_t)M * dst_slices;
+      const size_t sample_halves = std::min<size_t>(npix * 4, 1024);
+      std::vector<uint16_t> ref_buf(npix * 4), cand_buf(npix * 4);
+      size_t o[3] = {0, 0, 0};
+      size_t r[3] = {(size_t)M, (size_t)dst_slices, 1};
+      clEnqueueReadImage(raw_q, s_dst_img, CL_TRUE, o, r, 0, 0,
+                          ref_buf.data(), 0, nullptr, nullptr);
+      clEnqueueReadImage(raw_q, s_dst_img_cand, CL_TRUE, o, r, 0, 0,
+                          cand_buf.data(), 0, nullptr, nullptr);
+      const size_t step =
+        std::max<size_t>(1, (npix * 4) / sample_halves);
+      int checked = 0, mism = 0;
+      double max_abs = 0.0, sum_sq = 0.0, sum_ref_sq = 0.0;
+      for (size_t i = 0; i < npix * 4; i += step) {
+        auto h2f = [](uint16_t h) -> float {
+          uint32_t sign = (uint32_t)(h & 0x8000) << 16;
+          uint32_t exp = (h >> 10) & 0x1F;
+          uint32_t mant = h & 0x3FF;
+          uint32_t bits;
+          if (exp == 0) bits = sign;
+          else if (exp == 31) bits = sign | 0x7F800000 | (mant << 13);
+          else bits = sign | ((exp - 15 + 127) << 23) | (mant << 13);
+          float f; std::memcpy(&f, &bits, 4); return f;
+        };
+        float rv = h2f(ref_buf[i]), cv = h2f(cand_buf[i]);
+        float d = rv - cv;
+        if (std::abs(d) > std::abs(rv) * 0.05f + 1e-3f) mism++;
+        if (std::abs(d) > max_abs) max_abs = std::abs(d);
+        sum_sq += (double)d * d;
+        sum_ref_sq += (double)rv * rv;
+        checked++;
+      }
+      const double rel_l2 = sum_ref_sq > 0 ?
+                            std::sqrt(sum_sq / sum_ref_sq) : 0.0;
+      const uint64_t call_idx = s_verify_call_idx.fetch_add(1);
+      fprintf(stderr,
+        "[VERIFY call=%3lu M=%u N=%u K=%u] local(%d,%d,%d)→(%d,%d,%d) "
+        "mism=%d/%d max|d|=%.4g rel_l2=%.4g\n",
+        (unsigned long)call_idx, M, N, K, lx, ly, lz,
+        s_verify_x, s_verify_y, s_verify_z,
+        mism, checked, max_abs, rel_l2);
+    }
   }
   const uint64_t t3 = now_ns();
 
