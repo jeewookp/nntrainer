@@ -885,12 +885,16 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
 
     fprintf(stderr, "\n  M=%d N=%d K=%d\n", M, N, K);
 
-    // First dispatch at the default (128,1,4) to produce the reference
-    // output. Subsequent candidates are compared against this and
-    // rejected if their output doesn't match (the captured wave-memory
-    // kernel's subgroup-level ops don't work correctly at every local
-    // size — e.g. (32,1,2) runs 9% faster but produces garbage).
+    // Reference: dispatch at the default (128,1,4) after poisoning di,
+    // so the reference output only contains values that (128,1,4) wrote.
+    const size_t dst_npixels = (size_t)M * dst_slices;
+    std::vector<uint16_t> ref_poison(dst_npixels * 4);
+    for (size_t i = 0; i < ref_poison.size(); ++i)
+      ref_poison[i] = f32_to_f16(-999.0f);
     {
+      size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
+      cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+                             ref_poison.data(), 0, 0, 0);
       size_t need_z = (dst_slices + 7) / 8;
       size_t groups_z = (need_z + 4 - 1) / 4;
       size_t groups_x = ((size_t)M + 128 - 1) / 128;
@@ -899,12 +903,19 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
       cl.clFinish(queue);
     }
-    const size_t dst_npixels = (size_t)M * dst_slices;
     std::vector<uint16_t> ref_out(dst_npixels * 4, 0);
     {
       size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
       cl.clEnqueueReadImage(queue, di, 1, o, r, 0, 0, ref_out.data(), 0, 0, 0);
     }
+
+    // Pre-fill a "poison" pattern we'll write to di before every
+    // candidate dispatch. Any pixel the candidate fails to write ends
+    // up reading back as poison and misses the reference — catches
+    // candidates that drop writes due to thread-mapping / subgroup bugs.
+    std::vector<uint16_t> poison(dst_npixels * 4);
+    for (size_t i = 0; i < poison.size(); ++i)
+      poison[i] = f32_to_f16(-999.0f);
 
     double best_us = 1e18;
     LocalCand best = kLocals[0];
@@ -917,21 +928,27 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       size_t local[3]  = {(size_t)c.lx, (size_t)c.ly, (size_t)c.lz};
       size_t global[3] = {groups_z * c.lx, groups_x * c.ly, groups_y * c.lz};
 
-      // Match litert_lm delegate_kernel_bench: 50 warmup + 50 timed
-      // iters so DVFS has stabilized and noise is minimized.
-      for (int i = 0; i < 50; ++i)
-        cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+      // Poison the dst image so any pixel the candidate doesn't actually
+      // write is clearly visible as -999.0 on readback.
+      {
+        size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
+        cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+                               poison.data(), 0, 0, 0);
+      }
+      // One dispatch after poisoning to produce the output we check.
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
       cl.clFinish(queue);
-
-      // Correctness check: compare last output against the (128,1,4)
-      // reference. Skip the candidate if > 10% of sampled halves
-      // diverge — the wave-memory kernel is known to produce garbage
-      // at some locals despite running faster.
       {
         size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
         cl.clEnqueueReadImage(queue, di, 1, o, r, 0, 0, cand_out.data(),
                               0, 0, 0);
       }
+
+      // Warmup + timed bench (the correctness of these iterations
+      // doesn't matter, just their wall time).
+      for (int i = 0; i < 50; ++i)
+        cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+      cl.clFinish(queue);
       int match = 0, total = 0;
       const size_t N_SAMPLE = std::min<size_t>(dst_npixels * 4, 8192);
       const size_t step = std::max<size_t>(1, (dst_npixels * 4) / N_SAMPLE);
