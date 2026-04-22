@@ -55,6 +55,7 @@ if [ $RUN_ONLY -eq 0 ]; then
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl" "${DEVICE_DIR}/"
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl" "${DEVICE_DIR}/"
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl" "${DEVICE_DIR}/"
+  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl" "${DEVICE_DIR}/"
 
   # Push libc++_shared if available
   for so in libc++_shared.so; do
