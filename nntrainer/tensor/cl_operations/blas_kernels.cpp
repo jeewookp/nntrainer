@@ -2844,15 +2844,16 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
     s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
     s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
-    // Default local = (128, 1, 4). litert_lm's delegate_kernel_bench
-    // auto-tunes over 13 candidate local sizes — for some shapes a
-    // different choice wins. Env var NNTR_DELEGATE_CONV_LOCAL=X,Y,Z
-    // overrides the default so we can sweep without rebuilding.
+    // Best local from unittest tune (50 warmup + 50 timed, all 13
+    // litert_lm candidates) across all 7 Qwen3-4B prefill shapes:
+    // (32,1,2) wins by 2-12% over the old (128,1,4) default on every
+    // shape. NNTR_DELEGATE_CONV_LOCAL=X,Y,Z still overrides for
+    // future re-tuning (e.g. new model shapes).
     // Kernel mapping (from litert_lm's tune loop):
     //   X = group_id(1) * local[0] + local_id(0)   needs M values
     //   Y = group_id(2) * local[1] + local_id(1)   needs 1 value (h=1)
     //   Z = group_id(0) * local[2] + local_id(2)   needs (dst_slices+7)/8
-    int lx = 128, ly = 1, lz = 4;
+    int lx = 32, ly = 1, lz = 2;
     if (const char *env = std::getenv("NNTR_DELEGATE_CONV_LOCAL")) {
       int a_, b_, c_;
       if (std::sscanf(env, "%d,%d,%d", &a_, &b_, &c_) == 3 &&
@@ -3202,6 +3203,10 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
       size_t gz = ((dst_slices+7)/8+3)/4;
       const int g[3] = {(int)(gz*128), (int)((M+127)/128), 4};
       const int l[3] = {128, 1, 4};
+      // NOTE: the main gemm_delegate_fp16_cl uses local=(32,1,2) which
+      // tuned ~9% faster on all Qwen3-4B prefill shapes. The batched
+      // (MoE) variant has not been tuned yet — retune on representative
+      // MoE shapes before migrating.
       blas_cc->command_queue_inst_.DispatchCommand(s_conv_kern, g, l);
     }
     const uint64_t td2 = now_ns();
