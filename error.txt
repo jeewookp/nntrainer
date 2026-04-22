@@ -1,3 +1,50 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 11 (delta 9), reused 11 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (11/11), 6.74 KiB | 575.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   26839910..df83ff4e  all_gpu    -> upstream/all_gpu
+Updating 26839910..df83ff4e
+Fast-forward
+ nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl | 232 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/unittest/unittest_delegate_conv_wave.cpp                        | 290 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ unittest_delegate_conv_wave.sh                                       |   1 +
+ 3 files changed, 523 insertions(+)
+ create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_delegate_conv_wave.
+bash: unittest_delegate_conv_wave.: No such file or directory
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_delegate_conv_wave.sh 
+==========================================
+[Step 1] Building unittest_delegate_conv_wave (ndk-build)
+==========================================
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : googletest_main [arm64-v8a]
+[arm64-v8a] Clean          : nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : test_util [arm64-v8a]
+[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
+[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
+[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
+[arm64-v8a] Clean          : unittest_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
 [arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
 [arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
 [arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
@@ -15,213 +62,55 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.7 MB/s (366592 bytes in 0.011s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.9 MB/s (338520 bytes in 0.010s)
 nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.7 MB/s (7438 bytes in 0.003s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.5 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.3 MB/s (4231 bytes in 0.003s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (9732 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl: 1 file pushed. 0.6 MB/s (2298 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl: 1 file pushed. 0.7 MB/s (3255 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in 0.054s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl: 1 file pushed. 2.3 MB/s (12958 bytes in 0.005s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in 0.055s)
 
 ==========================================
 [Step 3] Running on device
 ==========================================
-[==========] Running 6 tests from 1 test suite.
+[==========] Running 2 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 6 tests from DelegateConvWaveTest
-[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
-GPU: QUALCOMM Adreno(TM) 830
-Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 432.4 us/iter = 2.483 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (142 ms)
-[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
-GPU: QUALCOMM Adreno(TM) 830
-global=(1024,4,4) local=(128,1,4)
-  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
-  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
-  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
-  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
-  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
-  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
-  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
-  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
-Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 486736.6 us = 0.002 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (4316 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate fp16 kernel — model shapes ===
-  M=437 N=4096 K=2560: 3180.5 us = 2.882 TFLOPS (×36 = 114.5 ms)
-  M=437 N=1024 K=2560: 894.0 us = 2.563 TFLOPS (×36 = 32.2 ms)
-  M=437 N=1024 K=2560: 903.1 us = 2.537 TFLOPS (×36 = 32.5 ms)
-  M=437 N=2560 K=4096: 3810.8 us = 2.405 TFLOPS (×36 = 137.2 ms)
-  M=437 N=9728 K=2560: 7917.7 us = 2.749 TFLOPS (×36 = 285.0 ms)
-  M=437 N=9728 K=2560: 7978.3 us = 2.728 TFLOPS (×36 = 287.2 ms)
-  M=437 N=2560 K=9728: 8099.8 us = 2.687 TFLOPS (×36 = 291.6 ms)
-  TOTAL: 3175.5 GFLOP in 1180.2 ms = 2.691 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1141 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate fp16 kernel — local-size tune ===
-
-  M=437 N=4096 K=2560
-    local=(128,1,4)   3171.5 us  2.890 TFLOPS  ✓
-    local=(64,1,4)   3268.6 us  2.804 TFLOPS  ✓
-    local=(32,1,4)   3255.8 us  2.815 TFLOPS  ✓
-    local=(64,2,4)   3371.7 us  2.718 TFLOPS  ✓
-    local=(32,2,4)   6308.1 us  1.453 TFLOPS  ✓
-    local=(128,1,2)   3164.2 us  2.896 TFLOPS  ✓
-    local=(64,1,2)   3262.8 us  2.809 TFLOPS  ✓
-    local=(32,1,2)   2880.4 us  3.182 TFLOPS  ✓
-    local=(128,1,1)   3158.5 us  2.902 TFLOPS  ✓
-    local=(64,1,1)   2899.4 us  3.161 TFLOPS  ✓
-    local=(32,1,1)   5561.9 us  1.648 TFLOPS  ✓
-    local=(256,1,2)   3303.5 us  2.774 TFLOPS  ✓
-    local=(256,1,1)   3312.3 us  2.767 TFLOPS  ✓
-    → best=(32,1,2)  2880.4 us  3.182 TFLOPS
-
-  M=437 N=1024 K=2560
-    local=(128,1,4)    914.7 us  2.505 TFLOPS  ✓
-    local=(64,1,4)    959.0 us  2.389 TFLOPS  ✓
-    local=(32,1,4)    936.7 us  2.446 TFLOPS  ✓
-    local=(64,2,4)    954.9 us  2.399 TFLOPS  ✓
-    local=(32,2,4)   1744.5 us  1.313 TFLOPS  ✓
-    local=(128,1,2)    909.6 us  2.519 TFLOPS  ✓
-    local=(64,1,2)    956.9 us  2.394 TFLOPS  ✓
-    local=(32,1,2)    805.5 us  2.844 TFLOPS  ✓
-    local=(128,1,1)    913.8 us  2.507 TFLOPS  ✓
-    local=(64,1,1)    867.0 us  2.643 TFLOPS  ✓
-    local=(32,1,1)   1518.9 us  1.508 TFLOPS  ✓
-    local=(256,1,2)   1101.1 us  2.081 TFLOPS  ✓
-    local=(256,1,1)    976.6 us  2.346 TFLOPS  ✓
-    → best=(32,1,2)  805.5 us  2.844 TFLOPS
-
-  M=437 N=1024 K=2560
-    local=(128,1,4)    912.7 us  2.510 TFLOPS  ✓
-    local=(64,1,4)    958.4 us  2.391 TFLOPS  ✓
-    local=(32,1,4)    937.2 us  2.445 TFLOPS  ✓
-    local=(64,2,4)    952.4 us  2.406 TFLOPS  ✓
-    local=(32,2,4)   1738.2 us  1.318 TFLOPS  ✓
-    local=(128,1,2)    907.7 us  2.524 TFLOPS  ✓
-    local=(64,1,2)    958.1 us  2.391 TFLOPS  ✓
-    local=(32,1,2)    858.0 us  2.670 TFLOPS  ✓
-    local=(128,1,1)    910.0 us  2.518 TFLOPS  ✓
-    local=(64,1,1)    855.1 us  2.679 TFLOPS  ✓
-    local=(32,1,1)   1516.6 us  1.511 TFLOPS  ✓
-    local=(256,1,2)   1100.1 us  2.083 TFLOPS  ✓
-    local=(256,1,1)    976.7 us  2.346 TFLOPS  ✓
-    → best=(64,1,1)  855.1 us  2.679 TFLOPS
-
-  M=437 N=2560 K=4096
-    local=(128,1,4)   3184.8 us  2.878 TFLOPS  ✓
-    local=(64,1,4)   3335.9 us  2.747 TFLOPS  ✓
-    local=(32,1,4)   3218.7 us  2.847 TFLOPS  ✓
-    local=(64,2,4)   3489.6 us  2.626 TFLOPS  ✓
-    local=(32,2,4)   6470.7 us  1.416 TFLOPS  ✓
-    local=(128,1,2)   3203.3 us  2.861 TFLOPS  ✓
-    local=(64,1,2)   3333.4 us  2.749 TFLOPS  ✓
-    local=(32,1,2)   2906.8 us  3.153 TFLOPS  ✓
-    local=(128,1,1)   3199.1 us  2.865 TFLOPS  ✓
-    local=(64,1,1)   2966.2 us  3.090 TFLOPS  ✓
-    local=(32,1,1)   5607.8 us  1.634 TFLOPS  ✓
-    local=(256,1,2)   3546.1 us  2.584 TFLOPS  ✓
-    local=(256,1,1)   3401.5 us  2.694 TFLOPS  ✓
-    → best=(32,1,2)  2906.8 us  3.153 TFLOPS
-
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7263.9 us  2.996 TFLOPS  ✓
-    local=(64,1,4)   7700.7 us  2.826 TFLOPS  ✓
-    local=(32,1,4)   7787.6 us  2.795 TFLOPS  ✓
-    local=(64,2,4)   7809.8 us  2.787 TFLOPS  ✓
-    local=(32,2,4)  14479.7 us  1.503 TFLOPS  ✓
-    local=(128,1,2)   7559.4 us  2.879 TFLOPS  ✓
-    local=(64,1,2)   7907.4 us  2.753 TFLOPS  ✓
-    local=(32,1,2)   6870.0 us  3.168 TFLOPS  ✓
-    local=(128,1,1)   7683.1 us  2.833 TFLOPS  ✓
-    local=(64,1,1)   6980.7 us  3.118 TFLOPS  ✓
-    local=(32,1,1)  12983.2 us  1.676 TFLOPS  ✓
-    local=(256,1,2)   7981.2 us  2.727 TFLOPS  ✓
-    local=(256,1,1)   7953.0 us  2.737 TFLOPS  ✓
-    → best=(32,1,2)  6870.0 us  3.168 TFLOPS
-
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7728.1 us  2.816 TFLOPS  ✓
-    local=(64,1,4)   8089.9 us  2.691 TFLOPS  ✓
-    local=(32,1,4)   8096.4 us  2.688 TFLOPS  ✓
-    local=(64,2,4)   7921.9 us  2.748 TFLOPS  ✓
-    local=(32,2,4)  14399.7 us  1.512 TFLOPS  ✓
-    local=(128,1,2)   7973.0 us  2.730 TFLOPS  ✓
-    local=(64,1,2)   8230.3 us  2.645 TFLOPS  ✓
-    local=(32,1,2)   7104.5 us  3.064 TFLOPS  ✓
-    local=(128,1,1)   7976.5 us  2.729 TFLOPS  ✓
-    local=(64,1,1)   7199.8 us  3.023 TFLOPS  ✓
-    local=(32,1,1)  12984.0 us  1.676 TFLOPS  ✓
-    local=(256,1,2)   8270.7 us  2.632 TFLOPS  ✓
-    local=(256,1,1)   8229.7 us  2.645 TFLOPS  ✓
-    → best=(32,1,2)  7104.5 us  3.064 TFLOPS
-
-  M=437 N=2560 K=9728
-    local=(128,1,4)   8159.5 us  2.668 TFLOPS  ✓
-    local=(64,1,4)   8590.1 us  2.534 TFLOPS  ✓
-    local=(32,1,4)   8531.0 us  2.551 TFLOPS  ✓
-    local=(64,2,4)   8308.0 us  2.620 TFLOPS  ✓
-    local=(32,2,4)  15263.5 us  1.426 TFLOPS  ✓
-    local=(128,1,2)   8325.2 us  2.614 TFLOPS  ✓
-    local=(64,1,2)   8679.3 us  2.508 TFLOPS  ✓
-    local=(32,1,2)   7568.2 us  2.876 TFLOPS  ✓
-    local=(128,1,1)   8355.6 us  2.605 TFLOPS  ✓
-    local=(64,1,1)   7645.9 us  2.847 TFLOPS  ✓
-    local=(32,1,1)  13307.1 us  1.636 TFLOPS  ✓
-    local=(256,1,2)   9224.0 us  2.360 TFLOPS  ✓
-    local=(256,1,1)   8971.2 us  2.426 TFLOPS  ✓
-    → best=(32,1,2)  7568.2 us  2.876 TFLOPS
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune (48783 ms)
+[----------] 2 tests from DelegateConvWaveTest
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Fused
 GPU: QUALCOMM Adreno(TM) 830
 
 === Fused int4 conv vs dequant+delegate reference ===
 
   M=437 N=4096 K=2560
-    fused:  15086.7 us  0.607 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  15446.2 us  0.593 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   3214.5 us  0.713 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2801.9 us  0.818 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   3204.4 us  0.715 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2818.7 us  0.813 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=4096
-    fused:  14252.7 us  0.643 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  13819.4 us  0.663 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  32111.9 us  0.678 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  29014.4 us  0.750 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  32400.6 us  0.672 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  29026.9 us  0.750 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=9728
-    fused:  49115.1 us  0.443 TFLOPS  rel_l2=0 max|d|=0  ✓
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14998 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
+    fused:  45164.1 us  0.482 TFLOPS  rel_l2=0 max|d|=0  ✓
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14407 ms)
+[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateInt4
 GPU: QUALCOMM Adreno(TM) 830
 
-=== Int4 Adreno kernel — model shapes ===
-  SKIP 437x4096x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x2560x4096: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x2560x9728: image1d_buffer failed -6
-  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (131 ms)
-[----------] 6 tests from DelegateConvWaveTest (69514 ms total)
+=== Delegate int4 conv vs dequant+delegate reference ===
 
-[----------] Global test environment tear-down
-[==========] 6 tests from 1 test suite ran. (69514 ms total)
-[  PASSED  ] 6 tests.
+  M=437 N=4096 K=2560
+    fp16 ref (dequant once + delegate conv):  3157.4 us  2.903 TFLOPS
+Killed 
 
 Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
