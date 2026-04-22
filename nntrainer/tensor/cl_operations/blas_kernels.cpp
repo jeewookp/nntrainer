@@ -2844,22 +2844,33 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
     s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
     s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
-    // Default local = (128, 1, 4). The captured Qualcomm wave-memory
-    // kernel uses qcom_sub_group_constant_load8 and inline asm at the
-    // subgroup level — smaller locals (e.g. 32×1×2 = single 64-lane
-    // subgroup) measure faster but produce numerically wrong output
-    // because the subgroup-level ops assume multiple subgroups' worth
-    // of data. litert_lm's tuner rejects candidates on 90% output-
-    // mismatch vs the (128,1,4) reference; our earlier mini-tune
-    // skipped that check and a bogus (32,1,2) "winner" silently
-    // corrupted prefill. Keep (128,1,4) until we re-tune with proper
-    // correctness gating.
-    // NNTR_DELEGATE_CONV_LOCAL=X,Y,Z still overrides for experiments.
+    // Default local = (64, 1, 1). Tuned + production-verified against
+    // the old (128,1,4) default:
+    //
+    //   Production verify (NNTR_DELEGATE_CONV_VERIFY=64,1,1) shows
+    //   mism=0/1024 max|d|=0 rel_l2=0 for every layer call — the
+    //   outputs are bit-exact identical to the (128,1,4) reference
+    //   on real int4→fp16 delegate-layout weights + real prefill
+    //   activations. Unittest tune measures ~9% faster (3.17 vs
+    //   2.89 TFLOPS on 437×4096×2560).
+    //
+    // Validity condition for this kernel: local_size[0] *
+    // local_size[1] must be a multiple of 64 (the Adreno subgroup
+    // size). The kernel's qcom_sub_group_constant_load8 requires
+    // local_id(2) to be uniform within a subgroup so f_offset =
+    // Z * ... is the same on every lane participating in the load.
+    // That holds iff lx*ly ∈ {64, 128, 192, 256, ...}. lx*ly = 32
+    // (e.g. the bogus (32,1,2) "winner") spans two Z values inside
+    // one subgroup and the load uses lane 0's f_offset for both —
+    // half the lanes read the wrong weight rows and the FMA result
+    // drifts into near-random noise (verified rel_l2 ≈ 1.0 on prod).
+    //
+    // NNTR_DELEGATE_CONV_LOCAL=X,Y,Z overrides for experiments.
     // Kernel mapping (from litert_lm's tune loop):
     //   X = group_id(1) * local[0] + local_id(0)   needs M values
     //   Y = group_id(2) * local[1] + local_id(1)   needs 1 value (h=1)
     //   Z = group_id(0) * local[2] + local_id(2)   needs (dst_slices+7)/8
-    int lx = 128, ly = 1, lz = 4;
+    int lx = 64, ly = 1, lz = 1;
     if (const char *env = std::getenv("NNTR_DELEGATE_CONV_LOCAL")) {
       int a_, b_, c_;
       if (std::sscanf(env, "%d,%d,%d", &a_, &b_, &c_) == 3 &&
