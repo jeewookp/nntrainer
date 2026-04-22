@@ -1,165 +1,160 @@
-
-==========================================
-[Step 2] Pushing to device
-==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 32.4 MB/s (380752 bytes in 0.011s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.8 MB/s (7438 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.2 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.0 MB/s (4231 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl: 1 file pushed. 0.6 MB/s (2298 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl: 1 file pushed. 0.8 MB/s (3255 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl: 1 file pushed. 1.2 MB/s (5521 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_dense.cl: 1 file pushed. 2.5 MB/s (12582 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0.cl: 1 file pushed. 1.0 MB/s (4622 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0_r3.cl: 1 file pushed. 1.6 MB/s (7649 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r4_r7.cl: 1 file pushed. 1.6 MB/s (7375 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.2 MB/s (1822720 bytes in 0.056s)
-
-==========================================
 [Step 3] Running on device
 ==========================================
-[==========] Running 7 tests from 1 test suite.
+[==========] Running 8 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 7 tests from DelegateConvWaveTest
+[----------] 8 tests from DelegateConvWaveTest
 [ RUN      ] DelegateConvWaveTest.DelegateLoadProbe
 GPU: QUALCOMM Adreno(TM) 830
 
 === Delegate wave-load microbench (count=32 vs count=8) ===
 
   M=437 N=4096 K=2560  (iters/thread=320)
-    count=32 (padded)      1433.9 us   requested= 240.00 MB     175.5 GB/s
-    count=8  (dense)        822.7 us   requested=  60.00 MB      76.5 GB/s
+    count=32 (padded)      1437.4 us   requested= 240.00 MB     175.1 GB/s
+    count=8  (dense)        830.9 us   requested=  60.00 MB      75.7 GB/s
 
   M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       320.5 us   requested=  60.00 MB     196.3 GB/s
-    count=8  (dense)        200.2 us   requested=  15.00 MB      78.6 GB/s
+    count=32 (padded)       320.2 us   requested=  60.00 MB     196.5 GB/s
+    count=8  (dense)        196.3 us   requested=  15.00 MB      80.1 GB/s
 
   M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       285.8 us   requested=  60.00 MB     220.2 GB/s
-    count=8  (dense)        196.8 us   requested=  15.00 MB      79.9 GB/s
+    count=32 (padded)       314.4 us   requested=  60.00 MB     200.1 GB/s
+    count=8  (dense)        193.5 us   requested=  15.00 MB      81.3 GB/s
 
   M=437 N=2560 K=4096  (iters/thread=512)
-    count=32 (padded)      1436.6 us   requested= 240.00 MB     175.2 GB/s
-    count=8  (dense)        848.3 us   requested=  60.00 MB      74.2 GB/s
+    count=32 (padded)      1447.0 us   requested= 240.00 MB     173.9 GB/s
+    count=8  (dense)        855.4 us   requested=  60.00 MB      73.6 GB/s
 
   M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3311.0 us   requested= 570.00 MB     180.5 GB/s
-    count=8  (dense)       1740.9 us   requested= 142.50 MB      85.8 GB/s
+    count=32 (padded)      3319.8 us   requested= 570.00 MB     180.0 GB/s
+    count=8  (dense)       1757.4 us   requested= 142.50 MB      85.0 GB/s
 
   M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3258.6 us   requested= 570.00 MB     183.4 GB/s
-    count=8  (dense)       1737.1 us   requested= 142.50 MB      86.0 GB/s
+    count=32 (padded)      3322.0 us   requested= 570.00 MB     179.9 GB/s
+    count=8  (dense)       1770.9 us   requested= 142.50 MB      84.4 GB/s
 
   M=437 N=2560 K=9728  (iters/thread=1216)
-    count=32 (padded)      3375.8 us   requested= 570.00 MB     177.0 GB/s
-    count=8  (dense)       2045.8 us   requested= 142.50 MB      73.0 GB/s
-[       OK ] DelegateConvWaveTest.DelegateLoadProbe (2479 ms)
+    count=32 (padded)      3438.5 us   requested= 570.00 MB     173.8 GB/s
+    count=8  (dense)       2070.0 us   requested= 142.50 MB      72.2 GB/s
+[       OK ] DelegateConvWaveTest.DelegateLoadProbe (2527 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Fused
 GPU: QUALCOMM Adreno(TM) 830
 
 === Fused int4 conv vs dequant+delegate reference ===
 
   M=437 N=4096 K=2560
-    fused:  15230.7 us  0.602 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  15600.4 us  0.587 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2748.1 us  0.834 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2797.3 us  0.819 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2743.7 us  0.835 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2748.0 us  0.834 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=4096
-    fused:  13666.7 us  0.671 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  13608.9 us  0.673 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  28890.6 us  0.753 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  28891.5 us  0.753 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  28863.0 us  0.754 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  28930.9 us  0.752 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=9728
-    fused:  43807.4 us  0.497 TFLOPS  rel_l2=0 max|d|=0  ✓
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14243 ms)
+    fused:  43889.9 us  0.496 TFLOPS  rel_l2=0 max|d|=0  ✓
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14145 ms)
 [ RUN      ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense
 GPU: QUALCOMM Adreno(TM) 830
 
 === Delegate int4 dense (count=8) vs fp16 ref ===
 
   M=437 N=1024 K=2560
-    fp16 ref (delegate):             913.0 us  2.509 TFLOPS
-    int4 dense (count=8 load):     693196.2 us  0.003 TFLOPS  rel_l2=0 max|d|=0  OK
-[       OK ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense (5324 ms)
+    fp16 ref (delegate):             914.1 us  2.506 TFLOPS
+    int4 dense (count=8 load):     781792.2 us  0.003 TFLOPS  rel_l2=0 max|d|=0  OK
+[       OK ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense (5796 ms)
 [ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0Only
 GPU: QUALCOMM Adreno(TM) 830
 
 === Probe: int4 dense r0-only (1/8 compute) ===
 
   M=437 N=1024 K=2560  (r0 does 1/8 of full FMAs)
-    fp16 ref (delegate, full):       1010.8 us  2.267 TFLOPS (full)
-    int4 r0-only (count=8 + 1/8 FMA):   755.6 us  0.379 TFLOPS (r0-scaled)
+    fp16 ref (delegate, full):        986.7 us  2.322 TFLOPS (full)
+    int4 r0-only (count=8 + 1/8 FMA):   803.5 us  0.356 TFLOPS (r0-scaled)
       rel_l2=0 max|d|=0  cmp=55936  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0Only (197 ms)
+[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0Only (203 ms)
 [ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3
 GPU: QUALCOMM Adreno(TM) 830
 
 === Probe: int4 dense r0..r3 (1/2 compute, 4 acc) ===
 
   M=437 N=1024 K=2560  (r0..r3 does 1/2 of full FMAs)
-    fp16 ref (delegate, full):       1004.7 us  2.280 TFLOPS (full)
-    int4 r0..r3 (count=8 + 1/2 FMA):  2004.9 us  0.571 TFLOPS (r0..r3-scaled)
+    fp16 ref (delegate, full):        954.0 us  2.402 TFLOPS (full)
+    int4 r0..r3 (count=8 + 1/2 FMA):  1979.8 us  0.579 TFLOPS (r0..r3-scaled)
       rel_l2=0 max|d|=0  cmp=223744  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3 (271 ms)
+[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3 (266 ms)
 [ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_Split_R0_R7
 GPU: QUALCOMM Adreno(TM) 830
 
 === Probe: int4 dense split (r0..r3 + r4..r7) ===
 
   M=437 N=1024 K=2560  (split r0..r3 + r4..r7 = full)
-    fp16 ref (delegate, full):       1003.1 us  2.284 TFLOPS
-    int4 split (r0..r3 + r4..r7):    3820.3 us  0.600 TFLOPS  rel_l2=0 max|d|=0  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_Split_R0_R7 (383 ms)
+    fp16 ref (delegate, full):        976.9 us  2.345 TFLOPS
+    int4 split (r0..r3 + r4..r7):    3685.1 us  0.622 TFLOPS  rel_l2=0 max|d|=0  OK
+[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_Split_R0_R7 (384 ms)
 [ RUN      ] DelegateConvWaveTest.AllShapes_DelegateInt4Split
 GPU: QUALCOMM Adreno(TM) 830
 
 === All shapes: fp16 delegate vs int4 split ===
 
   M=437 N=4096 K=2560
-    fp16 delegate:           3369.6 us  2.720 TFLOPS
-    int4 split (r0r3+r4r7): 13163.4 us  0.696 TFLOPS  rel_l2=0  3.91x fp16  OK
+    fp16 delegate:           3355.7 us  2.731 TFLOPS
+    int4 split (r0r3+r4r7): 13163.8 us  0.696 TFLOPS  rel_l2=0  3.92x fp16  OK
 
   M=437 N=1024 K=2560
-    fp16 delegate:            942.4 us  2.431 TFLOPS
-    int4 split (r0r3+r4r7):  4526.9 us  0.506 TFLOPS  rel_l2=0  4.80x fp16  OK
+    fp16 delegate:           1189.8 us  1.926 TFLOPS
+    int4 split (r0r3+r4r7):  4651.4 us  0.493 TFLOPS  rel_l2=0  3.91x fp16  OK
 
   M=437 N=1024 K=2560
-    fp16 delegate:           2013.2 us  1.138 TFLOPS
-    int4 split (r0r3+r4r7):  3935.6 us  0.582 TFLOPS  rel_l2=0  1.95x fp16  OK
+    fp16 delegate:           1018.3 us  2.250 TFLOPS
+    int4 split (r0r3+r4r7):  4611.0 us  0.497 TFLOPS  rel_l2=0  4.53x fp16  OK
 
   M=437 N=2560 K=4096
-    fp16 delegate:           4128.5 us  2.220 TFLOPS
-    int4 split (r0r3+r4r7): 13186.1 us  0.695 TFLOPS  rel_l2=0  3.19x fp16  OK
+    fp16 delegate:           4137.8 us  2.215 TFLOPS
+    int4 split (r0r3+r4r7): 12381.1 us  0.740 TFLOPS  rel_l2=0  2.99x fp16  OK
 
   M=437 N=9728 K=2560
-    fp16 delegate:           8270.0 us  2.632 TFLOPS
-    int4 split (r0r3+r4r7): 27617.2 us  0.788 TFLOPS  rel_l2=0  3.34x fp16  OK
+    fp16 delegate:           8381.2 us  2.597 TFLOPS
+    int4 split (r0r3+r4r7): 27604.3 us  0.788 TFLOPS  rel_l2=0  3.29x fp16  OK
 
   M=437 N=9728 K=2560
-    fp16 delegate:           8392.0 us  2.594 TFLOPS
-    int4 split (r0r3+r4r7): 28472.2 us  0.764 TFLOPS  rel_l2=0  3.39x fp16  OK
+    fp16 delegate:           8289.0 us  2.626 TFLOPS
+    int4 split (r0r3+r4r7): 28496.2 us  0.764 TFLOPS  rel_l2=0  3.44x fp16  OK
 
   M=437 N=2560 K=9728
-    fp16 delegate:           8605.3 us  2.529 TFLOPS
-    int4 split (r0r3+r4r7): 29565.4 us  0.736 TFLOPS  rel_l2=0  3.44x fp16  OK
+    fp16 delegate:           8580.8 us  2.537 TFLOPS
+    int4 split (r0r3+r4r7): 29551.0 us  0.737 TFLOPS  rel_l2=0  3.44x fp16  OK
 
   Totals over 7 shapes:
-    fp16 delegate:    35721.0 us
-    int4 split:      120467.0 us  (3.37x fp16)
-[       OK ] DelegateConvWaveTest.AllShapes_DelegateInt4Split (2018 ms)
-[----------] 7 tests from DelegateConvWaveTest (24918 ms total)
+    fp16 delegate:    34952.6 us
+    int4 split:      120458.9 us  (3.45x fp16)
+[       OK ] DelegateConvWaveTest.AllShapes_DelegateInt4Split (2038 ms)
+[ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3_Phased
+GPU: QUALCOMM Adreno(TM) 830
+
+=== Probe: r0..r3 inline DQ vs phased ===
+
+  M=437 N=1024 K=2560  (r0..r3 = 1/2 of full FMAs)
+    fp16 delegate (full):          868.9 us  2.637 TFLOPS (full)
+    int4 r0..r3 inline DQ:        1872.0 us  0.612 TFLOPS (r0..r3-scaled)  rel_l2=0 OK
+    int4 r0..r3 phased:           1990.2 us  0.576 TFLOPS (r0..r3-scaled)  rel_l2=0 OK
+
+    phased / inline = 1.06x  (lower is better)
+    phased_x2 (split-est) / fp16 delegate = 4.58x
+[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3_Phased (362 ms)
+[----------] 8 tests from DelegateConvWaveTest (25726 ms total)
 
 [----------] Global test environment tear-down
-[==========] 7 tests from 1 test suite ran. (24919 ms total)
-[  PASSED  ] 7 tests.
+[==========] 8 tests from 1 test suite ran. (25726 ms total)
+[  PASSED  ] 8 tests.
 
 Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
