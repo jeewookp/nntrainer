@@ -1,170 +1,368 @@
-GPU: QUALCOMM Adreno(TM) 830
-Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 434.0 us/iter = 2.474 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (152 ms)
-[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
-GPU: QUALCOMM Adreno(TM) 830
-global=(1024,4,4) local=(128,1,4)
-  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
-  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
-  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
-  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
-  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
-  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
-  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
-  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
-Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 414863.7 us = 0.003 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (3693 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
-GPU: QUALCOMM Adreno(TM) 830
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-=== Delegate fp16 kernel — model shapes ===
-  M=437 N=4096 K=2560: 3242.4 us = 2.826 TFLOPS (×36 = 116.7 ms)
-  M=437 N=1024 K=2560: 941.5 us = 2.433 TFLOPS (×36 = 33.9 ms)
-  M=437 N=1024 K=2560: 1456.5 us = 1.573 TFLOPS (×36 = 52.4 ms)
-  M=437 N=2560 K=4096: 3855.1 us = 2.377 TFLOPS (×36 = 138.8 ms)
-  M=437 N=9728 K=2560: 7836.6 us = 2.777 TFLOPS (×36 = 282.1 ms)
-  M=437 N=9728 K=2560: 7378.0 us = 2.950 TFLOPS (×36 = 265.6 ms)
-  M=437 N=2560 K=9728: 8115.9 us = 2.682 TFLOPS (×36 = 292.2 ms)
-  TOTAL: 3175.5 GFLOP in 1181.7 ms = 2.687 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1130 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune
-GPU: QUALCOMM Adreno(TM) 830
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-=== Delegate fp16 kernel — local-size tune ===
+[VERIFY call=  0 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.643 rel_l2=1.01
+[VERIFY call=  1 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=0.6567 rel_l2=0.9719
+[VERIFY call=  2 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=495/1024 max|d|=1.022 rel_l2=1.031
+[VERIFY call=  3 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=0.9624 rel_l2=0.9766
+[VERIFY call=  4 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=0.7026 rel_l2=0.8533
+[VERIFY call=  5 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=0.9536 rel_l2=0.8912
+[VERIFY call=  6 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=2.46 rel_l2=0.6227
+[VERIFY call=  7 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=0.5992 rel_l2=1.011
+[VERIFY call=  8 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=0.8103 rel_l2=1.059
+[VERIFY call=  9 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=496/1024 max|d|=0.3696 rel_l2=1.026
+[VERIFY call= 10 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=0.3055 rel_l2=0.8513
+[VERIFY call= 11 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=499/1025 max|d|=12.14 rel_l2=1.053
+[VERIFY call= 12 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=277/1025 max|d|=11.38 rel_l2=0.1179
+[VERIFY call= 13 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=491/1025 max|d|=0.6685 rel_l2=0.1206
+[VERIFY call= 14 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=0.3525 rel_l2=0.977
+[VERIFY call= 15 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=0.7115 rel_l2=1.014
+[VERIFY call= 16 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=0.3328 rel_l2=0.9571
+[VERIFY call= 17 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=0.4473 rel_l2=1.008
+[VERIFY call= 18 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=7.791 rel_l2=0.9384
+[VERIFY call= 19 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=383/1025 max|d|=11.84 rel_l2=0.2236
+[VERIFY call= 20 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=508/1025 max|d|=0.9762 rel_l2=0.2698
+[VERIFY call= 21 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=0.4138 rel_l2=0.9871
+[VERIFY call= 22 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=1.494 rel_l2=0.9954
+[VERIFY call= 23 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=0.4696 rel_l2=1.002
+[VERIFY call= 24 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=0.527 rel_l2=0.9563
+[VERIFY call= 25 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=5.416 rel_l2=0.9821
+[VERIFY call= 26 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=397/1025 max|d|=8.616 rel_l2=0.1574
+[VERIFY call= 27 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=1.775 rel_l2=0.9361
+[VERIFY call= 28 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=0.588 rel_l2=1.014
+[VERIFY call= 29 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=1.467 rel_l2=1.009
+[VERIFY call= 30 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=0.788 rel_l2=1.043
+[VERIFY call= 31 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=1.073 rel_l2=1.036
+[VERIFY call= 32 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=5.924 rel_l2=0.9663
+[VERIFY call= 33 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=455/1025 max|d|=7.057 rel_l2=0.2904
+[VERIFY call= 34 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=3.436 rel_l2=0.8253
+[VERIFY call= 35 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=0.614 rel_l2=0.9988
+[VERIFY call= 36 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.519 rel_l2=0.9756
+[VERIFY call= 37 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=0.7788 rel_l2=1.007
+[VERIFY call= 38 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=1.182 rel_l2=0.5846
+[VERIFY call= 39 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=2.095 rel_l2=1.037
+[VERIFY call= 40 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=488/1025 max|d|=6.218 rel_l2=0.5016
+[VERIFY call= 41 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=5.544 rel_l2=0.3629
+[VERIFY call= 42 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=2.917 rel_l2=1.01
+[VERIFY call= 43 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=2.17 rel_l2=0.9745
+[VERIFY call= 44 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=497/1024 max|d|=1.155 rel_l2=0.9879
+[VERIFY call= 45 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=1.08 rel_l2=0.2354
+[VERIFY call= 46 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=2.96 rel_l2=1.058
+[VERIFY call= 47 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=483/1025 max|d|=4.547 rel_l2=0.4278
+[VERIFY call= 48 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=2.15 rel_l2=0.01081
+[VERIFY call= 49 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=0.2636 rel_l2=0.9999
+[VERIFY call= 50 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=496/1024 max|d|=2.664 rel_l2=0.9833
+[VERIFY call= 51 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=488/1024 max|d|=1.56 rel_l2=0.9974
+[VERIFY call= 52 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=0.762 rel_l2=0.9206
+[VERIFY call= 53 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=2.002 rel_l2=1.002
+[VERIFY call= 54 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=482/1025 max|d|=4.184 rel_l2=0.376
+[VERIFY call= 55 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=2.482 rel_l2=1.057
+[VERIFY call= 56 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=494/1024 max|d|=0.4556 rel_l2=0.9849
+[VERIFY call= 57 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=4.029 rel_l2=1.019
+[VERIFY call= 58 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=484/1024 max|d|=1.903 rel_l2=1.04
+[VERIFY call= 59 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=0.7874 rel_l2=0.9079
+[VERIFY call= 60 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=2.479 rel_l2=0.9699
+[VERIFY call= 61 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=492/1025 max|d|=3.904 rel_l2=0.7391
+[VERIFY call= 62 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=1.571 rel_l2=1.063
+[VERIFY call= 63 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=1.013 rel_l2=1.004
+[VERIFY call= 64 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=3.112 rel_l2=0.986
+[VERIFY call= 65 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=490/1024 max|d|=1.865 rel_l2=0.9663
+[VERIFY call= 66 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=1.199 rel_l2=0.9451
+[VERIFY call= 67 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=2.244 rel_l2=1.002
+[VERIFY call= 68 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=499/1025 max|d|=4.878 rel_l2=0.63
+[VERIFY call= 69 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=1.757 rel_l2=1.028
+[VERIFY call= 70 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=498/1024 max|d|=1.467 rel_l2=1.02
+[VERIFY call= 71 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=4.028 rel_l2=1.001
+[VERIFY call= 72 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=491/1024 max|d|=2.572 rel_l2=0.9783
+[VERIFY call= 73 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=1.259 rel_l2=0.9166
+[VERIFY call= 74 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=2.351 rel_l2=1.018
+[VERIFY call= 75 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=3.613 rel_l2=0.6445
+[VERIFY call= 76 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=2.945 rel_l2=1.052
+[VERIFY call= 77 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=1.784 rel_l2=1.029
+[VERIFY call= 78 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=2.267 rel_l2=1.036
+[VERIFY call= 79 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=493/1024 max|d|=1.497 rel_l2=0.9564
+[VERIFY call= 80 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=1.355 rel_l2=0.7505
+[VERIFY call= 81 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=2.072 rel_l2=0.9787
+[VERIFY call= 82 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=490/1025 max|d|=2.865 rel_l2=0.6649
+[VERIFY call= 83 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=1.974 rel_l2=1.055
+[VERIFY call= 84 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=1.227 rel_l2=1.025
+[VERIFY call= 85 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=2.813 rel_l2=0.9837
+[VERIFY call= 86 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=497/1024 max|d|=2.364 rel_l2=0.982
+[VERIFY call= 87 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=1.714 rel_l2=0.8657
+[VERIFY call= 88 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=508/1025 max|d|=2.377 rel_l2=1.014
+[VERIFY call= 89 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=491/1025 max|d|=3.094 rel_l2=0.727
+[VERIFY call= 90 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=1.978 rel_l2=1.053
+[VERIFY call= 91 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=1.141 rel_l2=1.008
+[VERIFY call= 92 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=2.765 rel_l2=1.001
+[VERIFY call= 93 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=495/1024 max|d|=1.519 rel_l2=0.9904
+[VERIFY call= 94 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=508/1025 max|d|=0.9021 rel_l2=0.9416
+[VERIFY call= 95 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=2.316 rel_l2=0.978
+[VERIFY call= 96 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=4.842 rel_l2=0.7873
+[VERIFY call= 97 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=495/1025 max|d|=1.666 rel_l2=0.9823
+[VERIFY call= 98 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=498/1024 max|d|=1.975 rel_l2=0.9899
+[VERIFY call= 99 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=5.535 rel_l2=0.9993
+[VERIFY call=100 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=498/1024 max|d|=1.956 rel_l2=1.01
+[VERIFY call=101 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=3.086 rel_l2=0.8537
+[VERIFY call=102 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=2.021 rel_l2=0.9692
+[VERIFY call=103 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=4.876 rel_l2=0.829
+[VERIFY call=104 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=2.179 rel_l2=1.031
+[VERIFY call=105 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=496/1024 max|d|=0.8805 rel_l2=0.9909
+[VERIFY call=106 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=3.317 rel_l2=1.006
+[VERIFY call=107 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=496/1024 max|d|=2.22 rel_l2=0.9609
+[VERIFY call=108 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=3.216 rel_l2=0.9229
+[VERIFY call=109 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=1.975 rel_l2=0.9787
+[VERIFY call=110 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=3.669 rel_l2=0.7567
+[VERIFY call=111 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=3.597 rel_l2=1.029
+[VERIFY call=112 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=1.035 rel_l2=1.005
+[VERIFY call=113 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=2.885 rel_l2=0.9918
+[VERIFY call=114 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=1.804 rel_l2=0.9698
+[VERIFY call=115 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=2.364 rel_l2=0.8816
+[VERIFY call=116 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=2.156 rel_l2=0.9429
+[VERIFY call=117 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=6.938 rel_l2=0.8264
+[VERIFY call=118 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=1.417 rel_l2=0.3569
+[VERIFY call=119 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=1.008 rel_l2=1.005
+[VERIFY call=120 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=3.183 rel_l2=1.004
+[VERIFY call=121 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=494/1024 max|d|=2.553 rel_l2=0.9503
+[VERIFY call=122 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=1.476 rel_l2=0.6723
+[VERIFY call=123 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=1.774 rel_l2=0.9735
+[VERIFY call=124 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=3.614 rel_l2=0.8225
+[VERIFY call=125 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=3.397 rel_l2=1.071
+[VERIFY call=126 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=1.866 rel_l2=0.9875
+[VERIFY call=127 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=3.458 rel_l2=0.9962
+[VERIFY call=128 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=2.329 rel_l2=0.9922
+[VERIFY call=129 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=510/1025 max|d|=3.212 rel_l2=0.8274
+[VERIFY call=130 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=4.173 rel_l2=1.013
+[VERIFY call=131 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=2.964 rel_l2=0.7791
+[VERIFY call=132 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=1.644 rel_l2=0.9809
+[VERIFY call=133 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=2.212 rel_l2=1.002
+[VERIFY call=134 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=6.041 rel_l2=1.017
+[VERIFY call=135 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=3.926 rel_l2=0.9825
+[VERIFY call=136 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=3.808 rel_l2=0.972
+[VERIFY call=137 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=2.994 rel_l2=1.008
+[VERIFY call=138 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=4.648 rel_l2=0.8756
+[VERIFY call=139 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=5.066 rel_l2=1.09
+[VERIFY call=140 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=1.417 rel_l2=1.018
+[VERIFY call=141 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=7.529 rel_l2=0.9918
+[VERIFY call=142 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=497/1024 max|d|=3.123 rel_l2=1.021
+[VERIFY call=143 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=499/1025 max|d|=2.037 rel_l2=0.7913
+[VERIFY call=144 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=2.336 rel_l2=1.024
+[VERIFY call=145 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=4.11 rel_l2=0.8602
+[VERIFY call=146 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=4.129 rel_l2=1.098
+[VERIFY call=147 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=2.122 rel_l2=1.005
+[VERIFY call=148 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=6.727 rel_l2=0.9929
+[VERIFY call=149 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=3.813 rel_l2=1.006
+[VERIFY call=150 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=2.679 rel_l2=0.9104
+[VERIFY call=151 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=3.221 rel_l2=1.007
+[VERIFY call=152 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=493/1025 max|d|=4.28 rel_l2=0.7849
+[VERIFY call=153 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=495/1025 max|d|=4.222 rel_l2=1.051
+[VERIFY call=154 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=2.553 rel_l2=1.003
+[VERIFY call=155 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=508/1024 max|d|=8.909 rel_l2=1.025
+[VERIFY call=156 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=5.254 rel_l2=1.029
+[VERIFY call=157 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=3.438 rel_l2=0.9066
+[VERIFY call=158 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=497/1025 max|d|=3.113 rel_l2=0.9817
+[VERIFY call=159 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=4.477 rel_l2=0.7913
+[VERIFY call=160 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=4.479 rel_l2=1.006
+[VERIFY call=161 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=2.107 rel_l2=0.9754
+[VERIFY call=162 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=11.05 rel_l2=1.02
+[VERIFY call=163 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=495/1024 max|d|=4.676 rel_l2=1.018
+[VERIFY call=164 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=6.809 rel_l2=1.072
+[VERIFY call=165 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=499/1025 max|d|=4.378 rel_l2=0.9229
+[VERIFY call=166 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=489/1025 max|d|=5.872 rel_l2=0.8462
+[VERIFY call=167 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=4.525 rel_l2=0.9482
+[VERIFY call=168 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=1.468 rel_l2=0.9988
+[VERIFY call=169 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=8.802 rel_l2=0.9928
+[VERIFY call=170 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=6.029 rel_l2=1.025
+[VERIFY call=171 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=12.54 rel_l2=1.262
+[VERIFY call=172 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=4.296 rel_l2=1.044
+[VERIFY call=173 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=6.36 rel_l2=0.7926
+[VERIFY call=174 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=510/1025 max|d|=8.127 rel_l2=0.9245
+[VERIFY call=175 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.403 rel_l2=1.022
+[VERIFY call=176 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=9.882 rel_l2=1.008
+[VERIFY call=177 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=7.631 rel_l2=1.048
+[VERIFY call=178 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=507/1025 max|d|=3.034 rel_l2=1.045
+[VERIFY call=179 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=4.2 rel_l2=0.9715
+[VERIFY call=180 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=499/1025 max|d|=4.424 rel_l2=0.7098
+[VERIFY call=181 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=9.665 rel_l2=1.131
+[VERIFY call=182 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.581 rel_l2=1.02
+[VERIFY call=183 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=8.114 rel_l2=1
+[VERIFY call=184 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=499/1024 max|d|=5.271 rel_l2=1.044
+[VERIFY call=185 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=3.208 rel_l2=0.9897
+[VERIFY call=186 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=5.232 rel_l2=0.9857
+[VERIFY call=187 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=490/1025 max|d|=6.676 rel_l2=0.671
+[VERIFY call=188 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=508/1025 max|d|=15.99 rel_l2=1.18
+[VERIFY call=189 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=1.694 rel_l2=0.9945
+[VERIFY call=190 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=16.51 rel_l2=1.038
+[VERIFY call=191 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=7.534 rel_l2=0.971
+[VERIFY call=192 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=507/1025 max|d|=2.854 rel_l2=1.007
+[VERIFY call=193 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=500/1025 max|d|=7.176 rel_l2=0.9586
+[VERIFY call=194 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=487/1025 max|d|=7.299 rel_l2=0.6965
+[VERIFY call=195 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=10.95 rel_l2=0.9893
+[VERIFY call=196 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.754 rel_l2=0.9851
+[VERIFY call=197 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=509/1024 max|d|=12.3 rel_l2=1.042
+[VERIFY call=198 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=8.66 rel_l2=1.009
+[VERIFY call=199 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=507/1025 max|d|=2.369 rel_l2=0.9266
+[VERIFY call=200 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=7.436 rel_l2=0.9967
+[VERIFY call=201 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=489/1025 max|d|=7.283 rel_l2=0.6716
+[VERIFY call=202 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=13.31 rel_l2=1.096
+[VERIFY call=203 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.891 rel_l2=0.9948
+[VERIFY call=204 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=508/1024 max|d|=15.98 rel_l2=0.9849
+[VERIFY call=205 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=12.31 rel_l2=0.9856
+[VERIFY call=206 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=511/1025 max|d|=3.594 rel_l2=1.049
+[VERIFY call=207 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=503/1025 max|d|=6.205 rel_l2=1.054
+[VERIFY call=208 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=489/1025 max|d|=7.035 rel_l2=0.6291
+[VERIFY call=209 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=21.62 rel_l2=0.9897
+[VERIFY call=210 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=509/1024 max|d|=4.643 rel_l2=0.9756
+[VERIFY call=211 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=30.27 rel_l2=1.043
+[VERIFY call=212 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=15.11 rel_l2=1.043
+[VERIFY call=213 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=9.6 rel_l2=0.9913
+[VERIFY call=214 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=8.691 rel_l2=1.022
+[VERIFY call=215 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=493/1025 max|d|=6.211 rel_l2=0.6349
+[VERIFY call=216 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=33.12 rel_l2=1.006
+[VERIFY call=217 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=4.126 rel_l2=0.9288
+[VERIFY call=218 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=502/1024 max|d|=22.28 rel_l2=0.9846
+[VERIFY call=219 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=17.84 rel_l2=0.9764
+[VERIFY call=220 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=508/1025 max|d|=8.37 rel_l2=1.018
+[VERIFY call=221 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=7.641 rel_l2=1.011
+[VERIFY call=222 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=495/1025 max|d|=8.027 rel_l2=0.676
+[VERIFY call=223 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=30.2 rel_l2=0.9902
+[VERIFY call=224 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=500/1024 max|d|=3.553 rel_l2=0.983
+[VERIFY call=225 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=510/1024 max|d|=33.25 rel_l2=1.059
+[VERIFY call=226 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=17.98 rel_l2=0.9881
+[VERIFY call=227 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=6.991 rel_l2=1.007
+[VERIFY call=228 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=6.814 rel_l2=0.9649
+[VERIFY call=229 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=498/1025 max|d|=6.573 rel_l2=0.715
+[VERIFY call=230 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=26.21 rel_l2=1.016
+[VERIFY call=231 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=4.658 rel_l2=0.9803
+[VERIFY call=232 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=41.12 rel_l2=1.049
+[VERIFY call=233 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=37.75 rel_l2=0.9902
+[VERIFY call=234 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=16.66 rel_l2=1.106
+[VERIFY call=235 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=11.71 rel_l2=0.9948
+[VERIFY call=236 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=495/1025 max|d|=8.125 rel_l2=0.7199
+[VERIFY call=237 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=504/1025 max|d|=50.11 rel_l2=1.227
+[VERIFY call=238 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=505/1024 max|d|=8.738 rel_l2=1.063
+[VERIFY call=239 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=508/1024 max|d|=32.32 rel_l2=1.013
+[VERIFY call=240 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=507/1024 max|d|=50.05 rel_l2=1.008
+[VERIFY call=241 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=40.61 rel_l2=1.286
+[VERIFY call=242 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=13.29 rel_l2=1.028
+[VERIFY call=243 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=491/1025 max|d|=11.51 rel_l2=0.7389
+[VERIFY call=244 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=506/1025 max|d|=150.8 rel_l2=0.906
+[VERIFY call=245 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=504/1024 max|d|=21.02 rel_l2=0.9963
+[VERIFY call=246 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=506/1024 max|d|=49.09 rel_l2=1.008
+[VERIFY call=247 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=508/1024 max|d|=20.53 rel_l2=1.027
+[VERIFY call=248 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=57.71 rel_l2=0.9482
+[VERIFY call=249 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=501/1025 max|d|=12.26 rel_l2=0.9475
+[VERIFY call=250 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=485/1025 max|d|=16.89 rel_l2=0.5819
+[VERIFY call=251 M=437 N=2560 K=9728] local(128,1,4)→(32,1,2) mism=505/1025 max|d|=284.9 rel_l2=0.9664
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-  M=437 N=4096 K=2560
-    local=(128,1,4)   3152.1 us  2.907 TFLOPS  ✓
-    local=(64,1,4)   3249.3 us  2.820 TFLOPS  ✓
-    local=(32,1,4)   3226.0 us  2.841 TFLOPS  ✓
-    local=(64,2,4)   3376.6 us  2.714 TFLOPS  ✓
-    local=(32,2,4)   6221.3 us  1.473 TFLOPS  ✓
-    local=(128,1,2)   3147.5 us  2.912 TFLOPS  ✓
-    local=(64,1,2)   3239.4 us  2.829 TFLOPS  ✓
-    local=(32,1,2)   2834.9 us  3.233 TFLOPS  ✓
-    local=(128,1,1)   3140.0 us  2.919 TFLOPS  ✓
-    local=(64,1,1)   2891.1 us  3.170 TFLOPS  ✓
-    local=(32,1,1)   5546.7 us  1.652 TFLOPS  ✓
-    local=(256,1,2)   3289.5 us  2.786 TFLOPS  ✓
-    local=(256,1,1)   3268.9 us  2.804 TFLOPS  ✓
-    → best=(32,1,2)  2834.9 us  3.233 TFLOPS
 
-  M=437 N=1024 K=2560
-    local=(128,1,4)    857.6 us  2.672 TFLOPS  ✓
-    local=(64,1,4)    955.6 us  2.398 TFLOPS  ✓
-    local=(32,1,4)    940.4 us  2.436 TFLOPS  ✓
-    local=(64,2,4)    947.4 us  2.418 TFLOPS  ✓
-    local=(32,2,4)   1737.6 us  1.319 TFLOPS  ✓
-    local=(128,1,2)    906.1 us  2.528 TFLOPS  ✓
-    local=(64,1,2)    955.6 us  2.398 TFLOPS  ✓
-    local=(32,1,2)    856.7 us  2.674 TFLOPS  ✓
-    local=(128,1,1)    905.9 us  2.529 TFLOPS  ✓
-    local=(64,1,1)    865.7 us  2.646 TFLOPS  ✓
-    local=(32,1,1)   1514.0 us  1.513 TFLOPS  ✓
-    local=(256,1,2)   1041.3 us  2.200 TFLOPS  ✓
-    local=(256,1,1)    976.0 us  2.347 TFLOPS  ✓
-    → best=(32,1,2)  856.7 us  2.674 TFLOPS
 
-  M=437 N=1024 K=2560
-    local=(128,1,4)    861.4 us  2.660 TFLOPS  ✓
-    local=(64,1,4)    955.9 us  2.397 TFLOPS  ✓
-    local=(32,1,4)    937.4 us  2.444 TFLOPS  ✓
-    local=(64,2,4)    944.3 us  2.426 TFLOPS  ✓
-    local=(32,2,4)   1737.3 us  1.319 TFLOPS  ✓
-    local=(128,1,2)    907.3 us  2.525 TFLOPS  ✓
-    local=(64,1,2)    954.6 us  2.400 TFLOPS  ✓
-    local=(32,1,2)    856.2 us  2.676 TFLOPS  ✓
-    local=(128,1,1)    908.1 us  2.523 TFLOPS  ✓
-    local=(64,1,1)    864.4 us  2.651 TFLOPS  ✓
-    local=(32,1,1)   1512.0 us  1.515 TFLOPS  ✓
-    local=(256,1,2)   1050.7 us  2.181 TFLOPS  ✓
-    local=(256,1,1)    919.0 us  2.493 TFLOPS  ✓
-    → best=(32,1,2)  856.2 us  2.676 TFLOPS
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 6582 ms, 66.3932 TPS
+generation: 32 tokens, 7386 ms, 4.33252 TPS
+total: 13976 ms
+peak memory: 2724000 KB
+==========================================================
+[e2e time]: 16778 ms 
+Max Resident Set Size: 2724000 KB
 
-  M=437 N=2560 K=4096
-    local=(128,1,4)   3189.0 us  2.874 TFLOPS  ✓
-    local=(64,1,4)   3313.1 us  2.766 TFLOPS  ✓
-    local=(32,1,4)   3264.5 us  2.807 TFLOPS  ✓
-    local=(64,2,4)   3412.1 us  2.686 TFLOPS  ✓
-    local=(32,2,4)   6352.5 us  1.443 TFLOPS  ✓
-    local=(128,1,2)   3180.8 us  2.881 TFLOPS  ✓
-    local=(64,1,2)   3281.1 us  2.793 TFLOPS  ✓
-    local=(32,1,2)   2946.5 us  3.110 TFLOPS  ✓
-    local=(128,1,1)   3218.5 us  2.847 TFLOPS  ✓
-    local=(64,1,1)   2953.8 us  3.103 TFLOPS  ✓
-    local=(32,1,1)   5591.3 us  1.639 TFLOPS  ✓
-    local=(256,1,2)   3487.4 us  2.628 TFLOPS  ✓
-    local=(256,1,1)   3424.5 us  2.676 TFLOPS  ✓
-    → best=(32,1,2)  2946.5 us  3.110 TFLOPS
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:    79.6 ms
+  dequant(host):      5.3 ms ( 0.1%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.9 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.1 ms  (3x clSetKernelArg)
+    .dispatch:        4.1 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     177.6 ms
+  reformat_in(host):  0.0 ms ( 0.0%)  pool-hits=252/252
+  reformat_in(gpu):   0.0 ms
+  conv(wall):      3848.1 ms (99.6%)
+  conv(gpu):       1063.2 ms            2.987 TFLOPS
+  readback(host):     8.5 ms ( 0.2%)
+  readback(gpu):     36.4 ms
+  svmmap(gpu):        0.3 ms
+  sum(steps host): 3861.9 ms            0.822 TFLOPS
+  sum(gpu events): 1277.5 ms
+  fn_total(wall):  4086.1 ms            (unaccounted = -1133.0 ms = host overhead + non-event sync gaps)
 
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7529.4 us  2.891 TFLOPS  ✓
-    local=(64,1,4)   7886.9 us  2.760 TFLOPS  ✓
-    local=(32,1,4)   7913.7 us  2.750 TFLOPS  ✓
-    local=(64,2,4)   7718.1 us  2.820 TFLOPS  ✓
-    local=(32,2,4)  14407.5 us  1.511 TFLOPS  ✓
-    local=(128,1,2)   7775.3 us  2.799 TFLOPS  ✓
-    local=(64,1,2)   8116.8 us  2.682 TFLOPS  ✓
-    local=(32,1,2)   7039.7 us  3.092 TFLOPS  ✓
-    local=(128,1,1)   7884.0 us  2.761 TFLOPS  ✓
-    local=(64,1,1)   7089.7 us  3.070 TFLOPS  ✓
-    local=(32,1,1)  12950.5 us  1.681 TFLOPS  ✓
-    local=(256,1,2)   8179.5 us  2.661 TFLOPS  ✓
-    local=(256,1,1)   8158.2 us  2.668 TFLOPS  ✓
-    → best=(32,1,2)  7039.7 us  3.092 TFLOPS
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=6524.1 ms across all forwarding_op() calls
+  fully_connected               4090.6 ms  calls=252  avg=16.233 ms
+  mha_core                      1476.4 ms  calls=36  avg=41.010 ms
+  rms_norm                       524.8 ms  calls=73  avg=7.189 ms
+  reshaped_rms_norm              310.5 ms  calls=72  avg=4.312 ms
+  swiglu                          58.8 ms  calls=36  avg=1.632 ms
+  addition                        39.8 ms  calls=72  avg=0.552 ms
+  tie_word_embeddings             22.7 ms  calls=2  avg=11.370 ms
+  multiout                         0.5 ms  calls=144  avg=0.004 ms
+  input                            0.0 ms  calls=1  avg=0.037 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=20.05 ms calls=1 avg=20.047 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.68 ms calls=1 avg=2.684 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=6.97 ms calls=36 avg=0.194 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=483.19 ms calls=73 avg=6.619 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=310.04 ms calls=72 avg=4.306 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1449.03 ms calls=36 avg=40.251 ms
 
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7920.5 us  2.748 TFLOPS  ✓
-    local=(64,1,4)   8241.4 us  2.641 TFLOPS  ✓
-    local=(32,1,4)   8240.6 us  2.641 TFLOPS  ✓
-    local=(64,2,4)   8057.1 us  2.701 TFLOPS  ✓
-    local=(32,2,4)  14841.1 us  1.467 TFLOPS  ✓
-    local=(128,1,2)   8080.2 us  2.694 TFLOPS  ✓
-    local=(64,1,2)   8361.4 us  2.603 TFLOPS  ✓
-    local=(32,1,2)   7343.7 us  2.964 TFLOPS  ✓
-    local=(128,1,1)   8117.7 us  2.681 TFLOPS  ✓
-    local=(64,1,1)   7382.5 us  2.948 TFLOPS  ✓
-    local=(32,1,1)  13193.7 us  1.650 TFLOPS  ✓
-    local=(256,1,2)   8463.8 us  2.572 TFLOPS  ✓
-    local=(256,1,1)   8403.9 us  2.590 TFLOPS  ✓
-    → best=(32,1,2)  7343.7 us  2.964 TFLOPS
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4086.27 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4086.23 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
-  M=437 N=2560 K=9728
-    local=(128,1,4)   8321.9 us  2.615 TFLOPS  ✓
-    local=(64,1,4)   8777.4 us  2.480 TFLOPS  ✓
-    local=(32,1,4)   8758.4 us  2.485 TFLOPS  ✓
-    local=(64,2,4)   8346.8 us  2.608 TFLOPS  ✓
-    local=(32,2,4)  17106.2 us  1.272 TFLOPS  ✓
-    local=(128,1,2)   8672.1 us  2.510 TFLOPS  ✓
-    local=(64,1,2)   9091.8 us  2.394 TFLOPS  ✓
-    local=(32,1,2)   7928.1 us  2.745 TFLOPS  ✓
-    local=(128,1,1)   9036.3 us  2.409 TFLOPS  ✓
-    local=(64,1,1)   8472.0 us  2.569 TFLOPS  ✓
-    local=(32,1,1)  16227.6 us  1.341 TFLOPS  ✓
-    local=(256,1,2)   9894.3 us  2.200 TFLOPS  ✓
-    local=(256,1,1)   9831.1 us  2.214 TFLOPS  ✓
-    → best=(32,1,2)  7928.1 us  2.745 TFLOPS
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune (49975 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
-GPU: QUALCOMM Adreno(TM) 830
+==========================================
+ Run summary
+==========================================
 
-=== Int4 Adreno kernel — model shapes ===
-  SKIP 437x4096x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x2560x4096: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x2560x9728: image1d_buffer failed -6
-  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (135 ms)
-[----------] 5 tests from DelegateConvWaveTest (55087 ms total)
+--- Generation snippet (post-assistant tag) ---
 
-[----------] Global test environment tear-down
-[==========] 5 tests from 1 test suite ran. (55088 ms total)
-[  PASSED  ] 5 tests.
+[VERIFY call=  0 M=437 N=4096 K=2560] local(128,1,4)→(32,1,2) mism=503/1024 max|d|=1.643 rel_l2=1.01
+[VERIFY call=  1 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=501/1024 max|d|=0.6567 rel_l2=0.9719
+[VERIFY call=  2 M=437 N=1024 K=2560] local(128,1,4)→(32,1,2) mism=495/1024 max|d|=1.022 rel_l2=1.031
+[VERIFY call=  3 M=437 N=2560 K=4096] local(128,1,4)→(32,1,2) mism=496/1025 max|d|=0.9624 rel_l2=0.9766
+[VERIFY call=  4 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1025 max|d|=0.7026 rel_l2=0.8533
+[VERIFY call=  5 M=437 N=9728 K=2560] local(128,1,4)→(32,1,2) mism=502/1
 
-Log: unittest_delegate_conv_wave.log
+--- Perf summary ---
+prefill: 437 tokens, 6582 ms, 66.3932 TPS
+generation: 32 tokens, 7386 ms, 4.33252 TPS
+total: 13976 ms
+peak memory: 2724000 KB
+[e2e time]: 16778 ms 
+
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=4086.27 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.02 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  4086.23 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.02 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=20.05 ms calls=1 avg=20.047 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.68 ms calls=1 avg=2.684 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=6.97 ms calls=36 avg=0.194 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=483.19 ms calls=73 avg=6.619 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=310.04 ms calls=72 avg=4.306 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1449.03 ms calls=36 avg=40.251 ms
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
