@@ -2681,17 +2681,34 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
 
   // kernel objects (cached)
-  // NNTRAINER_DEQUANT_X2=1 swaps in the 2x variant of the dequant kernel
-  // (each thread produces 32 output halves from two ushort4 loads sharing
-  // one scale load, halving the dispatch thread count).
-  static const bool s_use_dq_x2 =
-    std::getenv("NNTRAINER_DEQUANT_X2") != nullptr;
-  if (!s_dq_kern)
-    s_dq_kern = blas_cc->registerClKernel(
-      s_use_dq_x2 ? dequant_int4_to_fp16_x2_kernel
-                  : dequant_int4_to_fp16_kernel,
-      s_use_dq_x2 ? "dequant_int4_to_delegate_fp16_x2"
-                  : "dequant_int4_to_delegate_fp16");
+  // Default dequant variant: x2 (2 src_slices + 1 shared scale + vstore16).
+  // Overrides:
+  //   NNTRAINER_DEQUANT_V1=1 — original (1 src_slice/thread, 4x half4 stores)
+  //   NNTRAINER_DEQUANT_X4=1 — x4 (2 out_slices × 2 src_slices per thread)
+  enum DqVariant { DQ_V1 = 0, DQ_X2 = 1, DQ_X4 = 2 };
+  static const DqVariant s_dq_variant =
+    std::getenv("NNTRAINER_DEQUANT_V1") ? DQ_V1
+    : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
+                                          : DQ_X2;
+  if (!s_dq_kern) {
+    const char *src = nullptr;
+    const char *name = nullptr;
+    switch (s_dq_variant) {
+    case DQ_V1:
+      src = dequant_int4_to_fp16_kernel;
+      name = "dequant_int4_to_delegate_fp16";
+      break;
+    case DQ_X2:
+      src = dequant_int4_to_fp16_x2_kernel;
+      name = "dequant_int4_to_delegate_fp16_x2";
+      break;
+    case DQ_X4:
+      src = dequant_int4_to_fp16_x4_kernel;
+      name = "dequant_int4_to_delegate_fp16_x4";
+      break;
+    }
+    s_dq_kern = blas_cc->registerClKernel(src, name);
+  }
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
     // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
@@ -2764,9 +2781,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
     const uint64_t tD = now_ns();
-    // Vectorized dequant thread count: v1 does 16 halves/thread,
-    // v2 does 32 (see NNTRAINER_DEQUANT_X2 branch above).
-    const int halves_per_thread = s_use_dq_x2 ? 32 : 16;
+    // Vectorized dequant thread count by variant.
+    const int halves_per_thread = s_dq_variant == DQ_X4 ? 64
+                                  : s_dq_variant == DQ_X2 ? 32
+                                                          : 16;
     int tot = (int)(w_halfs / halves_per_thread);
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
@@ -3231,15 +3249,32 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     s_dst_w = M; s_dst_h = max_dst_slices;
   }
 
-  // Same NNTRAINER_DEQUANT_X2 toggle as the single-call path above.
-  static const bool s_use_dq_x2 =
-    std::getenv("NNTRAINER_DEQUANT_X2") != nullptr;
-  if (!s_dq_kern)
-    s_dq_kern = blas_cc->registerClKernel(
-      s_use_dq_x2 ? dequant_int4_to_fp16_x2_kernel
-                  : dequant_int4_to_fp16_kernel,
-      s_use_dq_x2 ? "dequant_int4_to_delegate_fp16_x2"
-                  : "dequant_int4_to_delegate_fp16");
+  // Same variant selection as the single-call path above:
+  // default = x2, override with NNTRAINER_DEQUANT_V1 / NNTRAINER_DEQUANT_X4.
+  enum DqVariant { DQ_V1 = 0, DQ_X2 = 1, DQ_X4 = 2 };
+  static const DqVariant s_dq_variant =
+    std::getenv("NNTRAINER_DEQUANT_V1") ? DQ_V1
+    : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
+                                          : DQ_X2;
+  if (!s_dq_kern) {
+    const char *src = nullptr;
+    const char *name = nullptr;
+    switch (s_dq_variant) {
+    case DQ_V1:
+      src = dequant_int4_to_fp16_kernel;
+      name = "dequant_int4_to_delegate_fp16";
+      break;
+    case DQ_X2:
+      src = dequant_int4_to_fp16_x2_kernel;
+      name = "dequant_int4_to_delegate_fp16_x2";
+      break;
+    case DQ_X4:
+      src = dequant_int4_to_fp16_x4_kernel;
+      name = "dequant_int4_to_delegate_fp16_x4";
+      break;
+    }
+    s_dq_kern = blas_cc->registerClKernel(src, name);
+  }
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
     // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
@@ -3316,9 +3351,10 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
       int sn = (int)Ni, sk = (int)K;
       s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
       s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
-      // Vectorized dequant thread count: v1 does 16 halves/thread,
-      // v2 does 32 (NNTRAINER_DEQUANT_X2 branch above).
-      const int halves_per_thread = s_use_dq_x2 ? 32 : 16;
+      // Vectorized dequant thread count by variant.
+      const int halves_per_thread = s_dq_variant == DQ_X4 ? 64
+                                    : s_dq_variant == DQ_X2 ? 32
+                                                            : 16;
       int tot = (int)(w_halfs / halves_per_thread);
       const int dg[3] = {((tot+255)/256)*256, 1, 1};
       const int dl[3] = {256, 1, 1};
