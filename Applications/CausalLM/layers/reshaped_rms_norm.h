@@ -124,6 +124,11 @@ private:
     rms_props;
 
   unsigned int feature_size;
+
+  // Stage 1a: FP32 scratch reused across calls. See rms_norm.h for rationale.
+  nntrainer::Tensor in_fp32_scratch_;
+  nntrainer::Tensor out_fp32_scratch_;
+  size_t fp32_scratch_capacity_elems_ = 0;
 };
 
 } // namespace causallm

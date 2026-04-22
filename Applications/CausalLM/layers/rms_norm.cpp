@@ -208,8 +208,20 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       nntrainer::TensorDim fp32_dim = in_step.getDim();
       fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
 
+      // Stage 1a: reuse growing fp32 scratch tensors across calls instead of
+      // Tensor(..., alloc_now=true) every time. Scratch grows to the largest
+      // feature count ever seen; each call takes a shared view at the right
+      // dim.
       const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
+      const size_t need = fp32_dim.getFeatureLen();
+      if (fp32_scratch_capacity_elems_ < need) {
+        nntrainer::TensorDim cap_dim = fp32_dim;
+        in_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
+        out_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
+        fp32_scratch_capacity_elems_ = need;
+      }
+      nntrainer::Tensor in_fp32 =
+        in_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
       if (profile_this_call)
         g_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
 
@@ -224,7 +236,8 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       const uint64_t t_comp1_end = profile_this_call ? now_ns() : 0;
 
       const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
+      nntrainer::Tensor out_fp32 =
+        out_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
       const uint64_t t_a_out_end = profile_this_call ? now_ns() : 0;
       if (profile_this_call)
         g_rms_norm_profile.ns_alloc_out += t_a_out_end - t_a_out;

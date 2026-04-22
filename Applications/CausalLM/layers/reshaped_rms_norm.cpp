@@ -205,8 +205,17 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       nntrainer::TensorDim fp32_dim = in_step.getDim();
       fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
 
+      // Stage 1a: reuse fp32 scratch tensors (grow-only capacity).
       const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
+      const size_t need = fp32_dim.getFeatureLen();
+      if (fp32_scratch_capacity_elems_ < need) {
+        nntrainer::TensorDim cap_dim = fp32_dim;
+        in_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
+        out_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
+        fp32_scratch_capacity_elems_ = need;
+      }
+      nntrainer::Tensor in_fp32 =
+        in_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
       if (profile_this_call)
         g_reshaped_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
 
@@ -216,7 +225,8 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         g_reshaped_rms_norm_profile.ns_fp16_to_fp32 += now_ns() - t_cast_in;
 
       const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
+      nntrainer::Tensor out_fp32 =
+        out_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
       if (profile_this_call)
         g_reshaped_rms_norm_profile.ns_alloc_out += now_ns() - t_a_out;
 

@@ -113,6 +113,16 @@ public:
 private:
   std::array<unsigned int, 1> wt_idx;
   std::tuple<props::RMS_NORM_GAMMA_INIT, nntrainer::props::Epsilon> rms_props;
+
+  // Pre-allocated FP32 scratch tensors reused across incremental_forwarding
+  // calls. Both grow to the maximum (channel × height × width) seen — the
+  // FP16-activation prefill path used to allocate/free these every call,
+  // which Stage 0 measured at ~24% of RMSNormLayer wall time. Allocated
+  // on first use (we don't know max_seq_len at finalize time), reused
+  // thereafter.
+  nntrainer::Tensor in_fp32_scratch_;
+  nntrainer::Tensor out_fp32_scratch_;
+  size_t fp32_scratch_capacity_elems_ = 0;
 };
 
 } // namespace causallm
