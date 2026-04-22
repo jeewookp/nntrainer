@@ -379,6 +379,21 @@ protected:
     }
     return "";
   }
+
+  std::string LoadProbeInt4R0R3PhasedKernelSource() {
+    const char *paths[] = {
+      "probe_delegate_int4_r0_r3_phased.cl",
+      "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0_r3_phased.cl",
+      "/data/local/tmp/nntr_android_test/probe_delegate_int4_r0_r3_phased.cl",
+    };
+    for (auto p : paths) {
+      std::ifstream f(p);
+      if (f.good())
+        return std::string((std::istreambuf_iterator<char>(f)),
+                           std::istreambuf_iterator<char>());
+    }
+    return "";
+  }
 };
 
 
@@ -2012,6 +2027,264 @@ TEST_F(DelegateConvWaveTest, AllShapes_DelegateInt4Split) {
 
   cl.clReleaseKernel(k_r0r3);
   cl.clReleaseKernel(k_r4r7);
+  cl.clReleaseKernel(k_dequant);
+  cl.clReleaseKernel(k_delegate);
+}
+
+
+// ============================================================================
+// Phase-separated r0..r3 probe.
+// Compare three kernels head-to-head on the small shape:
+//   fp16 delegate (ref)                — baseline compute peak
+//   int4 r0..r3 inline-DQ              — existing, 2001 us (1/2 compute)
+//   int4 r0..r3 dequant-to-local phased — new: phase 1 dequants all 32
+//                                          half4 weights to named private
+//                                          regs, phase 2 is pure FMA
+// Goal: phased < inline → compiler pipelines dequant ALU behind FMA latency.
+// If so, the same reorg applied to r4..r7 + split dispatch cuts int4's
+// structural 3.4x gap vs fp16 delegate.
+// ============================================================================
+TEST_F(DelegateConvWaveTest, Probe_DelegateInt4_R0_R3_Phased) {
+  fprintf(stderr, "\n=== Probe: r0..r3 inline DQ vs phased ===\n");
+
+  std::string src_inline = LoadProbeInt4R0R3KernelSource();
+  std::string src_phased = LoadProbeInt4R0R3PhasedKernelSource();
+  std::string src_dequant = LoadDequantKernelSource();
+  std::string src_delegate = LoadKernelSource();
+  if (src_inline.empty() || src_phased.empty() || src_dequant.empty() ||
+      src_delegate.empty()) {
+    fprintf(stderr, "SKIP: kernel source not found\n");
+    return;
+  }
+
+  auto build = [&](const std::string &src, const char *flags,
+                   const char *kname) -> cl_kernel {
+    cl_int e;
+    const char *sp = src.c_str(); size_t sl = src.size();
+    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+    e = cl.clBuildProgram(prog, 1, &dev, flags, nullptr, nullptr);
+    if (e) {
+      size_t sz = 0;
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+      std::vector<char> log(sz + 1, 0);
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz,
+                               log.data(), nullptr);
+      fprintf(stderr, "BUILD FAIL (%s): %s\n", kname, log.data());
+      return nullptr;
+    }
+    return cl.clCreateKernel(prog, kname, &e);
+  };
+
+  cl_kernel k_inline = build(src_inline,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "delegate_conv_int4_dense_r0_r3");
+  cl_kernel k_phased = build(src_phased,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "delegate_conv_int4_dense_r0_r3_phased");
+  cl_kernel k_dequant = build(src_dequant,
+    "-cl-std=CL2.0", "dequant_int4_to_delegate_fp16");
+  cl_kernel k_delegate = build(src_delegate,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "main_function");
+  if (!k_inline || !k_phased || !k_dequant || !k_delegate) return;
+
+  const int M = 437, N = 1024, K = 2560;
+  const int src_slices = K / 4, dst_slices = N / 4;
+  const double gflops_full = 2.0 * M * N * K / 1e9;
+  const double gflops_half = gflops_full / 2.0;
+  fprintf(stderr, "\n  M=%d N=%d K=%d  (r0..r3 = 1/2 of full FMAs)\n", M, N, K);
+
+  auto lcg = [](uint32_t &s) { s = s * 1664525u + 1013904223u; return s; };
+  auto rand_h = [&](uint32_t &s) {
+    float f = ((int32_t)(lcg(s) >> 15) % 2048) / 10240.0f;
+    return f32_to_f16(f);
+  };
+
+  const size_t packed_count = (size_t)src_slices * N;
+  std::vector<uint16_t> packed_host(packed_count);
+  {
+    uint32_t rs = 0xC0FFEEu ^ (uint32_t)(N * 31u + K);
+    for (auto &u : packed_host) u = (uint16_t)(lcg(rs) & 0xFFFFu);
+  }
+  std::vector<uint16_t> scales_host(N);
+  {
+    uint32_t rs = 0xDECADEu ^ (uint32_t)(N + K * 7u);
+    for (auto &h : scales_host) h = rand_h(rs);
+  }
+  const size_t src_halves = (size_t)M * src_slices * 4;
+  std::vector<uint16_t> src_host(src_halves);
+  {
+    uint32_t rs = 0xBADCAFEu ^ (uint32_t)(M * 31u + K);
+    for (auto &h : src_host) h = rand_h(rs);
+  }
+
+  std::vector<uint16_t> dense_host;
+  RepackInt4ForDelegateDense(packed_host.data(), N, K, dense_host);
+
+  cl_int e;
+  cl_mem packed_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+    packed_count * 2, nullptr, &e);
+  cl.clEnqueueWriteBuffer(queue, packed_dev, 1, 0, packed_count * 2,
+    packed_host.data(), 0, 0, 0);
+  cl_mem scales_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+    (size_t)N * 2, nullptr, &e);
+  cl.clEnqueueWriteBuffer(queue, scales_dev, 1, 0, (size_t)N * 2,
+    scales_host.data(), 0, 0, 0);
+  cl_mem fp16_weights_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE,
+    (size_t)N * K * 2, nullptr, &e);
+  cl_mem dense_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+    dense_host.size() * 2, nullptr, &e);
+  cl.clEnqueueWriteBuffer(queue, dense_dev, 1, 0, dense_host.size() * 2,
+    dense_host.data(), 0, 0, 0);
+  cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
+
+  cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+  cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  sd.image_width = M; sd.image_height = src_slices;
+  cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &e);
+  {
+    size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+    cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, src_host.data(), 0, 0, 0);
+  }
+  cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  bd.image_width = dst_slices; bd.image_height = 1;
+  cl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &e);
+  {
+    std::vector<uint16_t> z(dst_slices * 4, 0);
+    size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+    cl.clEnqueueWriteImage(queue, bias, 1, o, r, 0, 0, z.data(), 0, 0, 0);
+  }
+  cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dd.image_width = M; dd.image_height = dst_slices;
+  cl_mem dst_ref = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+  cl_mem dst_inline = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+  cl_mem dst_phased = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+
+  int4 s0 = {1, dst_slices, M, 32};
+  int4 s1 = {src_slices, 0, 0, src_slices};
+  int4 s2 = {1, 1, 0, 0};
+  size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
+  size_t gl[3] = {gz, (size_t)((M + 127) / 128), 4};
+  size_t ll[3] = {128, 1, 4};
+
+  // fp16 ref.
+  {
+    int sn = N, sk = K;
+    cl.clSetKernelArg(k_dequant, 0, sizeof(cl_mem), &packed_dev);
+    cl.clSetKernelArg(k_dequant, 1, sizeof(cl_mem), &scales_dev);
+    cl.clSetKernelArg(k_dequant, 2, sizeof(cl_mem), &fp16_weights_dev);
+    cl.clSetKernelArg(k_dequant, 3, sizeof(int), &sn);
+    cl.clSetKernelArg(k_dequant, 4, sizeof(int), &sk);
+    const int n_z = (dst_slices + 7) / 8;
+    const int d_iters = src_slices / 2;
+    const size_t w_halfs = (size_t)n_z * d_iters * 256;
+    const int tot = (int)(w_halfs / 16);
+    size_t dg[3] = {(size_t)(((tot+255)/256)*256), 1, 1};
+    size_t dl[3] = {256, 1, 1};
+    cl.clEnqueueNDRangeKernel(queue, k_dequant, 3, 0, dg, dl, 0, 0, 0);
+  }
+  double fp16_us = 0.0;
+  {
+    cl.clSetKernelArg(k_delegate, 0, sizeof(cl_mem), &fp16_weights_dev);
+    cl.clSetKernelArg(k_delegate, 1, sizeof(cl_mem), &xm);
+    cl.clSetKernelArg(k_delegate, 2, sizeof(cl_mem), &bias);
+    cl.clSetKernelArg(k_delegate, 3, sizeof(cl_mem), &dst_ref);
+    cl.clSetKernelArg(k_delegate, 4, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(k_delegate, 5, sizeof(int4), &s0);
+    cl.clSetKernelArg(k_delegate, 6, sizeof(int4), &s1);
+    cl.clSetKernelArg(k_delegate, 7, sizeof(int4), &s2);
+    for (int i = 0; i < 5; ++i)
+      cl.clEnqueueNDRangeKernel(queue, k_delegate, 3, 0, gl, ll, 0, 0, 0);
+    cl.clFinish(queue);
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 5; ++i)
+      cl.clEnqueueNDRangeKernel(queue, k_delegate, 3, 0, gl, ll, 0, 0, 0);
+    cl.clFinish(queue);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    fp16_us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 5;
+    fprintf(stderr, "    fp16 delegate (full):        %7.1f us  %.3f TFLOPS (full)\n",
+            fp16_us, (gflops_full / (fp16_us / 1e6)) / 1000.0);
+  }
+
+  // Helper: run an int4 r0..r3 kernel, correctness on z*8..z*8+3 slices, then 3+3 bench.
+  auto run_r0r3 = [&](cl_kernel k, cl_mem dst, const char *label) {
+    cl.clSetKernelArg(k, 0, sizeof(cl_mem), &dense_dev);
+    cl.clSetKernelArg(k, 1, sizeof(cl_mem), &xm);
+    cl.clSetKernelArg(k, 2, sizeof(cl_mem), &scales_dev);
+    cl.clSetKernelArg(k, 3, sizeof(cl_mem), &bias);
+    cl.clSetKernelArg(k, 4, sizeof(cl_mem), &dst);
+    cl.clSetKernelArg(k, 5, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(k, 6, sizeof(int4), &s0);
+    cl.clSetKernelArg(k, 7, sizeof(int4), &s1);
+    cl.clSetKernelArg(k, 8, sizeof(int4), &s2);
+
+    cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
+    cl.clFinish(queue);
+
+    const size_t npix = (size_t)M * dst_slices;
+    std::vector<uint16_t> ref_out(npix * 4), cand_out(npix * 4);
+    size_t o3[3] = {0,0,0}, r3[3] = {(size_t)M, (size_t)dst_slices, 1};
+    cl.clEnqueueReadImage(queue, dst_ref, 1, o3, r3, 0, 0, ref_out.data(), 0, 0, 0);
+    cl.clEnqueueReadImage(queue, dst,     1, o3, r3, 0, 0, cand_out.data(), 0, 0, 0);
+    double sum_sq = 0.0, sum_ref_sq = 0.0, max_abs = 0.0;
+    size_t cmp = 0;
+    for (int m = 0; m < M; ++m) {
+      for (int z = 0; z * 8 < dst_slices; ++z) {
+        for (int kk = 0; kk < 4 && (z * 8 + kk) < dst_slices; ++kk) {
+          int ds = z * 8 + kk;
+          for (int j = 0; j < 4; ++j) {
+            size_t idx = ((size_t)ds * M + m) * 4 + j;
+            float rv = f16_to_f32(ref_out[idx]);
+            float cv = f16_to_f32(cand_out[idx]);
+            float d = rv - cv;
+            sum_sq += (double)d * d;
+            sum_ref_sq += (double)rv * rv;
+            if (std::abs(d) > max_abs) max_abs = std::abs(d);
+            cmp++;
+          }
+        }
+      }
+    }
+    double rel_l2 = sum_ref_sq > 0 ? std::sqrt(sum_sq / sum_ref_sq) : 0.0;
+    const bool ok = rel_l2 < 0.05;
+
+    double us = 0.0, tflops = 0.0;
+    if (ok) {
+      for (int i = 0; i < 3; ++i)
+        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
+      cl.clFinish(queue);
+      auto t0 = std::chrono::high_resolution_clock::now();
+      for (int i = 0; i < 3; ++i)
+        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
+      cl.clFinish(queue);
+      auto t1 = std::chrono::high_resolution_clock::now();
+      us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 3;
+      tflops = (gflops_half / (us / 1e6)) / 1000.0;
+    }
+    fprintf(stderr, "    %-28s %7.1f us  %.3f TFLOPS (r0..r3-scaled)"
+                    "  rel_l2=%.4g %s\n",
+            label, us, tflops, rel_l2, ok ? "OK" : "XX");
+    EXPECT_LT(rel_l2, 0.05) << label << " diverges";
+    return us;
+  };
+
+  double us_inline = run_r0r3(k_inline, dst_inline, "int4 r0..r3 inline DQ:");
+  double us_phased = run_r0r3(k_phased, dst_phased, "int4 r0..r3 phased:");
+
+  fprintf(stderr, "\n    phased / inline = %.2fx  (lower is better)\n",
+          us_inline > 0 ? us_phased / us_inline : 0.0);
+  fprintf(stderr, "    phased_x2 (split-est) / fp16 delegate = %.2fx\n",
+          fp16_us > 0 ? (us_phased * 2.0) / fp16_us : 0.0);
+
+  cl.clReleaseMemObject(packed_dev);
+  cl.clReleaseMemObject(scales_dev);
+  cl.clReleaseMemObject(fp16_weights_dev);
+  cl.clReleaseMemObject(dense_dev);
+  cl.clReleaseMemObject(xm);
+  cl.clReleaseMemObject(si);
+  cl.clReleaseMemObject(bias);
+  cl.clReleaseMemObject(dst_ref);
+  cl.clReleaseMemObject(dst_inline);
+  cl.clReleaseMemObject(dst_phased);
+  cl.clReleaseKernel(k_inline);
+  cl.clReleaseKernel(k_phased);
   cl.clReleaseKernel(k_dequant);
   cl.clReleaseKernel(k_delegate);
 }
