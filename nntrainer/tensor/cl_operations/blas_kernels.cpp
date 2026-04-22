@@ -2844,16 +2844,22 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_conv_kern->SetKernelArguments(a++, &s0, sizeof(s0));
     s_conv_kern->SetKernelArguments(a++, &s1, sizeof(s1));
     s_conv_kern->SetKernelArguments(a++, &s2, sizeof(s2));
-    // Best local from unittest tune (50 warmup + 50 timed, all 13
-    // litert_lm candidates) across all 7 Qwen3-4B prefill shapes:
-    // (32,1,2) wins by 2-12% over the old (128,1,4) default on every
-    // shape. NNTR_DELEGATE_CONV_LOCAL=X,Y,Z still overrides for
-    // future re-tuning (e.g. new model shapes).
+    // Default local = (128, 1, 4). The captured Qualcomm wave-memory
+    // kernel uses qcom_sub_group_constant_load8 and inline asm at the
+    // subgroup level — smaller locals (e.g. 32×1×2 = single 64-lane
+    // subgroup) measure faster but produce numerically wrong output
+    // because the subgroup-level ops assume multiple subgroups' worth
+    // of data. litert_lm's tuner rejects candidates on 90% output-
+    // mismatch vs the (128,1,4) reference; our earlier mini-tune
+    // skipped that check and a bogus (32,1,2) "winner" silently
+    // corrupted prefill. Keep (128,1,4) until we re-tune with proper
+    // correctness gating.
+    // NNTR_DELEGATE_CONV_LOCAL=X,Y,Z still overrides for experiments.
     // Kernel mapping (from litert_lm's tune loop):
     //   X = group_id(1) * local[0] + local_id(0)   needs M values
     //   Y = group_id(2) * local[1] + local_id(1)   needs 1 value (h=1)
     //   Z = group_id(0) * local[2] + local_id(2)   needs (dst_slices+7)/8
-    int lx = 32, ly = 1, lz = 2;
+    int lx = 128, ly = 1, lz = 4;
     if (const char *env = std::getenv("NNTR_DELEGATE_CONV_LOCAL")) {
       int a_, b_, c_;
       if (std::sscanf(env, "%d,%d,%d", &a_, &b_, &c_) == 3 &&

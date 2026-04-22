@@ -861,8 +861,31 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
     cl.clSetKernelArg(kern, 7, sizeof(int4), &s2);
 
     fprintf(stderr, "\n  M=%d N=%d K=%d\n", M, N, K);
+
+    // First dispatch at the default (128,1,4) to produce the reference
+    // output. Subsequent candidates are compared against this and
+    // rejected if their output doesn't match (the captured wave-memory
+    // kernel's subgroup-level ops don't work correctly at every local
+    // size — e.g. (32,1,2) runs 9% faster but produces garbage).
+    {
+      size_t need_z = (dst_slices + 7) / 8;
+      size_t groups_z = (need_z + 4 - 1) / 4;
+      size_t groups_x = ((size_t)M + 128 - 1) / 128;
+      size_t local[3]  = {128, 1, 4};
+      size_t global[3] = {groups_z * 128, groups_x * 1, 1 * 4};
+      cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
+      cl.clFinish(queue);
+    }
+    const size_t dst_npixels = (size_t)M * dst_slices;
+    std::vector<uint16_t> ref_out(dst_npixels * 4, 0);
+    {
+      size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
+      cl.clEnqueueReadImage(queue, di, 1, o, r, 0, 0, ref_out.data(), 0, 0, 0);
+    }
+
     double best_us = 1e18;
     LocalCand best = kLocals[0];
+    std::vector<uint16_t> cand_out(dst_npixels * 4, 0);
     for (const auto& c : kLocals) {
       size_t need_z = (dst_slices + 7) / 8;
       size_t groups_z = (need_z + c.lz - 1) / c.lz;
@@ -877,6 +900,25 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
         cl.clEnqueueNDRangeKernel(queue, kern, 3, 0, global, local, 0, 0, 0);
       cl.clFinish(queue);
 
+      // Correctness check: compare last output against the (128,1,4)
+      // reference. Skip the candidate if > 10% of sampled halves
+      // diverge — the wave-memory kernel is known to produce garbage
+      // at some locals despite running faster.
+      {
+        size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
+        cl.clEnqueueReadImage(queue, di, 1, o, r, 0, 0, cand_out.data(),
+                              0, 0, 0);
+      }
+      int match = 0, total = 0;
+      for (size_t i = 0; i < 4096 && i < dst_npixels * 4; ++i) {
+        float rv = f16_to_f32(ref_out[i]);
+        float cv = f16_to_f32(cand_out[i]);
+        float tol = fabsf(rv) * 0.01f + 1e-4f;
+        if (fabsf(rv - cv) < tol) match++;
+        ++total;
+      }
+      const bool correct = total == 0 || match >= total * 9 / 10;
+
       int iters = 50;
       auto t0 = std::chrono::high_resolution_clock::now();
       for (int i = 0; i < iters; ++i)
@@ -885,9 +927,10 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       auto t1 = std::chrono::high_resolution_clock::now();
       double us = std::chrono::duration<double, std::micro>(t1-t0).count() / iters;
       double tflops = (gflops / (us / 1e6)) / 1000.0;
-      fprintf(stderr, "    local=(%d,%d,%d)  %7.1f us  %.3f TFLOPS\n",
-              c.lx, c.ly, c.lz, us, tflops);
-      if (us < best_us) { best_us = us; best = c; }
+      fprintf(stderr, "    local=(%d,%d,%d)  %7.1f us  %.3f TFLOPS  %s\n",
+              c.lx, c.ly, c.lz, us, tflops,
+              correct ? "✓" : "✗ WRONG OUTPUT");
+      if (correct && us < best_us) { best_us = us; best = c; }
     }
     fprintf(stderr, "    → best=(%d,%d,%d)  %.1f us  %.3f TFLOPS\n",
             best.lx, best.ly, best.lz, best_us,
