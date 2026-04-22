@@ -1,71 +1,5 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.59 KiB | 324.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   34776099..f3c78a72  all_gpu    -> upstream/all_gpu
-Updating 34776099..f3c78a72
-Fast-forward
- test/unittest/unittest_delegate_conv_wave.cpp | 282 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++------------------------------------------------------------------------------------------------------------------------------------------
- 1 file changed, 144 insertions(+), 138 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_delegate_conv_wave.sh 
-==========================================
-[Step 1] Building unittest_delegate_conv_wave (ndk-build)
-==========================================
-Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
-[arm64-v8a] Clean          : googletest_main [arm64-v8a]
-[arm64-v8a] Clean          : nntrainer [arm64-v8a]
-[arm64-v8a] Clean          : test_util [arm64-v8a]
-[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
-[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
-[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
-[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
-[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
-[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
-[arm64-v8a] Clean          : unittest_models [arm64-v8a]
-[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool [arm64-v8a]
-[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool_fp16 [arm64-v8a]
-[arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
-Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
-[arm64-v8a] Compile++      : unittest_delegate_conv_wave <= unittest_delegate_conv_wave.cpp
-[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
-[arm64-v8a] StaticLibrary  : libgoogletest_main.a
-[arm64-v8a] Executable     : unittest_delegate_conv_wave
-[arm64-v8a] Install        : unittest_delegate_conv_wave => libs/arm64-v8a/unittest_delegate_conv_wave
-
-==========================================
-[Step 2] Pushing to device
-==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 32.1 MB/s (343984 bytes in 0.010s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.8 MB/s (7438 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.0 MB/s (9732 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl: 1 file pushed. 0.6 MB/s (2298 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl: 1 file pushed. 0.8 MB/s (3255 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl: 1 file pushed. 2.5 MB/s (12958 bytes in 0.005s)
-nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl: 1 file pushed. 1.1 MB/s (5521 bytes in 0.005s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.8 MB/s (1822720 bytes in 0.055s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_dense.cl: 1 file pushed. 2.1 MB/s (12582 bytes in 0.006s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 32.2 MB/s (1822720 bytes in 0.054s)
 
 ==========================================
 [Step 3] Running on device
@@ -79,67 +13,74 @@ GPU: QUALCOMM Adreno(TM) 830
 === Delegate wave-load microbench (count=32 vs count=8) ===
 
   M=437 N=4096 K=2560  (iters/thread=320)
-    count=32 (padded)      1476.7 us   requested= 240.00 MB     170.4 GB/s
-    count=8  (dense)        831.3 us   requested=  60.00 MB      75.7 GB/s
+    count=32 (padded)      1415.1 us   requested= 240.00 MB     177.8 GB/s
+    count=8  (dense)        812.6 us   requested=  60.00 MB      77.4 GB/s
 
   M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       298.6 us   requested=  60.00 MB     210.7 GB/s
-    count=8  (dense)        196.1 us   requested=  15.00 MB      80.2 GB/s
+    count=32 (padded)       281.8 us   requested=  60.00 MB     223.3 GB/s
+    count=8  (dense)        189.4 us   requested=  15.00 MB      83.0 GB/s
 
   M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       305.6 us   requested=  60.00 MB     205.9 GB/s
-    count=8  (dense)        203.1 us   requested=  15.00 MB      77.4 GB/s
+    count=32 (padded)       308.2 us   requested=  60.00 MB     204.2 GB/s
+    count=8  (dense)        207.8 us   requested=  15.00 MB      75.7 GB/s
 
   M=437 N=2560 K=4096  (iters/thread=512)
-    count=32 (padded)      1463.0 us   requested= 240.00 MB     172.0 GB/s
-    count=8  (dense)        862.9 us   requested=  60.00 MB      72.9 GB/s
+    count=32 (padded)      1447.2 us   requested= 240.00 MB     173.9 GB/s
+    count=8  (dense)        908.2 us   requested=  60.00 MB      69.3 GB/s
 
   M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3329.0 us   requested= 570.00 MB     179.5 GB/s
-    count=8  (dense)       1801.7 us   requested= 142.50 MB      82.9 GB/s
+    count=32 (padded)      3291.1 us   requested= 570.00 MB     181.6 GB/s
+    count=8  (dense)       1765.3 us   requested= 142.50 MB      84.6 GB/s
 
   M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3324.0 us   requested= 570.00 MB     179.8 GB/s
-    count=8  (dense)       1774.4 us   requested= 142.50 MB      84.2 GB/s
+    count=32 (padded)      3320.8 us   requested= 570.00 MB     180.0 GB/s
+    count=8  (dense)       1768.8 us   requested= 142.50 MB      84.5 GB/s
 
   M=437 N=2560 K=9728  (iters/thread=1216)
-    count=32 (padded)      3463.2 us   requested= 570.00 MB     172.6 GB/s
-    count=8  (dense)       2106.1 us   requested= 142.50 MB      70.9 GB/s
-[       OK ] DelegateConvWaveTest.DelegateLoadProbe (2533 ms)
+    count=32 (padded)      3429.5 us   requested= 570.00 MB     174.3 GB/s
+    count=8  (dense)       2008.1 us   requested= 142.50 MB      74.4 GB/s
+[       OK ] DelegateConvWaveTest.DelegateLoadProbe (2508 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Fused
 GPU: QUALCOMM Adreno(TM) 830
 
 === Fused int4 conv vs dequant+delegate reference ===
 
   M=437 N=4096 K=2560
-    fused:  15407.6 us  0.595 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  15686.2 us  0.584 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2830.2 us  0.810 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2802.9 us  0.817 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2779.4 us  0.824 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2757.6 us  0.831 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=4096
-    fused:  13777.1 us  0.665 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  13869.6 us  0.661 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  28735.2 us  0.757 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  28840.5 us  0.755 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  29548.6 us  0.737 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  29003.4 us  0.750 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=9728
-    fused:  43992.1 us  0.495 TFLOPS  rel_l2=0 max|d|=0  ✓
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14053 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateInt4
+    fused:  43713.0 us  0.498 TFLOPS  rel_l2=0 max|d|=0  ✓
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (13780 ms)
+[ RUN      ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense
 GPU: QUALCOMM Adreno(TM) 830
 
-=== Delegate int4 conv vs dequant+delegate reference ===
+=== Delegate int4 dense (count=8) vs fp16 ref ===
 
-  M=437 N=4096 K=2560
-    fp16 ref (dequant once + delegate conv):  3094.7 us  2.961 TFLOPS
-Killed 
+  M=437 N=1024 K=2560
+    fp16 ref (delegate):             887.8 us  2.581 TFLOPS
+    int4 dense (count=8 load):     711274.3 us  0.003 TFLOPS  rel_l2=0 max|d|=0  OK
+[       OK ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense (5414 ms)
+[----------] 3 tests from DelegateConvWaveTest (21704 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (21704 ms total)
+[  PASSED  ] 3 tests.
 
 Log: unittest_delegate_conv_wave.log
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
