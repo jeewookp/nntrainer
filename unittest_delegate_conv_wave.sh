@@ -56,11 +56,6 @@ if [ $RUN_ONLY -eq 0 ]; then
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl" "${DEVICE_DIR}/"
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl" "${DEVICE_DIR}/"
   $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl" "${DEVICE_DIR}/"
-  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_dense.cl" "${DEVICE_DIR}/"
-  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0.cl" "${DEVICE_DIR}/"
-  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0_r3.cl" "${DEVICE_DIR}/"
-  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r4_r7.cl" "${DEVICE_DIR}/"
-  $ADB_CMD push "nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_int4_r0_r3_phased.cl" "${DEVICE_DIR}/"
 
   # Push libc++_shared if available
   for so in libc++_shared.so; do
