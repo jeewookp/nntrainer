@@ -360,6 +360,126 @@ static const ShapeConfig kModelShapes[] = {
 
 
 // ============================================================================
+// Load-only microbench for the delegate wave-memory path.
+// Runs first so probe data is recorded even if a later, heavier test
+// trips the Adreno watchdog. Strips compute to a trivial OR-reduction,
+// sweeps two candidate int4 layouts:
+//   count=32 — fp16 delegate's native stride (512 B/iter, 4x padded for int4)
+//   count=8  — dense int4 stride (128 B/iter, no padding)
+// Reports us/iter and cooperative "bytes requested" bandwidth so we can
+// tell if (a) count=8 still hits peak (→ dense int4 layout is viable), or
+// (b) the wave loader only reaches peak at count=32 (→ padded layout, int4
+// wins nothing on load side, only on model size).
+// ============================================================================
+TEST_F(DelegateConvWaveTest, DelegateLoadProbe) {
+  fprintf(stderr,
+          "\n=== Delegate wave-load microbench (count=32 vs count=8) ===\n");
+
+  std::string src_probe = LoadProbeLoadKernelSource();
+  if (src_probe.empty()) {
+    fprintf(stderr, "SKIP: probe kernel source not found\n");
+    return;
+  }
+
+  auto build = [&](const std::string &src, const char *flags,
+                   const char *kname) -> cl_kernel {
+    cl_int e;
+    const char *sp = src.c_str(); size_t sl = src.size();
+    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+    e = cl.clBuildProgram(prog, 1, &dev, flags, nullptr, nullptr);
+    if (e) {
+      size_t sz = 0;
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+      std::vector<char> log(sz + 1, 0);
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz,
+                               log.data(), nullptr);
+      fprintf(stderr, "BUILD FAIL (%s): %s\n", kname, log.data());
+      return nullptr;
+    }
+    return cl.clCreateKernel(prog, kname, &e);
+  };
+
+  cl_kernel k32 = build(src_probe,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "probe_load_count32");
+  cl_kernel k8  = build(src_probe,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "probe_load_count8");
+  if (!k32 || !k8) return;
+
+  for (const auto &s : kModelShapes) {
+    const int M = s.M, N = s.N, K = s.K;
+    const int src_slices = K / 4, dst_slices = N / 4;
+    const int n_z = (dst_slices + 7) / 8;
+    const int iters = src_slices / 2;  // = K/8
+
+    fprintf(stderr, "\n  M=%d N=%d K=%d  (iters/thread=%d)\n", M, N, K, iters);
+
+    const size_t weights_halves = (size_t)n_z * iters * 256 + 256;
+    const size_t weights_bytes = weights_halves * 2;
+
+    cl_int e;
+    cl_mem weights_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+      weights_bytes, nullptr, &e);
+    cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
+
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = dst_slices;
+    cl_mem dst = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+
+    int4 s0 = {1, dst_slices, M, 32};
+    int4 s1 = {src_slices, 0, 0, src_slices};
+    int4 s2 = {1, 1, 0, 0};
+    size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
+    size_t gl[3] = {gz, (size_t)((M + 127) / 128), 4};
+    size_t ll[3] = {128, 1, 4};
+
+    const size_t n_wg_z = gl[0] / ll[0];
+    const size_t n_wg_x = gl[1] / ll[1];
+    const size_t n_wg_y = gl[2] / ll[2];
+    const size_t n_wgs = n_wg_z * n_wg_x * n_wg_y;
+
+    auto run = [&](cl_kernel k, int count_half8, const char *label) {
+      cl.clSetKernelArg(k, 0, sizeof(cl_mem), &weights_dev);
+      cl.clSetKernelArg(k, 1, sizeof(cl_mem), &xm);
+      cl.clSetKernelArg(k, 2, sizeof(cl_mem), &dst);
+      cl.clSetKernelArg(k, 3, sizeof(int4), &s0);
+      cl.clSetKernelArg(k, 4, sizeof(int4), &s1);
+      cl.clSetKernelArg(k, 5, sizeof(int4), &s2);
+
+      for (int i = 0; i < 50; ++i)
+        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
+      cl.clFinish(queue);
+
+      auto t0 = std::chrono::high_resolution_clock::now();
+      for (int i = 0; i < 50; ++i)
+        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
+      cl.clFinish(queue);
+      auto t1 = std::chrono::high_resolution_clock::now();
+      double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 50;
+
+      const double bytes_per_wg = 12.0 * iters * count_half8 * 16.0;
+      const double bytes_per_dispatch = bytes_per_wg * n_wgs;
+      const double gbps = (bytes_per_dispatch / (us / 1e6)) / 1e9;
+
+      fprintf(stderr,
+              "    %-20s  %7.1f us   requested=%7.2f MB   %7.1f GB/s\n",
+              label, us, bytes_per_dispatch / (1024.0 * 1024.0), gbps);
+    };
+
+    run(k32, 32, "count=32 (padded)");
+    run(k8,   8, "count=8  (dense)");
+
+    cl.clReleaseMemObject(weights_dev);
+    cl.clReleaseMemObject(xm);
+    cl.clReleaseMemObject(dst);
+  }
+
+  cl.clReleaseKernel(k32);
+  cl.clReleaseKernel(k8);
+}
+
+
+// ============================================================================
 // Fused int4 conv test: runs fused_conv_int4_fp16 against the reference
 // (dequant_int4_to_delegate_fp16 + captured delegate_conv_wave) pipeline,
 // reports per-shape rel_l2 correctness + TFLOPS so we can decide if the
@@ -789,6 +909,8 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateInt4) {
     }
 
     // ======= Candidate: delegate_conv_int4_wave =======
+    // Run 1 dispatch first for correctness; only benchmark if it matches,
+    // otherwise the 50-iter hammer can trip the Adreno watchdog.
     {
       cl.clSetKernelArg(k_int4, 0, sizeof(cl_mem), &repacked_dev);
       cl.clSetKernelArg(k_int4, 1, sizeof(cl_mem), &xm);
@@ -799,19 +921,10 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateInt4) {
       cl.clSetKernelArg(k_int4, 6, sizeof(int4), &s0);
       cl.clSetKernelArg(k_int4, 7, sizeof(int4), &s1);
       cl.clSetKernelArg(k_int4, 8, sizeof(int4), &s2);
-      for (int i = 0; i < 50; ++i)
-        cl.clEnqueueNDRangeKernel(queue, k_int4, 3, 0, gl, ll, 0, 0, 0);
-      cl.clFinish(queue);
-      auto t0 = std::chrono::high_resolution_clock::now();
-      for (int i = 0; i < 50; ++i)
-        cl.clEnqueueNDRangeKernel(queue, k_int4, 3, 0, gl, ll, 0, 0, 0);
-      cl.clFinish(queue);
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 50;
-      total_int4_us += us;
-      double tflops = (gflops / (us / 1e6)) / 1000.0;
 
-      // Correctness: rel_l2 against ref output.
+      cl.clEnqueueNDRangeKernel(queue, k_int4, 3, 0, gl, ll, 0, 0, 0);
+      cl.clFinish(queue);
+
       const size_t npix = (size_t)M * dst_slices;
       std::vector<uint16_t> ref_out(npix * 4), cand_out(npix * 4);
       size_t o3[3] = {0,0,0}, r3[3] = {(size_t)M, (size_t)dst_slices, 1};
@@ -829,10 +942,29 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateInt4) {
         if (std::abs(d) > max_abs) max_abs = std::abs(d);
       }
       double rel_l2 = sum_ref_sq > 0 ? std::sqrt(sum_sq / sum_ref_sq) : 0.0;
+      const bool ok = rel_l2 < 0.05;
+
+      double us = 0.0, tflops = 0.0;
+      if (ok) {
+        // Conservative 5+5 iters so a slow-but-correct kernel doesn't push
+        // the dispatch queue past the Adreno GPU-watchdog budget.
+        for (int i = 0; i < 5; ++i)
+          cl.clEnqueueNDRangeKernel(queue, k_int4, 3, 0, gl, ll, 0, 0, 0);
+        cl.clFinish(queue);
+        auto t0 = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < 5; ++i)
+          cl.clEnqueueNDRangeKernel(queue, k_int4, 3, 0, gl, ll, 0, 0, 0);
+        cl.clFinish(queue);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 5;
+        total_int4_us += us;
+        tflops = (gflops / (us / 1e6)) / 1000.0;
+      }
+
       fprintf(stderr, "    int4 delegate (repacked, inline dequant):   "
                       "%7.1f us  %.3f TFLOPS  rel_l2=%.4g max|d|=%.4g  %s\n",
               us, tflops, rel_l2, max_abs,
-              rel_l2 < 0.05 ? "OK" : "XX DIVERGES");
+              ok ? "OK" : "XX DIVERGES (benchmark skipped)");
       EXPECT_LT(rel_l2, 0.05) << "delegate_conv_int4_wave diverges from ref";
     }
 
@@ -857,132 +989,6 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateInt4) {
   cl.clReleaseKernel(k_int4);
   cl.clReleaseKernel(k_dequant);
   cl.clReleaseKernel(k_delegate);
-}
-
-
-// ============================================================================
-// Load-only microbench for the delegate wave-memory path.
-// Strips compute down to a trivial OR-reduction so the kernel time is
-// dominated by qcom_sub_group_constant_load8 cost. Sweeps the two
-// candidate int4 layouts:
-//   count=32 — fp16 delegate's native stride (512 B/iter, 4x padded for int4)
-//   count=8  — dense int4 stride (128 B/iter, no padding)
-// Reports us/iter and the cooperative "bytes requested" bandwidth so we can
-// tell if (a) count=8 still hits peak (→ dense int4 layout is viable), or
-// (b) the wave loader only reaches peak at count=32 (→ padded layout, int4
-// wins nothing on load side, only on model size).
-// ============================================================================
-TEST_F(DelegateConvWaveTest, DelegateLoadProbe) {
-  fprintf(stderr,
-          "\n=== Delegate wave-load microbench (count=32 vs count=8) ===\n");
-
-  std::string src_probe = LoadProbeLoadKernelSource();
-  if (src_probe.empty()) {
-    fprintf(stderr, "SKIP: probe kernel source not found\n");
-    return;
-  }
-
-  auto build = [&](const std::string &src, const char *flags,
-                   const char *kname) -> cl_kernel {
-    cl_int e;
-    const char *sp = src.c_str(); size_t sl = src.size();
-    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
-    e = cl.clBuildProgram(prog, 1, &dev, flags, nullptr, nullptr);
-    if (e) {
-      size_t sz = 0;
-      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
-      std::vector<char> log(sz + 1, 0);
-      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz,
-                               log.data(), nullptr);
-      fprintf(stderr, "BUILD FAIL (%s): %s\n", kname, log.data());
-      return nullptr;
-    }
-    return cl.clCreateKernel(prog, kname, &e);
-  };
-
-  cl_kernel k32 = build(src_probe,
-    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "probe_load_count32");
-  cl_kernel k8  = build(src_probe,
-    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "probe_load_count8");
-  if (!k32 || !k8) return;
-
-  for (const auto &s : kModelShapes) {
-    const int M = s.M, N = s.N, K = s.K;
-    const int src_slices = K / 4, dst_slices = N / 4;
-    const int n_z = (dst_slices + 7) / 8;
-    const int iters = src_slices / 2;  // = K/8
-
-    fprintf(stderr, "\n  M=%d N=%d K=%d  (iters/thread=%d)\n", M, N, K, iters);
-
-    // Weights buffer: must cover the largest f_offset either variant reads.
-    // count=32 needs ~(n_z*src_slices*16 + iters*32) half8s, i.e. ~N*K halves.
-    // count=8  needs ~N*K/4 halves. Allocate the larger one and share.
-    const size_t weights_halves = (size_t)n_z * iters * 256 + 256;
-    const size_t weights_bytes = weights_halves * 2;
-
-    cl_int e;
-    cl_mem weights_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
-      weights_bytes, nullptr, &e);
-    cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
-
-    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
-    cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
-    dd.image_width = M; dd.image_height = dst_slices;
-    cl_mem dst = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
-
-    int4 s0 = {1, dst_slices, M, 32};
-    int4 s1 = {src_slices, 0, 0, src_slices};
-    int4 s2 = {1, 1, 0, 0};
-    size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
-    size_t gl[3] = {gz, (size_t)((M + 127) / 128), 4};
-    size_t ll[3] = {128, 1, 4};
-
-    // Number of workgroups in the dispatch (one "tile" per wg).
-    const size_t n_wg_z = gl[0] / ll[0];
-    const size_t n_wg_x = gl[1] / ll[1];
-    const size_t n_wg_y = gl[2] / ll[2];
-    const size_t n_wgs = n_wg_z * n_wg_x * n_wg_y;
-
-    auto run = [&](cl_kernel k, int count_half8, const char *label) {
-      cl.clSetKernelArg(k, 0, sizeof(cl_mem), &weights_dev);
-      cl.clSetKernelArg(k, 1, sizeof(cl_mem), &xm);
-      cl.clSetKernelArg(k, 2, sizeof(cl_mem), &dst);
-      cl.clSetKernelArg(k, 3, sizeof(int4), &s0);
-      cl.clSetKernelArg(k, 4, sizeof(int4), &s1);
-      cl.clSetKernelArg(k, 5, sizeof(int4), &s2);
-
-      for (int i = 0; i < 50; ++i)
-        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
-      cl.clFinish(queue);
-
-      auto t0 = std::chrono::high_resolution_clock::now();
-      for (int i = 0; i < 50; ++i)
-        cl.clEnqueueNDRangeKernel(queue, k, 3, 0, gl, ll, 0, 0, 0);
-      cl.clFinish(queue);
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 50;
-
-      // Bytes "requested" per dispatch by qcom_sub_group_constant_load8.
-      // Per wg: 12 subgroups × iters × (count_half8 × 16 bytes).
-      const double bytes_per_wg = 12.0 * iters * count_half8 * 16.0;
-      const double bytes_per_dispatch = bytes_per_wg * n_wgs;
-      const double gbps = (bytes_per_dispatch / (us / 1e6)) / 1e9;
-
-      fprintf(stderr,
-              "    %-20s  %7.1f us   requested=%7.2f MB   %7.1f GB/s\n",
-              label, us, bytes_per_dispatch / (1024.0 * 1024.0), gbps);
-    };
-
-    run(k32, 32, "count=32 (padded)");
-    run(k8,   8, "count=8  (dense)");
-
-    cl.clReleaseMemObject(weights_dev);
-    cl.clReleaseMemObject(xm);
-    cl.clReleaseMemObject(dst);
-  }
-
-  cl.clReleaseKernel(k32);
-  cl.clReleaseKernel(k8);
 }
 
 
