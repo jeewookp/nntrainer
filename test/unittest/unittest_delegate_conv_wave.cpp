@@ -893,7 +893,7 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       ref_poison[i] = f32_to_f16(-999.0f);
     {
       size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
-      cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+      cl.clEnqueueWriteImage(queue, di, 1, o, r, 0, 0,
                              ref_poison.data(), 0, 0, 0);
       size_t need_z = (dst_slices + 7) / 8;
       size_t groups_z = (need_z + 4 - 1) / 4;
@@ -932,7 +932,7 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
       // write is clearly visible as -999.0 on readback.
       {
         size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)dst_slices,1};
-        cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+        cl.clEnqueueWriteImage(queue, di, 1, o, r, 0, 0,
                                poison.data(), 0, 0, 0);
       }
       // One dispatch after poisoning to produce the output we check.
