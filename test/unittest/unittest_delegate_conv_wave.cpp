@@ -790,10 +790,26 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16) {
 }
 
 // ============================================================================
-// Auto-tune work-group size per Qwen3 shape. Same setup as
-// ModelShapes_DelegateFp16 above but loops through 7 candidate local
-// sizes (the ones litert_lm's delegate_kernel_bench tries first) and
-// prints TFLOPS for each, plus the winner per shape.
+// Auto-tune work-group size per Qwen3 shape. Loops the captured
+// conv_wave kernel through 13 candidate local sizes (same set as
+// litert_lm's delegate_kernel_bench) and prints TFLOPS + a ✓/✗
+// correctness flag per candidate.
+//
+// IMPORTANT / KNOWN LIMITATION: the ✓ flag is NOT sufficient to pick
+// a production local. We verified empirically that (32,1,2) appears
+// ✓ in this test on every shape yet produces garbage generation
+// output when hard-coded into gemm_delegate_fp16_cl. The captured
+// Qualcomm kernel uses qcom_get_physical_sub_group_id + a shared
+// xmem wave-memory scratch where multiple subgroups cooperate on
+// weight loads; a workgroup with a single subgroup (like 32x1x2 = 64
+// work-items) runs the FMA loop correctly per-thread but the
+// subgroup-level wave-memory path ends up writing values that are
+// only correct for random / uniform test inputs — real model weights
+// with their specific int4->fp16 layout trip the broken path.
+//
+// This test is still useful as a throughput explorer, but do NOT
+// migrate the "best" local into production without an end-to-end
+// generation-correctness run.
 // ============================================================================
 TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
   fprintf(stderr, "\n=== Delegate fp16 kernel — local-size tune ===\n");
