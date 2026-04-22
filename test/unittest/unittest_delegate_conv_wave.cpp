@@ -824,11 +824,31 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
     if (e) { fprintf(stderr, "BUILD FAIL for %dx%dx%d\n", M, N, K); continue; }
     cl_kernel kern = cl.clCreateKernel(prog, "main_function", &e);
 
+    // Use pseudo-random fp16 inputs instead of the uniform (weights=0.01,
+    // src=1.0) used by the main bench: with uniform data every output
+    // collapses to the same scalar (K*0.01*1.0) and a buggy kernel that
+    // writes the wrong pixel, double-writes, or drops outputs still
+    // produces the same value everywhere, masking the bug. Random data
+    // makes each (m, n) output distinct so any thread/subgroup mapping
+    // error shows up as an output mismatch.
+    auto lcg = [](uint32_t &state) {
+      state = state * 1664525u + 1013904223u;
+      return state;
+    };
+    auto rand_h = [&](uint32_t &state) {
+      // fp16 values in [-0.1, 0.1) — small enough to stay well inside
+      // the fp16 range even after a K=9728 accumulate.
+      const float f = ((int32_t)(lcg(state) >> 15) % 2048) / 10240.0f;
+      return f32_to_f16(f);
+    };
     size_t wbytes = (size_t)N * K * 2;
     cl_mem w = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY, wbytes, nullptr, &e);
-    { uint16_t v = f32_to_f16(0.01f);
-      std::vector<uint16_t> d(wbytes/2, v);
-      cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, 0, 0); }
+    {
+      uint32_t rs = 0xC0FFEEu ^ (uint32_t)(N * 31u + K);
+      std::vector<uint16_t> d(wbytes / 2);
+      for (auto &x : d) x = rand_h(rs);
+      cl.clEnqueueWriteBuffer(queue, w, 1, 0, wbytes, d.data(), 0, 0, 0);
+    }
     cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
     cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
     cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
@@ -840,10 +860,13 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
     cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
     sd.image_width = M; sd.image_height = src_slices;
     cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &e);
-    { uint16_t one = f32_to_f16(1.0f);
-      std::vector<uint16_t> d((size_t)M*src_slices*4, one);
+    {
+      uint32_t rs = 0xBADCAFEu ^ (uint32_t)(M * 31u + K);
+      std::vector<uint16_t> d((size_t)M * src_slices * 4);
+      for (auto &x : d) x = rand_h(rs);
       size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
-      cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, d.data(), 0, 0, 0); }
+      cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, d.data(), 0, 0, 0);
+    }
     cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
     dd.image_width = M; dd.image_height = dst_slices;
     cl_mem di = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
@@ -910,10 +933,15 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
                               0, 0, 0);
       }
       int match = 0, total = 0;
-      for (size_t i = 0; i < 4096 && i < dst_npixels * 4; ++i) {
+      const size_t N_SAMPLE = std::min<size_t>(dst_npixels * 4, 8192);
+      const size_t step = std::max<size_t>(1, (dst_npixels * 4) / N_SAMPLE);
+      for (size_t i = 0; i < dst_npixels * 4; i += step) {
         float rv = f16_to_f32(ref_out[i]);
         float cv = f16_to_f32(cand_out[i]);
-        float tol = fabsf(rv) * 0.01f + 1e-4f;
+        // Wide tol because fp16 accumulate order differs between
+        // locals. Still tight enough to catch "half the outputs are
+        // zero" / "wrong pixel written" / etc.
+        float tol = fabsf(rv) * 0.05f + 1e-3f;
         if (fabsf(rv - cv) < tol) match++;
         ++total;
       }
