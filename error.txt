@@ -1,143 +1,126 @@
-  M=437 N=9728 K=2560: 7416.2 us = 2.935 TFLOPS (×36 = 267.0 ms)
-  M=437 N=2560 K=9728: 8185.3 us = 2.659 TFLOPS (×36 = 294.7 ms)
-  TOTAL: 3175.5 GFLOP in 1208.2 ms = 2.628 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1131 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune
-GPU: QUALCOMM Adreno(TM) 830
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-=== Delegate fp16 kernel — local-size tune ===
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-  M=437 N=4096 K=2560
-    local=(128,1,4)   3181.5 us  2.881 TFLOPS
-    local=(64,1,4)   3280.0 us  2.794 TFLOPS
-    local=(32,1,4)   3267.7 us  2.805 TFLOPS
-    local=(64,2,4)   3442.5 us  2.662 TFLOPS
-    local=(32,2,4)   6326.0 us  1.449 TFLOPS
-    local=(128,1,2)   3176.0 us  2.886 TFLOPS
-    local=(64,1,2)   3276.7 us  2.797 TFLOPS
-    local=(32,1,2)   2893.7 us  3.167 TFLOPS
-    local=(128,1,1)   3173.0 us  2.888 TFLOPS
-    local=(64,1,1)   2901.6 us  3.158 TFLOPS
-    local=(32,1,1)   5563.6 us  1.647 TFLOPS
-    local=(256,1,2)   3347.8 us  2.738 TFLOPS
-    local=(256,1,1)   3271.7 us  2.801 TFLOPS
-    → best=(32,1,2)  2893.7 us  3.167 TFLOPS
+_Post sure amfällen, the 7-digit number 987654321012345678901
 
-  M=437 N=1024 K=2560
-    local=(128,1,4)    913.4 us  2.508 TFLOPS
-    local=(64,1,4)    907.2 us  2.525 TFLOPS
-    local=(32,1,4)    941.1 us  2.435 TFLOPS
-    local=(64,2,4)    916.3 us  2.501 TFLOPS
-    local=(32,2,4)   1756.0 us  1.305 TFLOPS
-    local=(128,1,2)    913.5 us  2.508 TFLOPS
-    local=(64,1,2)    960.3 us  2.386 TFLOPS
-    local=(32,1,2)    861.1 us  2.661 TFLOPS
-    local=(128,1,1)    913.0 us  2.509 TFLOPS
-    local=(64,1,1)    869.6 us  2.635 TFLOPS
-    local=(32,1,1)   1520.8 us  1.507 TFLOPS
-    local=(256,1,2)   1093.8 us  2.095 TFLOPS
-    local=(256,1,1)    982.3 us  2.333 TFLOPS
-    → best=(32,1,2)  861.1 us  2.661 TFLOPS
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3808 ms, 114.758 TPS
+generation: 32 tokens, 7841 ms, 4.08111 TPS
+total: 11663 ms
+peak memory: 2771352 KB
+==========================================================
+[e2e time]: 14579 ms 
+Max Resident Set Size: 2771352 KB
 
-  M=437 N=1024 K=2560
-    local=(128,1,4)    867.9 us  2.640 TFLOPS
-    local=(64,1,4)    912.0 us  2.512 TFLOPS
-    local=(32,1,4)    894.7 us  2.561 TFLOPS
-    local=(64,2,4)    962.7 us  2.380 TFLOPS
-    local=(32,2,4)   1746.7 us  1.312 TFLOPS
-    local=(128,1,2)    915.3 us  2.503 TFLOPS
-    local=(64,1,2)    961.0 us  2.384 TFLOPS
-    local=(32,1,2)    849.0 us  2.699 TFLOPS
-    local=(128,1,1)    912.7 us  2.510 TFLOPS
-    local=(64,1,1)    821.8 us  2.788 TFLOPS
-    local=(32,1,1)   1522.1 us  1.505 TFLOPS
-    local=(256,1,2)   1050.8 us  2.180 TFLOPS
-    local=(256,1,1)    980.4 us  2.337 TFLOPS
-    → best=(64,1,1)  821.8 us  2.788 TFLOPS
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:    79.7 ms
+  dequant(host):      7.5 ms (51.9%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.8 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.2 ms  (3x clSetKernelArg)
+    .dispatch:        6.3 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     178.5 ms
+  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
+  reformat_in(gpu):   0.0 ms
+  conv(wall):         4.2 ms (29.0%)
+  conv(gpu):        975.3 ms            3.256 TFLOPS
+  readback(host):     2.7 ms (18.9%)
+  readback(gpu):     34.4 ms
+  svmmap(gpu):        0.4 ms
+  sum(steps host):   14.4 ms            219.822 TFLOPS
+  sum(gpu events): 1188.6 ms
+  fn_total(wall):  1438.7 ms            (unaccounted = 156.0 ms = host overhead + non-event sync gaps)
 
-  M=437 N=2560 K=4096
-    local=(128,1,4)   3225.3 us  2.841 TFLOPS
-    local=(64,1,4)   3342.9 us  2.742 TFLOPS
-    local=(32,1,4)   3285.6 us  2.789 TFLOPS
-    local=(64,2,4)   3455.4 us  2.652 TFLOPS
-    local=(32,2,4)   6412.2 us  1.429 TFLOPS
-    local=(128,1,2)   3212.9 us  2.852 TFLOPS
-    local=(64,1,2)   3342.2 us  2.742 TFLOPS
-    local=(32,1,2)   2960.1 us  3.096 TFLOPS
-    local=(128,1,1)   3210.2 us  2.855 TFLOPS
-    local=(64,1,1)   2968.5 us  3.087 TFLOPS
-    local=(32,1,1)   5608.1 us  1.634 TFLOPS
-    local=(256,1,2)   3500.5 us  2.618 TFLOPS
-    local=(256,1,1)   3402.0 us  2.694 TFLOPS
-    → best=(32,1,2)  2960.1 us  3.096 TFLOPS
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=3736.7 ms across all forwarding_op() calls
+  fully_connected               1444.1 ms  calls=252  avg=5.731 ms
+  mha_core                      1037.0 ms  calls=36  avg=28.804 ms
+  rms_norm                       620.1 ms  calls=73  avg=8.495 ms
+  reshaped_rms_norm              490.2 ms  calls=72  avg=6.809 ms
+  swiglu                          69.8 ms  calls=36  avg=1.938 ms
+  addition                        54.3 ms  calls=72  avg=0.754 ms
+  tie_word_embeddings             20.5 ms  calls=2  avg=10.228 ms
+  multiout                         0.7 ms  calls=144  avg=0.005 ms
+  input                            0.1 ms  calls=1  avg=0.054 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.75 ms calls=1 avg=18.745 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.69 ms calls=1 avg=1.693 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=6.87 ms calls=36 avg=0.191 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=572.74 ms calls=73 avg=7.846 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=489.53 ms calls=72 avg=6.799 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1010.15 ms calls=36 avg=28.060 ms
 
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7284.3 us  2.988 TFLOPS
-    local=(64,1,4)   7482.8 us  2.909 TFLOPS
-    local=(32,1,4)   7384.9 us  2.947 TFLOPS
-    local=(64,2,4)   7890.7 us  2.758 TFLOPS
-    local=(32,2,4)  14554.4 us  1.495 TFLOPS
-    local=(128,1,2)   7157.7 us  3.041 TFLOPS
-    local=(64,1,2)   7474.4 us  2.912 TFLOPS
-    local=(32,1,2)   6528.8 us  3.334 TFLOPS
-    local=(128,1,1)   7153.7 us  3.043 TFLOPS
-    local=(64,1,1)   6599.2 us  3.298 TFLOPS
-    local=(32,1,1)  12943.7 us  1.682 TFLOPS
-    local=(256,1,2)   7550.1 us  2.883 TFLOPS
-    local=(256,1,1)   7449.9 us  2.922 TFLOPS
-    → best=(32,1,2)  6528.8 us  3.334 TFLOPS
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1439.00 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1438.95 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7226.1 us  3.012 TFLOPS
-    local=(64,1,4)   7426.6 us  2.931 TFLOPS
-    local=(32,1,4)   7432.8 us  2.928 TFLOPS
-    local=(64,2,4)   7842.3 us  2.775 TFLOPS
-    local=(32,2,4)  14546.8 us  1.496 TFLOPS
-    local=(128,1,2)   7202.0 us  3.022 TFLOPS
-    local=(64,1,2)   7476.4 us  2.911 TFLOPS
-    local=(32,1,2)   6582.9 us  3.306 TFLOPS
-    local=(128,1,1)   7244.9 us  3.004 TFLOPS
-    local=(64,1,1)   6605.3 us  3.295 TFLOPS
-    local=(32,1,1)  12948.9 us  1.681 TFLOPS
-    local=(256,1,2)   7532.7 us  2.890 TFLOPS
-    local=(256,1,1)   7432.2 us  2.929 TFLOPS
-    → best=(32,1,2)  6582.9 us  3.306 TFLOPS
+==========================================
+ Run summary
+==========================================
 
-  M=437 N=2560 K=9728
-    local=(128,1,4)   7446.9 us  2.923 TFLOPS
-    local=(64,1,4)   7810.0 us  2.787 TFLOPS
-    local=(32,1,4)   7699.4 us  2.827 TFLOPS
-    local=(64,2,4)   8160.5 us  2.667 TFLOPS
-    local=(32,2,4)  15098.2 us  1.442 TFLOPS
-    local=(128,1,2)   7493.7 us  2.905 TFLOPS
-    local=(64,1,2)   7809.1 us  2.787 TFLOPS
-    local=(32,1,2)   6853.8 us  3.176 TFLOPS
-    local=(128,1,1)   7481.3 us  2.909 TFLOPS
-    local=(64,1,1)   6965.9 us  3.125 TFLOPS
-    local=(32,1,1)  13221.4 us  1.646 TFLOPS
-    local=(256,1,2)   8375.5 us  2.599 TFLOPS
-    local=(256,1,1)   7998.8 us  2.721 TFLOPS
-    → best=(32,1,2)  6853.8 us  3.176 TFLOPS
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune (45896 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
-GPU: QUALCOMM Adreno(TM) 830
+--- Generation snippet (post-assistant tag) ---
 
-=== Int4 Adreno kernel — model shapes ===
-  SKIP 437x4096x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x1024x2560: image1d_buffer failed -6
-  SKIP 437x2560x4096: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x9728x2560: image1d_buffer failed -6
-  SKIP 437x2560x9728: image1d_buffer failed -6
-  TOTAL: 0.0 GFLOP in 0.0 ms = nan TFLOPS (kernel only)
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Adreno (138 ms)
-[----------] 5 tests from DelegateConvWaveTest (51011 ms total)
+_Post sure amfällen, the 7-digit number 987654321012345678901
 
-[----------] Global test environment tear-down
-[==========] 5 tests from 1 test suite ran. (51011 ms total)
-[  PASSED  ] 5 tests.
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3808 ms, 114.758 TPS
+generation: 32 tokens, 7841 ms, 4.08111 TPS
+total: 11663 ms
+peak memory: 2771352 KB
+==========================================================
+[e2e time]: 14579 ms 
+Max Resident Set Size: 2771352 KB
 
-Log: unittest_delegate_conv_wave.log
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:    79.7 ms
+  dequant(host):      7.5 ms (51.9%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.8 ms  (2
+
+--- Perf summary ---
+prefill: 437 tokens, 3808 ms, 114.758 TPS
+generation: 32 tokens, 7841 ms, 4.08111 TPS
+total: 11663 ms
+peak memory: 2771352 KB
+[e2e time]: 14579 ms 
+
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1439.00 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1438.95 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.75 ms calls=1 avg=18.745 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.69 ms calls=1 avg=1.693 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=6.87 ms calls=36 avg=0.191 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=572.74 ms calls=73 avg=7.846 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=489.53 ms calls=72 avg=6.799 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=1010.15 ms calls=36 avg=28.060 ms
+
+Full log: temp_run.log  (error.txt is intentionally untouched)
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
