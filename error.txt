@@ -1,161 +1,128 @@
-[Step 3] Running on device
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3134 ms, 139.438 TPS
+generation: 32 tokens, 7502 ms, 4.26553 TPS
+total: 10640 ms
+peak memory: 2896268 KB
+==========================================================
+[e2e time]: 13602 ms 
+Max Resident Set Size: 2896268 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:   131.4 ms
+  dequant(host):      3.7 ms (50.8%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.6 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.1 ms  (3x clSetKernelArg)
+    .dispatch:        2.9 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     177.1 ms
+  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
+  reformat_in(gpu):   0.0 ms
+  conv(wall):         2.2 ms (30.2%)
+  conv(gpu):        979.3 ms            3.242 TFLOPS
+  readback(host):     1.4 ms (18.8%)
+  readback(gpu):     34.1 ms
+  svmmap(gpu):        0.2 ms
+  sum(steps host):    7.2 ms            440.563 TFLOPS
+  sum(gpu events): 1190.7 ms
+  fn_total(wall):  1459.1 ms            (unaccounted = 129.8 ms = host overhead + non-event sync gaps)
+
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=3075.6 ms across all forwarding_op() calls
+  fully_connected               1461.9 ms  calls=252  avg=5.801 ms
+  mha_core                       956.8 ms  calls=36  avg=26.579 ms
+  rms_norm                       365.0 ms  calls=73  avg=5.000 ms
+  reshaped_rms_norm              174.4 ms  calls=72  avg=2.422 ms
+  swiglu                          57.2 ms  calls=36  avg=1.590 ms
+  addition                        39.2 ms  calls=72  avg=0.545 ms
+  tie_word_embeddings             20.6 ms  calls=2  avg=10.282 ms
+  multiout                         0.4 ms  calls=144  avg=0.003 ms
+  input                            0.0 ms  calls=1  avg=0.035 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.68 ms calls=1 avg=17.675 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.87 ms calls=1 avg=2.870 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.83 ms calls=36 avg=0.134 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=321.46 ms calls=73 avg=4.404 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=174.16 ms calls=72 avg=2.419 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=930.17 ms calls=36 avg=25.838 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1459.20 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1459.18 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
 ==========================================
-[==========] Running 8 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 8 tests from DelegateConvWaveTest
-[ RUN      ] DelegateConvWaveTest.DelegateLoadProbe
-GPU: QUALCOMM Adreno(TM) 830
+ Run summary
+==========================================
 
-=== Delegate wave-load microbench (count=32 vs count=8) ===
+--- Generation snippet (post-assistant tag) ---
 
-  M=437 N=4096 K=2560  (iters/thread=320)
-    count=32 (padded)      1437.4 us   requested= 240.00 MB     175.1 GB/s
-    count=8  (dense)        830.9 us   requested=  60.00 MB      75.7 GB/s
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
 
-  M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       320.2 us   requested=  60.00 MB     196.5 GB/s
-    count=8  (dense)        196.3 us   requested=  15.00 MB      80.1 GB/s
 
-  M=437 N=1024 K=2560  (iters/thread=320)
-    count=32 (padded)       314.4 us   requested=  60.00 MB     200.1 GB/s
-    count=8  (dense)        193.5 us   requested=  15.00 MB      81.3 GB/s
 
-  M=437 N=2560 K=4096  (iters/thread=512)
-    count=32 (padded)      1447.0 us   requested= 240.00 MB     173.9 GB/s
-    count=8  (dense)        855.4 us   requested=  60.00 MB      73.6 GB/s
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3134 ms, 139.438 TPS
+generation: 32 tokens, 7502 ms, 4.26553 TPS
+total: 10640 ms
+peak memory: 2896268 KB
+==========================================================
+[e2e time]: 13602 ms 
+Max Resident Set Size: 2896268 KB
 
-  M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3319.8 us   requested= 570.00 MB     180.0 GB/s
-    count=8  (dense)       1757.4 us   requested= 142.50 MB      85.0 GB/s
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:   131.4 ms
+  dequant(host):      3.7 ms (50.8%)  cache-miss=252/25
 
-  M=437 N=9728 K=2560  (iters/thread=320)
-    count=32 (padded)      3322.0 us   requested= 570.00 MB     179.9 GB/s
-    count=8  (dense)       1770.9 us   requested= 142.50 MB      84.4 GB/s
+--- Perf summary ---
+prefill: 437 tokens, 3134 ms, 139.438 TPS
+generation: 32 tokens, 7502 ms, 4.26553 TPS
+total: 10640 ms
+peak memory: 2896268 KB
+[e2e time]: 13602 ms 
 
-  M=437 N=2560 K=9728  (iters/thread=1216)
-    count=32 (padded)      3438.5 us   requested= 570.00 MB     173.8 GB/s
-    count=8  (dense)       2070.0 us   requested= 142.50 MB      72.2 GB/s
-[       OK ] DelegateConvWaveTest.DelegateLoadProbe (2527 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Fused
-GPU: QUALCOMM Adreno(TM) 830
+--- dotQInteger profile breakdown ---
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1459.20 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1459.18 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
 
-=== Fused int4 conv vs dequant+delegate reference ===
+--- Layer wall-clock profile (prefill M>1) ---
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=17.68 ms calls=1 avg=17.675 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.87 ms calls=1 avg=2.870 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=4.83 ms calls=36 avg=0.134 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=321.46 ms calls=73 avg=4.404 ms
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=174.16 ms calls=72 avg=2.419 ms
+[PROFILE MHACoreLayer prefill (M>1)] total=930.17 ms calls=36 avg=25.838 ms
 
-  M=437 N=4096 K=2560
-    fused:  15600.4 us  0.587 TFLOPS  rel_l2=0 max|d|=0  ✓
+Full log: temp_run.log  (error.txt is intentionally untouched)
 
-  M=437 N=1024 K=2560
-    fused:   2797.3 us  0.819 TFLOPS  rel_l2=0 max|d|=0  ✓
-
-  M=437 N=1024 K=2560
-    fused:   2748.0 us  0.834 TFLOPS  rel_l2=0 max|d|=0  ✓
-
-  M=437 N=2560 K=4096
-    fused:  13608.9 us  0.673 TFLOPS  rel_l2=0 max|d|=0  ✓
-
-  M=437 N=9728 K=2560
-    fused:  28891.5 us  0.753 TFLOPS  rel_l2=0 max|d|=0  ✓
-
-  M=437 N=9728 K=2560
-    fused:  28930.9 us  0.752 TFLOPS  rel_l2=0 max|d|=0  ✓
-
-  M=437 N=2560 K=9728
-    fused:  43889.9 us  0.496 TFLOPS  rel_l2=0 max|d|=0  ✓
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14145 ms)
-[ RUN      ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate int4 dense (count=8) vs fp16 ref ===
-
-  M=437 N=1024 K=2560
-    fp16 ref (delegate):             914.1 us  2.506 TFLOPS
-    int4 dense (count=8 load):     781792.2 us  0.003 TFLOPS  rel_l2=0 max|d|=0  OK
-[       OK ] DelegateConvWaveTest.SmallShape_DelegateInt4Dense (5796 ms)
-[ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0Only
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Probe: int4 dense r0-only (1/8 compute) ===
-
-  M=437 N=1024 K=2560  (r0 does 1/8 of full FMAs)
-    fp16 ref (delegate, full):        986.7 us  2.322 TFLOPS (full)
-    int4 r0-only (count=8 + 1/8 FMA):   803.5 us  0.356 TFLOPS (r0-scaled)
-      rel_l2=0 max|d|=0  cmp=55936  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0Only (203 ms)
-[ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Probe: int4 dense r0..r3 (1/2 compute, 4 acc) ===
-
-  M=437 N=1024 K=2560  (r0..r3 does 1/2 of full FMAs)
-    fp16 ref (delegate, full):        954.0 us  2.402 TFLOPS (full)
-    int4 r0..r3 (count=8 + 1/2 FMA):  1979.8 us  0.579 TFLOPS (r0..r3-scaled)
-      rel_l2=0 max|d|=0  cmp=223744  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3 (266 ms)
-[ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_Split_R0_R7
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Probe: int4 dense split (r0..r3 + r4..r7) ===
-
-  M=437 N=1024 K=2560  (split r0..r3 + r4..r7 = full)
-    fp16 ref (delegate, full):        976.9 us  2.345 TFLOPS
-    int4 split (r0..r3 + r4..r7):    3685.1 us  0.622 TFLOPS  rel_l2=0 max|d|=0  OK
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_Split_R0_R7 (384 ms)
-[ RUN      ] DelegateConvWaveTest.AllShapes_DelegateInt4Split
-GPU: QUALCOMM Adreno(TM) 830
-
-=== All shapes: fp16 delegate vs int4 split ===
-
-  M=437 N=4096 K=2560
-    fp16 delegate:           3355.7 us  2.731 TFLOPS
-    int4 split (r0r3+r4r7): 13163.8 us  0.696 TFLOPS  rel_l2=0  3.92x fp16  OK
-
-  M=437 N=1024 K=2560
-    fp16 delegate:           1189.8 us  1.926 TFLOPS
-    int4 split (r0r3+r4r7):  4651.4 us  0.493 TFLOPS  rel_l2=0  3.91x fp16  OK
-
-  M=437 N=1024 K=2560
-    fp16 delegate:           1018.3 us  2.250 TFLOPS
-    int4 split (r0r3+r4r7):  4611.0 us  0.497 TFLOPS  rel_l2=0  4.53x fp16  OK
-
-  M=437 N=2560 K=4096
-    fp16 delegate:           4137.8 us  2.215 TFLOPS
-    int4 split (r0r3+r4r7): 12381.1 us  0.740 TFLOPS  rel_l2=0  2.99x fp16  OK
-
-  M=437 N=9728 K=2560
-    fp16 delegate:           8381.2 us  2.597 TFLOPS
-    int4 split (r0r3+r4r7): 27604.3 us  0.788 TFLOPS  rel_l2=0  3.29x fp16  OK
-
-  M=437 N=9728 K=2560
-    fp16 delegate:           8289.0 us  2.626 TFLOPS
-    int4 split (r0r3+r4r7): 28496.2 us  0.764 TFLOPS  rel_l2=0  3.44x fp16  OK
-
-  M=437 N=2560 K=9728
-    fp16 delegate:           8580.8 us  2.537 TFLOPS
-    int4 split (r0r3+r4r7): 29551.0 us  0.737 TFLOPS  rel_l2=0  3.44x fp16  OK
-
-  Totals over 7 shapes:
-    fp16 delegate:    34952.6 us
-    int4 split:      120458.9 us  (3.45x fp16)
-[       OK ] DelegateConvWaveTest.AllShapes_DelegateInt4Split (2038 ms)
-[ RUN      ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3_Phased
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Probe: r0..r3 inline DQ vs phased ===
-
-  M=437 N=1024 K=2560  (r0..r3 = 1/2 of full FMAs)
-    fp16 delegate (full):          868.9 us  2.637 TFLOPS (full)
-    int4 r0..r3 inline DQ:        1872.0 us  0.612 TFLOPS (r0..r3-scaled)  rel_l2=0 OK
-    int4 r0..r3 phased:           1990.2 us  0.576 TFLOPS (r0..r3-scaled)  rel_l2=0 OK
-
-    phased / inline = 1.06x  (lower is better)
-    phased_x2 (split-est) / fp16 delegate = 4.58x
-[       OK ] DelegateConvWaveTest.Probe_DelegateInt4_R0_R3_Phased (362 ms)
-[----------] 8 tests from DelegateConvWaveTest (25726 ms total)
-
-[----------] Global test environment tear-down
-[==========] 8 tests from 1 test suite ran. (25726 ms total)
-[  PASSED  ] 8 tests.
-
-Log: unittest_delegate_conv_wave.log
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
