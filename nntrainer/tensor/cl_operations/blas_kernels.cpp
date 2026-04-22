@@ -2681,9 +2681,17 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
 
   // kernel objects (cached)
+  // NNTRAINER_DEQUANT_X2=1 swaps in the 2x variant of the dequant kernel
+  // (each thread produces 32 output halves from two ushort4 loads sharing
+  // one scale load, halving the dispatch thread count).
+  static const bool s_use_dq_x2 =
+    std::getenv("NNTRAINER_DEQUANT_X2") != nullptr;
   if (!s_dq_kern)
     s_dq_kern = blas_cc->registerClKernel(
-      dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
+      s_use_dq_x2 ? dequant_int4_to_fp16_x2_kernel
+                  : dequant_int4_to_fp16_kernel,
+      s_use_dq_x2 ? "dequant_int4_to_delegate_fp16_x2"
+                  : "dequant_int4_to_delegate_fp16");
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
     // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
@@ -2756,8 +2764,10 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
     s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
     const uint64_t tD = now_ns();
-    // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
-    int tot = (int)(w_halfs / 16);
+    // Vectorized dequant thread count: v1 does 16 halves/thread,
+    // v2 does 32 (see NNTRAINER_DEQUANT_X2 branch above).
+    const int halves_per_thread = s_use_dq_x2 ? 32 : 16;
+    int tot = (int)(w_halfs / halves_per_thread);
     const int dg[3] = {((tot+255)/256)*256, 1, 1};
     const int dl[3] = {256, 1, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl, &dequant_ev);
@@ -3221,9 +3231,15 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     s_dst_w = M; s_dst_h = max_dst_slices;
   }
 
+  // Same NNTRAINER_DEQUANT_X2 toggle as the single-call path above.
+  static const bool s_use_dq_x2 =
+    std::getenv("NNTRAINER_DEQUANT_X2") != nullptr;
   if (!s_dq_kern)
     s_dq_kern = blas_cc->registerClKernel(
-      dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
+      s_use_dq_x2 ? dequant_int4_to_fp16_x2_kernel
+                  : dequant_int4_to_fp16_kernel,
+      s_use_dq_x2 ? "dequant_int4_to_delegate_fp16_x2"
+                  : "dequant_int4_to_delegate_fp16");
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
     // Without -qcom-accelerate-16-bit=true the Qualcomm compiler does
@@ -3300,8 +3316,10 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
       int sn = (int)Ni, sk = (int)K;
       s_dq_kern->SetKernelArguments(a++, &sn, sizeof(int));
       s_dq_kern->SetKernelArguments(a++, &sk, sizeof(int));
-      // Vectorized dequant: one thread per (z,it,s) block = 16 output halves.
-      int tot = (int)(w_halfs / 16);
+      // Vectorized dequant thread count: v1 does 16 halves/thread,
+      // v2 does 32 (NNTRAINER_DEQUANT_X2 branch above).
+      const int halves_per_thread = s_use_dq_x2 ? 32 : 16;
+      int tot = (int)(w_halfs / halves_per_thread);
       const int dg[3] = {((tot+255)/256)*256, 1, 1};
       const int dl[3] = {256, 1, 1};
       blas_cc->command_queue_inst_.DispatchCommand(s_dq_kern, dg, dl);

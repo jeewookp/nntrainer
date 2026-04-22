@@ -15,6 +15,7 @@ cl_op_kernels = [
   'int4_gemm.cl',
   'delegate_conv_wave.cl',
   'dequant_int4_to_fp16.cl',
+  'dequant_int4_to_fp16_x2.cl',
   'image_reformat.cl',
   'rmsnorm_image2d.cl',
   'addition_image2d.cl',
