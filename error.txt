@@ -1,165 +1,3 @@
-==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.6 MB/s (356456 bytes in 0.011s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 4.2 MB/s (7438 bytes in 0.002s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.0 MB/s (4231 bytes in 0.004s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.4 MB/s (1822720 bytes in 0.055s)
-
-==========================================
-[Step 3] Running on device
-==========================================
-[==========] Running 5 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 5 tests from DelegateConvWaveTest
-[ RUN      ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness
-GPU: QUALCOMM Adreno(TM) 830
-Correctness: 256/256 pass (expected=10.24, fp16 tol 15%)
-Performance: 435.7 us/iter = 2.464 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Matmul_1024x6144x1536_Correctness (151 ms)
-[ RUN      ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024
-GPU: QUALCOMM Adreno(TM) 830
-global=(1024,4,4) local=(128,1,4)
-  [m=0,n=0] gpu=-0.3579 cpu=-0.3566 err=0.4%
-  [m=0,n=1] gpu=0.9893 cpu=0.9843 err=0.5%
-  [m=0,n=2] gpu=-0.0975 cpu=-0.0950 err=2.7%
-  [m=0,n=3] gpu=0.0306 cpu=0.0309 err=0.9%
-  [m=1,n=0] gpu=0.7095 cpu=0.7074 err=0.3%
-  [m=1,n=1] gpu=0.1864 cpu=0.1875 err=0.6%
-  [m=1,n=2] gpu=0.1562 cpu=0.1541 err=1.4%
-  [m=1,n=3] gpu=-0.1127 cpu=-0.1143 err=1.4%
-Correctness: 128/128 pass (max err 12.9%)
-Int4 wave: 453234.3 us = 0.002 TFLOPS (M=512 N=1024 K=1024)
-[       OK ] DelegateConvWaveTest.Int4WaveKernel_512x1024x1024 (4055 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate fp16 kernel — model shapes ===
-  M=437 N=4096 K=2560: 3790.0 us = 2.418 TFLOPS (×36 = 136.4 ms)
-  M=437 N=1024 K=2560: 960.5 us = 2.385 TFLOPS (×36 = 34.6 ms)
-  M=437 N=1024 K=2560: 905.9 us = 2.529 TFLOPS (×36 = 32.6 ms)
-  M=437 N=2560 K=4096: 3330.2 us = 2.752 TFLOPS (×36 = 119.9 ms)
-  M=437 N=9728 K=2560: 7909.5 us = 2.752 TFLOPS (×36 = 284.7 ms)
-  M=437 N=9728 K=2560: 7450.3 us = 2.921 TFLOPS (×36 = 268.2 ms)
-  M=437 N=2560 K=9728: 8126.9 us = 2.678 TFLOPS (×36 = 292.6 ms)
-  TOTAL: 3175.5 GFLOP in 1169.0 ms = 2.716 TFLOPS (conv only)
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16 (1101 ms)
-[ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune
-GPU: QUALCOMM Adreno(TM) 830
-
-=== Delegate fp16 kernel — local-size tune ===
-
-  M=437 N=4096 K=2560
-    local=(128,1,4)   3163.7 us  2.897 TFLOPS  ✓
-    local=(64,1,4)   3262.1 us  2.809 TFLOPS  ✓
-    local=(32,1,4)   3240.7 us  2.828 TFLOPS  ✓
-    local=(64,2,4)   3398.7 us  2.697 TFLOPS  ✓
-    local=(32,2,4)   6248.6 us  1.467 TFLOPS  ✓
-    local=(128,1,2)   3161.3 us  2.899 TFLOPS  ✓
-    local=(64,1,2)   3255.9 us  2.815 TFLOPS  ✓
-    local=(32,1,2)   2837.3 us  3.230 TFLOPS  ✓
-    local=(128,1,1)   3157.1 us  2.903 TFLOPS  ✓
-    local=(64,1,1)   2899.1 us  3.161 TFLOPS  ✓
-    local=(32,1,1)   5557.7 us  1.649 TFLOPS  ✓
-    local=(256,1,2)   3312.4 us  2.767 TFLOPS  ✓
-    local=(256,1,1)   3294.0 us  2.782 TFLOPS  ✓
-    → best=(32,1,2)  2837.3 us  3.230 TFLOPS
-
-  M=437 N=1024 K=2560
-    local=(128,1,4)    914.3 us  2.506 TFLOPS  ✓
-    local=(64,1,4)    960.7 us  2.385 TFLOPS  ✓
-    local=(32,1,4)    942.5 us  2.431 TFLOPS  ✓
-    local=(64,2,4)    964.9 us  2.375 TFLOPS  ✓
-    local=(32,2,4)   1729.4 us  1.325 TFLOPS  ✓
-    local=(128,1,2)    915.5 us  2.503 TFLOPS  ✓
-    local=(64,1,2)    913.2 us  2.509 TFLOPS  ✓
-    local=(32,1,2)    859.1 us  2.667 TFLOPS  ✓
-    local=(128,1,1)    914.9 us  2.504 TFLOPS  ✓
-    local=(64,1,1)    860.8 us  2.662 TFLOPS  ✓
-    local=(32,1,1)   1520.8 us  1.507 TFLOPS  ✓
-    local=(256,1,2)   1100.3 us  2.082 TFLOPS  ✓
-    local=(256,1,1)    978.5 us  2.341 TFLOPS  ✓
-    → best=(32,1,2)  859.1 us  2.667 TFLOPS
-
-  M=437 N=1024 K=2560
-    local=(128,1,4)    914.5 us  2.505 TFLOPS  ✓
-    local=(64,1,4)    957.4 us  2.393 TFLOPS  ✓
-    local=(32,1,4)    892.5 us  2.567 TFLOPS  ✓
-    local=(64,2,4)    954.4 us  2.401 TFLOPS  ✓
-    local=(32,2,4)   1743.3 us  1.314 TFLOPS  ✓
-    local=(128,1,2)    859.9 us  2.664 TFLOPS  ✓
-    local=(64,1,2)    958.4 us  2.391 TFLOPS  ✓
-    local=(32,1,2)    857.3 us  2.673 TFLOPS  ✓
-    local=(128,1,1)    908.9 us  2.521 TFLOPS  ✓
-    local=(64,1,1)    819.1 us  2.797 TFLOPS  ✓
-    local=(32,1,1)   1515.5 us  1.512 TFLOPS  ✓
-    local=(256,1,2)   1099.8 us  2.083 TFLOPS  ✓
-    local=(256,1,1)    977.4 us  2.344 TFLOPS  ✓
-    → best=(64,1,1)  819.1 us  2.797 TFLOPS
-
-  M=437 N=2560 K=4096
-    local=(128,1,4)   3195.5 us  2.868 TFLOPS  ✓
-    local=(64,1,4)   3320.5 us  2.760 TFLOPS  ✓
-    local=(32,1,4)   3213.5 us  2.852 TFLOPS  ✓
-    local=(64,2,4)   3430.0 us  2.672 TFLOPS  ✓
-    local=(32,2,4)   6353.7 us  1.442 TFLOPS  ✓
-    local=(128,1,2)   3183.0 us  2.879 TFLOPS  ✓
-    local=(64,1,2)   3313.4 us  2.766 TFLOPS  ✓
-    local=(32,1,2)   2947.1 us  3.110 TFLOPS  ✓
-    local=(128,1,1)   3153.2 us  2.906 TFLOPS  ✓
-    local=(64,1,1)   2956.7 us  3.100 TFLOPS  ✓
-    local=(32,1,1)   5597.4 us  1.637 TFLOPS  ✓
-    local=(256,1,2)   3524.3 us  2.600 TFLOPS  ✓
-    local=(256,1,1)   3345.1 us  2.740 TFLOPS  ✓
-    → best=(32,1,2)  2947.1 us  3.110 TFLOPS
-
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7396.4 us  2.943 TFLOPS  ✓
-    local=(64,1,4)   7831.4 us  2.779 TFLOPS  ✓
-    local=(32,1,4)   7859.7 us  2.769 TFLOPS  ✓
-    local=(64,2,4)   7726.1 us  2.817 TFLOPS  ✓
-    local=(32,2,4)  14409.3 us  1.511 TFLOPS  ✓
-    local=(128,1,2)   7656.1 us  2.843 TFLOPS  ✓
-    local=(64,1,2)   8011.4 us  2.717 TFLOPS  ✓
-    local=(32,1,2)   6976.9 us  3.120 TFLOPS  ✓
-    local=(128,1,1)   7837.4 us  2.777 TFLOPS  ✓
-    local=(64,1,1)   7044.0 us  3.090 TFLOPS  ✓
-    local=(32,1,1)  12957.3 us  1.680 TFLOPS  ✓
-    local=(256,1,2)   8086.6 us  2.692 TFLOPS  ✓
-    local=(256,1,1)   8071.8 us  2.697 TFLOPS  ✓
-    → best=(32,1,2)  6976.9 us  3.120 TFLOPS
-
-  M=437 N=9728 K=2560
-    local=(128,1,4)   7823.5 us  2.782 TFLOPS  ✓
-    local=(64,1,4)   8162.1 us  2.667 TFLOPS  ✓
-    local=(32,1,4)   8190.1 us  2.658 TFLOPS  ✓
-    local=(64,2,4)   7981.6 us  2.727 TFLOPS  ✓
-    local=(32,2,4)  14610.9 us  1.490 TFLOPS  ✓
-    local=(128,1,2)   7977.6 us  2.728 TFLOPS  ✓
-    local=(64,1,2)   8268.9 us  2.632 TFLOPS  ✓
-    local=(32,1,2)   7228.4 us  3.011 TFLOPS  ✓
-    local=(128,1,1)   8039.0 us  2.708 TFLOPS  ✓
-    local=(64,1,1)   7327.9 us  2.970 TFLOPS  ✓
-    local=(32,1,1)  12984.4 us  1.676 TFLOPS  ✓
-    local=(256,1,2)   8379.2 us  2.598 TFLOPS  ✓
-    local=(256,1,1)   8335.4 us  2.611 TFLOPS  ✓
-    → best=(32,1,2)  7228.4 us  3.011 TFLOPS
-
-  M=437 N=2560 K=9728
-    local=(128,1,4)   8251.1 us  2.638 TFLOPS  ✓
-    local=(64,1,4)   8669.5 us  2.511 TFLOPS  ✓
-    local=(32,1,4)   8636.3 us  2.520 TFLOPS  ✓
-    local=(64,2,4)   8322.6 us  2.615 TFLOPS  ✓
-    local=(32,2,4)  15480.6 us  1.406 TFLOPS  ✓
-    local=(128,1,2)   8441.1 us  2.579 TFLOPS  ✓
-    local=(64,1,2)   8823.3 us  2.467 TFLOPS  ✓
-    local=(32,1,2)   7669.5 us  2.838 TFLOPS  ✓
-    local=(128,1,1)   8487.3 us  2.565 TFLOPS  ✓
-    local=(64,1,1)   7731.4 us  2.815 TFLOPS  ✓
-    local=(32,1,1)  13567.4 us  1.604 TFLOPS  ✓
-    local=(256,1,2)   9358.2 us  2.326 TFLOPS  ✓
-    local=(256,1,1)   9091.1 us  2.394 TFLOPS  ✓
-    → best=(32,1,2)  7669.5 us  2.838 TFLOPS
-[       OK ] DelegateConvWaveTest.ModelShapes_DelegateFp16_Tune (48390 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Adreno
 GPU: QUALCOMM Adreno(TM) 830
 
@@ -180,5 +18,87 @@ GPU: QUALCOMM Adreno(TM) 830
 [  PASSED  ] 5 tests.
 
 Log: unittest_delegate_conv_wave.log
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m '.'
+[all_gpu 9bbfc1c0] .
+ 1 file changed, 184 insertions(+), 211 deletions(-)
+ rewrite error.txt (74%)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+Already up to date.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git push upstream all_gpu
+Username for 'https://github.com': jeewook.kim
+Password for 'https://jeewook.kim@github.com': 
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 24 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 1.54 KiB | 1.54 MiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/jeewookp/nntrainer.git
+   0d2a2cef..9bbfc1c0  all_gpu -> all_gpu
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 1.60 KiB | 164.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   9bbfc1c0..f9181887  all_gpu    -> upstream/all_gpu
+Updating 9bbfc1c0..f9181887
+Fast-forward
+ test/unittest/unittest_delegate_conv_wave.cpp | 47 ++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 32 insertions(+), 15 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh unittest_delegate_conv_wave.sh 
+==========================================
+[Step 1] Building unittest_delegate_conv_wave (ndk-build)
+==========================================
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Clean          : ccapi-nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : googletest_main [arm64-v8a]
+[arm64-v8a] Clean          : nntrainer [arm64-v8a]
+[arm64-v8a] Clean          : test_util [arm64-v8a]
+[arm64-v8a] Clean          : unittest_base_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_ccapi [arm64-v8a]
+[arm64-v8a] Clean          : unittest_common_properties [arm64-v8a]
+[arm64-v8a] Clean          : unittest_compiler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_datasets [arm64-v8a]
+[arm64-v8a] Clean          : unittest_layers [arm64-v8a]
+[arm64-v8a] Clean          : unittest_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_neon_gelu [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_activations [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_appcontext [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_cpu_backend_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_exe_order [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_graph [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_internal [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lazy_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_lr_scheduler [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_modelfile [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_models [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_neon_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_nhwc [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool [arm64-v8a]
+[arm64-v8a] Clean          : unittest_nntrainer_tensor_pool_fp16 [arm64-v8a]
+[arm64-v8a] Clean          : unittest_util_func [arm64-v8a]
+Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Install libs/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : unittest_delegate_conv_wave <= unittest_delegate_conv_wave.cpp
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_delegate_conv_wave.cpp:896:41: error: use of undeclared identifier 'CL_TRUE'
+      cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+                                        ^
+/home/jwhero94/projects/nntrainer/test/jni/../unittest/unittest_delegate_conv_wave.cpp:935:43: error: use of undeclared identifier 'CL_TRUE'
+        cl.clEnqueueWriteImage(queue, di, CL_TRUE, o, r, 0, 0,
+                                          ^
+2 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: /home/jwhero94/projects/nntrainer/test/obj/local/arm64-v8a/objs/unittest_delegate_conv_wave/__/unittest/unittest_delegate_conv_wave.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : googletest_main <= gtest-all.cc
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
