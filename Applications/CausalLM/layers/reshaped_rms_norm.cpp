@@ -31,17 +31,49 @@ namespace {
 struct ReshapedRMSNormProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
+  std::atomic<uint64_t> ns_svm_map{0};
+  std::atomic<uint64_t> ns_alloc_in{0};
+  std::atomic<uint64_t> ns_fp16_to_fp32{0};
+  std::atomic<uint64_t> ns_alloc_out{0};
+  std::atomic<uint64_t> ns_neon{0};
+  std::atomic<uint64_t> ns_gamma_mul{0};
+  std::atomic<uint64_t> ns_fp32_to_fp16{0};
 
   ~ReshapedRMSNormProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
       return;
     const uint64_t t = ns.load();
+    const double T = t / 1.0e6;
+    auto pct = [&](uint64_t v) {
+      return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
+    };
     std::fprintf(stderr,
                  "[PROFILE ReshapedRMSNormLayer prefill (M>1)] "
                  "total=%.2f ms calls=%llu avg=%.3f ms\n",
-                 t / 1.0e6, (unsigned long long)c,
-                 c == 0 ? 0.0 : (t / 1.0e6) / static_cast<double>(c));
+                 T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  svm_map      : %8.2f ms (%5.1f%%)\n",
+                 ns_svm_map / 1.0e6, pct(ns_svm_map));
+    std::fprintf(stderr,
+                 "  alloc_in     : %8.2f ms (%5.1f%%)\n",
+                 ns_alloc_in / 1.0e6, pct(ns_alloc_in));
+    std::fprintf(stderr,
+                 "  fp16->fp32   : %8.2f ms (%5.1f%%)\n",
+                 ns_fp16_to_fp32 / 1.0e6, pct(ns_fp16_to_fp32));
+    std::fprintf(stderr,
+                 "  alloc_out    : %8.2f ms (%5.1f%%)\n",
+                 ns_alloc_out / 1.0e6, pct(ns_alloc_out));
+    std::fprintf(stderr,
+                 "  neon_rms     : %8.2f ms (%5.1f%%)  "
+                 "[rms_norm_wrt_width_fp16_intrinsic]\n",
+                 ns_neon / 1.0e6, pct(ns_neon));
+    std::fprintf(stderr,
+                 "  gamma_mul    : %8.2f ms (%5.1f%%)\n",
+                 ns_gamma_mul / 1.0e6, pct(ns_gamma_mul));
+    std::fprintf(stderr,
+                 "  fp32->fp16   : %8.2f ms (%5.1f%%)\n",
+                 ns_fp32_to_fp16 / 1.0e6, pct(ns_fp32_to_fp16));
   }
 };
 
@@ -100,6 +132,7 @@ void ReshapedRMSNormLayer::incremental_forwarding(
   // gemm may still have its image2d_to_svm write in flight with only a
   // non-blocking SVMMap enqueued. Drain the OpenCL queue here with a
   // blocking SVMMap so the CPU reads that follow see coherent data.
+  const uint64_t t_svm = profile_this_call ? now_ns() : 0;
   if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
@@ -108,6 +141,8 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in.getData<char>(), in.bytes(), /*read_only=*/true);
     }
   }
+  if (profile_this_call)
+    g_reshaped_rms_norm_profile.ns_svm_map += now_ns() - t_svm;
 #endif
 
   ml::train::TensorDim in_dim = in.getDim();
@@ -170,10 +205,22 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       nntrainer::TensorDim fp32_dim = in_step.getDim();
       fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
 
+      const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
       nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
-      in_fp32.copyData(in_step); // fp16 -> fp32
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
 
+      const uint64_t t_cast_in = profile_this_call ? now_ns() : 0;
+      in_fp32.copyData(in_step); // fp16 -> fp32
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_fp16_to_fp32 += now_ns() - t_cast_in;
+
+      const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
       nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_alloc_out += now_ns() - t_a_out;
+
+      const uint64_t t_neon = profile_this_call ? now_ns() : 0;
 #ifdef ENABLE_FP16
       nntrainer::rms_norm_wrt_width_fp16_intrinsic(
         in_fp32.getData<float>(), out_fp32.getData<float>(),
@@ -183,10 +230,20 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_fp32.getData<float>(), out_fp32.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_neon += now_ns() - t_neon;
+
+      const uint64_t t_gamma = profile_this_call ? now_ns() : 0;
       // gamma is fp32 (forced in finalize) -- multiply in the fp32 temp
       // before converting back to fp16.
       out_fp32.multiply_i(gamma);
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_gamma_mul += now_ns() - t_gamma;
+
+      const uint64_t t_cast_out = profile_this_call ? now_ns() : 0;
       out_step.copyData(out_fp32); // fp32 -> fp16
+      if (profile_this_call)
+        g_reshaped_rms_norm_profile.ns_fp32_to_fp16 += now_ns() - t_cast_out;
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");

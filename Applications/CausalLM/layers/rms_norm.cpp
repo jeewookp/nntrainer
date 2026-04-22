@@ -39,17 +39,62 @@ namespace {
 struct RMSNormProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
+  // Stage 0 sub-timers for FP16 activation path (where prefill lives).
+  // Each bucket is cumulative nanoseconds across all prefill calls.
+  std::atomic<uint64_t> ns_svm_map{0};   // SVMMap barrier (upstream GPU drain)
+  std::atomic<uint64_t> ns_alloc_in{0};  // fp32 input-temp construction
+  std::atomic<uint64_t> ns_fp16_to_fp32{0};  // in_step -> in_fp32 copy
+  std::atomic<uint64_t> ns_compute{0};   // mult.avg.add.inv_sqrt + in*t
+  std::atomic<uint64_t> ns_alloc_out{0}; // fp32 output-temp construction
+  std::atomic<uint64_t> ns_gamma_mul{0}; // out_fp32 *= gamma
+  std::atomic<uint64_t> ns_fp32_to_fp16{0}; // out_fp32 -> out_step copy
+  std::atomic<uint64_t> ns_publish{0};   // svm_to_image2d_publish
 
   ~RMSNormProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
       return;
     const uint64_t t = ns.load();
+    const double T = t / 1.0e6;
+    auto pct = [&](uint64_t v) {
+      return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
+    };
     std::fprintf(stderr,
                  "[PROFILE RMSNormLayer prefill (M>1)] total=%.2f ms "
                  "calls=%llu avg=%.3f ms\n",
-                 t / 1.0e6, (unsigned long long)c,
-                 c == 0 ? 0.0 : (t / 1.0e6) / static_cast<double>(c));
+                 T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  svm_map      : %8.2f ms (%5.1f%%)  "
+                 "[upstream GPU drain]\n",
+                 ns_svm_map / 1.0e6, pct(ns_svm_map));
+    std::fprintf(stderr,
+                 "  alloc_in     : %8.2f ms (%5.1f%%)  "
+                 "[fp32 in-temp construct]\n",
+                 ns_alloc_in / 1.0e6, pct(ns_alloc_in));
+    std::fprintf(stderr,
+                 "  fp16->fp32   : %8.2f ms (%5.1f%%)  "
+                 "[in copyData]\n",
+                 ns_fp16_to_fp32 / 1.0e6, pct(ns_fp16_to_fp32));
+    std::fprintf(stderr,
+                 "  compute      : %8.2f ms (%5.1f%%)  "
+                 "[multiply/average/add/inv_sqrt + multiply(t, out)]\n",
+                 ns_compute / 1.0e6, pct(ns_compute));
+    std::fprintf(stderr,
+                 "  alloc_out    : %8.2f ms (%5.1f%%)  "
+                 "[fp32 out-temp construct]\n",
+                 ns_alloc_out / 1.0e6, pct(ns_alloc_out));
+    std::fprintf(stderr,
+                 "  gamma_mul    : %8.2f ms (%5.1f%%)  "
+                 "[out_fp32 *= gamma]\n",
+                 ns_gamma_mul / 1.0e6, pct(ns_gamma_mul));
+    std::fprintf(stderr,
+                 "  fp32->fp16   : %8.2f ms (%5.1f%%)  "
+                 "[out copyData back]\n",
+                 ns_fp32_to_fp16 / 1.0e6, pct(ns_fp32_to_fp16));
+    std::fprintf(stderr,
+                 "  publish      : %8.2f ms (%5.1f%%)  "
+                 "[svm_to_image2d_publish]\n",
+                 ns_publish / 1.0e6, pct(ns_publish));
   }
 };
 
@@ -112,6 +157,7 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // (AdditionLayer's add2_fp16_svm GPU kernel, or Phase B Q/K/V gemm
   // writes) enqueue their output with no blocking SVMMap, so drain
   // the queue here so the host sees coherent data.
+  const uint64_t t_svm = profile_this_call ? now_ns() : 0;
   if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
@@ -120,6 +166,8 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         in.getData<char>(), in.bytes(), /*read_only=*/true);
     }
   }
+  if (profile_this_call)
+    g_rms_norm_profile.ns_svm_map += now_ns() - t_svm;
 #endif
 
   ml::train::TensorDim in_dim = in.getDim();
@@ -160,21 +208,45 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       nntrainer::TensorDim fp32_dim = in_step.getDim();
       fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
 
+      const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
       nntrainer::Tensor in_fp32(fp32_dim, /*alloc_now=*/true);
-      in_fp32.copyData(in_step); // fp16 -> fp32 via FloatTensor::copyData
+      if (profile_this_call)
+        g_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
 
+      const uint64_t t_cast_in = profile_this_call ? now_ns() : 0;
+      in_fp32.copyData(in_step); // fp16 -> fp32 via FloatTensor::copyData
+      if (profile_this_call)
+        g_rms_norm_profile.ns_fp16_to_fp32 += now_ns() - t_cast_in;
+
+      const uint64_t t_comp1 = profile_this_call ? now_ns() : 0;
       auto t = in_fp32.multiply(in_fp32).average(3).add(epsilon);
       t.inv_sqrt_i();
+      const uint64_t t_comp1_end = profile_this_call ? now_ns() : 0;
 
+      const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
       nntrainer::Tensor out_fp32(fp32_dim, /*alloc_now=*/true);
-      in_fp32.multiply(t, out_fp32);
+      const uint64_t t_a_out_end = profile_this_call ? now_ns() : 0;
+      if (profile_this_call)
+        g_rms_norm_profile.ns_alloc_out += t_a_out_end - t_a_out;
 
+      const uint64_t t_comp2 = profile_this_call ? now_ns() : 0;
+      in_fp32.multiply(t, out_fp32);
+      if (profile_this_call)
+        g_rms_norm_profile.ns_compute +=
+          (t_comp1_end - t_comp1) + (now_ns() - t_comp2);
+
+      const uint64_t t_gamma = profile_this_call ? now_ns() : 0;
       // gamma is fp32 (forced in finalize) -- do the per-channel scaling
       // in the fp32 domain. Doing it here avoids a multiply_i(fp16, fp32)
       // that would require a mixed-precision broadcast path.
       out_fp32.multiply_i(gamma);
+      if (profile_this_call)
+        g_rms_norm_profile.ns_gamma_mul += now_ns() - t_gamma;
 
+      const uint64_t t_cast_out = profile_this_call ? now_ns() : 0;
       out_step.copyData(out_fp32); // fp32 -> fp16 via HalfTensor::copyData
+      if (profile_this_call)
+        g_rms_norm_profile.ns_fp32_to_fp16 += now_ns() - t_cast_out;
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
@@ -200,6 +272,7 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // hidden_dim = W. Pool image2d layout: width = B*H (total positions),
   // height = W/4 (RGBA half slices). This matches gemm_delegate's
   // src image expectation.
+  const uint64_t t_pub = profile_this_call ? now_ns() : 0;
   if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
       out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       (out.width() % 4) == 0) {
@@ -212,6 +285,8 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     nntrainer::svm_to_image2d_publish(
       out.getData<char>(), step_M, (unsigned int)out.width());
   }
+  if (profile_this_call)
+    g_rms_norm_profile.ns_publish += now_ns() - t_pub;
 #endif
 
   if (profile_this_call) {
