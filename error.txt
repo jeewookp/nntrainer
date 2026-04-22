@@ -1,21 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+remote: Enumerating objects: 20, done.
+remote: Counting objects: 100% (20/20), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 11 (delta 9), reused 11 (delta 9), pack-reused 0 (from 0)
-Unpacking objects: 100% (11/11), 6.74 KiB | 575.00 KiB/s, done.
+Unpacking objects: 100% (11/11), 4.69 KiB | 436.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   26839910..df83ff4e  all_gpu    -> upstream/all_gpu
-Updating 26839910..df83ff4e
+   dda9bb8f..d57119b8  all_gpu    -> upstream/all_gpu
+Updating dda9bb8f..d57119b8
 Fast-forward
- nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl | 232 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- test/unittest/unittest_delegate_conv_wave.cpp                        | 290 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- unittest_delegate_conv_wave.sh                                       |   1 +
- 3 files changed, 523 insertions(+)
- create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_delegate_conv_wave.
-bash: unittest_delegate_conv_wave.: No such file or directory
+ nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl | 147 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/unittest/unittest_delegate_conv_wave.cpp                    | 141 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ unittest_delegate_conv_wave.sh                                   |   1 +
+ 3 files changed, 289 insertions(+)
+ create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash unittest_delegate_conv_wave.sh 
 ==========================================
 [Step 1] Building unittest_delegate_conv_wave (ndk-build)
@@ -62,54 +60,55 @@ Android NDK: WARNING:/home/jwhero94/projects/nntrainer/test/jni/Android.mk:test_
 ==========================================
 [Step 2] Pushing to device
 ==========================================
-test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 31.9 MB/s (338520 bytes in 0.010s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 2.7 MB/s (7438 bytes in 0.003s)
+test/libs/arm64-v8a/unittest_delegate_conv_wave: 1 file pushed. 30.3 MB/s (343536 bytes in 0.011s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.cl: 1 file pushed. 1.5 MB/s (7438 bytes in 0.005s)
 nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_wave.cl: 1 file pushed. 2.1 MB/s (9732 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 1.1 MB/s (4231 bytes in 0.004s)
+nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.cl: 1 file pushed. 0.9 MB/s (4231 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl: 1 file pushed. 0.6 MB/s (2298 bytes in 0.004s)
 nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl: 1 file pushed. 0.7 MB/s (3255 bytes in 0.004s)
-nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl: 1 file pushed. 2.3 MB/s (12958 bytes in 0.005s)
-test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.6 MB/s (1822720 bytes in 0.055s)
+nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_int4_wave.cl: 1 file pushed. 2.6 MB/s (12958 bytes in 0.005s)
+nntrainer/tensor/cl_operations/cl_kernels/probe_delegate_load.cl: 1 file pushed. 1.1 MB/s (5521 bytes in 0.005s)
+test/libs/arm64-v8a/libc++_shared.so: 1 file pushed. 31.1 MB/s (1822720 bytes in 0.056s)
 
 ==========================================
 [Step 3] Running on device
 ==========================================
-[==========] Running 2 tests from 1 test suite.
+[==========] Running 3 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 2 tests from DelegateConvWaveTest
+[----------] 3 tests from DelegateConvWaveTest
 [ RUN      ] DelegateConvWaveTest.ModelShapes_Int4Fused
 GPU: QUALCOMM Adreno(TM) 830
 
 === Fused int4 conv vs dequant+delegate reference ===
 
   M=437 N=4096 K=2560
-    fused:  15446.2 us  0.593 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  15071.6 us  0.608 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2801.9 us  0.818 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2810.9 us  0.815 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=1024 K=2560
-    fused:   2818.7 us  0.813 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:   2795.0 us  0.820 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=4096
-    fused:  13819.4 us  0.663 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  13849.6 us  0.662 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  29014.4 us  0.750 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  29064.0 us  0.749 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=9728 K=2560
-    fused:  29026.9 us  0.750 TFLOPS  rel_l2=0 max|d|=0  ✓
+    fused:  29634.0 us  0.734 TFLOPS  rel_l2=0 max|d|=0  ✓
 
   M=437 N=2560 K=9728
-    fused:  45164.1 us  0.482 TFLOPS  rel_l2=0 max|d|=0  ✓
-[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14407 ms)
+    fused:  44219.3 us  0.492 TFLOPS  rel_l2=0 max|d|=0  ✓
+[       OK ] DelegateConvWaveTest.ModelShapes_Int4Fused (14406 ms)
 [ RUN      ] DelegateConvWaveTest.ModelShapes_DelegateInt4
 GPU: QUALCOMM Adreno(TM) 830
 
 === Delegate int4 conv vs dequant+delegate reference ===
 
   M=437 N=4096 K=2560
-    fp16 ref (dequant once + delegate conv):  3157.4 us  2.903 TFLOPS
+    fp16 ref (dequant once + delegate conv):  3150.4 us  2.909 TFLOPS
 Killed 
 
 Log: unittest_delegate_conv_wave.log
