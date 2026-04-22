@@ -274,6 +274,36 @@ protected:
     }
     return "";
   }
+
+  std::string LoadFusedKernelSource() {
+    const char *paths[] = {
+      "fused_conv_int4_fp16.cl",
+      "nntrainer/tensor/cl_operations/cl_kernels/fused_conv_int4_fp16.cl",
+      "/data/local/tmp/nntr_android_test/fused_conv_int4_fp16.cl",
+    };
+    for (auto p : paths) {
+      std::ifstream f(p);
+      if (f.good())
+        return std::string((std::istreambuf_iterator<char>(f)),
+                           std::istreambuf_iterator<char>());
+    }
+    return "";
+  }
+
+  std::string LoadDequantKernelSource() {
+    const char *paths[] = {
+      "dequant_int4_to_fp16.cl",
+      "nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.cl",
+      "/data/local/tmp/nntr_android_test/dequant_int4_to_fp16.cl",
+    };
+    for (auto p : paths) {
+      std::ifstream f(p);
+      if (f.good())
+        return std::string((std::istreambuf_iterator<char>(f)),
+                           std::istreambuf_iterator<char>());
+    }
+    return "";
+  }
 };
 
 // ============================================================================
@@ -1002,6 +1032,231 @@ TEST_F(DelegateConvWaveTest, ModelShapes_DelegateFp16_Tune) {
     cl.clReleaseMemObject(di); cl.clReleaseKernel(kern);
     cl.clReleaseProgram(prog);
   }
+}
+
+// ============================================================================
+// Fused int4 conv test: runs fused_conv_int4_fp16 against the reference
+// (dequant_int4_to_delegate_fp16 + captured delegate_conv_wave) pipeline,
+// reports per-shape rel_l2 correctness + TFLOPS so we can decide if the
+// fused path is a production win. Same 7 Qwen3-4B prefill shapes, random
+// int4 weights + random fp16 src in [-0.1, 0.1).
+// ============================================================================
+TEST_F(DelegateConvWaveTest, ModelShapes_Int4Fused) {
+  fprintf(stderr, "\n=== Fused int4 conv vs dequant+delegate reference ===\n");
+
+  std::string src_fused = LoadFusedKernelSource();
+  std::string src_dequant = LoadDequantKernelSource();
+  std::string src_delegate = LoadKernelSource();
+  if (src_fused.empty() || src_dequant.empty() || src_delegate.empty()) {
+    fprintf(stderr, "SKIP: kernel source not found\n");
+    return;
+  }
+
+  auto build = [&](const std::string &src, const char *flags,
+                   const char *kname) -> cl_kernel {
+    cl_int e;
+    const char *sp = src.c_str(); size_t sl = src.size();
+    cl_program prog = cl.clCreateProgramWithSource(ctx, 1, &sp, &sl, &e);
+    e = cl.clBuildProgram(prog, 1, &dev, flags, nullptr, nullptr);
+    if (e) {
+      size_t sz = 0;
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &sz);
+      std::vector<char> log(sz + 1, 0);
+      cl.clGetProgramBuildInfo(prog, dev, CL_PROGRAM_BUILD_LOG, sz,
+                               log.data(), nullptr);
+      fprintf(stderr, "BUILD FAIL (%s): %s\n", kname, log.data());
+      return nullptr;
+    }
+    return cl.clCreateKernel(prog, kname, &e);
+  };
+
+  cl_kernel k_fused = build(src_fused,
+    "-cl-std=CL2.0", "fused_conv_int4_fp16");
+  cl_kernel k_dequant = build(src_dequant,
+    "-cl-std=CL2.0", "dequant_int4_to_delegate_fp16");
+  cl_kernel k_delegate = build(src_delegate,
+    "-qcom-accelerate-16-bit=true -cl-std=CL2.0", "main_function");
+  if (!k_fused || !k_dequant || !k_delegate) return;
+
+  for (const auto &s : kModelShapes) {
+    const int M = s.M, N = s.N, K = s.K;
+    const int src_slices = K / 4, dst_slices = N / 4;
+    const double gflops = 2.0 * M * N * K / 1e9;
+
+    fprintf(stderr, "\n  M=%d N=%d K=%d\n", M, N, K);
+
+    // Pseudo-random int4 weights + fp16 scales + fp16 src.
+    auto lcg = [](uint32_t &s) { s = s * 1664525u + 1013904223u; return s; };
+    auto rand_h = [&](uint32_t &s) {
+      float f = ((int32_t)(lcg(s) >> 15) % 2048) / 10240.0f;
+      return f32_to_f16(f);
+    };
+
+    // packed_weights: [(K/4) * N] ushort, each holding 4 nibbles.
+    const size_t packed_count = (size_t)src_slices * N;
+    std::vector<uint16_t> packed_host(packed_count);
+    {
+      uint32_t rs = 0xC0FFEEu ^ (uint32_t)(N * 31u + K);
+      for (auto &u : packed_host) u = (uint16_t)(lcg(rs) & 0xFFFFu);
+    }
+
+    // scales: [N] fp16 (per-output-channel).
+    std::vector<uint16_t> scales_host(N);
+    {
+      uint32_t rs = 0xDECADEu ^ (uint32_t)(N + K * 7u);
+      for (auto &h : scales_host) h = rand_h(rs);
+    }
+
+    // src: random fp16 in [-0.1, 0.1).
+    const size_t src_halves = (size_t)M * src_slices * 4;
+    std::vector<uint16_t> src_host(src_halves);
+    {
+      uint32_t rs = 0xBADCAFEu ^ (uint32_t)(M * 31u + K);
+      for (auto &h : src_host) h = rand_h(rs);
+    }
+
+    cl_int e;
+    // Device buffers.
+    cl_mem packed_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+      packed_count * 2, nullptr, &e);
+    cl.clEnqueueWriteBuffer(queue, packed_dev, 1, 0, packed_count * 2,
+      packed_host.data(), 0, 0, 0);
+    cl_mem scales_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+      (size_t)N * 2, nullptr, &e);
+    cl.clEnqueueWriteBuffer(queue, scales_dev, 1, 0, (size_t)N * 2,
+      scales_host.data(), 0, 0, 0);
+    // fp16 weight buffer for the reference pipeline (dequant writes here).
+    cl_mem fp16_weights_dev = cl.clCreateBuffer(ctx, CL_MEM_READ_WRITE,
+      (size_t)N * K * 2, nullptr, &e);
+    cl_mem xm = cl.clCreateBuffer(ctx, 0x4, 6144, nullptr, &e);
+
+    cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+    cl_image_desc sd = {}; sd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    sd.image_width = M; sd.image_height = src_slices;
+    cl_mem si = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &sd, 0, &e);
+    {
+      size_t o[3]={0,0,0}, r[3]={(size_t)M,(size_t)src_slices,1};
+      cl.clEnqueueWriteImage(queue, si, 1, o, r, 0, 0, src_host.data(), 0, 0, 0);
+    }
+    cl_image_desc bd = {}; bd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    bd.image_width = dst_slices; bd.image_height = 1;
+    cl_mem bias = cl.clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &bd, 0, &e);
+    {
+      std::vector<uint16_t> z(dst_slices * 4, 0);
+      size_t o[3]={0,0,0}, r[3]={(size_t)dst_slices,1,1};
+      cl.clEnqueueWriteImage(queue, bias, 1, o, r, 0, 0, z.data(), 0, 0, 0);
+    }
+    cl_image_desc dd = {}; dd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    dd.image_width = M; dd.image_height = dst_slices;
+    cl_mem dst_ref = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+    cl_mem dst_fused = cl.clCreateImage(ctx, CL_MEM_READ_WRITE, &fmt, &dd, 0, &e);
+
+    // ======= Reference: dequant + delegate conv =======
+    // dequant
+    {
+      int sn = N, sk = K;
+      cl.clSetKernelArg(k_dequant, 0, sizeof(cl_mem), &packed_dev);
+      cl.clSetKernelArg(k_dequant, 1, sizeof(cl_mem), &scales_dev);
+      cl.clSetKernelArg(k_dequant, 2, sizeof(cl_mem), &fp16_weights_dev);
+      cl.clSetKernelArg(k_dequant, 3, sizeof(int), &sn);
+      cl.clSetKernelArg(k_dequant, 4, sizeof(int), &sk);
+      const int n_z = (dst_slices + 7) / 8;
+      const int iters = src_slices / 2;
+      const size_t w_halfs = (size_t)n_z * iters * 256;
+      const int tot = (int)(w_halfs / 16);
+      size_t dg[3] = {(size_t)(((tot+255)/256)*256), 1, 1};
+      size_t dl[3] = {256, 1, 1};
+      cl.clEnqueueNDRangeKernel(queue, k_dequant, 3, 0, dg, dl, 0, 0, 0);
+    }
+    // delegate conv
+    {
+      int4 s0 = {1, dst_slices, M, 32};
+      int4 s1 = {src_slices, 0, 0, src_slices};
+      int4 s2 = {1, 1, 0, 0};
+      cl.clSetKernelArg(k_delegate, 0, sizeof(cl_mem), &fp16_weights_dev);
+      cl.clSetKernelArg(k_delegate, 1, sizeof(cl_mem), &xm);
+      cl.clSetKernelArg(k_delegate, 2, sizeof(cl_mem), &bias);
+      cl.clSetKernelArg(k_delegate, 3, sizeof(cl_mem), &dst_ref);
+      cl.clSetKernelArg(k_delegate, 4, sizeof(cl_mem), &si);
+      cl.clSetKernelArg(k_delegate, 5, sizeof(int4), &s0);
+      cl.clSetKernelArg(k_delegate, 6, sizeof(int4), &s1);
+      cl.clSetKernelArg(k_delegate, 7, sizeof(int4), &s2);
+      size_t gz = (((dst_slices + 7) / 8 + 3) / 4) * 128;
+      size_t gl[3] = {gz, (size_t)((M + 127) / 128), 4};
+      size_t ll[3] = {128, 1, 4};
+      cl.clEnqueueNDRangeKernel(queue, k_delegate, 3, 0, gl, ll, 0, 0, 0);
+    }
+    cl.clFinish(queue);
+
+    // ======= Candidate: fused kernel =======
+    int M_i = M, N_i = N, K_i = K;
+    cl.clSetKernelArg(k_fused, 0, sizeof(cl_mem), &packed_dev);
+    cl.clSetKernelArg(k_fused, 1, sizeof(cl_mem), &scales_dev);
+    cl.clSetKernelArg(k_fused, 2, sizeof(cl_mem), &si);
+    cl.clSetKernelArg(k_fused, 3, sizeof(cl_mem), &bias);
+    cl.clSetKernelArg(k_fused, 4, sizeof(cl_mem), &dst_fused);
+    cl.clSetKernelArg(k_fused, 5, sizeof(int), &M_i);
+    cl.clSetKernelArg(k_fused, 6, sizeof(int), &N_i);
+    cl.clSetKernelArg(k_fused, 7, sizeof(int), &K_i);
+    // 1 thread per (m, n_slice). Try local=(32, 8, 1) first.
+    size_t flocal[3] = {32, 8, 1};
+    size_t fglobal[3] = {
+      ((size_t)M + 31) / 32 * 32,
+      ((size_t)dst_slices + 7) / 8 * 8,
+      1
+    };
+
+    // Warmup (50) + timed (50).
+    for (int i = 0; i < 50; ++i)
+      cl.clEnqueueNDRangeKernel(queue, k_fused, 3, 0, fglobal, flocal, 0, 0, 0);
+    cl.clFinish(queue);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 50; ++i)
+      cl.clEnqueueNDRangeKernel(queue, k_fused, 3, 0, fglobal, flocal, 0, 0, 0);
+    cl.clFinish(queue);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 50;
+    double tflops = (gflops / (us / 1e6)) / 1000.0;
+
+    // Correctness: read both outputs, compute rel_l2.
+    const size_t npix = (size_t)M * dst_slices;
+    std::vector<uint16_t> ref_out(npix * 4), cand_out(npix * 4);
+    size_t o3[3] = {0,0,0}, r3[3] = {(size_t)M, (size_t)dst_slices, 1};
+    cl.clEnqueueReadImage(queue, dst_ref, 1, o3, r3, 0, 0,
+                          ref_out.data(), 0, 0, 0);
+    cl.clEnqueueReadImage(queue, dst_fused, 1, o3, r3, 0, 0,
+                          cand_out.data(), 0, 0, 0);
+
+    double sum_sq = 0.0, sum_ref_sq = 0.0, max_abs = 0.0;
+    for (size_t i = 0; i < npix * 4; ++i) {
+      float rv = f16_to_f32(ref_out[i]);
+      float cv = f16_to_f32(cand_out[i]);
+      float d = rv - cv;
+      sum_sq += (double)d * d;
+      sum_ref_sq += (double)rv * rv;
+      if (std::abs(d) > max_abs) max_abs = std::abs(d);
+    }
+    double rel_l2 = sum_ref_sq > 0 ? std::sqrt(sum_sq / sum_ref_sq) : 0.0;
+
+    fprintf(stderr, "    fused:  %7.1f us  %.3f TFLOPS  "
+            "rel_l2=%.4g max|d|=%.4g  %s\n",
+            us, tflops, rel_l2, max_abs,
+            rel_l2 < 0.05 ? "✓" : "✗ DIVERGES");
+
+    cl.clReleaseMemObject(packed_dev);
+    cl.clReleaseMemObject(scales_dev);
+    cl.clReleaseMemObject(fp16_weights_dev);
+    cl.clReleaseMemObject(xm);
+    cl.clReleaseMemObject(si);
+    cl.clReleaseMemObject(bias);
+    cl.clReleaseMemObject(dst_ref);
+    cl.clReleaseMemObject(dst_fused);
+  }
+
+  cl.clReleaseKernel(k_fused);
+  cl.clReleaseKernel(k_dequant);
+  cl.clReleaseKernel(k_delegate);
 }
 
 // ============================================================================
