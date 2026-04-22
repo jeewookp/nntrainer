@@ -20,6 +20,7 @@
 #include <unordered_map>
 
 #include "rms_norm.h"
+#include "rmsnorm_fused_fp16.h"
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <blas_kernels.h>
@@ -39,15 +40,10 @@ namespace {
 struct RMSNormProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
-  // Stage 0 sub-timers for FP16 activation path (where prefill lives).
+  // Stage 1b sub-timers for FP16 activation path (where prefill lives).
   // Each bucket is cumulative nanoseconds across all prefill calls.
   std::atomic<uint64_t> ns_svm_map{0};   // SVMMap barrier (upstream GPU drain)
-  std::atomic<uint64_t> ns_alloc_in{0};  // fp32 input-temp construction
-  std::atomic<uint64_t> ns_fp16_to_fp32{0};  // in_step -> in_fp32 copy
-  std::atomic<uint64_t> ns_compute{0};   // mult.avg.add.inv_sqrt + in*t
-  std::atomic<uint64_t> ns_alloc_out{0}; // fp32 output-temp construction
-  std::atomic<uint64_t> ns_gamma_mul{0}; // out_fp32 *= gamma
-  std::atomic<uint64_t> ns_fp32_to_fp16{0}; // out_fp32 -> out_step copy
+  std::atomic<uint64_t> ns_fused{0};     // rmsnorm_fused_fp16 (NEON)
   std::atomic<uint64_t> ns_publish{0};   // svm_to_image2d_publish
 
   ~RMSNormProfile() {
@@ -68,29 +64,9 @@ struct RMSNormProfile {
                  "[upstream GPU drain]\n",
                  ns_svm_map / 1.0e6, pct(ns_svm_map));
     std::fprintf(stderr,
-                 "  alloc_in     : %8.2f ms (%5.1f%%)  "
-                 "[fp32 in-temp construct]\n",
-                 ns_alloc_in / 1.0e6, pct(ns_alloc_in));
-    std::fprintf(stderr,
-                 "  fp16->fp32   : %8.2f ms (%5.1f%%)  "
-                 "[in copyData]\n",
-                 ns_fp16_to_fp32 / 1.0e6, pct(ns_fp16_to_fp32));
-    std::fprintf(stderr,
-                 "  compute      : %8.2f ms (%5.1f%%)  "
-                 "[multiply/average/add/inv_sqrt + multiply(t, out)]\n",
-                 ns_compute / 1.0e6, pct(ns_compute));
-    std::fprintf(stderr,
-                 "  alloc_out    : %8.2f ms (%5.1f%%)  "
-                 "[fp32 out-temp construct]\n",
-                 ns_alloc_out / 1.0e6, pct(ns_alloc_out));
-    std::fprintf(stderr,
-                 "  gamma_mul    : %8.2f ms (%5.1f%%)  "
-                 "[out_fp32 *= gamma]\n",
-                 ns_gamma_mul / 1.0e6, pct(ns_gamma_mul));
-    std::fprintf(stderr,
-                 "  fp32->fp16   : %8.2f ms (%5.1f%%)  "
-                 "[out copyData back]\n",
-                 ns_fp32_to_fp16 / 1.0e6, pct(ns_fp32_to_fp16));
+                 "  fused        : %8.2f ms (%5.1f%%)  "
+                 "[rmsnorm_fused_fp16 NEON]\n",
+                 ns_fused / 1.0e6, pct(ns_fused));
     std::fprintf(stderr,
                  "  publish      : %8.2f ms (%5.1f%%)  "
                  "[svm_to_image2d_publish]\n",
@@ -199,67 +175,26 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       out_step.multiply_i(gamma);
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
-      // Mixed precision: fp16 activations are prone to overflow when
-      // we accumulate x*x over the hidden dimension (K in [2560..9728]
-      // for Qwen3-4B with per-element values easily >1). Stage the
-      // variance computation through a fp32 temp, multiply by the
-      // fp32-pinned gamma, then write the normalized+scaled result
-      // back as fp16 in a single scopy.
-      nntrainer::TensorDim fp32_dim = in_step.getDim();
-      fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
-
-      // Stage 1a: reuse growing fp32 scratch tensors across calls instead of
-      // Tensor(..., alloc_now=true) every time. Scratch grows to the largest
-      // feature count ever seen; each call takes a shared view at the right
-      // dim.
-      const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
-      const size_t need = fp32_dim.getFeatureLen();
-      if (fp32_scratch_capacity_elems_ < need) {
-        nntrainer::TensorDim cap_dim = fp32_dim;
-        in_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
-        out_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
-        fp32_scratch_capacity_elems_ = need;
-      }
-      nntrainer::Tensor in_fp32 =
-        in_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
+      // Stage 1b: fused fp16-in fp16-out RMSNorm with fp32 accumulator
+      // and fp32-pinned gamma. Replaces the prior fp16 -> fp32 copy ->
+      // Tensor chain (multiply/average/add/inv_sqrt/multiply) -> gamma
+      // multiply_i -> fp32 -> fp16 copy round-trip, which was measured
+      // at ~295 ms of this layer's 318 ms prefill cost.
+      const uint64_t t_fused = profile_this_call ? now_ns() : 0;
+      const _FP16 *in_ptr = in_step.getData<_FP16>();
+      _FP16 *out_ptr = out_step.getData<_FP16>();
+      const float *gamma_ptr = gamma.getData<float>();
+      // Normalise row-by-row across the width (hidden) dim. The step
+      // tensor shape is (1, C, to-from, W); collapse the leading dims
+      // to a single H count.
+      const ml::train::TensorDim sd = in_step.getDim();
+      const std::size_t H_rows =
+        (std::size_t)sd.batch() * sd.channel() * sd.height();
+      const std::size_t W = sd.width();
+      rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+                         static_cast<float>(epsilon));
       if (profile_this_call)
-        g_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
-
-      const uint64_t t_cast_in = profile_this_call ? now_ns() : 0;
-      in_fp32.copyData(in_step); // fp16 -> fp32 via FloatTensor::copyData
-      if (profile_this_call)
-        g_rms_norm_profile.ns_fp16_to_fp32 += now_ns() - t_cast_in;
-
-      const uint64_t t_comp1 = profile_this_call ? now_ns() : 0;
-      auto t = in_fp32.multiply(in_fp32).average(3).add(epsilon);
-      t.inv_sqrt_i();
-      const uint64_t t_comp1_end = profile_this_call ? now_ns() : 0;
-
-      const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor out_fp32 =
-        out_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
-      const uint64_t t_a_out_end = profile_this_call ? now_ns() : 0;
-      if (profile_this_call)
-        g_rms_norm_profile.ns_alloc_out += t_a_out_end - t_a_out;
-
-      const uint64_t t_comp2 = profile_this_call ? now_ns() : 0;
-      in_fp32.multiply(t, out_fp32);
-      if (profile_this_call)
-        g_rms_norm_profile.ns_compute +=
-          (t_comp1_end - t_comp1) + (now_ns() - t_comp2);
-
-      const uint64_t t_gamma = profile_this_call ? now_ns() : 0;
-      // gamma is fp32 (forced in finalize) -- do the per-channel scaling
-      // in the fp32 domain. Doing it here avoids a multiply_i(fp16, fp32)
-      // that would require a mixed-precision broadcast path.
-      out_fp32.multiply_i(gamma);
-      if (profile_this_call)
-        g_rms_norm_profile.ns_gamma_mul += now_ns() - t_gamma;
-
-      const uint64_t t_cast_out = profile_this_call ? now_ns() : 0;
-      out_step.copyData(out_fp32); // fp32 -> fp16 via HalfTensor::copyData
-      if (profile_this_call)
-        g_rms_norm_profile.ns_fp32_to_fp16 += now_ns() - t_cast_out;
+        g_rms_norm_profile.ns_fused += now_ns() - t_fused;
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");

@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cpu_backend.h>
 #include <reshaped_rms_norm.h>
+#include "rmsnorm_fused_fp16.h"
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <cl_context.h>
@@ -32,12 +33,7 @@ struct ReshapedRMSNormProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
   std::atomic<uint64_t> ns_svm_map{0};
-  std::atomic<uint64_t> ns_alloc_in{0};
-  std::atomic<uint64_t> ns_fp16_to_fp32{0};
-  std::atomic<uint64_t> ns_alloc_out{0};
-  std::atomic<uint64_t> ns_neon{0};
-  std::atomic<uint64_t> ns_gamma_mul{0};
-  std::atomic<uint64_t> ns_fp32_to_fp16{0};
+  std::atomic<uint64_t> ns_fused{0};
 
   ~ReshapedRMSNormProfile() {
     const uint64_t c = calls.load();
@@ -56,24 +52,9 @@ struct ReshapedRMSNormProfile {
                  "  svm_map      : %8.2f ms (%5.1f%%)\n",
                  ns_svm_map / 1.0e6, pct(ns_svm_map));
     std::fprintf(stderr,
-                 "  alloc_in     : %8.2f ms (%5.1f%%)\n",
-                 ns_alloc_in / 1.0e6, pct(ns_alloc_in));
-    std::fprintf(stderr,
-                 "  fp16->fp32   : %8.2f ms (%5.1f%%)\n",
-                 ns_fp16_to_fp32 / 1.0e6, pct(ns_fp16_to_fp32));
-    std::fprintf(stderr,
-                 "  alloc_out    : %8.2f ms (%5.1f%%)\n",
-                 ns_alloc_out / 1.0e6, pct(ns_alloc_out));
-    std::fprintf(stderr,
-                 "  neon_rms     : %8.2f ms (%5.1f%%)  "
-                 "[rms_norm_wrt_width_fp16_intrinsic]\n",
-                 ns_neon / 1.0e6, pct(ns_neon));
-    std::fprintf(stderr,
-                 "  gamma_mul    : %8.2f ms (%5.1f%%)\n",
-                 ns_gamma_mul / 1.0e6, pct(ns_gamma_mul));
-    std::fprintf(stderr,
-                 "  fp32->fp16   : %8.2f ms (%5.1f%%)\n",
-                 ns_fp32_to_fp16 / 1.0e6, pct(ns_fp32_to_fp16));
+                 "  fused        : %8.2f ms (%5.1f%%)  "
+                 "[rmsnorm_fused_fp16 NEON]\n",
+                 ns_fused / 1.0e6, pct(ns_fused));
   }
 };
 
@@ -194,66 +175,23 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       out_step.multiply_i(gamma);
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
-      // Mixed precision: the `_FP16` template specialization of
-      // rms_norm_wrt_width_fp16_intrinsic is NYI in the fallback
-      // (arm_compute_backend_fp16.cpp:404 just delegates to
-      // __fallback_rms_norm_wrt_width_fp16_intrinsic which throws).
-      // Only the `float*` variant has a real NEON implementation, so
-      // we stage through a fp32 temp like RMSNormLayer does. Q/K norm
-      // width here is small (head_dim, e.g. 128 for Qwen3-4B) so the
-      // temp allocation is cheap.
-      nntrainer::TensorDim fp32_dim = in_step.getDim();
-      fp32_dim.setDataType(ml::train::TensorDim::DataType::FP32);
-
-      // Stage 1a: reuse fp32 scratch tensors (grow-only capacity).
-      const uint64_t t_a_in = profile_this_call ? now_ns() : 0;
-      const size_t need = fp32_dim.getFeatureLen();
-      if (fp32_scratch_capacity_elems_ < need) {
-        nntrainer::TensorDim cap_dim = fp32_dim;
-        in_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
-        out_fp32_scratch_ = nntrainer::Tensor(cap_dim, /*alloc_now=*/true);
-        fp32_scratch_capacity_elems_ = need;
-      }
-      nntrainer::Tensor in_fp32 =
-        in_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
+      // Stage 1b: fused fp16-in fp16-out RMSNorm + gamma.  Head-dim
+      // (W=feature_size) is small (128 on Qwen3-4B) but we run the
+      // normalisation H_rows = (height after reshape) times, which is
+      // (to-from) * num_heads per call.  Prior round-trip spent ~148 ms
+      // of 172 ms on fp32 temps + gamma multiply_i as a separate pass.
+      const uint64_t t_fused = profile_this_call ? now_ns() : 0;
+      const _FP16 *in_ptr = in_step.getData<_FP16>();
+      _FP16 *out_ptr = out_step.getData<_FP16>();
+      const float *gamma_ptr = gamma.getData<float>();
+      const ml::train::TensorDim sd = in_step.getDim();
+      const std::size_t H_rows =
+        (std::size_t)sd.batch() * sd.channel() * sd.height();
+      const std::size_t W = sd.width();
+      rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+                         static_cast<float>(epsilon));
       if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_alloc_in += now_ns() - t_a_in;
-
-      const uint64_t t_cast_in = profile_this_call ? now_ns() : 0;
-      in_fp32.copyData(in_step); // fp16 -> fp32
-      if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_fp16_to_fp32 += now_ns() - t_cast_in;
-
-      const uint64_t t_a_out = profile_this_call ? now_ns() : 0;
-      nntrainer::Tensor out_fp32 =
-        out_fp32_scratch_.getSharedDataTensor(fp32_dim, 0, true);
-      if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_alloc_out += now_ns() - t_a_out;
-
-      const uint64_t t_neon = profile_this_call ? now_ns() : 0;
-#ifdef ENABLE_FP16
-      nntrainer::rms_norm_wrt_width_fp16_intrinsic(
-        in_fp32.getData<float>(), out_fp32.getData<float>(),
-        in_step.getDim().height(), in_step.getDim().width(), epsilon);
-#else
-      nntrainer::rms_norm_wrt_width_fp32_intrinsic(
-        in_fp32.getData<float>(), out_fp32.getData<float>(),
-        in_step.getDim().height(), in_step.getDim().width(), epsilon);
-#endif
-      if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_neon += now_ns() - t_neon;
-
-      const uint64_t t_gamma = profile_this_call ? now_ns() : 0;
-      // gamma is fp32 (forced in finalize) -- multiply in the fp32 temp
-      // before converting back to fp16.
-      out_fp32.multiply_i(gamma);
-      if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_gamma_mul += now_ns() - t_gamma;
-
-      const uint64_t t_cast_out = profile_this_call ? now_ns() : 0;
-      out_step.copyData(out_fp32); // fp32 -> fp16
-      if (profile_this_call)
-        g_reshaped_rms_norm_profile.ns_fp32_to_fp16 += now_ns() - t_cast_out;
+        g_reshaped_rms_norm_profile.ns_fused += now_ns() - t_fused;
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
