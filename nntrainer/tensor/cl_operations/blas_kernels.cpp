@@ -2691,23 +2691,20 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
                                           : DQ_X2;
   if (!s_dq_kern) {
-    const char *src = nullptr;
-    const char *name = nullptr;
     switch (s_dq_variant) {
     case DQ_V1:
-      src = dequant_int4_to_fp16_kernel;
-      name = "dequant_int4_to_delegate_fp16";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
       break;
     case DQ_X2:
-      src = dequant_int4_to_fp16_x2_kernel;
-      name = "dequant_int4_to_delegate_fp16_x2";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_x2_kernel, "dequant_int4_to_delegate_fp16_x2");
       break;
     case DQ_X4:
-      src = dequant_int4_to_fp16_x4_kernel;
-      name = "dequant_int4_to_delegate_fp16_x4";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_x4_kernel, "dequant_int4_to_delegate_fp16_x4");
       break;
     }
-    s_dq_kern = blas_cc->registerClKernel(src, name);
   }
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
@@ -3257,23 +3254,20 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
                                           : DQ_X2;
   if (!s_dq_kern) {
-    const char *src = nullptr;
-    const char *name = nullptr;
     switch (s_dq_variant) {
     case DQ_V1:
-      src = dequant_int4_to_fp16_kernel;
-      name = "dequant_int4_to_delegate_fp16";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_kernel, "dequant_int4_to_delegate_fp16");
       break;
     case DQ_X2:
-      src = dequant_int4_to_fp16_x2_kernel;
-      name = "dequant_int4_to_delegate_fp16_x2";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_x2_kernel, "dequant_int4_to_delegate_fp16_x2");
       break;
     case DQ_X4:
-      src = dequant_int4_to_fp16_x4_kernel;
-      name = "dequant_int4_to_delegate_fp16_x4";
+      s_dq_kern = blas_cc->registerClKernel(
+        dequant_int4_to_fp16_x4_kernel, "dequant_int4_to_delegate_fp16_x4");
       break;
     }
-    s_dq_kern = blas_cc->registerClKernel(src, name);
   }
   if (!s_conv_kern)
     // Match the unittest build flags for the delegate conv kernel.
