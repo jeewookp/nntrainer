@@ -30,6 +30,14 @@
 #define TM 8
 #define TN 32
 #define HD 128          // Qwen3-4B head_dim; the dispatcher enforces this.
+// Pad the inner __local dim by one half so the row stride (2*(HD+PAD)
+// bytes) is no longer a multiple of 32*4 = 128 bytes (Adreno's
+// __local bank count * bank width).  Without the pad, k_tile[tn][d]
+// with fixed d and varying tn hit the same bank across all 32 tn's
+// of a wavefront -> 32-way serialisation per dot iteration, which
+// measured at qk = 1777 ms on device (vs ~500 ms projected at the
+// same GFLOPS after the bank pad lands).
+#define PAD 1
 
 __kernel __attribute__((reqd_work_group_size(TN, TM, 1)))
 void attn_qk_wave_fp16(
@@ -61,9 +69,12 @@ void attn_qk_wave_fp16(
   const int W_q = num_heads_Q  * HD;
   const int W_k = num_heads_KV * HD;
 
-  // __local tiles.  Q: TM rows x HD cols; K: TN rows x HD cols.  2KB + 4KB.
-  __local half q_tile[TM][HD];
-  __local half k_tile[TN][HD];
+  // __local tiles.  Q: TM rows x (HD+PAD) cols; K: TN rows x (HD+PAD).
+  // The PAD column is never touched in compute; it only shifts the
+  // row stride off the 128-byte boundary to break __local bank
+  // conflicts (see comment on PAD above).
+  __local half q_tile[TM][HD + PAD];
+  __local half k_tile[TN][HD + PAD];
 
   // Cooperative Q load: TM*HD = 1024 halves across 256 threads = 4/thread.
   {
