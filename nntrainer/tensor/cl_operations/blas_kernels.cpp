@@ -3005,8 +3005,22 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   }
   const uint64_t t3 = now_ns();
 
-  // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
-  {
+  // NNTRAINER_SKIP_READBACK=1 turns the image2d→SVM readback off and
+  // publishes s_dst_img into GpuImagePool keyed by the output SVM
+  // pointer, so a downstream pool-aware reader can consume the image
+  // directly. Leaves the output SVM buffer stale; any consumer that
+  // does tensor.getData() / tensor-as-SVM reads will see garbage. The
+  // shape cache (s_dst_img_cache keyed by (M, dst_slices)) is shared
+  // across calls, so two FCs with identical (M, N/4) will overwrite
+  // each other's image2d (e.g. Qwen3-4B k_proj and v_proj both
+  // dst_slices=256). That's a known correctness risk; this is a
+  // diagnostic gate, not a safe default.
+  static const bool s_skip_readback =
+    std::getenv("NNTRAINER_SKIP_READBACK") != nullptr;
+  if (s_skip_readback) {
+    GpuImagePool::Global().set(output, s_dst_img, (int)M, dst_slices);
+  } else {
+    // === Step 4: GPU output reformat: image2d → SVM [M][N] ===
     int a = 0;
     s_out_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
     s_out_kern->SetKernelSVMArguments(a++, output);
@@ -3040,7 +3054,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
   // blocking behaviour if we see correctness regressions.
   static const bool s_force_blocking_svmmap =
     std::getenv("NNTRAINER_DELEGATE_SVMMAP") != nullptr;
-  {
+  if (!s_skip_readback) {
     const cl_bool blk = s_force_blocking_svmmap ? CL_TRUE : CL_FALSE;
     clEnqueueSVMMap(clq, blk, CL_MAP_READ, output,
                     (size_t)M * N * sizeof(uint16_t), 0, nullptr, &svmmap_ev);
@@ -3336,7 +3350,16 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     conv_ns += (td2 - td1);
 
     // --- image2d -> SVM output (no SVMMap yet) ---
-    {
+    // NNTRAINER_SKIP_READBACK=1 publishes the dst image2d into
+    // GpuImagePool keyed by the output SVM pointer instead of the
+    // kernel readback. Same caveat as the single-call path: a
+    // pool-aware downstream reader wins, an SVM-reading consumer
+    // sees stale bytes.
+    static const bool s_skip_readback =
+      std::getenv("NNTRAINER_SKIP_READBACK") != nullptr;
+    if (s_skip_readback) {
+      GpuImagePool::Global().set(outputs[i], s_dst_img, (int)M, dst_slices);
+    } else {
       int a = 0;
       s_out_kern->SetKernelArguments(a++, &s_dst_img, sizeof(cl_mem));
       s_out_kern->SetKernelSVMArguments(a++, outputs[i]);
@@ -3358,11 +3381,15 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
   //
   // One SVMMap drains the in-order queue, so the host sees consistent
   // data across ALL outputs. This replaces N per-weight blocking maps.
+  static const bool s_skip_readback_outer =
+    std::getenv("NNTRAINER_SKIP_READBACK") != nullptr;
   const uint64_t tm0 = now_ns();
-  for (size_t i = 0; i < count; ++i) {
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      outputs[i], (size_t)M * Ns[i] * sizeof(uint16_t),
-      /*blocking=*/(i + 1 == count));
+  if (!s_skip_readback_outer) {
+    for (size_t i = 0; i < count; ++i) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        outputs[i], (size_t)M * Ns[i] * sizeof(uint16_t),
+        /*blocking=*/(i + 1 == count));
+    }
   }
   const uint64_t tm1 = now_ns();
   rb_ns += (tm1 - tm0);
