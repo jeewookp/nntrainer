@@ -226,6 +226,18 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
           int call_idx = s_check_calls.fetch_add(1);
           if (call_idx < 4) {
             const size_t total = H_rows * W;
+            // The GPU dispatch above enqueues a non-blocking SVMMap on
+            // out_ptr; that's fine for the model pipeline (in-order
+            // queue serialises everything) but it means the host can't
+            // read out_ptr right now without an explicit fence. Drain
+            // here with a blocking SVMMap before pulling the GPU bytes
+            // out for the diff.
+            auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+              nntrainer::Engine::Global().getRegisteredContext("gpu"));
+            if (cl_ctx) {
+              cl_ctx->command_queue_inst_.enqueueSVMMap(
+                (void *)out_ptr, total * sizeof(_FP16), /*read_only=*/true);
+            }
             std::vector<_FP16> neon_out(total);
             rmsnorm_fused_fp16(in_ptr, neon_out.data(), gamma_ptr, H_rows, W,
                                static_cast<float>(epsilon));
