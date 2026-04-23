@@ -3582,11 +3582,6 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
     const int ol[3] = {16, 16, 1};
     blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
   }
-  // Non-blocking SVMMap so host reads of out_svm later on this queue
-  // are coherent without stalling the dispatch.
-  clEnqueueSVMMap(clq, CL_FALSE, CL_MAP_READ, out_svm,
-                  (size_t)M * K * sizeof(uint16_t), 0, nullptr, nullptr);
-
   // Publish out_svm to GpuImagePool so the next gemm_delegate pool-hits
   // its svm_to_image2d reformat.
   //
@@ -3597,6 +3592,14 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
   // device, most likely due to Adreno image2d tiling/flush state that
   // the SVM round-trip clears. The v2 kernel itself was verified
   // numerically correct via gpu_check (max_rel ~0.1%, fp16 rounding).
+  //
+  // Do NOT issue a CPU-side clEnqueueSVMMap(CL_MAP_READ) on out_svm
+  // first. On coarse-grained SVM that claim pair (our map + publish's
+  // SVMUnmap) re-syncs caches between CPU and GPU and produces garbage
+  // downstream. The publish's own enqueueSVMUnmap commits image2d_to_svm's
+  // writes for the subsequent GPU read, and in-order queue guarantees
+  // ordering. Anyone that needs to read out_svm from host afterwards
+  // must enqueue their own blocking map.
   svm_to_image2d_publish(out_svm, (unsigned int)M, (unsigned int)K);
 }
 
