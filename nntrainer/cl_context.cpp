@@ -260,6 +260,11 @@ void ClContext::initBlasClKernels() {
   // in/out + fp16 cos/sin tables, env-gated via NNTRAINER_ROPE_GPU=1
   // in MHACoreLayer.
   registerClKernel(rotary_emb_qwen_fp16_kernel, "rotary_emb_qwen_fp16");
+
+  // GPU Q dot K^T attention scoring (compute_kcaches_qwen_fp16.cl).
+  // Env-gated via NNTRAINER_QK_GPU=1 in MHACoreLayer's compute_kcaches.
+  registerClKernel(compute_kcaches_qwen_fp16_kernel,
+                   "compute_kcaches_qwen_fp16");
 #endif
 
   blas_kernels_initialized = true;

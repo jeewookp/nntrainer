@@ -561,28 +561,63 @@ void MHACoreLayer::compute_kcaches(
           group_size, tile_size, local_window_size, head_kv, head_kv + 1);
       }
     } else {
-      std::vector<std::future<void>> futures;
-      unsigned int seq_start =
-        sequence_len < local_window_size ? 0 : sequence_len - local_window_size;
-      for (unsigned int i = seq_start; i < sequence_len; ++i) {
-        _FP16 *input_addr = in.getData<_FP16>() + num_head * head_dim * i;
-        _FP16 *cache_addr = cache.getData<_FP16>();
-        int row_to_compute = is_causal ? from + i + 1 : from + sequence_len;
-        size_t out_start_row =
-          is_causal ? calc_attn_index(from + i) - calc_attn_index(from)
-                    : i * (from + sequence_len);
-
-        _FP16 *output_addr = out.getData<_FP16>() + out_start_row * num_head;
-
-        futures.emplace_back(pool.submit_task([=]() {
-          nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
-                                     row_to_compute, num_head / group_size,
-                                     head_dim, group_size, tile_size,
-                                     local_window_size);
-        }));
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+      // NNTRAINER_QK_GPU=1 routes the prefill (sequence_len > 1) Q dot K^T
+      // through compute_kcaches_qwen_fp16 on the GPU instead of the
+      // per-row pool.submit_task NEON loop below. Default off until we
+      // verify timing.
+      static const bool s_qk_gpu =
+        std::getenv("NNTRAINER_QK_GPU") != nullptr;
+      static bool s_qk_gpu_logged = false;
+      if (!s_qk_gpu_logged) {
+        std::fprintf(stderr,
+                     "[mha_core] NNTRAINER_QK_GPU=%s -> %s\n",
+                     std::getenv("NNTRAINER_QK_GPU")
+                       ? std::getenv("NNTRAINER_QK_GPU")
+                       : "(unset)",
+                     s_qk_gpu ? "GPU compute_kcaches_qwen_fp16"
+                              : "NEON compute_kcaches");
+        s_qk_gpu_logged = true;
       }
-      for (auto &fut : futures)
-        fut.get();
+      if (s_qk_gpu &&
+          local_window_size >= sequence_len + (size_t)from &&
+          in.getMemoryData() && in.getMemoryData()->isSVM() &&
+          cache.getMemoryData() && cache.getMemoryData()->isSVM() &&
+          (num_head % group_size) == 0) {
+        const unsigned int T = (unsigned int)from + (unsigned int)sequence_len;
+        nntrainer::compute_kcaches_qwen_fp16_cl(
+          (void *)in.getData<_FP16>(),
+          (void *)cache.getData<_FP16>(),
+          out.getData<_FP16>(),
+          (unsigned int)sequence_len, T, (unsigned int)from,
+          (unsigned int)num_head, (unsigned int)group_size,
+          (unsigned int)head_dim, is_causal ? 1 : 0);
+      } else
+#endif
+      {
+        std::vector<std::future<void>> futures;
+        unsigned int seq_start =
+          sequence_len < local_window_size ? 0 : sequence_len - local_window_size;
+        for (unsigned int i = seq_start; i < sequence_len; ++i) {
+          _FP16 *input_addr = in.getData<_FP16>() + num_head * head_dim * i;
+          _FP16 *cache_addr = cache.getData<_FP16>();
+          int row_to_compute = is_causal ? from + i + 1 : from + sequence_len;
+          size_t out_start_row =
+            is_causal ? calc_attn_index(from + i) - calc_attn_index(from)
+                      : i * (from + sequence_len);
+
+          _FP16 *output_addr = out.getData<_FP16>() + out_start_row * num_head;
+
+          futures.emplace_back(pool.submit_task([=]() {
+            nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
+                                       row_to_compute, num_head / group_size,
+                                       head_dim, group_size, tile_size,
+                                       local_window_size);
+          }));
+        }
+        for (auto &fut : futures)
+          fut.get();
+      }
     }
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";

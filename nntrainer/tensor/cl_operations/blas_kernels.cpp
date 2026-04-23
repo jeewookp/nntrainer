@@ -3704,6 +3704,103 @@ void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
 }
 #endif
 
+#ifdef ENABLE_FP16
+// ============================================================================
+// GPU Qwen-style attention scoring (Q dot K^T per head, causal triangle).
+// Env-gated opt-in through NNTRAINER_QK_GPU=1 in MHACoreLayer.
+// ============================================================================
+void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
+                                   _FP16 *out_host,
+                                   unsigned int M, unsigned int T,
+                                   unsigned int from,
+                                   unsigned int num_heads_Q,
+                                   unsigned int gqa_size,
+                                   unsigned int head_dim, int is_causal) {
+  if (!q_svm || !k_cache_svm || !out_host || M == 0 || T == 0 ||
+      head_dim == 0 || num_heads_Q == 0 || gqa_size == 0 ||
+      (num_heads_Q % gqa_size) != 0)
+    return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue clq = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  // Total scores produced (matches the out_ tensor size in mha_core's
+  // one_batch_incremental_forwarding):
+  //   causal:   sum_{i=0..M-1} (from + i + 1)
+  //           = M*from + M*(M+1)/2
+  //   else:     M * T
+  size_t total_scores;
+  if (is_causal) {
+    total_scores = (size_t)M * (size_t)from + (size_t)M * (size_t)(M + 1) / 2;
+  } else {
+    total_scores = (size_t)M * (size_t)T;
+  }
+  const size_t out_bytes =
+    total_scores * (size_t)num_heads_Q * sizeof(uint16_t);
+
+  // Persistent SVM scratch for the kernel output, sized to the largest
+  // we've ever needed.  Using SVM (instead of a host pointer wrapped via
+  // CL_MEM_USE_HOST_PTR) keeps the dispatch on the same SetKernelSVMArguments
+  // path the rest of the helpers use.
+  static void *s_scratch_svm = nullptr;
+  static size_t s_scratch_bytes = 0;
+  if (out_bytes > s_scratch_bytes) {
+    if (s_scratch_svm) {
+      blas_cc->context_inst_.releaseSVMRegion(s_scratch_svm);
+    }
+    s_scratch_svm = blas_cc->context_inst_.createSVMRegion(out_bytes);
+    if (!s_scratch_svm) return;
+    s_scratch_bytes = out_bytes;
+  }
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(compute_kcaches_qwen_fp16_kernel,
+                                        "compute_kcaches_qwen_fp16");
+  }
+  if (!s_kern) return;
+
+  // Make CPU-or-prior-kernel writes visible to the GPU.  Q usually came
+  // straight from rotary_emb_qwen_fp16_cl above (same queue, in-order),
+  // and K cache too, so SVMUnmap is mostly a no-op but cheap.
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
+
+  const float scale = 1.0f / std::sqrt((float)head_dim);
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, q_svm);
+  s_kern->SetKernelSVMArguments(a++, k_cache_svm);
+  s_kern->SetKernelSVMArguments(a++, s_scratch_svm);
+  const int M_i = (int)M, T_i = (int)T, from_i = (int)from;
+  const int nhq = (int)num_heads_Q, gqa = (int)gqa_size, hd = (int)head_dim;
+  s_kern->SetKernelArguments(a++, &M_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &T_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &from_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &nhq, sizeof(int));
+  s_kern->SetKernelArguments(a++, &gqa, sizeof(int));
+  s_kern->SetKernelArguments(a++, &hd, sizeof(int));
+  s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
+  s_kern->SetKernelArguments(a++, &scale, sizeof(float));
+
+  // Local 64x1x1 (Adreno wavefront).  kk on the inner axis so adjacent
+  // work-items hit adjacent K rows in cache.
+  const int lx = 64;
+  const int gx = ((T_i + lx - 1) / lx) * lx;
+  const int g[3] = {gx, nhq, M_i};
+  const int l[3] = {lx, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+
+  // Drain via blocking SVMMap on the scratch so the memcpy below sees
+  // GPU-written values.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    s_scratch_svm, out_bytes, /*read_only=*/true);
+  std::memcpy(out_host, s_scratch_svm, out_bytes);
+}
+#endif
+
 // ============================================================================
 // Phase B helper — fp16 SwiGLU on SVM buffers via swiglu_cl_fp16 kernel.
 // ============================================================================

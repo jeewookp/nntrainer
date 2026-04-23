@@ -272,6 +272,38 @@ void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
                                     unsigned int seq_len_max,
                                     unsigned int M, unsigned int W,
                                     unsigned int dim, unsigned int from);
+
+/**
+ * @brief GPU Qwen-style Q dot K^T attention scoring (causal-triangle output).
+ *
+ * @param q_svm        fp16 SVM, [M, num_heads_Q, head_dim] (the layer's Q
+ *                     after RoPE).
+ * @param k_cache_svm  fp16 SVM, [T_max, num_heads_KV, head_dim] (KV cache
+ *                     base; only rows [0, T) are read).
+ * @param out_host     fp16 host buffer of length total_scores * num_heads_Q
+ *                     where total_scores = (causal ? sum_{i=0..M-1}(from+i+1)
+ *                                                  : M*T). The helper
+ *                     stages through an internal SVM scratch and copies
+ *                     the result into out_host on completion (caller's
+ *                     out_ tensor is heap-allocated, not SVM).
+ * @param M            number of query rows for this layer call.
+ * @param T            cached row count (= from + sequence_len).
+ * @param from         starting cache row (0 for the typical single-call
+ *                     prefill, increases per token in decode).
+ * @param num_heads_Q, gqa_size, head_dim   GQA layout.
+ * @param is_causal    1 for causal-triangle output, 0 for full M x T.
+ *
+ * Issues a blocking SVMMap on the staging buffer + memcpy into out_host
+ * before returning, so downstream NEON code (softmax_triangle,
+ * compute_fp16vcache_transposed) sees coherent data.
+ */
+void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
+                                   _FP16 *out_host,
+                                   unsigned int M, unsigned int T,
+                                   unsigned int from,
+                                   unsigned int num_heads_Q,
+                                   unsigned int gqa_size,
+                                   unsigned int head_dim, int is_causal);
 #endif
 
 /**
