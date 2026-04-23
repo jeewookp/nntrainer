@@ -35,6 +35,14 @@
 #   ./temp_litert_attention_intercept.sh
 #   PREFILL_TOKENS=437 ./temp_litert_attention_intercept.sh
 
+# Re-exec under bash when invoked via `sh` (dash): we rely on
+# `set -o pipefail`, `${var,,}`, arrays, [[ ]] … which dash does not
+# support. Without this guard `sh temp_litert_attention_intercept.sh`
+# dies on line 1 with "Illegal option -o pipefail".
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
 set -euo pipefail
 
