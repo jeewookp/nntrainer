@@ -3730,7 +3730,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
 
   static ClContext::SharedPtrClKernel s_kern;
   if (!s_kern) {
-    // Same -cl-std=CL2.0 override as the ClContext init registration so
+    // -cl-std=CL2.0 override matches the ClContext init registration so
     // ocl_kernel_map dedupes on (name + options).  Required for
     // work_group_reduce_add.
     s_kern = blas_cc->registerClKernel(
@@ -3739,13 +3739,60 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
   if (!s_kern) return;
 
-  // Commit any upstream CPU writes on Q / K / V before the GPU reads.
-  // For Qwen3 prefill Q came from rotary (NEON) + K/V from cache copy
-  // (NEON), so the SVMUnmaps are the coherence primitive.
+  // Commit upstream CPU writes before the GPU reads (Q and K/V come
+  // from NEON rotary / cache copy this iteration).
   blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+
+  const unsigned int num_heads_KV = num_heads_Q / gqa_size;
+
+  // V4 binds K/V as image1d_buffer<half4> instead of __global half*:
+  // the texture fetch path hits a separate cache from the plain L1,
+  // and with GQA (gqa_size=4) four consecutive Q-heads share the
+  // same K/V head -> later WGs for those heads find K/V hot.  Wrap
+  // the SVM region as a cl_mem (CL_MEM_USE_HOST_PTR) then as a
+  // 1-D image.  Same pattern as gpu_int4_gemm_adreno's input
+  // binding.
+  const size_t kv_bytes =
+    (size_t)T * (size_t)num_heads_KV * (size_t)head_dim * sizeof(uint16_t);
+  const size_t kv_half4_width =
+    (size_t)T * (size_t)num_heads_KV * (size_t)head_dim / 4u;
+
+  cl_int err = CL_SUCCESS;
+  cl_mem k_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                kv_bytes, k_cache_svm, &err);
+  if (err != CL_SUCCESS || !k_buf) return;
+  cl_mem v_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
+                                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                kv_bytes, v_cache_svm, &err);
+  if (err != CL_SUCCESS || !v_buf) { clReleaseMemObject(k_buf); return; }
+
+  cl_image_format kv_fmt;
+  kv_fmt.image_channel_order = CL_RGBA;
+  kv_fmt.image_channel_data_type = CL_HALF_FLOAT;
+  cl_image_desc kv_desc;
+  std::memset(&kv_desc, 0, sizeof(kv_desc));
+  kv_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+  kv_desc.image_width = kv_half4_width;
+
+  kv_desc.buffer = k_buf;
+  cl_mem k_img = clCreateImage(blas_cc->context_inst_.GetContext(),
+                               CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
+                               nullptr, &err);
+  if (err != CL_SUCCESS || !k_img) {
+    clReleaseMemObject(v_buf); clReleaseMemObject(k_buf); return;
+  }
+  kv_desc.buffer = v_buf;
+  cl_mem v_img = clCreateImage(blas_cc->context_inst_.GetContext(),
+                               CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
+                               nullptr, &err);
+  if (err != CL_SUCCESS || !v_img) {
+    clReleaseMemObject(k_img); clReleaseMemObject(v_buf);
+    clReleaseMemObject(k_buf); return;
+  }
 
   const float scale = 1.0f / std::sqrt((float)head_dim);
   const int M_i = (int)M, T_i = (int)T, from_i = (int)from;
@@ -3753,8 +3800,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
 
   int a = 0;
   s_kern->SetKernelSVMArguments(a++, q_svm);
-  s_kern->SetKernelSVMArguments(a++, k_cache_svm);
-  s_kern->SetKernelSVMArguments(a++, v_cache_svm);
+  s_kern->SetKernelArguments(a++, &k_img, sizeof(cl_mem));
+  s_kern->SetKernelArguments(a++, &v_img, sizeof(cl_mem));
   s_kern->SetKernelSVMArguments(a++, out_svm);
   s_kern->SetKernelArguments(a++, &M_i, sizeof(int));
   s_kern->SetKernelArguments(a++, &T_i, sizeof(int));
@@ -3764,28 +3811,29 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // V3 multi-Q per WG: WG = (HD, TM, 1) = (128, 4, 1), one WG per
-  // (head h, block of TM consecutive m positions).  Pack TM Q rows
-  // into the same WG so the Adreno wavefront scheduler has TM
-  // independent softmax states to round-robin instead of a single
-  // sequential one (V0..V2 were stuck at 1 wavefront / WG and ~3%
-  // of ALU peak).  TM must match the #define in
-  // attention_fused_fp16.cl; TM=8 (1024 threads/WG) silently nooped
-  // on Adreno 830, TM=4 (512 threads) launches cleanly.
-  constexpr int TM = 4;
-  const int m_blocks = (M_i + TM - 1) / TM;
-  const int g[3] = {128, nhq * TM, m_blocks};
-  const int l[3] = {128, TM, 1};
+  // Back to V0's dispatch shape now that we've stopped trying to
+  // get ILP out of multi-Q WGs (V3c proved WG-level barriers kill
+  // the win, V3a/d proved sub_group_reduce is broken on Qualcomm
+  // 2D WGs).  Single-wavefront WG + texture-cached K/V aims at
+  // the memory bottleneck directly.
+  const int g[3] = {128, nhq, M_i};
+  const int l[3] = {128, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
-  // Downstream MHA code path writes out to the o_proj FC's input via SVM.
-  // Drain with blocking SVMMap so the NEON / GPU consumer sees coherent
-  // bytes.  Single fence for the whole attention block — that's the
-  // key win over the per-stage rope/qk helpers.
+  // Blocking drain so downstream MHA (NEON o_proj FC input) sees
+  // coherent bytes.  Also gives us a natural sync point before we
+  // release the cl_mem wrappers below.
   blas_cc->command_queue_inst_.enqueueSVMMap(
     out_svm,
     (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
     /*read_only=*/true);
+
+  // Release cl_mem wrappers.  Safe after the blocking SVMMap above
+  // — the kernel has finished so none of these are still referenced.
+  clReleaseMemObject(v_img);
+  clReleaseMemObject(k_img);
+  clReleaseMemObject(v_buf);
+  clReleaseMemObject(k_buf);
 }
 
 // ============================================================================

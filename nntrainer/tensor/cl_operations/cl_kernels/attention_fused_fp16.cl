@@ -1,54 +1,54 @@
-// Fused FlashAttention-style Qwen attention, v3d (multi-Q per WG,
-// sub_group_reduce_add, TM=4).
+// Fused FlashAttention-style Qwen attention, v4 (image1d_buffer K/V).
 //
-// Timings (Qwen3-4B prefill, 36 layers, M=437, num_heads=32, HD=128):
-//   V0  tree reduce, TM=1                            1794 ms  correct
-//   V1  work_group_reduce_add barrier-free           2397 ms  correct
-//   V2  work_group_reduce_add + d==0 exp             2464 ms  correct
-//   V3a sub_group_reduce_add, TM=8                   1988 ms  WRONG
-//   V3b tree reduce, TM=8                              17 ms  NOOPED (launch limit)
-//   V3c tree reduce, TM=4                            2307 ms  correct
-// NEON baseline                                       866 ms
+// Exhaustive V3 sweep showed multi-Q WG + tree reduce is bound by
+// WG-level barriers that sync all participating wavefronts; multi-Q
+// WG + sub_group_reduce produced wrong output because the Qualcomm
+// driver does NOT form sub-groups in linear id order for 2D WGs.
+// V0's single-wavefront WG is the best correct variant (1794 ms) but
+// is still 2x over NEON (866 ms).
 //
-// V3c proved the ILP hypothesis isn't free on Adreno: WG-level
-// barriers for the per-row tree reduce stall all four wavefronts
-// every 7 times per kk iteration, which eats the win from having
-// four independent softmax states.  V0's single-wavefront WG keeps
-// its 7 barriers/iter cheap because there's nothing to sync across.
+// The next lever is memory, not ILP. Per-layer attention reads
+//   32 heads x 437 Q positions x ~220 avg kk x 128 HD x 2 bytes
+//   x (K + V) = ~1.6 GB
+// of K/V data each layer, 36 layers = ~57 GB per prefill. At
+// Adreno 830's ~80 GB/s peak sustained bandwidth the theoretical
+// floor is ~700 ms — which explains why NEON (866 ms) is close to
+// optimal and we have ~900 ms of head-room vs V0.
 //
-// V3a got the barrier economics right (sub_group_reduce_add is
-// wavefront-internal, so ~0-cost) but produced wrong output — we
-// assumed TM=8 was the culprit (driver lane reassignment under
-// pressure).  V3d tests whether TM=4 + sub_group_reduce gives BOTH
-// correctness and speed:
-//   - OpenCL 2.0 spec guarantees sub-groups are built from
-//     consecutive work-items in LINEAR local-id order
-//     (local_id(0) inner), so lanes 0..127 = m_local=0, lanes
-//     128..255 = m_local=1, etc., which is exactly one row per
-//     sub-group when sub_group_size = HD = 128.
-//   - qcom_reqd_sub_group_size("full") forces the native wavefront
-//     width (128 on Adreno 830).
-//   - With TM=4, WG = 512 threads = 4 wavefronts — well under the
-//     launch limit that tripped V3b.
-// Expected: if the OpenCL 2.0 linear-subgroup guarantee holds under
-// these params, we get correct output AND barrier-free per-row
-// reduces across 4 wavefronts of ILP.  If wrong output: the
-// guarantee is violated on this driver and we fall back to V3c.
+// Two structural tricks collapse that head-room:
+//
+//   1. image1d_buffer_t binding for K/V.  Adreno has a dedicated
+//      texture-cache / fetch unit separate from the generic L1 used
+//      by `__global half *` loads.  For contiguous 128-thread WG
+//      reads the two paths have similar first-touch bandwidth, but
+//      the texture path caches across WGs.
+//
+//   2. GQA share: Qwen3 has gqa_size=4 (32 Q heads / 8 KV heads).
+//      Four consecutive Q heads hit the SAME K-head and the SAME
+//      V-head.  Those four WGs scheduled close together on the same
+//      SM will find K/V hot in the texture cache -> ~4x effective
+//      bandwidth on K/V for those heads.  Plain __global reads
+//      would (mostly) miss L1 for each new WG.
+//
+// Kernel shape is identical to V0 apart from the K/V type change.
+// Input K/V are still 1-D fp16 [T, num_heads_KV, HD] laid out
+// contiguously; we bind them as image1d_buffer<half4>, width =
+// T * num_heads_KV * HD / 4, so one image4 fetch covers 4
+// consecutive half lanes.  Each thread reads one half4 (4 halves
+// out of 128) and multiplies only the lane matching its d%4 — the
+// other three lanes feed d+1/+2/+3 threads, so the whole WG issues
+// HD/4 = 32 texture fetches per kk vs. 128 scalar global loads in V0.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#pragma OPENCL EXTENSION cl_khr_subgroups : enable
-#pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
 #define HD 128
-#define TM 4
 
-__attribute__((qcom_reqd_sub_group_size("full")))
-__kernel __attribute__((reqd_work_group_size(HD, TM, 1)))
+__kernel __attribute__((reqd_work_group_size(HD, 1, 1)))
 void attention_fused_fp16(
-    __global const half *Q,
-    __global const half *K_cache,
-    __global const half *V_cache,
-    __global half *out,
+    __global const half          *Q,
+    __read_only image1d_buffer_t  K_cache_img,
+    __read_only image1d_buffer_t  V_cache_img,
+    __global half                *out,
     const int M,
     const int T,
     const int from,
@@ -57,82 +57,69 @@ void attention_fused_fp16(
     const int is_causal,
     const float scale) {
 
-  const int d       = get_local_id(0);     // 0..HD-1
-  const int m_local = get_local_id(1);     // 0..TM-1
-  const int h       = get_group_id(1);     // 0..num_heads_Q-1
-  const int m_base  = get_group_id(2) * TM;
-  const int m       = m_base + m_local;
-  const bool row_valid = (m < M);
+  const int d = get_local_id(0);
+  const int h = get_group_id(1);
+  const int m = get_group_id(2);
+  if (h >= num_heads_Q || m >= M) return;
 
   const int num_heads_KV = num_heads_Q / gqa_size;
   const int h_kv = h / gqa_size;
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
-  const float q_val = row_valid ? (float)Q[m * W_q + h * HD + d] : 0.0f;
+  // d % 4 and d / 4 get reused every kk, hoist them.
+  const int d_hi = d >> 2;   // 0..31
+  const int d_lo = d & 3;    // 0..3
 
-  // Per-row softmax publishers (written by d==0 of each row).
-  __local float rescale_l  [TM];
-  __local float score_exp_l[TM];
+  const float q_val = (float)Q[m * W_q + h * HD + d];
+
+  __local float rescale_l;
+  __local float score_exp_l;
 
   float running_max = -INFINITY;
   float running_sum = 0.0f;
   float acc         = 0.0f;
 
-  int kk_end = T;
-  if (is_causal != 0) {
-    const int m_last = (m_base + TM - 1 < M) ? (m_base + TM - 1) : (M - 1);
-    kk_end = from + m_last + 1;
-  }
-  const int kk_end_row = (is_causal != 0) ? (from + m + 1) : T;
+  const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
 
   for (int kk = 0; kk < kk_end; ++kk) {
-    const bool row_active = row_valid && (kk < kk_end_row);
+    // Image1d_buffer is addressed in half4 units.  Each WG stride
+    // across d=0..127 maps to 32 distinct half4 indices; four
+    // consecutive threads (d_lo = 0..3) hit the SAME half4 at the
+    // same cycle, which Adreno's texture-cache coalesces into a
+    // single fetch.
+    const int kv_base4 = (kk * W_k + h_kv * HD) >> 2;  // half4 idx base
+    const half4 k4 = read_imageh(K_cache_img, kv_base4 + d_hi);
+    const half4 v4 = read_imageh(V_cache_img, kv_base4 + d_hi);
 
-    const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
-    const float partial = row_active ? (q_val * k_val) : 0.0f;
+    // Pick this thread's half from the fetched half4.
+    const float k_val = (float)((half*)&k4)[d_lo];
+    const float v_val = (float)((half*)&v4)[d_lo];
 
-    // Per-row sub-group reduction: sub_group_size = HD = 128 = one
-    // wavefront, and OpenCL 2.0 sub-groups follow linear-id order
-    // (local_id(0) inner), so lanes 0..127 = m_local=0 row, lanes
-    // 128..255 = m_local=1 row, ..., giving us one sub-group per
-    // row.  Barrier-free within the wavefront.
-    const float score = sub_group_reduce_add(partial) * scale;
+    const float partial = q_val * k_val;
+    const float score = work_group_reduce_add(partial) * scale;
 
     if (d == 0) {
-      if (row_active) {
-        const float prev_max = running_max;
-        const float new_max  = fmax(prev_max, score);
-        const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
-                               ? 0.0f
-                               : exp(prev_max - new_max);
-        const float score_exp = exp(score - new_max);
-        rescale_l  [m_local] = rescale;
-        score_exp_l[m_local] = score_exp;
-        running_max = new_max;
-        running_sum = running_sum * rescale + score_exp;
-      } else {
-        rescale_l  [m_local] = 1.0f;
-        score_exp_l[m_local] = 0.0f;
-      }
+      const float prev_max = running_max;
+      const float new_max  = fmax(prev_max, score);
+      const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
+                             ? 0.0f
+                             : exp(prev_max - new_max);
+      const float score_exp = exp(score - new_max);
+      rescale_l   = rescale;
+      score_exp_l = score_exp;
+      running_max = new_max;
+      running_sum = running_sum * rescale + score_exp;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    const float rescale   = rescale_l  [m_local];
-    const float score_exp = score_exp_l[m_local];
-    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-    if (row_active) {
-      acc = acc * rescale + score_exp * v_val;
-    }
+    const float rescale   = rescale_l;
+    const float score_exp = score_exp_l;
+    acc = acc * rescale + score_exp * v_val;
   }
 
-  __local float sum_l[TM];
-  if (d == 0) sum_l[m_local] = running_sum;
+  __local float sum_l;
+  if (d == 0) sum_l = running_sum;
   barrier(CLK_LOCAL_MEM_FENCE);
-
-  if (row_valid) {
-    const float s = sum_l[m_local];
-    const float inv = (s > 0.0f) ? (1.0f / s) : 0.0f;
-    out[m * W_q + h * HD + d] = (half)(acc * inv);
-  }
+  out[m * W_q + h * HD + d] = (half)(acc / sum_l);
 }
