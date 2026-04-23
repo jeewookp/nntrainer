@@ -252,6 +252,28 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
                          const float *gamma, unsigned int M, unsigned int K,
                          float epsilon);
 
+#ifdef ENABLE_FP16
+/**
+ * @brief Qwen-style fp16 rotary embedding on the GPU queue.
+ *
+ * Both input and output are flat fp16 SVM pointers of length
+ * M * W (W = num_heads * dim). cos_table_fp16 / sin_table_fp16 are
+ * flattened (seq_len_max * dim) fp16 buffers — caller maintains them
+ * alongside the precomputed std::vector<std::vector<_FP16>> tables in
+ * MHACoreLayer; this helper caches a cl_mem per pointer.
+ *
+ * In-place is safe (in_svm == out_svm).  Issues a blocking SVMMap on
+ * out_svm at the end so the immediate downstream NEON consumer
+ * (compute_kcaches / compute_fp16vcache_transposed) sees coherent data.
+ */
+void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
+                                    const _FP16 *cos_table_fp16,
+                                    const _FP16 *sin_table_fp16,
+                                    unsigned int seq_len_max,
+                                    unsigned int M, unsigned int W,
+                                    unsigned int dim, unsigned int from);
+#endif
+
 /**
  * @brief Phase B helper — fp16 SwiGLU on an SVM in1/in2/out via a GPU
  * kernel dispatch. Enqueues `swiglu_cl_fp16` (a file-scope kernel

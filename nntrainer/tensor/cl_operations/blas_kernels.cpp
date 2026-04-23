@@ -3611,6 +3611,99 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
   }
 }
 
+#ifdef ENABLE_FP16
+// ============================================================================
+// GPU Qwen-style rotary embedding via rotary_emb_qwen_fp16. Env-gated
+// opt-in through NNTRAINER_ROPE_GPU=1 (checked at the layer level).
+// See header for semantics.
+// ============================================================================
+void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
+                                    const _FP16 *cos_table_fp16,
+                                    const _FP16 *sin_table_fp16,
+                                    unsigned int seq_len_max,
+                                    unsigned int M, unsigned int W,
+                                    unsigned int dim, unsigned int from) {
+  if (!in_svm || !out_svm || !cos_table_fp16 || !sin_table_fp16 ||
+      M == 0 || W == 0 || dim == 0 || (W % dim) != 0)
+    return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  cl_int err = 0;
+  const size_t table_bytes =
+    (size_t)seq_len_max * (size_t)dim * sizeof(uint16_t);
+
+  // Cache the cos / sin cl_mem buffers per host pointer. The host
+  // tables are precomputed once per MHACoreLayer instance and never
+  // mutated, so a one-shot CL_MEM_COPY_HOST_PTR upload is enough.
+  struct TableCache { cl_mem buf; size_t bytes; };
+  static std::unordered_map<uintptr_t, TableCache> s_table_cache;
+
+  auto get_table = [&](const _FP16 *host_ptr) -> cl_mem {
+    const uintptr_t key = reinterpret_cast<uintptr_t>(host_ptr);
+    auto it = s_table_cache.find(key);
+    if (it != s_table_cache.end() && it->second.bytes >= table_bytes)
+      return it->second.buf;
+    if (it != s_table_cache.end() && it->second.buf)
+      clReleaseMemObject(it->second.buf);
+    cl_int e2 = 0;
+    cl_mem buf = clCreateBuffer(clctx,
+                                CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                table_bytes, (void *)host_ptr, &e2);
+    if (e2 != CL_SUCCESS || !buf) return nullptr;
+    s_table_cache[key] = {buf, table_bytes};
+    return buf;
+  };
+
+  cl_mem cos_buf = get_table(cos_table_fp16);
+  cl_mem sin_buf = get_table(sin_table_fp16);
+  if (!cos_buf || !sin_buf) return;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(rotary_emb_qwen_fp16_kernel,
+                                        "rotary_emb_qwen_fp16");
+  }
+  if (!s_kern) return;
+
+  // Make CPU writes to in_svm visible to the GPU before the kernel
+  // reads them.  In-place RoPE: out_svm == in_svm so this also covers
+  // the output side until the SVMMap below remaps it for host reads.
+  blas_cc->command_queue_inst_.enqueueSVMUnmap((void *)in_svm);
+  if (out_svm != in_svm)
+    blas_cc->command_queue_inst_.enqueueSVMUnmap((void *)out_svm);
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, in_svm);
+  s_kern->SetKernelSVMArguments(a++, out_svm);
+  s_kern->SetKernelArguments(a++, &cos_buf, sizeof(cl_mem));
+  s_kern->SetKernelArguments(a++, &sin_buf, sizeof(cl_mem));
+  const int sm = (int)M, sw = (int)W, sd = (int)dim, sf = (int)from;
+  s_kern->SetKernelArguments(a++, &sm, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sw, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sd, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sf, sizeof(int));
+
+  const int num_heads = (int)W / (int)dim;
+  const int half_ = (int)dim / 2;
+  // Local 64x1 (Adreno wavefront).  Half-pair grid.
+  const int lx = (M * num_heads >= 64) ? 64 : (int)M * num_heads;
+  const int gx = ((M * num_heads + lx - 1) / lx) * lx;
+  const int gy = half_;
+  const int g[3] = {gx, gy, 1};
+  const int l[3] = {lx, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+
+  // Downstream is NEON CPU (compute_kcaches / compute_fp16vcache).
+  // Drain the queue with a blocking map so those scalar reads are
+  // coherent with the GPU writes above.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    out_svm, (size_t)M * W * sizeof(uint16_t), /*read_only=*/true);
+}
+#endif
+
 // ============================================================================
 // Phase B helper — fp16 SwiGLU on SVM buffers via swiglu_cl_fp16 kernel.
 // ============================================================================

@@ -105,6 +105,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export ${DELEGATE_ENV}; \
   export ${VERIFY_ENV}; \
   export NNTRAINER_RMSNORM_GPU=1; \
+  export NNTRAINER_ROPE_GPU=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
