@@ -1,33 +1,29 @@
-// Fused FlashAttention-style Qwen attention in a single kernel.
-// Replaces the NEON triple (compute_kcaches + softmax_triangle +
-// compute_fp16vcache_transposed) with one dispatch that keeps the
-// online-softmax running stats in registers and never materialises
-// the M x T attention matrix.
+// Fused FlashAttention-style Qwen attention, v2.
 //
-// v1: barrier-free inner loop
-//   - work_group_reduce_add collapses the per-kk dot product to a
-//     single workgroup-wide value (all threads read the same result,
-//     no __local scratch, no explicit barrier).
-//   - running_max / running_sum are held in private registers of
-//     every thread; they're redundant copies of the same scalar, but
-//     because each thread computes them from the broadcast score all
-//     copies stay in sync without __local writes or barriers.
-//   - Previous (V0) version barriered 9+ times per kk iteration for
-//     the tree reduction + __local broadcast.  At M=437, T=437,
-//     num_heads_Q=32 that was ~30M barriers per prefill layer; with
-//     v1 it drops to zero.
+// V0 used a manual tree reduction (7 barriers/iter) for the Q.K dot and
+// a __local broadcast of the softmax state (2 more barriers), so 9
+// barriers per kk iteration.  Measured 1794 ms fused on Qwen3-4B prefill.
 //
-// Layout unchanged from V0:
-//   Q        : fp16 [M, num_heads_Q,  head_dim]
-//   K_cache  : fp16 [T_max, num_heads_KV, head_dim]  (only [0, T) valid)
-//   V_cache  : fp16 [T_max, num_heads_KV, head_dim]  (only [0, T) valid)
-//   out      : fp16 [M, num_heads_Q, head_dim]
-// GQA : h_kv = h / gqa_size.
+// V1 replaced the reduction with work_group_reduce_add and made every
+// thread compute the softmax state from the broadcast score, removing
+// all explicit barriers — but every thread re-does the fmax+2*exp math
+// 128x redundantly, and the transcendental cost dominated: measured
+// 2397 ms (worse than V0).
 //
-// Dispatch:
-//   global = (HD, num_heads_Q, M)    local = (HD, 1, 1)
-//   local_id(0) = d  (0..HD-1)
-//   group_id(1) = h, group_id(2) = m
+// V2 keeps the barrier-free reduction (work_group_reduce_add) but
+// confines the fmax / exp math to d == 0 like V0, broadcasting the
+// rescale + score_exp scalars via __local.  That's one reduce + one
+// __local round-trip per iter, and no redundant transcendentals:
+//
+//   partial = q_val * k_val
+//   score   = work_group_reduce_add(partial) * scale           // barrier-free
+//   if d==0: update running_max, running_sum, publish rescale / score_exp
+//   barrier
+//   acc = acc * rescale + score_exp * v_val
+//
+// Layout / dispatch unchanged from V0:
+//   Q / K_cache / V_cache / out : fp16, GQA (h_kv = h / gqa_size),
+//   HD hard-coded = 128, WG = (HD, 1, 1), global = (HD, num_heads_Q, M).
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -59,9 +55,13 @@ void attention_fused_fp16(
 
   const float q_val = (float)Q[m * W_q + h * HD + d];
 
-  // Per-thread copies of the running softmax state.  Every thread
-  // mutates them in lockstep from the broadcast score, so they stay
-  // identical across the workgroup without __local writes or barriers.
+  // Scalars published by d==0 for the other threads to broadcast-read.
+  __local float rescale_l;
+  __local float score_exp_l;
+
+  // Running softmax state — lives entirely on d == 0.  Other threads
+  // only need the per-iter rescale / score_exp that come through
+  // __local, and the final sum which we publish once at the end.
   float running_max = -INFINITY;
   float running_sum = 0.0f;
   float acc = 0.0f;
@@ -72,21 +72,34 @@ void attention_fused_fp16(
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
     const float partial = q_val * k_val;
 
-    // One-call workgroup reduction: every thread gets the same score.
+    // Single-intrinsic workgroup reduction; all threads receive the
+    // same scalar with no explicit barrier in our kernel (the driver
+    // handles any internal sync inside the intrinsic).
     const float score = work_group_reduce_add(partial) * scale;
 
-    const float prev_max = running_max;
-    const float new_max = fmax(prev_max, score);
-    const float rescale = (isinf(prev_max) && prev_max < 0.0f)
-                          ? 0.0f
-                          : exp(prev_max - new_max);
-    const float score_exp = exp(score - new_max);
+    if (d == 0) {
+      const float prev_max = running_max;
+      const float new_max = fmax(prev_max, score);
+      const float rescale = (isinf(prev_max) && prev_max < 0.0f)
+                            ? 0.0f
+                            : exp(prev_max - new_max);
+      const float score_exp = exp(score - new_max);
+      rescale_l = rescale;
+      score_exp_l = score_exp;
+      running_max = new_max;
+      running_sum = running_sum * rescale + score_exp;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
+    const float rescale   = rescale_l;
+    const float score_exp = score_exp_l;
     const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-    acc         = acc         * rescale + score_exp * v_val;
-    running_sum = running_sum * rescale + score_exp;
-    running_max = new_max;
+    acc = acc * rescale + score_exp * v_val;
   }
 
-  out[m * W_q + h * HD + d] = (half)(acc / running_sum);
+  // Publish the final sum for the normalisation step.
+  __local float sum_l;
+  if (d == 0) sum_l = running_sum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  out[m * W_q + h * HD + d] = (half)(acc / sum_l);
 }
