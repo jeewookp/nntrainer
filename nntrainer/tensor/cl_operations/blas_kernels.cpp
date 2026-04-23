@@ -3739,11 +3739,16 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
   if (!s_kern) return;
 
-  // Commit upstream CPU writes before the GPU reads (Q and K/V come
-  // from NEON rotary / cache copy this iteration).
+  // Q and out stay on the SVM path, so commit CPU writes / publish
+  // ownership for them. K and V are about to be wrapped as cl_mem
+  // via CL_MEM_USE_HOST_PTR — the existing int4_gemm input binding
+  // does this WITHOUT an SVMUnmap first, and doing an SVMUnmap
+  // ahead of clCreateBuffer seems to invalidate the SVM ptr on
+  // Adreno (the V4 first-run noop + garbage output pattern,
+  // 7.87 ms for 36 dispatches = pure failure overhead, was caused
+  // by having SVMUnmap here).  Let clCreateBuffer handle the
+  // host/device sync via its own driver path.
   blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
 
   const unsigned int num_heads_KV = num_heads_Q / gqa_size;
@@ -3764,11 +3769,32 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   cl_mem k_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
                                 CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                 kv_bytes, k_cache_svm, &err);
-  if (err != CL_SUCCESS || !k_buf) return;
+  if (err != CL_SUCCESS || !k_buf) {
+    static bool logged_k = false;
+    if (!logged_k) {
+      std::fprintf(stderr,
+                   "[attention_fused_fp16_cl] clCreateBuffer(K) failed: "
+                   "err=%d, ptr=%p, bytes=%zu\n",
+                   (int)err, k_cache_svm, kv_bytes);
+      logged_k = true;
+    }
+    return;
+  }
   cl_mem v_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
                                 CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                 kv_bytes, v_cache_svm, &err);
-  if (err != CL_SUCCESS || !v_buf) { clReleaseMemObject(k_buf); return; }
+  if (err != CL_SUCCESS || !v_buf) {
+    static bool logged_v = false;
+    if (!logged_v) {
+      std::fprintf(stderr,
+                   "[attention_fused_fp16_cl] clCreateBuffer(V) failed: "
+                   "err=%d, ptr=%p, bytes=%zu\n",
+                   (int)err, v_cache_svm, kv_bytes);
+      logged_v = true;
+    }
+    clReleaseMemObject(k_buf);
+    return;
+  }
 
   cl_image_format kv_fmt;
   kv_fmt.image_channel_order = CL_RGBA;
@@ -3783,6 +3809,14 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
                                CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
                                nullptr, &err);
   if (err != CL_SUCCESS || !k_img) {
+    static bool logged_ki = false;
+    if (!logged_ki) {
+      std::fprintf(stderr,
+                   "[attention_fused_fp16_cl] clCreateImage(K) failed: "
+                   "err=%d, half4_width=%zu\n",
+                   (int)err, kv_half4_width);
+      logged_ki = true;
+    }
     clReleaseMemObject(v_buf); clReleaseMemObject(k_buf); return;
   }
   kv_desc.buffer = v_buf;
@@ -3790,6 +3824,14 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
                                CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
                                nullptr, &err);
   if (err != CL_SUCCESS || !v_img) {
+    static bool logged_vi = false;
+    if (!logged_vi) {
+      std::fprintf(stderr,
+                   "[attention_fused_fp16_cl] clCreateImage(V) failed: "
+                   "err=%d, half4_width=%zu\n",
+                   (int)err, kv_half4_width);
+      logged_vi = true;
+    }
     clReleaseMemObject(k_img); clReleaseMemObject(v_buf);
     clReleaseMemObject(k_buf); return;
   }
