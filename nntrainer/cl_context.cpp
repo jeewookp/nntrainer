@@ -233,6 +233,22 @@ void ClContext::initBlasClKernels() {
   registerClKernel(addition_fp16_kernel, "addition_cl_fp16");
   registerClKernel(hscal_kernel, "sscal_cl_fp16");
 #endif
+
+  // Pre-register the gemm_delegate_fp16_cl pipeline's kernels so their
+  // compile cost (measured ~70 ms across first-call setup) lands here at
+  // ClContext::initialize() instead of on the first prefill dispatch.
+  // ocl_kernel_map dedupes by (kernel_name + compile_options), so later
+  // registerClKernel calls in blas_kernels.cpp that use the exact same
+  // (string, name, options) tuple become fast hash hits. The delegate
+  // conv build flags must match blas_kernels.cpp:2695 verbatim.
+  registerClKernel(dequant_int4_to_fp16_kernel,
+                   "dequant_int4_to_delegate_fp16");
+  registerClKernel(
+    delegate_conv_wave_kernel, "main_function",
+    "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  registerClKernel(image_reformat_kernel, "svm_to_image2d");
+  registerClKernel(image_reformat_kernel, "image2d_to_svm");
+
   blas_kernels_initialized = true;
 }
 
