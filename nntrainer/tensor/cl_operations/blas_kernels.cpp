@@ -3592,15 +3592,23 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
   // device, most likely due to Adreno image2d tiling/flush state that
   // the SVM round-trip clears. The v2 kernel itself was verified
   // numerically correct via gpu_check (max_rel ~0.1%, fp16 rounding).
-  //
-  // Do NOT issue a CPU-side clEnqueueSVMMap(CL_MAP_READ) on out_svm
-  // first. On coarse-grained SVM that claim pair (our map + publish's
-  // SVMUnmap) re-syncs caches between CPU and GPU and produces garbage
-  // downstream. The publish's own enqueueSVMUnmap commits image2d_to_svm's
-  // writes for the subsequent GPU read, and in-order queue guarantees
-  // ordering. Anyone that needs to read out_svm from host afterwards
-  // must enqueue their own blocking map.
   svm_to_image2d_publish(out_svm, (unsigned int)M, (unsigned int)K);
+
+  // Decode (M == 1) falls back to gemv_int4_adreno_cl downstream; that
+  // path starts with a CPU scalar copy `svm_in[k] = in_u16[k]` (see
+  // HalfTensor::dotQInteger M=1 branch). Without a blocking host fence
+  // here, CPU reads of out_svm return pre-kernel contents and the gemv
+  // consumes garbage — every decode token lands on the wrong row of
+  // the int4 weight matmul and the generation goes off the rails
+  // while prefill (which reads image2d via pool) stays coherent.
+  //
+  // For prefill (M > 1) the next gemm_delegate reads via pool image2d,
+  // so the fence isn't needed and we'd be stalling the pipeline for
+  // no reason.
+  if (M == 1) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      out_svm, (size_t)M * K * sizeof(uint16_t), /*read_only=*/true);
+  }
 }
 
 // ============================================================================
