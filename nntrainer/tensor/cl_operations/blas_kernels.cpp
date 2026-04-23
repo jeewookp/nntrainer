@@ -3588,7 +3588,15 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
                   (size_t)M * K * sizeof(uint16_t), 0, nullptr, nullptr);
 
   // Publish image2d for downstream pool consumers (next gemm_delegate).
-  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  // NNTRAINER_RMSNORM_GPU_NOPOOL=1 skips the publish for correctness
+  // bisection: if output-garbage goes away with no-publish, the handoff
+  // between RMSNorm out_img and the downstream pool reader is the bug,
+  // not the kernel math.
+  static const bool s_no_pool_publish =
+    std::getenv("NNTRAINER_RMSNORM_GPU_NOPOOL") != nullptr;
+  if (!s_no_pool_publish) {
+    GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  }
 }
 
 // ============================================================================
