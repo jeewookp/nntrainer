@@ -1,27 +1,29 @@
-// Step 1 / incremental: K-only memory-bandwidth probe.
+// Step 2 / incremental: K load + Q load + per-lane partial.
 //
-// Full V5 with TQ=4 landed at MHA=1284 ms / qk=1204 ms (vs V0 1794 ms
-// and NEON 866 ms).  Better than V0, still ~5x off the theoretical
-// memory floor.  To see where the rest of the 1204 ms actually goes
-// we strip the kernel back to just the K read + a scalar sink, so the
-// measured time is (dispatch + scheduler + pure K global-memory load)
-// with no Q, no V, no softmax, no reduce.
+// Step 1 measurement: qk = 170 ms (K-only, 36 layers).  That's only
+// 9.5% of V0's 1794 ms — L2 cache across 14000 WGs absorbs most of
+// the K traffic.  Memory is NOT the main attention bottleneck on
+// this hardware; reduce/softmax/V/acc together account for the
+// remaining 1624 ms.
 //
-// Kernel signature is kept identical to V0..V5 (Q, K, V, out, plus
-// scalars) so the C++ dispatch side doesn't change.  Unused arguments
-// are quietly ignored.  out is filled with a deterministic, K-derived
-// value so the compiler cannot dead-code-eliminate the inner loop.
+// Step 2 adds:
+//   * one Q load per WG (outside the kk loop, so ~1 load / WG)
+//   * one V load per kk (same pattern as K — adds memory cost
+//     comparable to K itself ~170 ms)
+//   * per-lane partial = q_val * k_val accumulated to sink
+// Still no reduce, no softmax, no real score.  Expected time:
+// Step 1 + ~170 ms V read + tiny Q overhead -> ~340-400 ms.
 //
-// Incremental plan (each step keeps previous measurement points
-// valid so we can spot which addition costs what):
-//   Step 1:  K load only, sink to out                            <-- here
-//   Step 2:  + Q load + partial = q * k, sink
-//   Step 3:  + tree reduce across d for score
-//   Step 4:  + online softmax (running_max / running_sum / rescale)
-//   Step 5:  + V load + acc update
-//   Step 6:  + TQ-tile register-held Q (V5 design)
+// If Step 2 lands near 350 ms, the K + V + Q path costs ~350 ms
+// total and ALL the remaining 1400 ms in V0 must come from the
+// reduce + softmax + acc path — i.e. work_group_reduce_add or the
+// per-kk __local broadcast of rescale / score_exp is the real
+// bottleneck, not memory.
 //
-// Dispatch is V0 shape: WG=(128,1,1), global=(128, num_heads_Q, M).
+// Sink strategy: acc keeps per-lane running q*k + v so neither the
+// K nor the V read is dead code.  Scale applied on write-out.
+//
+// Kernel signature and dispatch shape still match V0.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -41,9 +43,6 @@ void attention_fused_fp16(
     const int is_causal,
     const float scale) {
 
-  (void)Q;
-  (void)V_cache;
-
   const int d = get_local_id(0);
   const int h = get_group_id(1);
   const int m = get_group_id(2);
@@ -54,19 +53,18 @@ void attention_fused_fp16(
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
+  const float q_val = (float)Q[m * W_q + h * HD + d];
+
   const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
 
-  // Pure K read loop.  acc must feed the output to survive the
-  // compiler's dead-code pass.  Same K access pattern as V0 / V5:
-  //   one contiguous HD-half cache line per WG per kk.
+  // Per-lane sink: accumulate q*k + v for every kk.  Each thread
+  // keeps its own running acc so the compiler can't hoist the loop.
   float acc = 0.0f;
   for (int kk = 0; kk < kk_end; ++kk) {
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
-    acc += k_val;
+    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
+    acc += q_val * k_val + v_val;
   }
 
-  // Store something derived from every loaded K so the compiler
-  // can't elide the loop.  `scale` is a runtime scalar so it
-  // defeats constant folding too.
   out[m * W_q + h * HD + d] = (half)(acc * scale);
 }
