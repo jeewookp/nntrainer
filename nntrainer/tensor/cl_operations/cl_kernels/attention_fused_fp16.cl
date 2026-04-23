@@ -1,29 +1,28 @@
-// Step 2 / incremental: K load + Q load + per-lane partial.
+// Step 3 / incremental: + work_group_reduce_add across d per kk.
 //
-// Step 1 measurement: qk = 170 ms (K-only, 36 layers).  That's only
-// 9.5% of V0's 1794 ms — L2 cache across 14000 WGs absorbs most of
-// the K traffic.  Memory is NOT the main attention bottleneck on
-// this hardware; reduce/softmax/V/acc together account for the
-// remaining 1624 ms.
+// Step 1 qk =  170 ms  (K-only load)
+// Step 2 qk =  341 ms  (+ V load + Q load + per-lane partial q*k+v)
+// V0 qk    = 1794 ms  (full kernel: reduce + softmax + V acc update)
 //
-// Step 2 adds:
-//   * one Q load per WG (outside the kk loop, so ~1 load / WG)
-//   * one V load per kk (same pattern as K — adds memory cost
-//     comparable to K itself ~170 ms)
-//   * per-lane partial = q_val * k_val accumulated to sink
-// Still no reduce, no softmax, no real score.  Expected time:
-// Step 1 + ~170 ms V read + tiny Q overhead -> ~340-400 ms.
+// So memory (K+V+Q+partial) costs ~340 ms, and the remaining
+// ~1450 ms of V0 must be in reduce + softmax + acc update.
 //
-// If Step 2 lands near 350 ms, the K + V + Q path costs ~350 ms
-// total and ALL the remaining 1400 ms in V0 must come from the
-// reduce + softmax + acc path — i.e. work_group_reduce_add or the
-// per-kk __local broadcast of rescale / score_exp is the real
-// bottleneck, not memory.
+// Step 3 isolates the REDUCE cost by adding one work_group_reduce_add
+// per kk on (q_val * k_val), multiplying by scale to form the score,
+// and sinking the score into a per-lane accumulator against v_val.
+// Still no softmax, no online-max / -sum, no rescale.  The per-lane
+// acc += score * v keeps every memory and reduce op live against
+// dead-code elimination.
 //
-// Sink strategy: acc keeps per-lane running q*k + v so neither the
-// K nor the V read is dead code.  Scale applied on write-out.
+// Expected cost split:
+//   Step 3 - Step 2  = per-kk work_group_reduce_add cost
+// If step 3 comes in around 800-1200 ms, reduce is the dominant
+// component of V0's 1794 ms and we need a different reduce strategy
+// (sub_group_reduce, tree reduce with fewer rows, ...).
+// If step 3 comes in around 400-600 ms, reduce is cheap and the
+// missing cost lives in softmax / acc (step 4-5).
 //
-// Kernel signature and dispatch shape still match V0.
+// Kernel signature + V0 dispatch unchanged.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -57,14 +56,20 @@ void attention_fused_fp16(
 
   const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
 
-  // Per-lane sink: accumulate q*k + v for every kk.  Each thread
-  // keeps its own running acc so the compiler can't hoist the loop.
   float acc = 0.0f;
   for (int kk = 0; kk < kk_end; ++kk) {
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
     const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-    acc += q_val * k_val + v_val;
+
+    // The reduce we want to cost in isolation.  Every thread sees
+    // the same score after the intrinsic — no explicit barrier
+    // needed.
+    const float score = work_group_reduce_add(q_val * k_val) * scale;
+
+    // Per-lane sink.  score * v_val keeps both the reduce output
+    // and the V load alive for the compiler.
+    acc += score * v_val;
   }
 
-  out[m * W_q + h * HD + d] = (half)(acc * scale);
+  out[m * W_q + h * HD + d] = (half)acc;
 }
