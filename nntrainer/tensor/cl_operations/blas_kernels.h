@@ -304,6 +304,31 @@ void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
                                    unsigned int num_heads_Q,
                                    unsigned int gqa_size,
                                    unsigned int head_dim, int is_causal);
+
+/**
+ * @brief Fused FlashAttention dispatch on the GPU queue.
+ *
+ * Replaces the NEON compute_kcaches + softmax_triangle +
+ * compute_fp16vcache_transposed triple with one kernel.  Uses an
+ * online-softmax running max/sum so the attention matrix is never
+ * materialised.
+ *
+ * All tensors fp16; Q and the KV cache are already on SVM
+ * (FC output for Q; MHA's cache SVM allocation for K/V).  The output
+ * attention tensor on the Qwen3 prefill path is SVM too, so the helper
+ * writes directly into it.
+ *
+ * head_dim is fixed to 128 (the kernel hard-codes HD); the layer-side
+ * gate enforces that before calling.
+ */
+void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
+                              void *v_cache_svm,
+                              void *out_svm,
+                              unsigned int M, unsigned int T,
+                              unsigned int from,
+                              unsigned int num_heads_Q,
+                              unsigned int gqa_size,
+                              unsigned int head_dim, int is_causal);
 #endif
 
 /**

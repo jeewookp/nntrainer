@@ -264,6 +264,10 @@ void ClContext::initBlasClKernels() {
   // GPU Q dot K^T attention scoring — tiled wave variant with __local
   // Q + K tiles.  Env-gated via NNTRAINER_QK_GPU=1 in MHACoreLayer.
   registerClKernel(attn_qk_wave_fp16_kernel, "attn_qk_wave_fp16");
+
+  // Fused FlashAttention (qk + softmax + av in one dispatch per layer).
+  // Env-gated via NNTRAINER_ATTN_GPU=1 in MHACoreLayer.
+  registerClKernel(attention_fused_fp16_kernel, "attention_fused_fp16");
 #endif
 
   blas_kernels_initialized = true;

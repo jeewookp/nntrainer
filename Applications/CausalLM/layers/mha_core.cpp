@@ -712,14 +712,63 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   nntrainer::Tensor b_cached_value = cache_value.getSharedDataTensor(
     cached_value_dim, batch * cache_value_dim.getFeatureLen(), true);
 
+  unsigned int gqa_size = num_heads_Q / num_heads_KV;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // NNTRAINER_ATTN_GPU=1 replaces the NEON qk + softmax + av triple
+  // with a single fused FlashAttention-style GPU dispatch.  Needs
+  // SVM-backed Q / K / V / output, GQA shape, head_dim == 128.
+  // Numerical result is the same attention output tensor the NEON
+  // path would produce, so we can short-circuit the entire block
+  // (no out_ scratch needed).
+  static const bool s_attn_gpu =
+    std::getenv("NNTRAINER_ATTN_GPU") != nullptr;
+  static bool s_attn_gpu_logged = false;
+  if (!s_attn_gpu_logged) {
+    std::fprintf(stderr,
+                 "[mha_core] NNTRAINER_ATTN_GPU=%s -> %s\n",
+                 std::getenv("NNTRAINER_ATTN_GPU")
+                   ? std::getenv("NNTRAINER_ATTN_GPU")
+                   : "(unset)",
+                 s_attn_gpu ? "GPU attention_fused_fp16"
+                            : "NEON qk + softmax + av");
+    s_attn_gpu_logged = true;
+  }
+  if (s_attn_gpu &&
+      query_step.getMemoryData() && query_step.getMemoryData()->isSVM() &&
+      b_cached_key.getMemoryData() && b_cached_key.getMemoryData()->isSVM() &&
+      b_cached_value.getMemoryData() && b_cached_value.getMemoryData()->isSVM() &&
+      attention_output_step.getMemoryData() &&
+      attention_output_step.getMemoryData()->isSVM() &&
+      query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      head_dim == 128 &&
+      (num_heads_Q % gqa_size) == 0) {
+    const uint64_t t_fused0 = profile_substage ? mha_now_ns() : 0;
+    nntrainer::attention_fused_fp16_cl(
+      (void *)query_step.getData<_FP16>(),
+      (void *)b_cached_key.getData<_FP16>(),
+      (void *)b_cached_value.getData<_FP16>(),
+      (void *)attention_output_step.getData<_FP16>(),
+      (unsigned int)step_size, (unsigned int)cache_to,
+      (unsigned int)cache_from,
+      (unsigned int)num_heads_Q, (unsigned int)gqa_size,
+      (unsigned int)head_dim, is_causal ? 1 : 0);
+    if (profile_substage) {
+      // Fused kernel covers all three sub-stages; record the combined
+      // time under ns_qk for the moment (ns_softmax and ns_av stay at
+      // zero so the profile makes the shift obvious at a glance).
+      g_mha_core_profile.ns_qk += mha_now_ns() - t_fused0;
+    }
+    return;
+  }
+#endif
+
   // out_ stores the output of Q * K
   nntrainer::Tensor out_(
     1, 1,
     is_causal ? (calc_attn_index(cache_to) - calc_attn_index(cache_from))
               : (step_size * cache_to),
     num_heads_Q, query_step.getTensorType());
-
-  unsigned int gqa_size = num_heads_Q / num_heads_KV;
 
   const uint64_t t_qk0 = profile_substage ? mha_now_ns() : 0;
   compute_kcaches(query_step, b_cached_key, out_, cache_from,

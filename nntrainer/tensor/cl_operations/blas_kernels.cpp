@@ -3706,6 +3706,76 @@ void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
 
 #ifdef ENABLE_FP16
 // ============================================================================
+// Fused FlashAttention (qk + softmax + av) via attention_fused_fp16.
+// Env-gated opt-in through NNTRAINER_ATTN_GPU=1 in MHACoreLayer.  One
+// dispatch per layer call replaces the three NEON stages; online-softmax
+// running stats stay in __local across the K loop.
+// ============================================================================
+void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
+                              void *v_cache_svm,
+                              void *out_svm,
+                              unsigned int M, unsigned int T,
+                              unsigned int from,
+                              unsigned int num_heads_Q,
+                              unsigned int gqa_size,
+                              unsigned int head_dim, int is_causal) {
+  if (!q_svm || !k_cache_svm || !v_cache_svm || !out_svm ||
+      M == 0 || T == 0 || num_heads_Q == 0 || gqa_size == 0 ||
+      (num_heads_Q % gqa_size) != 0)
+    return;
+  if (head_dim != 128) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(attention_fused_fp16_kernel,
+                                        "attention_fused_fp16");
+  }
+  if (!s_kern) return;
+
+  // Commit any upstream CPU writes on Q / K / V before the GPU reads.
+  // For Qwen3 prefill Q came from rotary (NEON) + K/V from cache copy
+  // (NEON), so the SVMUnmaps are the coherence primitive.
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+
+  const float scale = 1.0f / std::sqrt((float)head_dim);
+  const int M_i = (int)M, T_i = (int)T, from_i = (int)from;
+  const int nhq = (int)num_heads_Q, gqa = (int)gqa_size;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, q_svm);
+  s_kern->SetKernelSVMArguments(a++, k_cache_svm);
+  s_kern->SetKernelSVMArguments(a++, v_cache_svm);
+  s_kern->SetKernelSVMArguments(a++, out_svm);
+  s_kern->SetKernelArguments(a++, &M_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &T_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &from_i, sizeof(int));
+  s_kern->SetKernelArguments(a++, &nhq, sizeof(int));
+  s_kern->SetKernelArguments(a++, &gqa, sizeof(int));
+  s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
+  s_kern->SetKernelArguments(a++, &scale, sizeof(float));
+
+  // HD=128 threads per WG, one WG per (h, m).
+  const int g[3] = {128, nhq, M_i};
+  const int l[3] = {128, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+
+  // Downstream MHA code path writes out to the o_proj FC's input via SVM.
+  // Drain with blocking SVMMap so the NEON / GPU consumer sees coherent
+  // bytes.  Single fence for the whole attention block — that's the
+  // key win over the per-stage rope/qk helpers.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    out_svm,
+    (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
+    /*read_only=*/true);
+}
+
+// ============================================================================
 // GPU Qwen-style attention scoring (Q dot K^T per head, causal triangle).
 // Env-gated opt-in through NNTRAINER_QK_GPU=1 in MHACoreLayer.
 // ============================================================================
