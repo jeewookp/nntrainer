@@ -2691,6 +2691,12 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
                                           : DQ_X2;
   if (!s_dq_kern) {
+    const char *variant_name = s_dq_variant == DQ_V1   ? "V1 (16 halves/thread)"
+                               : s_dq_variant == DQ_X2 ? "X2 (32 halves/thread, vstore16)"
+                                                       : "X4 (64 halves/thread, 4x vstore16)";
+    std::fprintf(stderr,
+                 "[dequant_int4] gemm_delegate_fp16_cl variant = %s\n",
+                 variant_name);
     switch (s_dq_variant) {
     case DQ_V1:
       s_dq_kern = blas_cc->registerClKernel(
@@ -3254,6 +3260,12 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     : std::getenv("NNTRAINER_DEQUANT_X4") ? DQ_X4
                                           : DQ_X2;
   if (!s_dq_kern) {
+    const char *variant_name = s_dq_variant == DQ_V1   ? "V1 (16 halves/thread)"
+                               : s_dq_variant == DQ_X2 ? "X2 (32 halves/thread, vstore16)"
+                                                       : "X4 (64 halves/thread, 4x vstore16)";
+    std::fprintf(stderr,
+                 "[dequant_int4] gemm_delegate_fp16_cl variant = %s\n",
+                 variant_name);
     switch (s_dq_variant) {
     case DQ_V1:
       s_dq_kern = blas_cc->registerClKernel(
