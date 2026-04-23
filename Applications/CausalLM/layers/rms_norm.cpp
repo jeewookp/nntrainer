@@ -194,6 +194,17 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       // for semantics. Defaults off so existing CPU path stays active.
       static const bool s_rmsnorm_gpu =
         std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
+      static bool s_logged_variant = false;
+      if (!s_logged_variant) {
+        std::fprintf(stderr,
+                     "[rms_norm] NNTRAINER_RMSNORM_GPU=%s -> %s\n",
+                     std::getenv("NNTRAINER_RMSNORM_GPU")
+                       ? std::getenv("NNTRAINER_RMSNORM_GPU")
+                       : "(unset)",
+                     s_rmsnorm_gpu ? "GPU image2d path"
+                                   : "NEON fused path");
+        s_logged_variant = true;
+      }
       if (s_rmsnorm_gpu && in_step.getMemoryData() &&
           in_step.getMemoryData()->isSVM() && out_step.getMemoryData() &&
           out_step.getMemoryData()->isSVM() && (W % 4) == 0) {
