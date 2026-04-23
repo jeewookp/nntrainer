@@ -95,44 +95,19 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # logs [VERIFY ...] with per-call mismatch counts, max abs diff, and
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
-# NNTRAINER_RMSNORM_GPU=1 routes RMSNormLayer (and later ReshapedRMSNorm)
-# through rmsnorm_image2d_v2 on the GPU queue instead of the NEON CPU
-# loop. See blas_kernels.cpp::rmsnorm_image2d_cl.
-# ----------------------------------------------------------------------------
-# RMSNorm GPU A/B loop. Each pass runs with a different env and writes
-# its own log so the summary at the bottom can compare all variants
-# without the caller needing to remember env-var incantations.
-# ----------------------------------------------------------------------------
-run_rmsnorm_variant() {
-  local name="$1"
-  local extra_env="$2"
-  local log="../../temp_run_${name}.log"
-  echo ""
-  echo "=========================================="
-  echo " [RMSNorm variant] ${name}"
-  if [ -n "$extra_env" ]; then
-    echo "   extra env: ${extra_env}"
-  fi
-  echo "=========================================="
-  adb shell "cd /data/local/tmp/nntrainer/test; \
-    export LD_LIBRARY_PATH=.; \
-    export ${DELEGATE_ENV}; \
-    export ${VERIFY_ENV}; \
-    ${extra_env} \
-    export NNTRAINER_PROFILE_LAYER_SYNC=1; \
-    taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
-    2>&1 | tee "$log"
-}
-
-# 1) NEON baseline (no RMSNorm GPU env).
-run_rmsnorm_variant "neon" ""
-
-# 2) GPU path (rmsnorm_image2d_v2 + pool publish).
-run_rmsnorm_variant "gpu" "export NNTRAINER_RMSNORM_GPU=1;"
-
-# Keep the old single-log name pointed at the last variant for any
-# downstream tool that still greps temp_run.log directly.
-cp -f ../../temp_run_gpu.log ${RUN_LOG} || true
+# Single GPU-RMSNorm run. The neon-vs-gpu A/B loop is gone now that the
+# GPU path is verified (gpu_check earlier showed max_rel ~0.1%, fp16
+# rounding) and is faster (RMSNormLayer ~20 ms vs NEON ~70 ms on warm
+# device). To temporarily re-baseline against NEON, unset the env or
+# pass NNTRAINER_RMSNORM_GPU=0 via the host shell.
+adb shell "cd /data/local/tmp/nntrainer/test; \
+  export LD_LIBRARY_PATH=.; \
+  export ${DELEGATE_ENV}; \
+  export ${VERIFY_ENV}; \
+  export NNTRAINER_RMSNORM_GPU=1; \
+  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
+  2>&1 | tee ${RUN_LOG}
 
 # ----------------------------------------------------------------------------
 # Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
@@ -169,44 +144,37 @@ adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 
 # ----------------------------------------------------------------------------
-# Per-variant summary. Each RMSNorm variant has its own temp_run_<v>.log
-# from run_rmsnorm_variant above; print a compact side-by-side view so
-# `sh temp.sh` is self-contained.
+# Single-run summary. Pulls the headline numbers + per-layer breakdowns
+# from RUN_LOG so `sh temp.sh` is self-contained without scrolling
+# through the full device output.
 # ----------------------------------------------------------------------------
 echo ""
 echo "=========================================="
-echo " RMSNorm A/B summary"
+echo " Run summary"
 echo "=========================================="
 
-for VARIANT in neon gpu; do
-  VLOG="temp_run_${VARIANT}.log"
-  [ -f "$VLOG" ] || continue
-
-  echo ""
-  echo "############################"
-  echo "# variant: ${VARIANT}"
-  echo "############################"
-
-  echo "-- rms_norm gate resolution --"
-  grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" "$VLOG" | head -1 || echo "(no gate line)"
-
-  echo "-- Perf --"
-  grep -E "prefill:|generation:|total:|peak memory|e2e time" "$VLOG" | head -5 \
-    || echo "(no perf lines)"
-
-  echo "-- RMSNorm / Reshaped / MHA profile --"
-  grep -A 4 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" "$VLOG" \
-    || echo "(no profile lines)"
-
-  echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
-  awk '/<\|im_start\|>assistant/ { f=1; next } f' "$VLOG" | head -c 300
-  echo ""
-done
+echo ""
+echo "-- rms_norm gate resolution --"
+grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" ${RUN_LOG} | head -1 \
+  || echo "(no gate line)"
 
 echo ""
-echo "Full per-variant logs:"
-echo "  temp_run_neon.log"
-echo "  temp_run_gpu.log"
+echo "-- Perf --"
+grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} | head -5 \
+  || echo "(no perf lines)"
+
+echo ""
+echo "-- Layer profiles (RMSNorm / Reshaped / MHA + sub-stages) --"
+grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" ${RUN_LOG} \
+  || echo "(no profile lines)"
+
+echo ""
+echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
+awk '/<\|im_start\|>assistant/ { f=1; next } f' ${RUN_LOG} | head -c 300
+echo ""
+
+echo ""
+echo "Full log: ${RUN_LOG}"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"
