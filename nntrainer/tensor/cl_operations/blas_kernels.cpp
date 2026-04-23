@@ -3762,15 +3762,11 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // V5 per-thread Q-tile: WG = (HD, 1, 1) = 1 wavefront (barriers
-  // stay cheap); Q-tile of TQ=4 lives in thread-private registers so
-  // one K/V load per kk feeds TQ Q rows.  TQ must match the
-  // attention_fused_fp16.cl #define.  Grid shrinks by TQ in the M
-  // dimension versus V0, which is exactly the K/V memory traffic
-  // reduction.
-  constexpr int TQ = 4;
-  const int m_tiles = (M_i + TQ - 1) / TQ;
-  const int g[3] = {128, nhq, m_tiles};
+  // Step 1 incremental probe: V0 shape (one WG per (h, m)).  Grid
+  // returns to 128 * num_heads_Q * M so the kernel measurement is
+  // comparable to V0's 1794 ms baseline.  TQ-tile comes back in a
+  // later step once we know where the time is actually going.
+  const int g[3] = {128, nhq, M_i};
   const int l[3] = {128, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
