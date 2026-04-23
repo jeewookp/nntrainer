@@ -157,6 +157,36 @@ adb shell "rm -f ${DEVICE_CL_DIR}/*.cl"
 adb push "${BIN}"           "${DEVICE_FOLDER}/litert_lm_main"    >/dev/null
 adb push "${LIBLITERT_SO}"  "${DEVICE_FOLDER}/libLiteRt.so"      >/dev/null
 adb push "${INTERCEPT_SO}"  "${DEVICE_FOLDER}/libcl_intercept.so" >/dev/null
+
+# Also push interceptor AS libOpenCL.so — belt-and-suspenders in case
+# libLiteRtGpuAccelerator.so dlopen("libOpenCL.so")s by name (bypasses
+# LD_PRELOAD since the real resolver caches the vendor path). With
+# LD_LIBRARY_PATH=. the in-folder libOpenCL.so wins over
+# /system/vendor/lib64/libOpenCL.so. Back up any existing on-device
+# copy first so repeated runs don't clobber real state, and restore it
+# at end-of-script (trap) on any exit path.
+if adb shell "test -f ${DEVICE_FOLDER}/libOpenCL.so"; then
+  # Only back up if the existing file is NOT our interceptor (avoid
+  # backing up a stale interceptor as if it were vendor libOpenCL.so).
+  if ! adb shell "cmp -s ${DEVICE_FOLDER}/libOpenCL.so ${DEVICE_FOLDER}/libcl_intercept.so"; then
+    echo "[attn-intercept.sh] Backing up pre-existing ${DEVICE_FOLDER}/libOpenCL.so"
+    adb shell "mv ${DEVICE_FOLDER}/libOpenCL.so ${DEVICE_FOLDER}/libOpenCL.so.bak"
+  fi
+fi
+adb push "${INTERCEPT_SO}"  "${DEVICE_FOLDER}/libOpenCL.so"       >/dev/null
+restore_libopencl() {
+  if adb shell "test -f ${DEVICE_FOLDER}/libOpenCL.so.bak" 2>/dev/null; then
+    adb shell "rm -f ${DEVICE_FOLDER}/libOpenCL.so; \
+               mv ${DEVICE_FOLDER}/libOpenCL.so.bak ${DEVICE_FOLDER}/libOpenCL.so" \
+      2>/dev/null || true
+  else
+    # No vendor copy was there -- just remove our shim so subsequent
+    # non-intercepted runs pick up the real /system/vendor/.../libOpenCL.so.
+    adb shell "rm -f ${DEVICE_FOLDER}/libOpenCL.so" 2>/dev/null || true
+  fi
+}
+trap restore_libopencl EXIT
+
 for f in "${REQUIRED_PREBUILTS[@]}"; do
   adb push "${PREBUILT_DIR}/${f}" "${DEVICE_FOLDER}/${f}" >/dev/null
 done
@@ -176,11 +206,27 @@ fi
 
 # Clear CL program caches so the delegate is forced to compile from
 # source (otherwise clCreateProgramWithBinary replays a cached blob
-# and no .cl files are ever created).
+# and no .cl files are ever created). Hit every location Adreno /
+# LiteRT are known to use, then sweep everything under $DEVICE_FOLDER
+# that looks cache-ish.
 echo "[attn-intercept.sh] Clearing on-device CL caches ..."
-adb shell "rm -rf ${DEVICE_FOLDER}/cache/* 2>/dev/null; \
-           rm -rf /data/local/tmp/cl_cache/* 2>/dev/null; \
-           rm -rf /data/data/*/cache/cl_cache/* 2>/dev/null" 2>/dev/null || true
+adb shell "rm -rf ${DEVICE_FOLDER}/cache/*                2>/dev/null; \
+           rm -rf ${DEVICE_FOLDER}/*.cache                2>/dev/null; \
+           rm -rf ${DEVICE_FOLDER}/compilation_cache_*    2>/dev/null; \
+           rm -rf ${DEVICE_FOLDER}/kernel_cache*          2>/dev/null; \
+           rm -rf ${DEVICE_FOLDER}/.adrenocompiledkernel  2>/dev/null; \
+           rm -rf /data/local/tmp/cl_cache/*              2>/dev/null; \
+           rm -rf /data/local/tmp/kernel_cache/*          2>/dev/null; \
+           rm -rf /data/local/tmp/.adrenocompiledkernel   2>/dev/null; \
+           rm -rf /sdcard/.adrenocompiledkernel           2>/dev/null; \
+           rm -rf /data/data/*/cache/cl_cache/*           2>/dev/null; \
+           rm -rf /data/data/*/code_cache/.adrenocompiledkernel 2>/dev/null; \
+           rm -rf /data/user_de/0/*/code_cache/.adrenocompiledkernel 2>/dev/null; \
+           true" 2>/dev/null || true
+# Nuke anything cache-ish that survived inside the device folder.
+adb shell "find ${DEVICE_FOLDER} -maxdepth 3 \\
+  \\( -iname '*cache*' -o -iname '*adreno*kernel*' -o -iname '*.bin.cached' \\) \\
+  -print -exec rm -rf {} + 2>/dev/null; true" 2>/dev/null || true
 
 # ----------------------------------------------------------------------------
 # 4. Run litert_lm_main under LD_PRELOAD intercept.
@@ -205,6 +251,33 @@ adb shell "cd ${DEVICE_FOLDER}; \
     --report_peak_memory_footprint=true \
     --enable_op_profiling=false" \
   2>&1 | tee "${RUN_LOG}"
+
+# Diagnose interceptor status from the run log. Three states:
+#   (a) zero [cl_intercept] lines      -> interceptor did NOT load
+#       (LD_PRELOAD ignored, or .so path wrong)
+#   (b) "Real OpenCL loaded" but no "#N:" lines
+#                                      -> interceptor loaded BUT delegate
+#       used clCreateProgramWithBinary (cached blob; we didn't wipe all
+#       caches)
+#   (c) one or more "#N:" lines        -> interceptor worked; we have
+#                                         captures
+echo ""
+echo "[attn-intercept.sh] Interceptor diagnostic:"
+LOAD_HITS=$(grep -c '\[cl_intercept\] Real OpenCL loaded' "${RUN_LOG}" || true)
+DUMP_HITS=$(grep -c '\[cl_intercept\] #' "${RUN_LOG}" || true)
+echo "  'Real OpenCL loaded' markers: ${LOAD_HITS}"
+echo "  per-program dump markers    : ${DUMP_HITS}"
+if [ "${LOAD_HITS}" = "0" ]; then
+  echo "  -> FATAL: interceptor never loaded. Check whether the"
+  echo "     delegate resolves libOpenCL.so via dlopen with an absolute"
+  echo "     vendor path; if so, consider the binary-patch approach in"
+  echo "     temp_litert_cl_patch_intercept.sh."
+elif [ "${DUMP_HITS}" = "0" ]; then
+  echo "  -> Interceptor loaded but zero sources intercepted. The"
+  echo "     delegate is using a precompiled blob via"
+  echo "     clCreateProgramWithBinary. Hunt for leftover cache files:"
+  echo "     adb shell 'find / -iname \"*.adrenocompiledkernel*\" 2>/dev/null'"
+fi
 
 # ----------------------------------------------------------------------------
 # 5. Pull captures + scan for attention kernels.
