@@ -1,3 +1,355 @@
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.7 MB/s (45253760 bytes in 1.281s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.2 MB/s (44778088 bytes in 1.287s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.3 MB/s (3960072 bytes in 0.117s)
+3 files pushed. 33.4 MB/s (93991920 bytes in 2.687s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.3 MB/s (11142184 bytes in 0.329s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.0 MB/s (129304 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 29.8 MB/s (1822720 bytes in 0.058s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+
+==========================================
+ [RMSNorm variant] neon
+==========================================
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=(unset) -> NEON fused path
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3054 ms, 143.091 TPS
+generation: 32 tokens, 7508 ms, 4.26212 TPS
+total: 10570 ms
+peak memory: 2746876 KB
+==========================================================
+[e2e time]: 13443 ms 
+Max Resident Set Size: 2746876 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:    18.1 ms
+  dequant(host):      7.7 ms (46.8%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.9 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.3 ms  (3x clSetKernelArg)
+    .dispatch:        6.4 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     172.5 ms
+  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
+  reformat_in(gpu):   0.0 ms
+  conv(wall):         5.3 ms (32.0%)
+  conv(gpu):        978.4 ms            3.245 TFLOPS
+  readback(host):     3.5 ms (21.0%)
+  readback(gpu):     33.6 ms
+  svmmap(gpu):        0.4 ms
+  sum(steps host):   16.5 ms            192.743 TFLOPS
+  sum(gpu events): 1184.9 ms
+  fn_total(wall):  1434.1 ms            (unaccounted = 214.5 ms = host overhead + non-event sync gaps)
+
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=2988.8 ms across all forwarding_op() calls
+  fully_connected               1440.5 ms  calls=252  avg=5.716 ms
+  mha_core                      1132.8 ms  calls=36  avg=31.468 ms
+  reshaped_rms_norm              144.1 ms  calls=72  avg=2.002 ms
+  rms_norm                       122.3 ms  calls=73  avg=1.675 ms
+  swiglu                          68.5 ms  calls=36  avg=1.903 ms
+  addition                        55.6 ms  calls=72  avg=0.772 ms
+  tie_word_embeddings             24.1 ms  calls=2  avg=12.070 ms
+  multiout                         0.7 ms  calls=144  avg=0.005 ms
+  input                            0.0 ms  calls=1  avg=0.039 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=19.80 ms calls=1 avg=19.801 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=4.32 ms calls=1 avg=4.321 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=8.12 ms calls=36 avg=0.226 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=76.39 ms calls=73 avg=1.046 ms
+  svm_map      :     3.23 ms (  4.2%)  [upstream GPU drain]
+  fused        :    69.84 ms ( 91.4%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     2.87 ms (  3.8%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=143.41 ms calls=72 avg=1.992 ms
+  svm_map      :     5.68 ms (  4.0%)
+  fused        :   137.04 ms ( 95.6%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1105.94 ms calls=36 avg=30.721 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1434.42 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1434.36 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+
+==========================================
+ [RMSNorm variant] gpu
+   extra env: export NNTRAINER_RMSNORM_GPU=1;
+==========================================
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+<think>]=-们 unbelie};
+
+
+,'",'"nip grouRAIN grouWAR};
+
+
+nine ninetynine们 ninenipnip crim<|endoftext|>
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3059 ms, 142.857 TPS
+generation: 21 tokens, 4730 ms, 4.43975 TPS
+total: 7793 ms
+peak memory: 2730476 KB
+==========================================================
+[e2e time]: 10843 ms 
+Max Resident Set Size: 2730476 KB
+
+[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
+  resource_setup:    17.9 ms
+  dequant(host):      7.5 ms (49.6%)  cache-miss=252/252
+    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
+    .svmarg:          0.8 ms  (2x clSetKernelArgSVMPointer)
+    .arg:             0.2 ms  (3x clSetKernelArg)
+    .dispatch:        6.3 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     170.3 ms
+  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
+  reformat_in(gpu):   0.0 ms
+  conv(wall):         4.7 ms (30.9%)
+  conv(gpu):        977.5 ms            3.248 TFLOPS
+  readback(host):     2.9 ms (19.3%)
+  readback(gpu):     33.5 ms
+  svmmap(gpu):        0.4 ms
+  sum(steps host):   15.2 ms            209.061 TFLOPS
+  sum(gpu events): 1181.7 ms
+  fn_total(wall):  1385.3 ms            (unaccounted = 170.5 ms = host overhead + non-event sync gaps)
+
+[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
+  total=3003.4 ms across all forwarding_op() calls
+  fully_connected               1391.3 ms  calls=252  avg=5.521 ms
+  mha_core                      1251.0 ms  calls=36  avg=34.750 ms
+  reshaped_rms_norm              145.7 ms  calls=72  avg=2.024 ms
+  swiglu                          68.4 ms  calls=36  avg=1.899 ms
+  rms_norm                        66.7 ms  calls=73  avg=0.914 ms
+  addition                        54.8 ms  calls=72  avg=0.762 ms
+  tie_word_embeddings             24.7 ms  calls=2  avg=12.326 ms
+  multiout                         0.7 ms  calls=144  avg=0.005 ms
+  input                            0.0 ms  calls=1  avg=0.047 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.41 ms calls=1 avg=21.410 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.22 ms calls=1 avg=3.221 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=7.95 ms calls=36 avg=0.221 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=17.95 ms calls=73 avg=0.246 ms
+  svm_map      :     3.21 ms ( 17.9%)  [upstream GPU drain]
+  fused        :    14.28 ms ( 79.6%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=145.04 ms calls=72 avg=2.014 ms
+  svm_map      :     5.65 ms (  3.9%)
+  fused        :   138.77 ms ( 95.7%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1224.35 ms calls=36 avg=34.010 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1385.55 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1385.48 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  out_stage   :     0.03 ms (  0.0%)  [svm_out -> fp16 scalar loop]
+  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
+
+==========================================
+ [RMSNorm variant] gpu_nopool
+   extra env: export NNTRAINER_RMSNORM_GPU=1; export NNTRAINER_RMSNORM_GPU_NOPOOL=1;
+==========================================
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
 SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
@@ -19,69 +371,167 @@ sandbox, and code to facilitate future research.<|im_end|>
 손verslk加强 hurst èmes spons
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3146 ms, 138.907 TPS
-generation: 32 tokens, 7047 ms, 4.54094 TPS
-total: 10197 ms
-peak memory: 2648660 KB
+prefill: 437 tokens, 3211 ms, 136.095 TPS
+generation: 32 tokens, 7116 ms, 4.49691 TPS
+total: 10332 ms
+peak memory: 2663404 KB
 ==========================================================
-[e2e time]: 13089 ms 
-Max Resident Set Size: 2648660 KB
+[e2e time]: 13376 ms 
+Max Resident Set Size: 2663404 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    17.6 ms
-  dequant(host):      7.8 ms (46.0%)  cache-miss=252/252
+  resource_setup:    19.1 ms
+  dequant(host):      8.0 ms (45.8%)  cache-miss=252/252
     .alloc:           0.0 ms  (clCreateBuffer + cache insert)
-    .svmarg:          0.9 ms  (2x clSetKernelArgSVMPointer)
+    .svmarg:          1.0 ms  (2x clSetKernelArgSVMPointer)
     .arg:             0.3 ms  (3x clSetKernelArg)
-    .dispatch:        6.4 ms  (DispatchCommand = clEnqueueNDRangeKernel)
-  dequant(gpu):     172.2 ms
+    .dispatch:        6.6 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):     170.7 ms
   reformat_in(host):  0.0 ms ( 0.3%)  pool-hits=72/252
   reformat_in(gpu):   0.1 ms
-  conv(wall):         5.6 ms (32.9%)
-  conv(gpu):        980.6 ms            3.238 TFLOPS
-  readback(host):     3.5 ms (20.9%)
-  readback(gpu):     33.9 ms
+  conv(wall):         5.7 ms (32.8%)
+  conv(gpu):        980.4 ms            3.239 TFLOPS
+  readback(host):     3.7 ms (21.2%)
+  readback(gpu):     33.6 ms
   svmmap(gpu):        0.4 ms
-  sum(steps host):   16.9 ms            187.491 TFLOPS
-  sum(gpu events): 1187.2 ms
-  fn_total(wall):  1418.9 ms            (unaccounted = 197.2 ms = host overhead + non-event sync gaps)
+  sum(steps host):   17.4 ms            182.330 TFLOPS
+  sum(gpu events): 1185.2 ms
+  fn_total(wall):  1430.7 ms            (unaccounted = 209.0 ms = host overhead + non-event sync gaps)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=3063.0 ms across all forwarding_op() calls
-  fully_connected               1494.5 ms  calls=252  avg=5.930 ms
-  mha_core                      1195.2 ms  calls=36  avg=33.199 ms
-  reshaped_rms_norm              150.9 ms  calls=72  avg=2.096 ms
-  swiglu                          71.7 ms  calls=36  avg=1.993 ms
-  rms_norm                        69.7 ms  calls=73  avg=0.955 ms
-  addition                        56.6 ms  calls=72  avg=0.786 ms
-  tie_word_embeddings             23.6 ms  calls=2  avg=11.776 ms
-  multiout                         0.8 ms  calls=144  avg=0.006 ms
-  input                            0.0 ms  calls=1  avg=0.039 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.54 ms calls=1 avg=21.542 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.99 ms calls=1 avg=1.991 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.38 ms calls=36 avg=0.233 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=19.45 ms calls=73 avg=0.266 ms
-  svm_map      :     3.40 ms ( 17.5%)  [upstream GPU drain]
-  fused        :    15.57 ms ( 80.1%)  [rmsnorm_fused_fp16 NEON]
-  publish      :     0.01 ms (  0.0%)  [svm_to_image2d_publish]
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=150.22 ms calls=72 avg=2.086 ms
-  svm_map      :     5.96 ms (  4.0%)
-  fused        :   143.61 ms ( 95.6%)  [rmsnorm_fused_fp16 NEON]
-[PROFILE MHACoreLayer prefill (M>1)] total=1168.22 ms calls=36 avg=32.451 ms
+  total=3153.8 ms across all forwarding_op() calls
+  fully_connected               1506.7 ms  calls=252  avg=5.979 ms
+  mha_core                      1261.3 ms  calls=36  avg=35.035 ms
+  reshaped_rms_norm              154.7 ms  calls=72  avg=2.149 ms
+  swiglu                          76.7 ms  calls=36  avg=2.131 ms
+  rms_norm                        71.5 ms  calls=73  avg=0.980 ms
+  addition                        58.8 ms  calls=72  avg=0.816 ms
+  tie_word_embeddings             23.4 ms  calls=2  avg=11.681 ms
+  multiout                         0.8 ms  calls=144  avg=0.005 ms
+  input                            0.0 ms  calls=1  avg=0.045 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.63 ms calls=1 avg=21.633 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.71 ms calls=1 avg=1.713 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=9.21 ms calls=36 avg=0.256 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=19.79 ms calls=73 avg=0.271 ms
+  svm_map      :     3.28 ms ( 16.6%)  [upstream GPU drain]
+  fused        :    16.02 ms ( 81.0%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=153.94 ms calls=72 avg=2.138 ms
+  svm_map      :     6.05 ms (  3.9%)
+  fused        :   147.17 ms ( 95.6%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1234.58 ms calls=36 avg=34.294 ms
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1488.46 ms calls=252
-  in_fence    :    12.80 ms (  0.9%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :    56.38 ms (  3.8%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1419.24 ms ( 95.3%)  [wrapper + clEnqueue + SVMMap sync]
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1500.28 ms calls=252
+  in_fence    :    12.82 ms (  0.9%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :    56.37 ms (  3.8%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :  1431.05 ms ( 95.4%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
- Run summary
+ RMSNorm A/B summary
 ==========================================
 
---- Generation snippet (post-assistant tag) ---
+############################
+# variant: neon
+############################
+-- rms_norm gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=(unset) -> NEON fused path
+-- Perf --
+prefill: 437 tokens, 3054 ms, 143.091 TPS
+generation: 32 tokens, 7508 ms, 4.26212 TPS
+total: 10570 ms
+peak memory: 2746876 KB
+[e2e time]: 13443 ms 
+-- RMSNorm / Reshaped / MHA profile --
+[PROFILE RMSNormLayer prefill (M>1)] total=76.39 ms calls=73 avg=1.046 ms
+  svm_map      :     3.23 ms (  4.2%)  [upstream GPU drain]
+  fused        :    69.84 ms ( 91.4%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     2.87 ms (  3.8%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=143.41 ms calls=72 avg=1.992 ms
+  svm_map      :     5.68 ms (  4.0%)
+  fused        :   137.04 ms ( 95.6%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1105.94 ms calls=36 avg=30.721 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1434.42 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=(unset) -> NEON fused path
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+
+
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens,
+
+############################
+# variant: gpu
+############################
+-- rms_norm gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+-- Perf --
+prefill: 437 tokens, 3059 ms, 142.857 TPS
+generation: 21 tokens, 4730 ms, 4.43975 TPS
+total: 7793 ms
+peak memory: 2730476 KB
+[e2e time]: 10843 ms 
+-- RMSNorm / Reshaped / MHA profile --
+[PROFILE RMSNormLayer prefill (M>1)] total=17.95 ms calls=73 avg=0.246 ms
+  svm_map      :     3.21 ms ( 17.9%)  [upstream GPU drain]
+  fused        :    14.28 ms ( 79.6%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=145.04 ms calls=72 avg=2.014 ms
+  svm_map      :     5.65 ms (  3.9%)
+  fused        :   138.77 ms ( 95.7%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1224.35 ms calls=36 avg=34.010 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1385.55 ms calls=252
+  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :     0.03 ms (  0.0%)  [fp16 -> svm_in scalar loop]
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+<think>]=-们 unbelie};
+
+
+,'",'"nip grouRAIN grouWAR};
+
+
+nine ninetynine们 ninenipnip crim<|endoftext|>
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3059 ms, 142.857 TPS
+generation: 21 tokens, 4730 ms,
+
+############################
+# variant: gpu_nopool
+############################
+-- rms_norm gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+-- Perf --
+prefill: 437 tokens, 3211 ms, 136.095 TPS
+generation: 32 tokens, 7116 ms, 4.49691 TPS
+total: 10332 ms
+peak memory: 2663404 KB
+[e2e time]: 13376 ms 
+-- RMSNorm / Reshaped / MHA profile --
+[PROFILE RMSNormLayer prefill (M>1)] total=19.79 ms calls=73 avg=0.271 ms
+  svm_map      :     3.28 ms ( 16.6%)  [upstream GPU drain]
+  fused        :    16.02 ms ( 81.0%)  [rmsnorm_fused_fp16 NEON]
+  publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=153.94 ms calls=72 avg=2.138 ms
+  svm_map      :     6.05 ms (  3.9%)
+  fused        :   147.17 ms ( 95.6%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1234.58 ms calls=36 avg=34.294 ms
+
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1500.28 ms calls=252
+  in_fence    :    12.82 ms (  0.9%)  [blocking SVMMap on pool-miss inputs]
+  in_stage    :    56.37 ms (  3.8%)  [fp16 -> svm_in scalar loop]
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 部副ocaleMOSTairyohl pond Dreette흠 décidea不起-ever undermined必定i crewpend-o p maj selectedItem};
@@ -90,41 +540,12 @@ Max Resident Set Size: 2648660 KB
 손verslk加强 hurst èmes spons
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3146 ms, 138.907 TPS
-generation: 32 tokens, 7047 ms, 4.54094 TPS
-total: 10197 ms
-peak memory: 2648660 KB
-==========================================================
-[e2e time]: 13089 ms 
-Max Resident Set Size: 2648660 KB
+prefill: 437 tokens, 3211 ms, 136.09
 
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    17.6 ms
-  dequant(h
-
---- Perf summary ---
-prefill: 437 tokens, 3146 ms, 138.907 TPS
-generation: 32 tokens, 7047 ms, 4.54094 TPS
-total: 10197 ms
-peak memory: 2648660 KB
-[e2e time]: 13089 ms 
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1488.46 ms calls=252
-  in_fence    :    12.80 ms (  0.9%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :    56.38 ms (  3.8%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1419.24 ms ( 95.3%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.04 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=21.54 ms calls=1 avg=21.542 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=1.99 ms calls=1 avg=1.991 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=8.38 ms calls=36 avg=0.233 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=19.45 ms calls=73 avg=0.266 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=150.22 ms calls=72 avg=2.086 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=1168.22 ms calls=36 avg=32.451 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
+Full per-variant logs:
+  temp_run_neon.log
+  temp_run_gpu.log
+  temp_run_gpu_nopool.log
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
