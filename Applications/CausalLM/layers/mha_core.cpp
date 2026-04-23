@@ -41,17 +41,47 @@ namespace {
 struct MHACoreProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
+  // Stage 0 sub-timers for one_batch_incremental_forwarding's six
+  // NEON-CPU stages (FP16 path; the FP32 / sliding-window variants are
+  // not measured because they are not on the Qwen3-4B prefill path).
+  std::atomic<uint64_t> ns_rope_q{0};   // apply_rotary_emb_tensor_v2(query)
+  std::atomic<uint64_t> ns_rope_k{0};   // apply_rotary_emb_tensor_v2(key->cache)
+  std::atomic<uint64_t> ns_v_copy{0};   // b_cache_value_step.copyData(value)
+  std::atomic<uint64_t> ns_qk{0};       // compute_kcaches (Q dot K^T)
+  std::atomic<uint64_t> ns_softmax{0};  // softmax_triangle (masked softmax)
+  std::atomic<uint64_t> ns_av{0};       // compute_fp16vcache_transposed (A * V)
 
   ~MHACoreProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
       return;
     const uint64_t t = ns.load();
+    const double T = t / 1.0e6;
+    auto pct = [&](uint64_t v) {
+      return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
+    };
     std::fprintf(stderr,
                  "[PROFILE MHACoreLayer prefill (M>1)] total=%.2f ms "
                  "calls=%llu avg=%.3f ms\n",
-                 t / 1.0e6, (unsigned long long)c,
-                 c == 0 ? 0.0 : (t / 1.0e6) / static_cast<double>(c));
+                 T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  rope_q   : %8.2f ms (%5.1f%%)  [apply_rotary_emb_v2 query]\n",
+                 ns_rope_q / 1.0e6, pct(ns_rope_q));
+    std::fprintf(stderr,
+                 "  rope_k   : %8.2f ms (%5.1f%%)  [apply_rotary_emb_v2 key->cache]\n",
+                 ns_rope_k / 1.0e6, pct(ns_rope_k));
+    std::fprintf(stderr,
+                 "  v_copy   : %8.2f ms (%5.1f%%)  [value -> cache copyData]\n",
+                 ns_v_copy / 1.0e6, pct(ns_v_copy));
+    std::fprintf(stderr,
+                 "  qk       : %8.2f ms (%5.1f%%)  [compute_kcaches Q dot K^T]\n",
+                 ns_qk / 1.0e6, pct(ns_qk));
+    std::fprintf(stderr,
+                 "  softmax  : %8.2f ms (%5.1f%%)  [softmax_triangle]\n",
+                 ns_softmax / 1.0e6, pct(ns_softmax));
+    std::fprintf(stderr,
+                 "  av       : %8.2f ms (%5.1f%%)  [compute_fp16vcache_transposed A*V]\n",
+                 ns_av / 1.0e6, pct(ns_av));
   }
 };
 
@@ -684,17 +714,33 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     batch * cache_value_dim.getFeatureLen() + from * cache_value_dim.width(),
     true);
 
-  apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, _from, false);
+  // Sub-stage profile gate: only count prefill calls (to-from > 1) so
+  // decode noise doesn't dilute the breakdown.
+  const bool profile_substage = (to - from) > 1;
 
+  const uint64_t t_rope_q0 = profile_substage ? mha_now_ns() : 0;
+  apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, _from, false);
+  if (profile_substage)
+    g_mha_core_profile.ns_rope_q += mha_now_ns() - t_rope_q0;
+
+  const uint64_t t_rope_k0 = profile_substage ? mha_now_ns() : 0;
   apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim, _from,
                              false);
+  if (profile_substage)
+    g_mha_core_profile.ns_rope_k += mha_now_ns() - t_rope_k0;
 
   if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
+    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
     apply_rotary_emb_tensor_v2(value_step, b_cache_value_step, head_dim, _from,
                                true);
+    if (profile_substage)
+      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
   } else if (query_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
+    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
     b_cache_value_step.copyData(value_step);
+    if (profile_substage)
+      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
@@ -719,14 +765,23 @@ void MHACoreLayer::one_batch_incremental_forwarding(
 
   unsigned int gqa_size = num_heads_Q / num_heads_KV;
 
+  const uint64_t t_qk0 = profile_substage ? mha_now_ns() : 0;
   compute_kcaches(query_step, b_cached_key, out_, _from, to - from, num_heads_Q,
                   gqa_size, head_dim, pool);
+  if (profile_substage)
+    g_mha_core_profile.ns_qk += mha_now_ns() - t_qk0;
 
+  const uint64_t t_sm0 = profile_substage ? mha_now_ns() : 0;
   softmax_triangle(out_, to - from, num_heads_Q, from, pool, sink_step);
+  if (profile_substage)
+    g_mha_core_profile.ns_softmax += mha_now_ns() - t_sm0;
 
+  const uint64_t t_av0 = profile_substage ? mha_now_ns() : 0;
   compute_fp16vcache_transposed(out_, b_cached_value, attention_output_step,
                                 from, num_heads_KV, gqa_size, head_dim, to,
                                 pool);
+  if (profile_substage)
+    g_mha_core_profile.ns_av += mha_now_ns() - t_av0;
 }
 
 /************************************************************** */
