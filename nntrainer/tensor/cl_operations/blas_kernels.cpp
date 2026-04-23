@@ -3720,6 +3720,10 @@ void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
       head_dim == 0 || num_heads_Q == 0 || gqa_size == 0 ||
       (num_heads_Q % gqa_size) != 0)
     return;
+  // attn_qk_wave_fp16.cl hard-codes HD=128.  Fall through the dispatch
+  // only if head_dim matches; the layer-side gate should already enforce
+  // this for Qwen3, but be explicit.
+  if (head_dim != 128) return;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
@@ -3757,8 +3761,8 @@ void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
 
   static ClContext::SharedPtrClKernel s_kern;
   if (!s_kern) {
-    s_kern = blas_cc->registerClKernel(compute_kcaches_qwen_fp16_kernel,
-                                        "compute_kcaches_qwen_fp16");
+    s_kern = blas_cc->registerClKernel(attn_qk_wave_fp16_kernel,
+                                        "attn_qk_wave_fp16");
   }
   if (!s_kern) return;
 
@@ -3785,12 +3789,15 @@ void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Local 64x1x1 (Adreno wavefront).  kk on the inner axis so adjacent
-  // work-items hit adjacent K rows in cache.
-  const int lx = 64;
-  const int gx = ((T_i + lx - 1) / lx) * lx;
-  const int g[3] = {gx, nhq, M_i};
-  const int l[3] = {lx, 1, 1};
+  // Wave kernel tile: (TN=32, TM=8, 1).  global rounded up to the tile
+  // sizes along axes 0 and 1; axis 2 is one workgroup per Q-head.
+  // head_dim must equal HD=128 (Qwen3-4B); early-return in the helper
+  // entry skips the dispatch if anything else is ever passed in.
+  const int TN = 32, TM = 8;
+  const int gx = ((T_i + TN - 1) / TN) * TN;
+  const int gy = ((M_i + TM - 1) / TM) * TM;
+  const int g[3] = {gx, gy, nhq};
+  const int l[3] = {TN, TM, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
   // Drain via blocking SVMMap on the scratch so the memcpy below sees

@@ -583,7 +583,8 @@ void MHACoreLayer::compute_kcaches(
           local_window_size >= sequence_len + (size_t)from &&
           in.getMemoryData() && in.getMemoryData()->isSVM() &&
           cache.getMemoryData() && cache.getMemoryData()->isSVM() &&
-          (num_head % group_size) == 0) {
+          (num_head % group_size) == 0 &&
+          head_dim == 128) {
         const unsigned int T = (unsigned int)from + (unsigned int)sequence_len;
         nntrainer::compute_kcaches_qwen_fp16_cl(
           (void *)in.getData<_FP16>(),

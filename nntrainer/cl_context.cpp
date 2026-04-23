@@ -261,10 +261,9 @@ void ClContext::initBlasClKernels() {
   // in MHACoreLayer.
   registerClKernel(rotary_emb_qwen_fp16_kernel, "rotary_emb_qwen_fp16");
 
-  // GPU Q dot K^T attention scoring (compute_kcaches_qwen_fp16.cl).
-  // Env-gated via NNTRAINER_QK_GPU=1 in MHACoreLayer's compute_kcaches.
-  registerClKernel(compute_kcaches_qwen_fp16_kernel,
-                   "compute_kcaches_qwen_fp16");
+  // GPU Q dot K^T attention scoring — tiled wave variant with __local
+  // Q + K tiles.  Env-gated via NNTRAINER_QK_GPU=1 in MHACoreLayer.
+  registerClKernel(attn_qk_wave_fp16_kernel, "attn_qk_wave_fp16");
 #endif
 
   blas_kernels_initialized = true;
