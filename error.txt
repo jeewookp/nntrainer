@@ -1,159 +1,31 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ git pull origin litert_lm 
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.13 KiB | 384.00 KiB/s, done.
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 4.44 KiB | 206.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   554ee18a..187c833e  litert_lm  -> origin/litert_lm
-Updating 554ee18a..187c833e
+   7b775533..b286c290  litert_lm  -> origin/litert_lm
+Updating 7b775533..b286c290
 Fast-forward
- runtime/cl_bench/delegate_kernel_bench.cc | 19 ++++++++++++++++---
- 1 file changed, 16 insertions(+), 3 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ DK_SHAPES="1024x6144x1536" ./temp_litert_dk_bench.sh 
-[dk_bench.sh] === Delegate Kernel Direct Benchmark ===
-[dk_bench.sh] SHAPE=1024x6144x1536 CL_FILE=cl_intercept/program_002.cl
-
-INFO: Reading 'startup' options from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --windows_enable_symlinks
-INFO: Options provided by the client:
-  Inherited 'common' options: --isatty=1 --terminal_columns=425
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
-INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
-INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
-INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
-INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
-INFO: Analyzed target //runtime/cl_bench:delegate_kernel_bench (0 packages loaded, 0 targets configured).
-INFO: Found 1 target...
-Target //runtime/cl_bench:delegate_kernel_bench up-to-date:
-  bazel-bin/runtime/cl_bench/delegate_kernel_bench
-INFO: Elapsed time: 0.892s, Critical Path: 0.82s
-INFO: 3 processes: 1 internal, 2 local.
-INFO: Build completed successfully, 3 total actions
-
-
-[dk_bench.sh] GPU freq info:
-  governor: msm-adreno-tz
-  cur_freq: 222000000
-  max_freq: 1200000000
-  min_freq: 160000000
-
-[dk_bench.sh] Running (taskset f0) ...
-[dk_bench] Delegate kernel benchmark
-[dk_bench] M=1024 N=6144 K=1536 (19.327 GFLOPS)
-[dk_bench] src_slices=384 dst_slices=1536 dst_groups=192
-[dk_bench] cl_file=cl_intercept/program_002.cl
-[dk_bench] Loaded 7438 bytes CL source
-WARN: clCreateCommandBufferKHR not found
-WARN: clCommandNDRangeKernelKHR not found
-WARN: clFinalizeCommandBufferKHR not found
-WARN: clEnqueueCommandBufferKHR not found
-WARN: clReleaseCommandBufferKHR not found
-[dk_bench] GPU: QUALCOMM Adreno(TM) 830
-[dk_bench] EGL 1.5 initialized
-[dk_bench] EGL context active
-[dk_bench] EGL CL device: 0x76423626f8 (clGetDeviceIDs device: 0x76423626f8) SAME
-[dk_bench] CL-EGL shared context created (with QCOM props)
-[dk_bench] clSetPerfHintQCOM(HIGH): OK
-[dk_bench] Build opts: '-qcom-accelerate-16-bit=true -cl-std=CL2.0'
-[dk_bench] Kernel compiled OK
-[dk_bench] Compiled binary size: 7292 bytes
-[dk_bench] Running weight pipeline ...
-  prog_000: OK
-  prog_001: OK
-  Weight pipeline complete
-[dk_bench] global=(6144,8,4) local=(128,1,4)
-[dk_bench] s0=(1,1536,1024,32) s1=(384,0,0,384) s2=(1,1,0,0)
-[dk_bench] Preparing verification data ...
-  Computing CPU reference (kernel weight layout) ...
-  CPU ref[0,0]=-0.7401 ref[0,1]=0.8040 ref[1,0]=-0.8933
-  GPU ref vs CPU ref (first few elements):
-    [0,0] gpu=-0.7437 cpu=-0.7401 err=0.5%
-    [0,1] gpu=0.8022 cpu=0.8040 err=0.2%
-    [0,2] gpu=-0.1055 cpu=-0.1057 err=0.2%
-    [0,3] gpu=0.3950 cpu=0.3989 err=1.0%
-    [1,0] gpu=-0.8926 cpu=-0.8933 err=0.1%
-    [1,1] gpu=0.5708 cpu=0.5797 err=1.5%
-    [1,2] gpu=-0.0327 cpu=-0.0300 err=8.9%
-    [1,3] gpu=0.6768 cpu=0.6786 err=0.3%
-  GPU-CPU match: 127/128 (within 15%)
-[dk_bench] Auto-tuning local sizes ...
-  local=(128,1,4) global=(6144,8,4) → 6459.6 us (2.992 TFLOPS) ✓
-  local=(64,1,4) global=(3072,16,4) → 6665.2 us (2.900 TFLOPS) ✓
-  local=(32,1,4) global=(1536,32,4) → 6629.7 us (2.915 TFLOPS) ✓
-  local=(64,2,4) global=(3072,32,4) → 7032.2 us (2.748 TFLOPS) ✓
-  local=(32,2,4) global=(1536,64,4) → 12776.3 us (1.513 TFLOPS) ✓
-  local=(128,1,2) global=(12288,8,2) → 6455.0 us (2.994 TFLOPS) ✓
-  local=(64,1,2) global=(6144,16,2) → 6661.2 us (2.901 TFLOPS) ✓
-  local=(32,1,2) global=(3072,32,2) → 5973.0 us (3.236 TFLOPS) ✓
-  local=(128,1,1) global=(24576,8,1) → 6453.6 us (2.995 TFLOPS) ✓
-  local=(64,1,1) global=(12288,16,1) → 5990.7 us (3.226 TFLOPS) ✓
-  local=(32,1,1) global=(6144,32,1) → 11510.1 us (1.679 TFLOPS) ✓
-  local=(256,1,2) global=(24576,4,2) → 6118.2 us (3.159 TFLOPS) ✓
-  local=(256,1,1) global=(49152,4,1) → 6365.8 us (3.036 TFLOPS) ✓
-[dk_bench] Best: local=(32,1,2) → 5973.0 us (3.236 TFLOPS)
-[dk_bench] global=(3072,32,2) local=(32,1,2)
-[dk_bench] Warmup 50 ...
-[dk_bench] Timed 100 iters (burst) ...
-
-[dk_bench] Results: M=1024 N=6144 K=1536
-  wall (burst):     5637.5 us  TFLOPS=3.428
-
-  Single-dispatch profiling:
-    QUEUED→SUBMIT:   144.8 us
-    SUBMIT→START:    287.4 us
-    START→END:      5600.7 us  TFLOPS=3.451
-
-  Batch profiling (delegate-style, last of 5):
-    START→END:      5596.9 us  TFLOPS=3.453
-
-  Pipeline (prog_001 before conv):
-    START→END:      5599.0 us  TFLOPS=3.452
-
-  delegate ref:     3691.0 us  TFLOPS=5.2
-  gpu:  5600.7 us  TFLOPS=3.451
-  (delegate kernel_avg_us for reference: ~3720 us = 5.2 TFLOPS)
-
-[dk_bench] Command buffer not available
-
-[dk_bench] Qualcomm RecordableQueue test ...
-  Attempt 1 (0x40E6 only): err=-30
-  Attempt 2 (as PROPERTIES bit): err=-30
-  Attempt 3 (plain queue): err=0
-  Recordable queue created
-  NewRecording failed: -35
-
-[dk_bench] Multi-kernel pipeline test ...
-  Pipeline (001+002) total/N: 5676.6 us per pair
-  Conv-only burst wall/N:     5672.6 us  TFLOPS=3.407
-  delegate ref:               3691.0 us  TFLOPS=5.2
-
-[dk_bench] Final verification with best config ...
-  vs GPU ref (128,1,4): 1000/1000 match (max rel err 0.00%)
-  vs CPU fp32 ref (layout-aware):
-    [m=0,n=0] gpu=-0.743652 cpu=-0.740065 err=0.5%
-    [m=0,n=1] gpu=0.802246 cpu=0.804012 err=0.2%
-    [m=0,n=2] gpu=-0.105469 cpu=-0.105670 err=0.2%
-    [m=0,n=3] gpu=0.395020 cpu=0.398884 err=1.0%
-    [m=0,n=4] gpu=-1.018555 cpu=-1.020660 err=0.2%
-    [m=0,n=5] gpu=0.260742 cpu=0.263322 err=1.0%
-    [m=0,n=6] gpu=-0.219116 cpu=-0.221664 err=1.1%
-    [m=0,n=7] gpu=0.084106 cpu=0.087984 err=4.4%
-    [m=1,n=0] gpu=-0.892578 cpu=-0.893286 err=0.1%
-    [m=1,n=1] gpu=0.570801 cpu=0.579733 err=1.5%
-    [m=1,n=2] gpu=-0.032654 cpu=-0.029997 err=8.9%
-    [m=1,n=3] gpu=0.676758 cpu=0.678578 err=0.3%
-    [m=1,n=4] gpu=-0.932129 cpu=-0.922411 err=1.1%
-    [m=1,n=5] gpu=0.489990 cpu=0.489756 err=0.0%
-    [m=1,n=6] gpu=0.424316 cpu=0.423689 err=0.1%
-    [m=1,n=7] gpu=0.808594 cpu=0.815445 err=0.8%
-  CPU match: 127/128 (max err 27.3%)
-  ✓ PASS: output matches reference
-
-
+ temp_litert_attention_intercept.sh | 227 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------------------------------------------------------------------------
+ 1 file changed, 146 insertions(+), 81 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ sh temp_litert_attention_intercept.sh 
+temp_litert_attention_intercept.sh: 39: set: Illegal option -o pipefail
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
