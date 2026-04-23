@@ -138,9 +138,17 @@ run_rmsnorm_variant "gpu" "export NNTRAINER_RMSNORM_GPU=1;"
 run_rmsnorm_variant "gpu_nopool" \
   "export NNTRAINER_RMSNORM_GPU=1; export NNTRAINER_RMSNORM_GPU_NOPOOL=1;"
 
+# 4) GPU path + CHECK: also run NEON into a scratch buffer, diff vs
+#    GPU output, log max abs / max rel / first-bad-index for the first
+#    four calls, and overwrite out_ptr with the NEON result so model
+#    generation stays correct during debug. This tells us whether the
+#    kernel math is right before we look at layout / coherence.
+run_rmsnorm_variant "gpu_check" \
+  "export NNTRAINER_RMSNORM_GPU=1; export NNTRAINER_RMSNORM_GPU_CHECK=1;"
+
 # Keep the old single-log name pointed at the last variant for any
 # downstream tool that still greps temp_run.log directly.
-cp -f ../../temp_run_gpu_nopool.log ${RUN_LOG} || true
+cp -f ../../temp_run_gpu_check.log ${RUN_LOG} || true
 
 # ----------------------------------------------------------------------------
 # Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
@@ -186,7 +194,7 @@ echo "=========================================="
 echo " RMSNorm A/B summary"
 echo "=========================================="
 
-for VARIANT in neon gpu gpu_nopool; do
+for VARIANT in neon gpu gpu_nopool gpu_check; do
   VLOG="temp_run_${VARIANT}.log"
   [ -f "$VLOG" ] || continue
 
@@ -206,6 +214,9 @@ for VARIANT in neon gpu gpu_nopool; do
   grep -A 4 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" "$VLOG" \
     || echo "(no profile lines)"
 
+  echo "-- GPU/NEON delta (gpu_check only) --"
+  grep "rmsnorm_check" "$VLOG" || echo "(no delta lines)"
+
   echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
   awk '/<\|im_start\|>assistant/ { f=1; next } f' "$VLOG" | head -c 300
   echo ""
@@ -216,6 +227,7 @@ echo "Full per-variant logs:"
 echo "  temp_run_neon.log"
 echo "  temp_run_gpu.log"
 echo "  temp_run_gpu_nopool.log"
+echo "  temp_run_gpu_check.log"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"

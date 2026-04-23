@@ -16,8 +16,10 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 
 #include "rms_norm.h"
 #include "rmsnorm_fused_fp16.h"
@@ -208,10 +210,54 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       if (s_rmsnorm_gpu && in_step.getMemoryData() &&
           in_step.getMemoryData()->isSVM() && out_step.getMemoryData() &&
           out_step.getMemoryData()->isSVM() && (W % 4) == 0) {
+        // NNTRAINER_RMSNORM_GPU_CHECK=1 also runs the NEON path into a
+        // scratch buffer, diffs vs the GPU result, logs the max abs
+        // delta on the first ~4 calls, and overwrites out_ptr with
+        // the NEON result so the rest of the model stays correct
+        // while we debug the GPU kernel.
+        static const bool s_check =
+          std::getenv("NNTRAINER_RMSNORM_GPU_CHECK") != nullptr;
         nntrainer::rmsnorm_image2d_cl(
           (void *)in_ptr, (void *)out_ptr, gamma_ptr,
           (unsigned int)H_rows, (unsigned int)W,
           static_cast<float>(epsilon));
+        if (s_check) {
+          static std::atomic<int> s_check_calls{0};
+          int call_idx = s_check_calls.fetch_add(1);
+          if (call_idx < 4) {
+            const size_t total = H_rows * W;
+            std::vector<_FP16> neon_out(total);
+            rmsnorm_fused_fp16(in_ptr, neon_out.data(), gamma_ptr, H_rows, W,
+                               static_cast<float>(epsilon));
+            float max_abs = 0.f, max_rel = 0.f;
+            size_t first_bad = (size_t)-1;
+            for (size_t i = 0; i < total; ++i) {
+              float g = (float)out_ptr[i];
+              float n = (float)neon_out[i];
+              float d = std::fabs(g - n);
+              if (d > max_abs) max_abs = d;
+              if (std::fabs(n) > 1e-6f) {
+                float r = d / std::fabs(n);
+                if (r > max_rel) max_rel = r;
+              }
+              if (d > 0.01f && first_bad == (size_t)-1) first_bad = i;
+            }
+            std::fprintf(stderr,
+                         "[rmsnorm_check call=%d M=%zu W=%zu] "
+                         "max|d|=%.5g max_rel=%.5g first_bad=%zd "
+                         "gpu[0..3]=%.4f %.4f %.4f %.4f "
+                         "neon[0..3]=%.4f %.4f %.4f %.4f\n",
+                         call_idx, H_rows, W, max_abs, max_rel,
+                         (ssize_t)first_bad,
+                         (float)out_ptr[0], (float)out_ptr[1],
+                         (float)out_ptr[2], (float)out_ptr[3],
+                         (float)neon_out[0], (float)neon_out[1],
+                         (float)neon_out[2], (float)neon_out[3]);
+            // Overwrite GPU result with NEON so generation stays correct
+            // even while debug mode is active.
+            std::memcpy(out_ptr, neon_out.data(), total * sizeof(_FP16));
+          }
+        }
       } else {
         rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
                            static_cast<float>(epsilon));
