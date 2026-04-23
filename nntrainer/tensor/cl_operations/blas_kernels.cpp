@@ -3739,102 +3739,11 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
   if (!s_kern) return;
 
-  // Q and out stay on the SVM path, so commit CPU writes / publish
-  // ownership for them. K and V are about to be wrapped as cl_mem
-  // via CL_MEM_USE_HOST_PTR — the existing int4_gemm input binding
-  // does this WITHOUT an SVMUnmap first, and doing an SVMUnmap
-  // ahead of clCreateBuffer seems to invalidate the SVM ptr on
-  // Adreno (the V4 first-run noop + garbage output pattern,
-  // 7.87 ms for 36 dispatches = pure failure overhead, was caused
-  // by having SVMUnmap here).  Let clCreateBuffer handle the
-  // host/device sync via its own driver path.
+  // Commit upstream CPU writes before the GPU reads.
   blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
   blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
-
-  const unsigned int num_heads_KV = num_heads_Q / gqa_size;
-
-  // V4 binds K/V as image1d_buffer<half4> instead of __global half*:
-  // the texture fetch path hits a separate cache from the plain L1,
-  // and with GQA (gqa_size=4) four consecutive Q-heads share the
-  // same K/V head -> later WGs for those heads find K/V hot.  Wrap
-  // the SVM region as a cl_mem (CL_MEM_USE_HOST_PTR) then as a
-  // 1-D image.  Same pattern as gpu_int4_gemm_adreno's input
-  // binding.
-  const size_t kv_bytes =
-    (size_t)T * (size_t)num_heads_KV * (size_t)head_dim * sizeof(uint16_t);
-  const size_t kv_half4_width =
-    (size_t)T * (size_t)num_heads_KV * (size_t)head_dim / 4u;
-
-  cl_int err = CL_SUCCESS;
-  cl_mem k_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
-                                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                                kv_bytes, k_cache_svm, &err);
-  if (err != CL_SUCCESS || !k_buf) {
-    static bool logged_k = false;
-    if (!logged_k) {
-      std::fprintf(stderr,
-                   "[attention_fused_fp16_cl] clCreateBuffer(K) failed: "
-                   "err=%d, ptr=%p, bytes=%zu\n",
-                   (int)err, k_cache_svm, kv_bytes);
-      logged_k = true;
-    }
-    return;
-  }
-  cl_mem v_buf = clCreateBuffer(blas_cc->context_inst_.GetContext(),
-                                CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                                kv_bytes, v_cache_svm, &err);
-  if (err != CL_SUCCESS || !v_buf) {
-    static bool logged_v = false;
-    if (!logged_v) {
-      std::fprintf(stderr,
-                   "[attention_fused_fp16_cl] clCreateBuffer(V) failed: "
-                   "err=%d, ptr=%p, bytes=%zu\n",
-                   (int)err, v_cache_svm, kv_bytes);
-      logged_v = true;
-    }
-    clReleaseMemObject(k_buf);
-    return;
-  }
-
-  cl_image_format kv_fmt;
-  kv_fmt.image_channel_order = CL_RGBA;
-  kv_fmt.image_channel_data_type = CL_HALF_FLOAT;
-  cl_image_desc kv_desc;
-  std::memset(&kv_desc, 0, sizeof(kv_desc));
-  kv_desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
-  kv_desc.image_width = kv_half4_width;
-
-  kv_desc.buffer = k_buf;
-  cl_mem k_img = clCreateImage(blas_cc->context_inst_.GetContext(),
-                               CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
-                               nullptr, &err);
-  if (err != CL_SUCCESS || !k_img) {
-    static bool logged_ki = false;
-    if (!logged_ki) {
-      std::fprintf(stderr,
-                   "[attention_fused_fp16_cl] clCreateImage(K) failed: "
-                   "err=%d, half4_width=%zu\n",
-                   (int)err, kv_half4_width);
-      logged_ki = true;
-    }
-    clReleaseMemObject(v_buf); clReleaseMemObject(k_buf); return;
-  }
-  kv_desc.buffer = v_buf;
-  cl_mem v_img = clCreateImage(blas_cc->context_inst_.GetContext(),
-                               CL_MEM_READ_ONLY, &kv_fmt, &kv_desc,
-                               nullptr, &err);
-  if (err != CL_SUCCESS || !v_img) {
-    static bool logged_vi = false;
-    if (!logged_vi) {
-      std::fprintf(stderr,
-                   "[attention_fused_fp16_cl] clCreateImage(V) failed: "
-                   "err=%d, half4_width=%zu\n",
-                   (int)err, kv_half4_width);
-      logged_vi = true;
-    }
-    clReleaseMemObject(k_img); clReleaseMemObject(v_buf);
-    clReleaseMemObject(k_buf); return;
-  }
 
   const float scale = 1.0f / std::sqrt((float)head_dim);
   const int M_i = (int)M, T_i = (int)T, from_i = (int)from;
@@ -3842,8 +3751,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
 
   int a = 0;
   s_kern->SetKernelSVMArguments(a++, q_svm);
-  s_kern->SetKernelArguments(a++, &k_img, sizeof(cl_mem));
-  s_kern->SetKernelArguments(a++, &v_img, sizeof(cl_mem));
+  s_kern->SetKernelSVMArguments(a++, k_cache_svm);
+  s_kern->SetKernelSVMArguments(a++, v_cache_svm);
   s_kern->SetKernelSVMArguments(a++, out_svm);
   s_kern->SetKernelArguments(a++, &M_i, sizeof(int));
   s_kern->SetKernelArguments(a++, &T_i, sizeof(int));
@@ -3853,29 +3762,22 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Back to V0's dispatch shape now that we've stopped trying to
-  // get ILP out of multi-Q WGs (V3c proved WG-level barriers kill
-  // the win, V3a/d proved sub_group_reduce is broken on Qualcomm
-  // 2D WGs).  Single-wavefront WG + texture-cached K/V aims at
-  // the memory bottleneck directly.
-  const int g[3] = {128, nhq, M_i};
+  // V5 per-thread Q-tile: WG = (HD, 1, 1) = 1 wavefront (barriers
+  // stay cheap); Q-tile of TQ=4 lives in thread-private registers so
+  // one K/V load per kk feeds TQ Q rows.  TQ must match the
+  // attention_fused_fp16.cl #define.  Grid shrinks by TQ in the M
+  // dimension versus V0, which is exactly the K/V memory traffic
+  // reduction.
+  constexpr int TQ = 4;
+  const int m_tiles = (M_i + TQ - 1) / TQ;
+  const int g[3] = {128, nhq, m_tiles};
   const int l[3] = {128, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
-  // Blocking drain so downstream MHA (NEON o_proj FC input) sees
-  // coherent bytes.  Also gives us a natural sync point before we
-  // release the cl_mem wrappers below.
   blas_cc->command_queue_inst_.enqueueSVMMap(
     out_svm,
     (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
     /*read_only=*/true);
-
-  // Release cl_mem wrappers.  Safe after the blocking SVMMap above
-  // — the kernel has finished so none of these are still referenced.
-  clReleaseMemObject(v_img);
-  clReleaseMemObject(k_img);
-  clReleaseMemObject(v_buf);
-  clReleaseMemObject(k_buf);
 }
 
 // ============================================================================

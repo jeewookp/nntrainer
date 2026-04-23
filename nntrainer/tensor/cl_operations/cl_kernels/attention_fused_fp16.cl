@@ -1,54 +1,64 @@
-// Fused FlashAttention-style Qwen attention, v4 (image1d_buffer K/V).
+// Fused FlashAttention-style Qwen attention, v5 (per-thread Q-tile).
 //
-// Exhaustive V3 sweep showed multi-Q WG + tree reduce is bound by
-// WG-level barriers that sync all participating wavefronts; multi-Q
-// WG + sub_group_reduce produced wrong output because the Qualcomm
-// driver does NOT form sub-groups in linear id order for 2D WGs.
-// V0's single-wavefront WG is the best correct variant (1794 ms) but
-// is still 2x over NEON (866 ms).
+// Prior attempts and what they taught:
+//   V0   WG=(128,1,1), TQ=1                1794 ms   correct (baseline)
+//   V1   work_group_reduce_add             2397 ms   128x redundant exp
+//   V2   V1 + d==0 exp + __local           2464 ms   extra barrier
+//   V3a  WG=(128,8,1) sub_group_reduce     1988 ms   WRONG (lane map)
+//   V3b  WG=(128,8,1) tree reduce            17 ms   NOOP (launch limit)
+//   V3c  WG=(128,4,1) tree reduce          2307 ms   correct, WG-barrier bound
+//   V3d  WG=(128,4,1) sub_group             ---     WRONG (lane map)
+//   V4   V0 + image1d_buffer K/V            noop   CL_INVALID_VALUE
+//                                                   (SVM pool sub-offsets
+//                                                    can't be host_ptr)
+// NEON reference                             866 ms
 //
-// The next lever is memory, not ILP. Per-layer attention reads
-//   32 heads x 437 Q positions x ~220 avg kk x 128 HD x 2 bytes
-//   x (K + V) = ~1.6 GB
-// of K/V data each layer, 36 layers = ~57 GB per prefill. At
-// Adreno 830's ~80 GB/s peak sustained bandwidth the theoretical
-// floor is ~700 ms — which explains why NEON (866 ms) is close to
-// optimal and we have ~900 ms of head-room vs V0.
+// The V3 family tried to get FlashAttention's Q-tile reuse by widening
+// the workgroup in the Q dimension (WG = (HD, TM, 1)), but:
+//   - Multi-wavefront WG barriers are MUCH more expensive on Adreno
+//     than V0's single-wavefront ones -> V3c's extra 7 barriers/iter
+//     eat the ILP win.
+//   - sub_group_reduce would bypass that cost, but Qualcomm's 2D WG
+//     sub-group formation is NOT linear-id row-major -> wrong output.
 //
-// Two structural tricks collapse that head-room:
+// V5 keeps V0's single-wavefront WG (HD, 1, 1) — so barriers stay
+// cheap — and moves the Q-tile INTO the thread's private registers
+// instead of into extra work-items:
 //
-//   1. image1d_buffer_t binding for K/V.  Adreno has a dedicated
-//      texture-cache / fetch unit separate from the generic L1 used
-//      by `__global half *` loads.  For contiguous 128-thread WG
-//      reads the two paths have similar first-touch bandwidth, but
-//      the texture path caches across WGs.
+//   Each of the 128 threads holds TQ private Q values (one per Q
+//   position in the tile), TQ running softmax states, and TQ accs.
+//   For every kk the WG loads K[kk] (one 256 B cache line shared
+//   across TQ rows) and V[kk] (another), computes TQ partials per
+//   thread, parallel-reduces all TQ rows in one pass through
+//   __local[TQ][HD] (same 7 barriers as V0 — each barrier handles
+//   TQ reductions at once), broadcasts TQ rescale / score_exp
+//   scalars through __local[TQ], and updates TQ accs.
 //
-//   2. GQA share: Qwen3 has gqa_size=4 (32 Q heads / 8 KV heads).
-//      Four consecutive Q heads hit the SAME K-head and the SAME
-//      V-head.  Those four WGs scheduled close together on the same
-//      SM will find K/V hot in the texture cache -> ~4x effective
-//      bandwidth on K/V for those heads.  Plain __global reads
-//      would (mostly) miss L1 for each new WG.
+// Effect on memory traffic:
+//   V0 has num_WGs = num_heads_Q * M.  Each WG re-reads the full K /
+//   V sequence for its one Q position.
+//   V5 has num_WGs = num_heads_Q * ceil(M / TQ).  Each WG still
+//   re-reads K / V once, but now one read feeds TQ Q positions —
+//   effective K / V traffic drops by TQ.
+//   Theoretical memory floor for attention: 56 GB (V0 no-cache) /
+//   TQ = 14 GB at TQ=4 -> ~233 ms at 60 GB/s (vs. V0's 933 ms).
 //
-// Kernel shape is identical to V0 apart from the K/V type change.
-// Input K/V are still 1-D fp16 [T, num_heads_KV, HD] laid out
-// contiguously; we bind them as image1d_buffer<half4>, width =
-// T * num_heads_KV * HD / 4, so one image4 fetch covers 4
-// consecutive half lanes.  Each thread reads one half4 (4 halves
-// out of 128) and multiplies only the lane matching its d%4 — the
-// other three lanes feed d+1/+2/+3 threads, so the whole WG issues
-// HD/4 = 32 texture fetches per kk vs. 128 scalar global loads in V0.
+// TQ=4 is a conservative first step.  Private register pressure at
+// TQ=4 is ~7 floats/row x 4 = 28 scalars/thread + scratch ~ well
+// inside the 64 KB WG register file.  __local footprint is
+// TQ * HD * 4 = 2 KB.  Can push to TQ=8 if the driver copes.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define HD 128
+#define TQ 4
 
 __kernel __attribute__((reqd_work_group_size(HD, 1, 1)))
 void attention_fused_fp16(
-    __global const half          *Q,
-    __read_only image1d_buffer_t  K_cache_img,
-    __read_only image1d_buffer_t  V_cache_img,
-    __global half                *out,
+    __global const half *Q,
+    __global const half *K_cache,
+    __global const half *V_cache,
+    __global half *out,
     const int M,
     const int T,
     const int from,
@@ -57,69 +67,124 @@ void attention_fused_fp16(
     const int is_causal,
     const float scale) {
 
-  const int d = get_local_id(0);
-  const int h = get_group_id(1);
-  const int m = get_group_id(2);
-  if (h >= num_heads_Q || m >= M) return;
+  const int d      = get_local_id(0);         // 0..HD-1
+  const int h      = get_group_id(1);         // 0..num_heads_Q-1
+  const int m_base = get_group_id(2) * TQ;    // first Q row of this tile
 
   const int num_heads_KV = num_heads_Q / gqa_size;
   const int h_kv = h / gqa_size;
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
-  // d % 4 and d / 4 get reused every kk, hoist them.
-  const int d_hi = d >> 2;   // 0..31
-  const int d_lo = d & 3;    // 0..3
+  // Per-thread state for TQ rows.  q_val is loaded once; the softmax
+  // running state is maintained by d==0 of the WG, but we declare
+  // the arrays on every thread because the compiler keeps them in
+  // regs regardless.
+  float q_val      [TQ];
+  float acc        [TQ];
+  float running_max[TQ];
+  float running_sum[TQ];
+  int   kk_end_row [TQ];
+  bool  row_valid  [TQ];
 
-  const float q_val = (float)Q[m * W_q + h * HD + d];
+  int kk_end_tile = 0;
 
-  __local float rescale_l;
-  __local float score_exp_l;
+  #pragma unroll
+  for (int q = 0; q < TQ; ++q) {
+    const int m = m_base + q;
+    row_valid  [q] = (m < M);
+    q_val      [q] = row_valid[q] ? (float)Q[m * W_q + h * HD + d] : 0.0f;
+    acc        [q] = 0.0f;
+    running_max[q] = -INFINITY;
+    running_sum[q] = 0.0f;
+    kk_end_row [q] = row_valid[q]
+                     ? ((is_causal != 0) ? (from + m + 1) : T)
+                     : 0;
+    if (kk_end_row[q] > kk_end_tile) kk_end_tile = kk_end_row[q];
+  }
 
-  float running_max = -INFINITY;
-  float running_sum = 0.0f;
-  float acc         = 0.0f;
+  // Row-parallel reduce scratch + per-row softmax publishers.
+  __local float reduce_buf [TQ][HD];
+  __local float rescale_l  [TQ];
+  __local float score_exp_l[TQ];
+  __local float sum_l      [TQ];
 
-  const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
+  for (int kk = 0; kk < kk_end_tile; ++kk) {
+    const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
 
-  for (int kk = 0; kk < kk_end; ++kk) {
-    // Image1d_buffer is addressed in half4 units.  Each WG stride
-    // across d=0..127 maps to 32 distinct half4 indices; four
-    // consecutive threads (d_lo = 0..3) hit the SAME half4 at the
-    // same cycle, which Adreno's texture-cache coalesces into a
-    // single fetch.
-    const int kv_base4 = (kk * W_k + h_kv * HD) >> 2;  // half4 idx base
-    const half4 k4 = read_imageh(K_cache_img, kv_base4 + d_hi);
-    const half4 v4 = read_imageh(V_cache_img, kv_base4 + d_hi);
-
-    // Pick this thread's half from the fetched half4.
-    const float k_val = (float)((half*)&k4)[d_lo];
-    const float v_val = (float)((half*)&v4)[d_lo];
-
-    const float partial = q_val * k_val;
-    const float score = work_group_reduce_add(partial) * scale;
-
-    if (d == 0) {
-      const float prev_max = running_max;
-      const float new_max  = fmax(prev_max, score);
-      const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
-                             ? 0.0f
-                             : exp(prev_max - new_max);
-      const float score_exp = exp(score - new_max);
-      rescale_l   = rescale;
-      score_exp_l = score_exp;
-      running_max = new_max;
-      running_sum = running_sum * rescale + score_exp;
+    // Stage TQ partials in __local, one row at a time via q index.
+    #pragma unroll
+    for (int q = 0; q < TQ; ++q) {
+      const bool row_active = row_valid[q] && (kk < kk_end_row[q]);
+      reduce_buf[q][d] = row_active ? (q_val[q] * k_val) : 0.0f;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    const float rescale   = rescale_l;
-    const float score_exp = score_exp_l;
-    acc = acc * rescale + score_exp * v_val;
+    // Tree-reduce all TQ rows in parallel.  Each thread updates TQ
+    // slots per step; total barrier count is log2(HD) = 7, the same
+    // as V0 — just with TQ × more flops per barrier.
+    for (int stride = HD / 2; stride > 0; stride >>= 1) {
+      if (d < stride) {
+        #pragma unroll
+        for (int q = 0; q < TQ; ++q) {
+          reduce_buf[q][d] += reduce_buf[q][d + stride];
+        }
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // d==0 advances the softmax running state for all TQ rows and
+    // publishes per-row rescale / score_exp.
+    if (d == 0) {
+      #pragma unroll
+      for (int q = 0; q < TQ; ++q) {
+        const bool row_active = row_valid[q] && (kk < kk_end_row[q]);
+        if (row_active) {
+          const float score    = reduce_buf[q][0] * scale;
+          const float prev_max = running_max[q];
+          const float new_max  = fmax(prev_max, score);
+          const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
+                                 ? 0.0f
+                                 : exp(prev_max - new_max);
+          const float score_exp = exp(score - new_max);
+          rescale_l  [q] = rescale;
+          score_exp_l[q] = score_exp;
+          running_max[q] = new_max;
+          running_sum[q] = running_sum[q] * rescale + score_exp;
+        } else {
+          rescale_l  [q] = 1.0f;
+          score_exp_l[q] = 0.0f;
+        }
+      }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
+
+    #pragma unroll
+    for (int q = 0; q < TQ; ++q) {
+      const bool row_active = row_valid[q] && (kk < kk_end_row[q]);
+      if (row_active) {
+        acc[q] = acc[q] * rescale_l[q] + score_exp_l[q] * v_val;
+      }
+    }
   }
 
-  __local float sum_l;
-  if (d == 0) sum_l = running_sum;
+  // Publish final running_sum for the normalization step.  Only
+  // d==0's private copy is the authoritative one.
+  if (d == 0) {
+    #pragma unroll
+    for (int q = 0; q < TQ; ++q) sum_l[q] = running_sum[q];
+  }
   barrier(CLK_LOCAL_MEM_FENCE);
-  out[m * W_q + h * HD + d] = (half)(acc / sum_l);
+
+  #pragma unroll
+  for (int q = 0; q < TQ; ++q) {
+    if (row_valid[q]) {
+      const int m = m_base + q;
+      const float s = sum_l[q];
+      const float inv = (s > 0.0f) ? (1.0f / s) : 0.0f;
+      out[m * W_q + h * HD + d] = (half)(acc[q] * inv);
+    }
+  }
 }
