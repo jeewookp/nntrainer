@@ -249,6 +249,12 @@ void ClContext::initBlasClKernels() {
   registerClKernel(image_reformat_kernel, "svm_to_image2d");
   registerClKernel(image_reformat_kernel, "image2d_to_svm");
 
+  // GPU RMSNorm (rmsnorm_image2d_v2.cl) — cooperative-reduction variant,
+  // env-gated via NNTRAINER_RMSNORM_GPU=1 in RMSNormLayer /
+  // ReshapedRMSNormLayer. Pre-compile at init for the same reason as
+  // the delegate pipeline above.
+  registerClKernel(rmsnorm_image2d_v2_kernel, "rmsnorm_image2d_v2");
+
   blas_kernels_initialized = true;
 }
 

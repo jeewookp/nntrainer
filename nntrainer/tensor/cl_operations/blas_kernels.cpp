@@ -3434,6 +3434,164 @@ void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
 }
 
 // ============================================================================
+// GPU RMSNorm via rmsnorm_image2d_v2. Env-gated opt-in through
+// NNTRAINER_RMSNORM_GPU=1 (checked at the layer level). See the header
+// documentation for semantics.
+// ============================================================================
+void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
+                        const float *gamma, unsigned int M, unsigned int K,
+                        float epsilon) {
+  if (!in_svm || !out_svm || !gamma || M == 0 || K == 0 || (K % 4) != 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue clq = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const int slices = (int)K / 4;
+  cl_int err = 0;
+
+  // --- gamma: cache a cl_mem buffer per gamma pointer. ---
+  struct GammaCache { cl_mem buf; size_t bytes; };
+  static std::unordered_map<uintptr_t, GammaCache> s_gamma_cache;
+  cl_mem gamma_buf = nullptr;
+  {
+    const uintptr_t gk = reinterpret_cast<uintptr_t>(gamma);
+    const size_t need = (size_t)K * sizeof(float);
+    auto it = s_gamma_cache.find(gk);
+    if (it != s_gamma_cache.end() && it->second.bytes >= need) {
+      gamma_buf = it->second.buf;
+    } else {
+      if (it != s_gamma_cache.end() && it->second.buf)
+        clReleaseMemObject(it->second.buf);
+      gamma_buf = clCreateBuffer(clctx,
+                                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                 need, (void *)gamma, &err);
+      if (err != CL_SUCCESS || !gamma_buf) return;
+      s_gamma_cache[gk] = {gamma_buf, need};
+    }
+  }
+
+  // --- input image2d: pool hit, or on-demand svm_to_image2d. ---
+  int pool_M = 0, pool_slices = 0;
+  cl_mem in_img = GpuImagePool::Global().get(in_svm, &pool_M, &pool_slices);
+  bool in_img_is_pool = (in_img && pool_M == (int)M && pool_slices == slices);
+  if (!in_img_is_pool) {
+    // Allocate/reuse a staging image2d keyed by in_svm. Same cached-by-
+    // ptr pattern as svm_to_image2d_publish so we avoid a per-call alloc.
+    struct StagedIn { cl_mem img; int M, slices; };
+    static std::unordered_map<uintptr_t, StagedIn> s_in_cache;
+    const uintptr_t ik = reinterpret_cast<uintptr_t>(in_svm);
+    auto it = s_in_cache.find(ik);
+    if (it != s_in_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      in_img = it->second.img;
+    } else {
+      if (it != s_in_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      in_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !in_img) return;
+      s_in_cache[ik] = {in_img, (int)M, slices};
+    }
+    // Make the CPU-side writes visible before the GPU kernel reads them.
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(in_svm);
+    // Reformat svm -> image2d.
+    static ClContext::SharedPtrClKernel s_in_kern;
+    if (!s_in_kern) {
+      s_in_kern = blas_cc->registerClKernel(image_reformat_kernel,
+                                            "svm_to_image2d");
+    }
+    if (s_in_kern) {
+      int a = 0;
+      s_in_kern->SetKernelSVMArguments(a++, in_svm);
+      s_in_kern->SetKernelArguments(a++, &in_img, sizeof(cl_mem));
+      int sm = (int)M, sk = (int)K;
+      s_in_kern->SetKernelArguments(a++, &sm, sizeof(int));
+      s_in_kern->SetKernelArguments(a++, &sk, sizeof(int));
+      const int ig[3] = {((int)M + 15) / 16 * 16,
+                          (slices + 15) / 16 * 16, 1};
+      const int il[3] = {16, 16, 1};
+      blas_cc->command_queue_inst_.DispatchCommand(s_in_kern, ig, il);
+    }
+  }
+
+  // --- output image2d: cache keyed by out_svm. ---
+  struct StagedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, StagedOut> s_out_cache;
+  cl_mem out_img = nullptr;
+  {
+    const uintptr_t ok = reinterpret_cast<uintptr_t>(out_svm);
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return;
+      s_out_cache[ok] = {out_img, (int)M, slices};
+    }
+  }
+
+  // --- rmsnorm kernel dispatch ---
+  static ClContext::SharedPtrClKernel s_rms_kern;
+  if (!s_rms_kern) {
+    s_rms_kern = blas_cc->registerClKernel(rmsnorm_image2d_v2_kernel,
+                                           "rmsnorm_image2d_v2");
+  }
+  if (s_rms_kern) {
+    int a = 0;
+    s_rms_kern->SetKernelArguments(a++, &in_img, sizeof(cl_mem));
+    s_rms_kern->SetKernelArguments(a++, &out_img, sizeof(cl_mem));
+    s_rms_kern->SetKernelArguments(a++, &gamma_buf, sizeof(cl_mem));
+    const float eps = epsilon;
+    s_rms_kern->SetKernelArguments(a++, &eps, sizeof(float));
+    const int sm_i = (int)M, ss_i = slices;
+    s_rms_kern->SetKernelArguments(a++, &sm_i, sizeof(int));
+    s_rms_kern->SetKernelArguments(a++, &ss_i, sizeof(int));
+    // WG_SIZE=64 in the kernel; one workgroup per position.
+    const int g[3] = {(int)M * 64, 1, 1};
+    const int l[3] = {64, 1, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_rms_kern, g, l);
+  }
+
+  // --- readback image2d -> SVM + publish to pool ---
+  static ClContext::SharedPtrClKernel s_out_kern;
+  if (!s_out_kern) {
+    s_out_kern = blas_cc->registerClKernel(image_reformat_kernel,
+                                           "image2d_to_svm");
+  }
+  if (s_out_kern) {
+    int a = 0;
+    s_out_kern->SetKernelArguments(a++, &out_img, sizeof(cl_mem));
+    s_out_kern->SetKernelSVMArguments(a++, out_svm);
+    int sm = (int)M, sk = (int)K;
+    s_out_kern->SetKernelArguments(a++, &sm, sizeof(int));
+    s_out_kern->SetKernelArguments(a++, &sk, sizeof(int));
+    const int og[3] = {((int)M + 15) / 16 * 16,
+                        (slices + 15) / 16 * 16, 1};
+    const int ol[3] = {16, 16, 1};
+    blas_cc->command_queue_inst_.DispatchCommand(s_out_kern, og, ol);
+  }
+  // Non-blocking SVMMap so host reads of out_svm later on this queue
+  // are coherent without stalling the dispatch.
+  clEnqueueSVMMap(clq, CL_FALSE, CL_MAP_READ, out_svm,
+                  (size_t)M * K * sizeof(uint16_t), 0, nullptr, nullptr);
+
+  // Publish image2d for downstream pool consumers (next gemm_delegate).
+  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+}
+
+// ============================================================================
 // Phase B helper — fp16 SwiGLU on SVM buffers via swiglu_cl_fp16 kernel.
 // ============================================================================
 void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,

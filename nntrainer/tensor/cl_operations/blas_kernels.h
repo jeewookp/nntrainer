@@ -230,6 +230,29 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
 void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K);
 
 /**
+ * @brief GPU RMSNorm via rmsnorm_image2d_v2 (cooperative workgroup reduction).
+ *
+ * Layout: image2d input of width=M, height=K/4, RGBA half. Same for output.
+ *
+ * @param in_svm   fp16 SVM pointer to (M x K) input.
+ * @param out_svm  fp16 SVM pointer to (M x K) output (must be distinct).
+ * @param gamma    fp32 per-channel scale of length K. Cached as a cl_mem
+ *                 buffer keyed by pointer (built once per layer).
+ * @param M        number of rows.
+ * @param K        hidden / feature width. Must be a multiple of 4.
+ * @param epsilon  variance epsilon.
+ *
+ * If @p in_svm is already in GpuImagePool the svm_to_image2d reformat
+ * is skipped. After the kernel, the output image2d is both read back
+ * into @p out_svm and registered in GpuImagePool under @p out_svm so
+ * the next pool-aware layer (e.g. gemm_delegate_fp16_cl) can skip
+ * its reformat.
+ */
+void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
+                         const float *gamma, unsigned int M, unsigned int K,
+                         float epsilon);
+
+/**
  * @brief Phase B helper — fp16 SwiGLU on an SVM in1/in2/out via a GPU
  * kernel dispatch. Enqueues `swiglu_cl_fp16` (a file-scope kernel
  * already bundled in the OpenCL build) with the three tensor SVM

@@ -95,10 +95,15 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # logs [VERIFY ...] with per-call mismatch counts, max abs diff, and
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
+# NNTRAINER_RMSNORM_GPU=1 routes RMSNormLayer (and later ReshapedRMSNorm)
+# through rmsnorm_image2d_v2 on the GPU queue instead of the NEON CPU
+# loop. See blas_kernels.cpp::rmsnorm_image2d_cl.
+RMSNORM_GPU_ENV="${NNTRAINER_RMSNORM_GPU:+NNTRAINER_RMSNORM_GPU=$NNTRAINER_RMSNORM_GPU}"
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
   export ${VERIFY_ENV}; \
+  export ${RMSNORM_GPU_ENV}; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}

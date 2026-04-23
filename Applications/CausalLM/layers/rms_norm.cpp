@@ -184,15 +184,31 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       const _FP16 *in_ptr = in_step.getData<_FP16>();
       _FP16 *out_ptr = out_step.getData<_FP16>();
       const float *gamma_ptr = gamma.getData<float>();
-      // Normalise row-by-row across the width (hidden) dim. The step
-      // tensor shape is (1, C, to-from, W); collapse the leading dims
-      // to a single H count.
       const ml::train::TensorDim sd = in_step.getDim();
       const std::size_t H_rows =
         (std::size_t)sd.batch() * sd.channel() * sd.height();
       const std::size_t W = sd.width();
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+      // NNTRAINER_RMSNORM_GPU=1 dispatches rmsnorm_image2d_v2 on the
+      // GPU queue instead of the NEON CPU loop. See blas_kernels.cpp
+      // for semantics. Defaults off so existing CPU path stays active.
+      static const bool s_rmsnorm_gpu =
+        std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
+      if (s_rmsnorm_gpu && in_step.getMemoryData() &&
+          in_step.getMemoryData()->isSVM() && out_step.getMemoryData() &&
+          out_step.getMemoryData()->isSVM() && (W % 4) == 0) {
+        nntrainer::rmsnorm_image2d_cl(
+          (void *)in_ptr, (void *)out_ptr, gamma_ptr,
+          (unsigned int)H_rows, (unsigned int)W,
+          static_cast<float>(epsilon));
+      } else {
+        rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+                           static_cast<float>(epsilon));
+      }
+#else
       rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
                          static_cast<float>(epsilon));
+#endif
       if (profile_this_call)
         g_rms_norm_profile.ns_fused += now_ns() - t_fused;
     } else {
@@ -221,7 +237,12 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // height = W/4 (RGBA half slices). This matches gemm_delegate's
   // src image expectation.
   const uint64_t t_pub = profile_this_call ? now_ns() : 0;
-  if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
+  // Skip the separate publish when the GPU path already put out_img in
+  // GpuImagePool as part of rmsnorm_image2d_cl.
+  static const bool s_rmsnorm_gpu_publish_skip =
+    std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
+  if (!s_rmsnorm_gpu_publish_skip &&
+      out.getMemoryData() && out.getMemoryData()->isSVM() &&
       out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       (out.width() % 4) == 0) {
     // Use the step size (rows we actually just wrote). The tensor is

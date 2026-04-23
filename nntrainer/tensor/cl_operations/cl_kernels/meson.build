@@ -17,6 +17,7 @@ cl_op_kernels = [
   'dequant_int4_to_fp16.cl',
   'image_reformat.cl',
   'rmsnorm_image2d.cl',
+  'rmsnorm_image2d_v2.cl',
   'addition_image2d.cl',
   'swiglu_image2d.cl',
   'int4_gemm_adreno.cl',
