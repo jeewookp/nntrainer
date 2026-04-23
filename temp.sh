@@ -98,17 +98,49 @@ VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGAT
 # NNTRAINER_RMSNORM_GPU=1 routes RMSNormLayer (and later ReshapedRMSNorm)
 # through rmsnorm_image2d_v2 on the GPU queue instead of the NEON CPU
 # loop. See blas_kernels.cpp::rmsnorm_image2d_cl.
-RMSNORM_GPU_ENV="${NNTRAINER_RMSNORM_GPU:+NNTRAINER_RMSNORM_GPU=$NNTRAINER_RMSNORM_GPU}"
-RMSNORM_GPU_NOPOOL_ENV="${NNTRAINER_RMSNORM_GPU_NOPOOL:+NNTRAINER_RMSNORM_GPU_NOPOOL=$NNTRAINER_RMSNORM_GPU_NOPOOL}"
-adb shell "cd /data/local/tmp/nntrainer/test; \
-  export LD_LIBRARY_PATH=.; \
-  export ${DELEGATE_ENV}; \
-  export ${VERIFY_ENV}; \
-  export ${RMSNORM_GPU_ENV}; \
-  export ${RMSNORM_GPU_NOPOOL_ENV}; \
-  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
-  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
-  2>&1 | tee ${RUN_LOG}
+# ----------------------------------------------------------------------------
+# RMSNorm GPU A/B loop. Each pass runs with a different env and writes
+# its own log so the summary at the bottom can compare all variants
+# without the caller needing to remember env-var incantations.
+# ----------------------------------------------------------------------------
+run_rmsnorm_variant() {
+  local name="$1"
+  local extra_env="$2"
+  local log="../../temp_run_${name}.log"
+  echo ""
+  echo "=========================================="
+  echo " [RMSNorm variant] ${name}"
+  if [ -n "$extra_env" ]; then
+    echo "   extra env: ${extra_env}"
+  fi
+  echo "=========================================="
+  adb shell "cd /data/local/tmp/nntrainer/test; \
+    export LD_LIBRARY_PATH=.; \
+    export ${DELEGATE_ENV}; \
+    export ${VERIFY_ENV}; \
+    ${extra_env} \
+    export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+    taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
+    2>&1 | tee "$log"
+}
+
+# 1) NEON baseline (no RMSNorm GPU env).
+run_rmsnorm_variant "neon" ""
+
+# 2) GPU path, pool publish enabled (handoff to next gemm_delegate via
+#    GpuImagePool). This is the mode we measured output-garbage on.
+run_rmsnorm_variant "gpu" "export NNTRAINER_RMSNORM_GPU=1;"
+
+# 3) GPU path with pool publish disabled so downstream must read via
+#    SVM. Bisection vs variant (2): if generation is correct here, the
+#    bug is in the pool handoff; if it's still garbage, the kernel /
+#    image2d_to_svm chain itself is wrong.
+run_rmsnorm_variant "gpu_nopool" \
+  "export NNTRAINER_RMSNORM_GPU=1; export NNTRAINER_RMSNORM_GPU_NOPOOL=1;"
+
+# Keep the old single-log name pointed at the last variant for any
+# downstream tool that still greps temp_run.log directly.
+cp -f ../../temp_run_gpu_nopool.log ${RUN_LOG} || true
 
 # ----------------------------------------------------------------------------
 # Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
@@ -145,36 +177,45 @@ adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 
 # ----------------------------------------------------------------------------
-# Diagnostic summary (extracted from temp_run.log for quick scanning)
+# Per-variant summary. Each RMSNorm variant has its own temp_run_<v>.log
+# from run_rmsnorm_variant above; print a compact side-by-side view so
+# `sh temp.sh` is self-contained.
 # ----------------------------------------------------------------------------
-RUN_LOG=temp_run.log
-
 echo ""
 echo "=========================================="
-echo " Run summary"
+echo " RMSNorm A/B summary"
 echo "=========================================="
 
-echo ""
-echo "--- Generation snippet (post-assistant tag) ---"
-awk '/<\|im_start\|>assistant/ { found=1; next } found { print }' ${RUN_LOG} | head -c 600
-echo ""
+for VARIANT in neon gpu gpu_nopool; do
+  VLOG="temp_run_${VARIANT}.log"
+  [ -f "$VLOG" ] || continue
+
+  echo ""
+  echo "############################"
+  echo "# variant: ${VARIANT}"
+  echo "############################"
+
+  echo "-- rms_norm gate resolution --"
+  grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" "$VLOG" | head -1 || echo "(no gate line)"
+
+  echo "-- Perf --"
+  grep -E "prefill:|generation:|total:|peak memory|e2e time" "$VLOG" | head -5 \
+    || echo "(no perf lines)"
+
+  echo "-- RMSNorm / Reshaped / MHA profile --"
+  grep -A 4 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" "$VLOG" \
+    || echo "(no profile lines)"
+
+  echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
+  awk '/<\|im_start\|>assistant/ { f=1; next } f' "$VLOG" | head -c 300
+  echo ""
+done
 
 echo ""
-echo "--- Perf summary ---"
-grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} || echo "(no perf lines)"
-
-echo ""
-echo "--- dotQInteger profile breakdown ---"
-# Match both FloatTensor (FP32 activation path) and HalfTensor (FP16
-# activation path) profilers.
-grep -A 4 "PROFILE .*Tensor::dotQInteger" ${RUN_LOG} || echo "(no PROFILE lines found)"
-
-echo ""
-echo "--- Layer wall-clock profile (prefill M>1) ---"
-grep -E "PROFILE (RMSNormLayer|ReshapedRMSNormLayer|MHACoreLayer|SwiGLULayer|EmbeddingLayer|TieWordEmbedding)" ${RUN_LOG} || echo "(no layer PROFILE lines found)"
-
-echo ""
-echo "Full log: ${RUN_LOG}  (error.txt is intentionally untouched)"
+echo "Full per-variant logs:"
+echo "  temp_run_neon.log"
+echo "  temp_run_gpu.log"
+echo "  temp_run_gpu_nopool.log"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"
