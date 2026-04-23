@@ -1,134 +1,641 @@
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 16, done.
+remote: Counting objects: 100% (16/16), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 9 (delta 7), reused 9 (delta 7), pack-reused 0 (from 0)
+Unpacking objects: 100% (9/9), 3.17 KiB | 463.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   0962fb91..b8d2e08a  all_gpu    -> upstream/all_gpu
+Updating 0962fb91..b8d2e08a
+Fast-forward
+ nntrainer/tensor/cl_operations/blas_kernels.cpp                      | 88 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--------------------------
+ nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16_x4.cl | 78 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ nntrainer/tensor/cl_operations/cl_kernels/meson.build                |  1 +
+ 3 files changed, 141 insertions(+), 26 deletions(-)
+ create mode 100644 nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16_x4.cl
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ NNTRAINER_DEQUANT_X4=1 sh temp.sh 
+-Dmmap-read=false
+/home/jwhero94/projects/nntrainer
+~/projects/nntrainer ~/projects/nntrainer
+Using ARM architecture config from: /home/jwhero94/projects/nntrainer/tools/cross/android_armv8-2-a.json
+The Meson build system
+Version: 0.61.2
+Source dir: /home/jwhero94/projects/nntrainer
+Build dir: /home/jwhero94/projects/nntrainer/builddir
+Build type: native build
+Project name: nntrainer
+Project version: 0.6.0
+C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C linker for the host machine: cc ld.bfd 2.38
+C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C++ linker for the host machine: c++ ld.bfd 2.38
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Program powershell found: NO
+Program nproc found: YES (/usr/bin/nproc)
+Program cmd.exe found: NO
+Message: Build for ARM architecture
+Message: MMAP enabled
+Message: OpenCL build is now enabled and will function only if an OpenCL-supported GPU is available. Using CLBlast as the OpenCL backend.
+Message: preparing opencl
+Message: OpenCL kernel path set to: nntrainer_opencl_kernels
+Compiler for C supports arguments -Wredundant-decls: YES 
+Compiler for C++ supports arguments -Wredundant-decls: YES 
+Compiler for C supports arguments -Wwrite-strings: YES 
+Compiler for C++ supports arguments -Wwrite-strings: YES 
+Compiler for C supports arguments -Wformat: YES 
+Compiler for C++ supports arguments -Wformat: YES 
+Compiler for C supports arguments -Wformat-nonliteral: YES 
+Compiler for C++ supports arguments -Wformat-nonliteral: YES 
+Compiler for C supports arguments -Wformat-security: YES 
+Compiler for C++ supports arguments -Wformat-security: YES 
+Compiler for C supports arguments -Winit-self: YES 
+Compiler for C++ supports arguments -Winit-self: YES 
+Compiler for C supports arguments -Waddress: YES 
+Compiler for C++ supports arguments -Waddress: YES 
+Compiler for C supports arguments -Wvla: YES 
+Compiler for C++ supports arguments -Wvla: YES 
+Compiler for C supports arguments -Wpointer-arith: YES 
+Compiler for C++ supports arguments -Wpointer-arith: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES 
+Compiler for C++ supports arguments -Wno-error=varargs: YES 
+Compiler for C supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C supports arguments -Wno-error=sign-compare: YES 
+Compiler for C++ supports arguments -Wno-error=sign-compare: YES 
+Compiler for C supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C supports arguments -ftree-vectorize: YES 
+Compiler for C++ supports arguments -ftree-vectorize: YES 
+Compiler for C supports arguments -Wno-unused-variable: YES 
+Compiler for C++ supports arguments -Wno-unused-variable: YES 
+Compiler for C supports arguments -Wno-comment: YES 
+Compiler for C++ supports arguments -Wno-comment: YES 
+Compiler for C supports arguments -Wno-ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-ignored-attributes: YES 
+Compiler for C supports arguments -Wno-sign-compare: YES 
+Compiler for C++ supports arguments -Wno-sign-compare: YES 
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C supports arguments -Wmissing-declarations: YES 
+Compiler for C supports arguments -Wmissing-include-dirs: YES 
+Compiler for C supports arguments -Wmissing-prototypes: YES 
+Compiler for C supports arguments -Wnested-externs: YES 
+Compiler for C supports arguments -Waggregate-return: YES 
+Compiler for C supports arguments -Wold-style-definition: YES 
+Compiler for C supports arguments -Wdeclaration-after-statement: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Run-time dependency capi-ml-common found: YES 1.8.8
+Run-time dependency capi-ml-inference found: YES 1.8.8
+Message: preparing blas
+Message: set openblas num threads=1
+Message: set nntrainer num threads=1
+Run-time dependency OpenMP found: YES 4.5
+Message: set nntrainer omp threads=1
+Run-time dependency GMock found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Library m found: YES
+Library dl found: YES
+Run-time dependency threads found: YES
+Message: preparing ml api
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/home/jwhero94/projects/nntrainer/builddir/android_build_result/conf/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=0 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE__FP16=1 -DUSE_MMAP=1 -DENABLE_OPENCL=1 -DCL_TARGET_OPENCL_VERSION=200 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DBLAS_NUM_THREADS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=1 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1
+Message: arm_arch_opt : armv8.2-a
+Compiler for C++ supports arguments -march=armv8.2-a+fp16+sve+i8mm: NO 
+nntrainer/tensor/cl_operations/cl_kernels/meson.build:79: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.57.0': fs.read.
+Configuring addition.cpp using configuration
+Configuring addition.h using configuration
+nntrainer/tensor/cl_operations/cl_kernels/meson.build:118: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.58.0': format strings.
+Configuring concat_axis_1.cpp using configuration
+Configuring concat_axis_1.h using configuration
+Configuring concat_axis_2.cpp using configuration
+Configuring concat_axis_2.h using configuration
+Configuring concat_axis_3.cpp using configuration
+Configuring concat_axis_3.h using configuration
+Configuring convert_block_q4_0.cpp using configuration
+Configuring convert_block_q4_0.h using configuration
+Configuring copy.cpp using configuration
+Configuring copy.h using configuration
+Configuring dot.cpp using configuration
+Configuring dot.h using configuration
+Configuring embedding.cpp using configuration
+Configuring embedding.h using configuration
+Configuring int4_gemv.cpp using configuration
+Configuring int4_gemv.h using configuration
+Configuring int4_gemv_adreno.cpp using configuration
+Configuring int4_gemv_adreno.h using configuration
+Configuring int4_quantize_input.cpp using configuration
+Configuring int4_quantize_input.h using configuration
+Configuring int4_gemm.cpp using configuration
+Configuring int4_gemm.h using configuration
+Configuring delegate_conv_wave.cpp using configuration
+Configuring delegate_conv_wave.h using configuration
+Configuring dequant_int4_to_fp16.cpp using configuration
+Configuring dequant_int4_to_fp16.h using configuration
+Configuring dequant_int4_to_fp16_x2.cpp using configuration
+Configuring dequant_int4_to_fp16_x2.h using configuration
+Configuring dequant_int4_to_fp16_x4.cpp using configuration
+Configuring dequant_int4_to_fp16_x4.h using configuration
+Configuring image_reformat.cpp using configuration
+Configuring image_reformat.h using configuration
+Configuring rmsnorm_image2d.cpp using configuration
+Configuring rmsnorm_image2d.h using configuration
+Configuring addition_image2d.cpp using configuration
+Configuring addition_image2d.h using configuration
+Configuring swiglu_image2d.cpp using configuration
+Configuring swiglu_image2d.h using configuration
+Configuring int4_gemm_adreno.cpp using configuration
+Configuring int4_gemm_adreno.h using configuration
+Configuring int4_gemm_adreno_v2.cpp using configuration
+Configuring int4_gemm_adreno_v2.h using configuration
+Configuring int4_gemm_adreno_v3.cpp using configuration
+Configuring int4_gemm_adreno_v3.h using configuration
+Configuring int8_int4_gemm_adreno.cpp using configuration
+Configuring int8_int4_gemm_adreno.h using configuration
+Configuring input_transpose.cpp using configuration
+Configuring input_transpose.h using configuration
+Configuring q4_0_ab_bi_8x4.cpp using configuration
+Configuring q4_0_ab_bi_8x4.h using configuration
+Configuring q6_k_sgemv.cpp using configuration
+Configuring q6_k_sgemv.h using configuration
+Configuring restore_block_q4_0.cpp using configuration
+Configuring restore_block_q4_0.h using configuration
+Configuring rmsnorm.cpp using configuration
+Configuring rmsnorm.h using configuration
+Configuring rotary_emb.cpp using configuration
+Configuring rotary_emb.h using configuration
+Configuring sgemm_no_trans.cpp using configuration
+Configuring sgemm_no_trans.h using configuration
+Configuring sgemm_trans_a.cpp using configuration
+Configuring sgemm_trans_a.h using configuration
+Configuring sgemm_trans_ab.cpp using configuration
+Configuring sgemm_trans_ab.h using configuration
+Configuring sgemm_trans_b.cpp using configuration
+Configuring sgemm_trans_b.h using configuration
+Configuring sgemv_no_trans.cpp using configuration
+Configuring sgemv_no_trans.h using configuration
+Configuring sgemv.cpp using configuration
+Configuring sgemv.h using configuration
+Configuring sscal.cpp using configuration
+Configuring sscal.h using configuration
+Configuring swiglu.cpp using configuration
+Configuring swiglu.h using configuration
+Configuring transpose_16bit.cpp using configuration
+Configuring transpose_16bit.h using configuration
+Configuring transpose_32bit_16bit.cpp using configuration
+Configuring transpose_32bit_16bit.h using configuration
+Configuring transpose_axis_0.cpp using configuration
+Configuring transpose_axis_0.h using configuration
+Configuring transpose_axis_1.cpp using configuration
+Configuring transpose_axis_1.h using configuration
+Configuring transpose_axis_2.cpp using configuration
+Configuring transpose_axis_2.h using configuration
+Configuring add2_fp16_svm.cpp using configuration
+Configuring add2_fp16_svm.h using configuration
+Configuring addition_fp16.cpp using configuration
+Configuring addition_fp16.h using configuration
+Configuring concat_axis_1_fp16.cpp using configuration
+Configuring concat_axis_1_fp16.h using configuration
+Configuring concat_axis_2_fp16.cpp using configuration
+Configuring concat_axis_2_fp16.h using configuration
+Configuring concat_axis_3_fp16.cpp using configuration
+Configuring concat_axis_3_fp16.h using configuration
+Configuring copy_fp16.cpp using configuration
+Configuring copy_fp16.h using configuration
+Configuring dot_fp16.cpp using configuration
+Configuring dot_fp16.h using configuration
+Configuring embedding_fp16.cpp using configuration
+Configuring embedding_fp16.h using configuration
+Configuring hgemm_no_trans.cpp using configuration
+Configuring hgemm_no_trans.h using configuration
+Configuring hgemm_trans_a.cpp using configuration
+Configuring hgemm_trans_a.h using configuration
+Configuring hgemm_trans_ab.cpp using configuration
+Configuring hgemm_trans_ab.h using configuration
+Configuring hgemm_trans_b.cpp using configuration
+Configuring hgemm_trans_b.h using configuration
+Configuring hgemv_no_trans.cpp using configuration
+Configuring hgemv_no_trans.h using configuration
+Configuring hgemv.cpp using configuration
+Configuring hgemv.h using configuration
+Configuring hscal.cpp using configuration
+Configuring hscal.h using configuration
+Configuring rmsnorm_fp16.cpp using configuration
+Configuring rmsnorm_fp16.h using configuration
+Configuring rotary_emb_fp16.cpp using configuration
+Configuring rotary_emb_fp16.h using configuration
+Configuring swiglu_fp16.cpp using configuration
+Configuring swiglu_fp16.h using configuration
+Configuring transpose_axis_0_fp16.cpp using configuration
+Configuring transpose_axis_0_fp16.h using configuration
+Configuring transpose_axis_1_fp16.cpp using configuration
+Configuring transpose_axis_1_fp16.h using configuration
+Configuring transpose_axis_2_fp16.cpp using configuration
+Configuring transpose_axis_2_fp16.h using configuration
+Configuring cl_kernels.h using configuration
+Configuring ccapi-ml-training.pc using configuration
+Configuring capi-ml-training.pc using configuration
+meson.build:761: WARNING: test is not supported in android build, test skipped
+meson.build:773: WARNING: android app is not supported for now, building app skipped
+meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
+Message: compile flags are:-march=armv8.2-a+fp16+dotprod+i8mm -O3
+Configuring Android.mk using configuration
+jni/meson.build:101: WARNING: The variable(s) 'MESON_TFLITE_ROOT' in the input file 'jni/Android.mk.in' are not present in the given configuration data.
+Program ndk-build found: YES (/home/jwhero94/neo/android-ndk-r26d/ndk-build)
+Message: building for android
+Build targets in project: 1
+WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features which were added in newer versions:
+ * 0.57.0: {'fs.read'}
+ * 0.58.0: {'format strings'}
+NOTICE: Future-deprecated features used:
+ * 0.56.0: {'meson.build_root', 'meson.source_root'}
 
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
+nntrainer 0.6.0
 
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
+  User defined options
+    arm-arch                 : armv8.2-a
+    arm-march                : -march=armv8.2-a+fp16+dotprod+i8mm
+    enable-fp16              : true
+    enable-opencl            : true
+    enable-tflite-backbone   : false
+    enable-tflite-interpreter: false
+    hgemm-experimental-kernel: false
+    mmap-read                : false
+    omp-num-threads          : 1
+    openblas-num-threads     : 1
+    platform                 : android
+    thread-backend           : omp
 
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2659 ms, 164.347 TPS
-generation: 32 tokens, 7524 ms, 4.25306 TPS
-total: 10190 ms
-peak memory: 2751468 KB
-==========================================================
-[e2e time]: 13114 ms 
-Max Resident Set Size: 2751468 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    75.9 ms
-  dequant(host):      3.6 ms (50.9%)  cache-miss=252/252
-    .alloc:           0.0 ms  (clCreateBuffer + cache insert)
-    .svmarg:          0.5 ms  (2x clSetKernelArgSVMPointer)
-    .arg:             0.1 ms  (3x clSetKernelArg)
-    .dispatch:        3.0 ms  (DispatchCommand = clEnqueueNDRangeKernel)
-  dequant(gpu):     173.5 ms
-  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
-  reformat_in(gpu):   0.0 ms
-  conv(wall):         2.2 ms (30.1%)
-  conv(gpu):        978.3 ms            3.246 TFLOPS
-  readback(host):     1.3 ms (18.8%)
-  readback(gpu):     33.6 ms
-  svmmap(gpu):        0.2 ms
-  sum(steps host):    7.2 ms            443.376 TFLOPS
-  sum(gpu events): 1185.6 ms
-  fn_total(wall):  1412.0 ms            (unaccounted = 143.4 ms = host overhead + non-event sync gaps)
-
-[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=2602.2 ms across all forwarding_op() calls
-  fully_connected               1414.9 ms  calls=252  avg=5.615 ms
-  mha_core                       944.0 ms  calls=36  avg=26.222 ms
-  rms_norm                        82.9 ms  calls=73  avg=1.136 ms
-  swiglu                          55.4 ms  calls=36  avg=1.539 ms
-  addition                        42.8 ms  calls=72  avg=0.594 ms
-  reshaped_rms_norm               41.0 ms  calls=72  avg=0.569 ms
-  tie_word_embeddings             20.8 ms  calls=2  avg=10.420 ms
-  multiout                         0.3 ms  calls=144  avg=0.002 ms
-  input                            0.0 ms  calls=1  avg=0.043 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.46 ms calls=1 avg=18.458 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.36 ms calls=1 avg=2.363 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=4.81 ms calls=36 avg=0.134 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=41.99 ms calls=73 avg=0.575 ms
-  svm_map      :     1.79 ms (  4.3%)  [upstream GPU drain]
-  fused        :    27.23 ms ( 64.8%)  [rmsnorm_fused_fp16 NEON]
-  publish      :    12.77 ms ( 30.4%)  [svm_to_image2d_publish]
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=40.77 ms calls=72 avg=0.566 ms
-  svm_map      :     1.96 ms (  4.8%)
-  fused        :    38.62 ms ( 94.7%)  [rmsnorm_fused_fp16 NEON]
-[PROFILE MHACoreLayer prefill (M>1)] total=917.19 ms calls=36 avg=25.478 ms
-
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1412.18 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1412.16 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-  misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
---- Generation snippet (post-assistant tag) ---
-
-<think>
-Okay, the user wants a summary of this abstract in three sentences, in English. Let me read through the abstract again to make sure I understand it.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2659 ms, 164.347 TPS
-generation: 32 tokens, 7524 ms, 4.25306 TPS
-total: 10190 ms
-peak memory: 2751468 KB
-==========================================================
-[e2e time]: 13114 ms 
-Max Resident Set Size: 2751468 KB
-
-[PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    75.9 ms
-  dequant(host):      3.6 ms (50.9%)  cache-miss=252/25
-
---- Perf summary ---
-prefill: 437 tokens, 2659 ms, 164.347 TPS
-generation: 32 tokens, 7524 ms, 4.25306 TPS
-total: 10190 ms
-peak memory: 2751468 KB
-[e2e time]: 13114 ms 
-
---- dotQInteger profile breakdown ---
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1412.18 ms calls=252
-  in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1412.16 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
-  out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
-
---- Layer wall-clock profile (prefill M>1) ---
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=18.46 ms calls=1 avg=18.458 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.36 ms calls=1 avg=2.363 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=4.81 ms calls=36 avg=0.134 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=41.99 ms calls=73 avg=0.575 ms
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=40.77 ms calls=72 avg=0.566 ms
-[PROFILE MHACoreLayer prefill (M>1)] total=917.19 ms calls=36 avg=25.478 ms
-
-Full log: temp_run.log  (error.txt is intentionally untouched)
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+Found ninja-1.10.1 at /usr/bin/ninja
+~/projects/nntrainer/builddir ~/projects/nntrainer ~/projects/nntrainer                             
+[1/2] Generating jni/ndk-build with a custom command
+FAILED: jni/arm64-v8a 
+/home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer/builddir/jni -j24
+[arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface_qai8dxp_qsi4cxp.cpp:444:26: warning: extra tokens at the end of '#pragma omp parallel for' are ignored [-Wextra-tokens]
+#pragma omp parallel for num_thread(n_threads)
+                         ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
+[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
+[arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight.cpp
+[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
+[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
+[arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/lib/arm64-v8a/
+[arm64-v8a] Install /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer/builddir/opencl/lib/arm64-v8a/
+[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
+[arm64-v8a] Compile++      : clblast <= common.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
+[arm64-v8a] Compile++      : clblast <= api_common.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
+[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
+[arm64-v8a] Compile++      : clblast <= routine.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
+[arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
+[arm64-v8a] Compile++      : clblast <= database.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= engine.cpp
+[arm64-v8a] Compile++      : nntrainer <= manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
+[arm64-v8a] Compile++      : nntrainer <= data_iteration.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= iteration_queue.cpp
+[arm64-v8a] Compile++      : nntrainer <= previous_input_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_realizer.cpp
+[arm64-v8a] Compile++      : clblast <= clblast.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiout_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tflite_export_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= databuffer_factory.cpp
+[arm64-v8a] Compile++      : nntrainer <= databuffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
+[arm64-v8a] Compile++      : clblast <= tuning.cpp
+[arm64-v8a] Compile++      : nntrainer <= func_data_producer.cpp
+[arm64-v8a] Compile++      : nntrainer <= loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= random_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= raw_file_data_producer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mse_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= constant_derivative_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cross_entropy_sigmoid_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= kld_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cross_entropy_softmax_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= dir_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= add_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= subtract_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= sqrt_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiply_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= sine_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cosine_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tangent_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cast_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= matmul_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= gather_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= negative_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiout_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= input_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_normalization_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= fc_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= conv1d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= conv2d_transpose_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_translate_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_l2norm_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_flip_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= conv2d_layer.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/layers/conv2d_layer.cpp:96:24: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto apply_data = [&]<typename T>(T *val) {
+                       ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/conv2d_layer.cpp:233:24: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto apply_data = [&]<typename T>(T *out_data) {
+                       ^
+2 warnings generated.
+[arm64-v8a] Compile++      : nntrainer <= embedding.cpp
+[arm64-v8a] Compile++      : nntrainer <= pooling2d_layer.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:194:23: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto apply_max = [&]<typename T>(T *result_data) {
+                      ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:213:27: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto apply_average = [&]<typename T>(T *result_data) {
+                          ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:245:30: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto apply_global_max = [&]<typename T>(T *result_data) {
+                             ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:352:25: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto pool_fn_max = [&]<typename T>(const T *in_data, int channel_idx,
+                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:383:38: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto pool_fn_global_max = [&, this]<typename T>(const T *in_data,
+                                     ^
+/home/jwhero94/projects/nntrainer/nntrainer/layers/pooling2d_layer.cpp:412:29: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
+  auto pool_fn_average = [&]<typename T>(const T *in_data, int channel_idx,
+                            ^
+6 warnings generated.
+[arm64-v8a] Compile++      : nntrainer <= multi_head_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= split_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= permute_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= rnn.cpp
+[arm64-v8a] Compile++      : nntrainer <= time_dist.cpp
+[arm64-v8a] Compile++      : nntrainer <= rnncell.cpp
+[arm64-v8a] Compile++      : nntrainer <= common_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= dropout.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= reshape_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= reduce_sum_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= lstmcell_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= reduce_mean_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= centroid_knn.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_node.cpp
+[arm64-v8a] Compile++      : nntrainer <= positional_encoding_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgd.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_devel.cpp
+[arm64-v8a] Compile++      : nntrainer <= identity_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= lstm.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= lstmcell.cpp
+[arm64-v8a] Compile++      : nntrainer <= zoneout_lstmcell.cpp
+[arm64-v8a] Compile++      : nntrainer <= upsample2d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= fallback_kleidiai.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_common_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= fallback_internal_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= cblas_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= fallback_internal.cpp
+[arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_fp16_fp32.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x8.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_neon.cpp
+[arm64-v8a] Compile++      : nntrainer <= gru.cpp
+[arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon_f16.cpp
+[arm64-v8a] Compile++      : nntrainer <= grucell.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x8.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x8.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transA.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_quant.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_util.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transAB.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_pack.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transB.cpp
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.c
+[arm64-v8a] Compile++      : nntrainer <= dynamic_training_optimization.cpp
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32.c
+[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32_neon.c
+[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f32.c
+[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
+[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.c
+[arm64-v8a] Compile++      : nntrainer <= hgemm_noTrans.cpp
+[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.c
+[arm64-v8a] Compile++      : nntrainer <= channel_shuffle.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_cosine.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_constant.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_linear.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3.cpp
+[arm64-v8a] Compile++      : nntrainer <= copy.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_exponential.cpp
+[arm64-v8a] Compile++      : nntrainer <= adam.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1.cpp
+[arm64-v8a] Compile++      : nntrainer <= convert_block_q4_0.cpp
+[arm64-v8a] Compile++      : nntrainer <= dot.cpp
+[arm64-v8a] Compile++      : nntrainer <= embedding.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_quantize_input.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemv_adreno.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemm.cpp
+[arm64-v8a] Compile++      : nntrainer <= delegate_conv_wave.cpp
+[arm64-v8a] Compile++      : nntrainer <= dequant_int4_to_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= dequant_int4_to_fp16_x2.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_image2d.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_image2d.cpp
+[arm64-v8a] Compile++      : nntrainer <= image_reformat.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemm_adreno.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemm_adreno_v2.cpp
+[arm64-v8a] Compile++      : nntrainer <= dequant_int4_to_fp16_x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_image2d.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemm_adreno_v3.cpp
+[arm64-v8a] Compile++      : nntrainer <= restore_block_q4_0.cpp
+[arm64-v8a] Compile++      : nntrainer <= input_transpose.cpp
+[arm64-v8a] Compile++      : nntrainer <= int8_int4_gemm_adreno.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_step.cpp
+[arm64-v8a] Compile++      : nntrainer <= q6_k_sgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_ab_bi_8x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_ab.cpp
+[arm64-v8a] Compile++      : nntrainer <= rotary_emb.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= sscal.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_32bit_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= adamw.cpp
+[arm64-v8a] Compile++      : nntrainer <= lion.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= add2_fp16_svm.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= dot_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= copy_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_ab.cpp
+[arm64-v8a] Compile++      : nntrainer <= embedding_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hscal.cpp
+[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
+[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= bs_thread_pool_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.cpp:65:25: warning: data argument not used by format string [-Wformat-extra-args]
+            error_code, OpenCLErrorCodeToString(error_code));
+                        ^
+/home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
+  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
+                                                   ^~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2698:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2702:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_x2_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:2706:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_x4_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:3264:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:3268:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_x2_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.cpp:3272:13: error: assigning to 'const char *' from incompatible type 'const std::string' (aka 'const basic_string<char>')
+      src = dequant_int4_to_fp16_x4_kernel;
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+6 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
+[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= connection.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
+ninja: build stopped: subcommand failed.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
