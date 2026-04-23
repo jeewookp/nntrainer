@@ -95,20 +95,53 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # logs [VERIFY ...] with per-call mismatch counts, max abs diff, and
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
-# Single GPU-RMSNorm run. The neon-vs-gpu A/B loop is gone now that the
-# GPU path is verified (gpu_check earlier showed max_rel ~0.1%, fp16
-# rounding) and is faster (RMSNormLayer ~20 ms vs NEON ~70 ms on warm
-# device). To temporarily re-baseline against NEON, unset the env or
-# pass NNTRAINER_RMSNORM_GPU=0 via the host shell.
-adb shell "cd /data/local/tmp/nntrainer/test; \
-  export LD_LIBRARY_PATH=.; \
-  export ${DELEGATE_ENV}; \
-  export ${VERIFY_ENV}; \
-  export NNTRAINER_RMSNORM_GPU=1; \
-  export NNTRAINER_ROPE_GPU=1; \
-  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
-  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
-  2>&1 | tee ${RUN_LOG}
+# Multi-run driver. One cold warmup that we discard + three timed runs
+# whose prefill/generation numbers go into the summary table. The idea
+# is NOT to average away every kind of noise — Adreno 830 thermally
+# throttles within seconds of sustained load — but to make the spread
+# visible and let us pick the median when comparing before/after on
+# the hot-path optimisations.
+#
+# run_once $i  -- $i is the run index (0 = warmup, 1..N = timed).
+run_once() {
+  local idx="$1"
+  local log="../../temp_run_${idx}.log"
+  echo ""
+  echo "=========================================="
+  if [ "$idx" = "warmup" ]; then
+    echo " [run warmup]"
+  else
+    echo " [run ${idx}]"
+  fi
+  echo "=========================================="
+  adb shell "cd /data/local/tmp/nntrainer/test; \
+    export LD_LIBRARY_PATH=.; \
+    export ${DELEGATE_ENV}; \
+    export ${VERIFY_ENV}; \
+    export NNTRAINER_RMSNORM_GPU=1; \
+    export NNTRAINER_ROPE_GPU=1; \
+    export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+    taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
+    2>&1 | tee "$log"
+}
+
+# Discard first (cold-kernel / cold-cache / page-fault) run.
+run_once "warmup"
+
+# Optional short cool-down. Short enough not to slow the iteration loop,
+# long enough to let the thermal sensor drop a bit.
+sleep 3
+
+# Three timed runs.
+run_once 1
+sleep 3
+run_once 2
+sleep 3
+run_once 3
+
+# Keep the old single-log name pointed at the last timed run so anything
+# that still greps temp_run.log keeps working.
+cp -f ../../temp_run_3.log ${RUN_LOG} || true
 
 # ----------------------------------------------------------------------------
 # Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
@@ -147,38 +180,49 @@ adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 # ----------------------------------------------------------------------------
 # Single-run summary. Pulls the headline numbers + per-layer breakdowns
 # from temp_run.log so `sh temp.sh` is self-contained without scrolling
-# through the full device output. The summary block runs AFTER `cd ../..`
-# back to the repo root, so reference the log relative to that root, not
-# relative to Applications/CausalLM where RUN_LOG was originally set.
+# through the full device output. After the multi-run driver above we
+# have 4 logs (warmup + 3 timed); the summary block aggregates the 3
+# timed runs into a side-by-side table and keeps the last run's
+# layer-profile / generation snippet for reference.
 # ----------------------------------------------------------------------------
-SUMMARY_LOG=temp_run.log
 echo ""
 echo "=========================================="
-echo " Run summary"
+echo " Run summary (3 timed runs, warmup discarded)"
 echo "=========================================="
 
 echo ""
-echo "-- rms_norm gate resolution --"
-grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" ${SUMMARY_LOG} | head -1 \
+echo "-- Gate resolution (from run 1) --"
+grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU\|\[mha_core\] NNTRAINER_ROPE_GPU" temp_run_1.log \
+  | head -4 \
   || echo "(no gate line)"
 
 echo ""
-echo "-- Perf --"
-grep -E "prefill:|generation:|total:|peak memory|e2e time" ${SUMMARY_LOG} | head -5 \
-  || echo "(no perf lines)"
+printf "%-6s %-14s %-14s %-11s\n" "run" "prefill(ms,TPS)" "gen(ms,TPS)" "e2e(ms)"
+for i in 1 2 3; do
+  LOG="temp_run_${i}.log"
+  [ -f "$LOG" ] || continue
+  P_MS=$(grep '^prefill: ' "$LOG" | head -1 | awk -F'[ ,]+' '{print $4}')
+  P_TPS=$(grep '^prefill: ' "$LOG" | head -1 | awk -F'[ ,]+' '{print $6}')
+  G_MS=$(grep '^generation: ' "$LOG" | head -1 | awk -F'[ ,]+' '{print $4}')
+  G_TPS=$(grep '^generation: ' "$LOG" | head -1 | awk -F'[ ,]+' '{print $6}')
+  E_MS=$(grep '\[e2e time\]' "$LOG" | head -1 | awk -F'[ :]+' '{print $4}')
+  printf "%-6s %s/%s %s/%s %s\n" "$i" "$P_MS" "$P_TPS" "$G_MS" "$G_TPS" "$E_MS"
+done
 
 echo ""
-echo "-- Layer profiles (RMSNorm / Reshaped / MHA + sub-stages) --"
-grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" ${SUMMARY_LOG} \
+echo "-- Layer profiles (last run, run 3) --"
+grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" temp_run_3.log \
   || echo "(no profile lines)"
 
 echo ""
-echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
-awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 300
+echo "-- Generation snippet (run 3) --"
+awk '/<\|im_start\|>assistant/ { f=1; next } f' temp_run_3.log | head -c 300
 echo ""
 
 echo ""
-echo "Full log: ${SUMMARY_LOG}"
+echo "Full per-run logs:"
+echo "  temp_run_warmup.log  (discarded)"
+echo "  temp_run_1.log  temp_run_2.log  temp_run_3.log  (timed)"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"
