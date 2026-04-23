@@ -29,7 +29,13 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define HD 128
-#define TM 8
+// TM is the number of Q positions packed into a single WG. TM=8
+// (1024 threads / WG) returned zeros / stale memory on Adreno 830 —
+// likely hit a driver limit (max WG size, register pressure, or
+// __local budget) and silently nooped. TM=4 (512 threads, 2KB
+// __local) keeps the ILP win from multi-wavefront scheduling while
+// staying well under any Adreno 830 launch threshold.
+#define TM 4
 
 __kernel __attribute__((reqd_work_group_size(HD, TM, 1)))
 void attention_fused_fp16(

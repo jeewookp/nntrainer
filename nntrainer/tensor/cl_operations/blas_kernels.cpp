@@ -3764,13 +3764,15 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // V3 multi-Q per WG: WG = (HD, TM, 1) = (128, 8, 1), one WG per
+  // V3 multi-Q per WG: WG = (HD, TM, 1) = (128, 4, 1), one WG per
   // (head h, block of TM consecutive m positions).  Pack TM Q rows
   // into the same WG so the Adreno wavefront scheduler has TM
   // independent softmax states to round-robin instead of a single
   // sequential one (V0..V2 were stuck at 1 wavefront / WG and ~3%
-  // of ALU peak).
-  constexpr int TM = 8;
+  // of ALU peak).  TM must match the #define in
+  // attention_fused_fp16.cl; TM=8 (1024 threads/WG) silently nooped
+  // on Adreno 830, TM=4 (512 threads) launches cleanly.
+  constexpr int TM = 4;
   const int m_blocks = (M_i + TM - 1) / TM;
   const int g[3] = {128, nhq * TM, m_blocks};
   const int l[3] = {128, TM, 1};
