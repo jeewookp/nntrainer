@@ -1,54 +1,36 @@
-// Fused FlashAttention-style Qwen attention, v3 (multi-Q per WG).
+// Fused FlashAttention-style Qwen attention, v3b (multi-Q per WG,
+// manual per-row tree reduce).
 //
-// V0..V2 timings:
+// Timings (Qwen3-4B prefill, 36 layers, M=437, num_heads=32, HD=128):
 //   V0  tree-reduce + __local broadcast       1794 ms
-//   V1  work_group_reduce_add barrier-free    2397 ms (128x redundant exp)
-//   V2  work_group_reduce_add + d==0 exp      2464 ms (barrier + serial lane)
-// NEON baseline for the same workload         866 ms
+//   V1  work_group_reduce_add barrier-free    2397 ms
+//   V2  work_group_reduce_add + d==0 exp      2464 ms
+//   V3a sub_group_reduce_add + TM=8           wrong output (lane-map
+//                                             assumption bad) — 1988 ms
+// NEON baseline                                866 ms
 //
-// Root cause of V0..V2 regression: WG = 128 = 1 wavefront, and the kk
-// loop has a serial dependency through running_max/running_sum/acc.  The
-// GPU has nothing to schedule while that single wavefront stalls on
-// K/V memory, so compute ran at ~3% of ALU peak.  The fix is structural,
-// not a tuning knob: pack multiple Q positions into the same WG so
-// the wavefront scheduler has multiple wavefronts to round-robin.
+// V3a tried to exploit ILP by packing TM=8 Q positions into a WG so
+// the scheduler had 8 wavefronts to round-robin, and used
+// sub_group_reduce_add with qcom_reqd_sub_group_size("full") to reduce
+// each row independently. The output came back garbage because the
+// Adreno driver's 2D lane-to-sub-group mapping is NOT simply
+// row-major: lanes 0..127 did not all correspond to m_local=0 of a
+// single row, so the per-row dot product mixed rows.
 //
-// V3 layout:
-//   WG = (HD, TM, 1) = (128, 8, 1) = 8 wavefronts, 1024 threads.
-//   Each WG handles (1 head h) x (TM consecutive Q positions).
-//   global = (HD, TM * num_heads_Q, ceil(M / TM)).
-//
-// ILP recipe:
-//   * sub-group size is forced to the native wavefront width (128) via
-//     qcom_reqd_sub_group_size("full").  With the default row-major
-//     flattening of a 2D WG (local_id(0) varies fastest), lanes
-//     0..127 = row m_local=0, lanes 128..255 = row m_local=1, etc.
-//   * sub_group_reduce_add therefore reduces within a single row
-//     (across d), which is exactly the Q.K dot for that row.
-//   * Each row keeps its own running_max / running_sum / acc in private
-//     registers.  Only the rescale / score_exp scalars per row are
-//     published to __local[TM], broadcast-read by the other 127 lanes
-//     of the same row.
-//   * K and V are loaded once per kk and reused across all TM rows — a
-//     TMx reduction in global memory traffic.
-//
-// Tail handling:
-//   M is not necessarily divisible by TM (Qwen3-4B prefill is M=437).
-//   Rows whose m_global >= M must NOT exit early (would break barriers).
-//   Instead all threads stay through every barrier; invalid rows skip
-//   the d==0 softmax update, publish neutral rescale=1 / score_exp=0,
-//   and write nothing at the end.  For causal attention the loop bound
-//   is the max kk_end across the valid rows in the WG, so the longest
-//   row determines the iteration count.
+// V3b keeps the same dispatch (WG = (HD, TM, 1)) and the same ILP
+// recipe, but replaces the sub_group reduce with an EXPLICIT per-row
+// tree reduce through __local[TM][HD]. Index arithmetic is by
+// (m_local, d) so correctness is independent of any lane-ordering
+// assumption. The cost is log2(HD) = 7 barriers per kk iteration, but
+// the barriers are now cheap relative to ILP-hidden memory latency
+// (they only sync 1024 threads within a WG, not across WGs; the
+// scheduler can still overlap the 8 wavefronts' work between them).
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#pragma OPENCL EXTENSION cl_khr_subgroups : enable
-#pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
 #define HD 128
 #define TM 8
 
-__attribute__((qcom_reqd_sub_group_size("full")))
 __kernel __attribute__((reqd_work_group_size(HD, TM, 1)))
 void attention_fused_fp16(
     __global const half *Q,
@@ -75,11 +57,12 @@ void attention_fused_fp16(
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
-  // Out-of-bounds rows must still participate in every barrier, so we
-  // only mask the global memory read.
   const float q_val = row_valid ? (float)Q[m * W_q + h * HD + d] : 0.0f;
 
-  // Per-row softmax state — publishers are d==0 of each row.
+  // Per-row tree-reduce scratch. [m_local][d].
+  __local float reduce_buf[TM][HD];
+
+  // Per-row softmax publishers (written by d==0 of each row).
   __local float rescale_l  [TM];
   __local float score_exp_l[TM];
 
@@ -87,14 +70,13 @@ void attention_fused_fp16(
   float running_sum = 0.0f;
   float acc         = 0.0f;
 
-  // Loop to the MAX kk across all rows in this WG (causal: last valid
-  // row has the largest bound; non-causal: every row goes to T).
+  // Causal: each row's own kk_end is from+m+1; the WG loops to the
+  // max so every row reaches the barriers inside the loop.
   int kk_end = T;
   if (is_causal != 0) {
     const int m_last = (m_base + TM - 1 < M) ? (m_base + TM - 1) : (M - 1);
     kk_end = from + m_last + 1;
   }
-  // Each row's own termination bound (causal = from + m + 1).
   const int kk_end_row = (is_causal != 0) ? (from + m + 1) : T;
 
   for (int kk = 0; kk < kk_end; ++kk) {
@@ -103,10 +85,21 @@ void attention_fused_fp16(
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
     const float partial = row_active ? (q_val * k_val) : 0.0f;
 
-    // Row-wise reduction: sub_group_size == HD == 128 == one wavefront,
-    // so this reduces across d for a single m_local.  Barrier-free
-    // inside the sub-group.
-    const float score = sub_group_reduce_add(partial) * scale;
+    // Stage partial in local memory; one per (m_local, d) slot.
+    reduce_buf[m_local][d] = partial;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // In-row tree reduce across d. Bank conflicts are 2-way
+    // (stride=64 hits same bank as stride=0 under 32-bank layout),
+    // acceptable for this working-set size.
+    for (int stride = HD / 2; stride > 0; stride >>= 1) {
+      if (d < stride) {
+        reduce_buf[m_local][d] += reduce_buf[m_local][d + stride];
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    const float score = reduce_buf[m_local][0] * scale;
 
     if (d == 0) {
       if (row_active) {
@@ -121,8 +114,6 @@ void attention_fused_fp16(
         running_max = new_max;
         running_sum = running_sum * rescale + score_exp;
       } else {
-        // Neutral values so the other 127 lanes of this row read
-        // something defined, but acc stays unchanged below.
         rescale_l  [m_local] = 1.0f;
         score_exp_l[m_local] = 0.0f;
       }
@@ -137,15 +128,12 @@ void attention_fused_fp16(
     }
   }
 
-  // Publish the final sum for the normalization step.
   __local float sum_l[TM];
   if (d == 0) sum_l[m_local] = running_sum;
   barrier(CLK_LOCAL_MEM_FENCE);
 
   if (row_valid) {
     const float s = sum_l[m_local];
-    // Guard s==0 (empty causal row kk_end_row==0) — shouldn't happen
-    // for valid rows with from+m+1 >= 1 but be defensive.
     const float inv = (s > 0.0f) ? (1.0f / s) : 0.0f;
     out[m * W_q + h * HD + d] = (half)(acc * inv);
   }
