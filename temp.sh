@@ -95,10 +95,15 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # logs [VERIFY ...] with per-call mismatch counts, max abs diff, and
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
+# NNTRAINER_SKIP_READBACK=1 swaps gemm_delegate_fp16_cl's image2d→SVM
+# readback for a GpuImagePool publish. See blas_kernels.cpp comment —
+# diagnostic only, downstream consumers see stale SVM.
+SKIP_READBACK_ENV="${NNTRAINER_SKIP_READBACK:+NNTRAINER_SKIP_READBACK=$NNTRAINER_SKIP_READBACK}"
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
   export ${VERIFY_ENV}; \
+  export ${SKIP_READBACK_ENV}; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
