@@ -3764,9 +3764,16 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // HD=128 threads per WG, one WG per (h, m).
-  const int g[3] = {128, nhq, M_i};
-  const int l[3] = {128, 1, 1};
+  // V3 multi-Q per WG: WG = (HD, TM, 1) = (128, 8, 1), one WG per
+  // (head h, block of TM consecutive m positions).  Pack TM Q rows
+  // into the same WG so the Adreno wavefront scheduler has TM
+  // independent softmax states to round-robin instead of a single
+  // sequential one (V0..V2 were stuck at 1 wavefront / WG and ~3%
+  // of ALU peak).
+  constexpr int TM = 8;
+  const int m_blocks = (M_i + TM - 1) / TM;
+  const int g[3] = {128, nhq * TM, m_blocks};
+  const int l[3] = {128, TM, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
   // Downstream MHA code path writes out to the o_proj FC's input via SVM.
