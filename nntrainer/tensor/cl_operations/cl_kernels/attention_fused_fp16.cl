@@ -1,33 +1,30 @@
-// Step 3 / incremental: + work_group_reduce_add across d per kk.
+// Step 3b / incremental: reduce via sub_group_reduce_add (1D WG).
 //
-// Step 1 qk =  170 ms  (K-only load)
-// Step 2 qk =  341 ms  (+ V load + Q load + per-lane partial q*k+v)
-// V0 qk    = 1794 ms  (full kernel: reduce + softmax + V acc update)
+// Step 3 (work_group_reduce_add) added 1531 ms over step 2 across
+// 36 layers.  That's ~85% of V0's 1794 ms concentrated in a single
+// intrinsic call.  On a 1-wavefront WG (HD=128, the Adreno native
+// wavefront width) sub_group_reduce_add is logically equivalent to
+// work_group_reduce_add but stays on a single wavefront the driver
+// already has in flight, skipping the workgroup-barrier machinery.
 //
-// So memory (K+V+Q+partial) costs ~340 ms, and the remaining
-// ~1450 ms of V0 must be in reduce + softmax + acc update.
+// The V3a/V3d sub-group experiments failed at TM>=4 because 2D WGs
+// have non-linear lane ordering on Qualcomm.  Here WG is 1D
+// ((HD, 1, 1)), so lanes 0..127 ARE threads 0..127 in both
+// local-id and sub-group-id spaces — no ambiguity.
 //
-// Step 3 isolates the REDUCE cost by adding one work_group_reduce_add
-// per kk on (q_val * k_val), multiplying by scale to form the score,
-// and sinking the score into a per-lane accumulator against v_val.
-// Still no softmax, no online-max / -sum, no rescale.  The per-lane
-// acc += score * v keeps every memory and reduce op live against
-// dead-code elimination.
-//
-// Expected cost split:
-//   Step 3 - Step 2  = per-kk work_group_reduce_add cost
-// If step 3 comes in around 800-1200 ms, reduce is the dominant
-// component of V0's 1794 ms and we need a different reduce strategy
-// (sub_group_reduce, tree reduce with fewer rows, ...).
-// If step 3 comes in around 400-600 ms, reduce is cheap and the
-// missing cost lives in softmax / acc (step 4-5).
-//
-// Kernel signature + V0 dispatch unchanged.
+// If step 3b lands well below step 3 (say ~500-800 ms qk), the
+// bottleneck of V0 really is the workgroup-level reduce intrinsic,
+// and swapping to sub_group_reduce is the hot fix for attention.
+// From there, the V5-style per-thread Q-tile (TQ=4) on top of
+// sub_group_reduce would be step 6.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
+#pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
 #define HD 128
 
+__attribute__((qcom_reqd_sub_group_size("full")))
 __kernel __attribute__((reqd_work_group_size(HD, 1, 1)))
 void attention_fused_fp16(
     __global const half *Q,
@@ -61,13 +58,8 @@ void attention_fused_fp16(
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
     const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
 
-    // The reduce we want to cost in isolation.  Every thread sees
-    // the same score after the intrinsic — no explicit barrier
-    // needed.
-    const float score = work_group_reduce_add(q_val * k_val) * scale;
+    const float score = sub_group_reduce_add(q_val * k_val) * scale;
 
-    // Per-lane sink.  score * v_val keeps both the reduce output
-    // and the V load alive for the compiler.
     acc += score * v_val;
   }
 
