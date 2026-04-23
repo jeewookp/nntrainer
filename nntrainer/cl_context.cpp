@@ -266,8 +266,11 @@ void ClContext::initBlasClKernels() {
   registerClKernel(attn_qk_wave_fp16_kernel, "attn_qk_wave_fp16");
 
   // Fused FlashAttention (qk + softmax + av in one dispatch per layer).
-  // Env-gated via NNTRAINER_ATTN_GPU=1 in MHACoreLayer.
-  registerClKernel(attention_fused_fp16_kernel, "attention_fused_fp16");
+  // Env-gated via NNTRAINER_ATTN_GPU=1 in MHACoreLayer.  Uses
+  // work_group_reduce_add (OpenCL 2.0) so the build must pass -cl-std=CL2.0.
+  registerClKernel(
+    attention_fused_fp16_kernel, "attention_fused_fp16",
+    "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
 #endif
 
   blas_kernels_initialized = true;

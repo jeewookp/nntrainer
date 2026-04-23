@@ -3730,8 +3730,12 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
 
   static ClContext::SharedPtrClKernel s_kern;
   if (!s_kern) {
-    s_kern = blas_cc->registerClKernel(attention_fused_fp16_kernel,
-                                        "attention_fused_fp16");
+    // Same -cl-std=CL2.0 override as the ClContext init registration so
+    // ocl_kernel_map dedupes on (name + options).  Required for
+    // work_group_reduce_add.
+    s_kern = blas_cc->registerClKernel(
+      attention_fused_fp16_kernel, "attention_fused_fp16",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
   if (!s_kern) return;
 
