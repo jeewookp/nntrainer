@@ -623,21 +623,38 @@ void MHACoreLayer::one_batch_incremental_forwarding(
                                       cache_index * cache_value_dim.width(),
                                     true);
 
+  // Sub-stage profile gate: only count prefill calls (to-from > 1) so
+  // decode noise doesn't dilute the breakdown. This is the Qwen3-style
+  // overload (no sink_step / no GPT-OSS sliding window).
+  const bool profile_substage = (to - from) > 1;
+
   // apply rotary embedding for query
+  const uint64_t t_rope_q0 = profile_substage ? mha_now_ns() : 0;
   apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
                              false);
+  if (profile_substage)
+    g_mha_core_profile.ns_rope_q += mha_now_ns() - t_rope_q0;
 
   // append kcache with rotary embedding
+  const uint64_t t_rope_k0 = profile_substage ? mha_now_ns() : 0;
   apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim, cache_index,
                              false);
+  if (profile_substage)
+    g_mha_core_profile.ns_rope_k += mha_now_ns() - t_rope_k0;
 
   // append vcache without rotary embedding
   if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
+    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
     apply_rotary_emb_tensor_v2(value_step, b_cache_value_step, head_dim,
                                cache_index, true);
+    if (profile_substage)
+      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
   } else if (query_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
+    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
     b_cache_value_step.copyData(value_step);
+    if (profile_substage)
+      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
@@ -667,14 +684,23 @@ void MHACoreLayer::one_batch_incremental_forwarding(
 
   unsigned int gqa_size = num_heads_Q / num_heads_KV;
 
+  const uint64_t t_qk0 = profile_substage ? mha_now_ns() : 0;
   compute_kcaches(query_step, b_cached_key, out_, cache_from,
                   cache_to - cache_from, num_heads_Q, gqa_size, head_dim, pool);
+  if (profile_substage)
+    g_mha_core_profile.ns_qk += mha_now_ns() - t_qk0;
 
+  const uint64_t t_sm0 = profile_substage ? mha_now_ns() : 0;
   softmax_triangle(out_, step_size, num_heads_Q, cache_from, pool);
+  if (profile_substage)
+    g_mha_core_profile.ns_softmax += mha_now_ns() - t_sm0;
 
+  const uint64_t t_av0 = profile_substage ? mha_now_ns() : 0;
   compute_fp16vcache_transposed(out_, b_cached_value, attention_output_step,
                                 cache_from, num_heads_KV, gqa_size, head_dim,
                                 cache_to, pool);
+  if (profile_substage)
+    g_mha_core_profile.ns_av += mha_now_ns() - t_av0;
 }
 
 void MHACoreLayer::one_batch_incremental_forwarding(

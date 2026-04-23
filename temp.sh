@@ -145,9 +145,12 @@ adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 # ----------------------------------------------------------------------------
 # Single-run summary. Pulls the headline numbers + per-layer breakdowns
-# from RUN_LOG so `sh temp.sh` is self-contained without scrolling
-# through the full device output.
+# from temp_run.log so `sh temp.sh` is self-contained without scrolling
+# through the full device output. The summary block runs AFTER `cd ../..`
+# back to the repo root, so reference the log relative to that root, not
+# relative to Applications/CausalLM where RUN_LOG was originally set.
 # ----------------------------------------------------------------------------
+SUMMARY_LOG=temp_run.log
 echo ""
 echo "=========================================="
 echo " Run summary"
@@ -155,26 +158,26 @@ echo "=========================================="
 
 echo ""
 echo "-- rms_norm gate resolution --"
-grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" ${RUN_LOG} | head -1 \
+grep "\[rms_norm\] NNTRAINER_RMSNORM_GPU" ${SUMMARY_LOG} | head -1 \
   || echo "(no gate line)"
 
 echo ""
 echo "-- Perf --"
-grep -E "prefill:|generation:|total:|peak memory|e2e time" ${RUN_LOG} | head -5 \
+grep -E "prefill:|generation:|total:|peak memory|e2e time" ${SUMMARY_LOG} | head -5 \
   || echo "(no perf lines)"
 
 echo ""
 echo "-- Layer profiles (RMSNorm / Reshaped / MHA + sub-stages) --"
-grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" ${RUN_LOG} \
+grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" ${SUMMARY_LOG} \
   || echo "(no profile lines)"
 
 echo ""
 echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
-awk '/<\|im_start\|>assistant/ { f=1; next } f' ${RUN_LOG} | head -c 300
+awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 300
 echo ""
 
 echo ""
-echo "Full log: ${RUN_LOG}"
+echo "Full log: ${SUMMARY_LOG}"
 echo ""
 echo "To restore the original (long-context) config on device:"
 echo "  adb shell 'mv ${CFG}.bak ${CFG}'"
