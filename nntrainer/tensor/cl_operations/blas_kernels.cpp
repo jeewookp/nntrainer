@@ -3587,8 +3587,17 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
   clEnqueueSVMMap(clq, CL_FALSE, CL_MAP_READ, out_svm,
                   (size_t)M * K * sizeof(uint16_t), 0, nullptr, nullptr);
 
-  // Publish image2d for downstream pool consumers (next gemm_delegate).
-  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  // Publish out_svm to GpuImagePool so the next gemm_delegate pool-hits
+  // its svm_to_image2d reformat.
+  //
+  // Go through svm_to_image2d_publish (one extra kernel dispatch that
+  // re-reads out_svm and writes a fresh image2d) instead of calling
+  // GpuImagePool::set(out_svm, out_img, …) directly. Measured: the
+  // direct-handoff variant produces garbage downstream output on this
+  // device, most likely due to Adreno image2d tiling/flush state that
+  // the SVM round-trip clears. The v2 kernel itself was verified
+  // numerically correct via gpu_check (max_rel ~0.1%, fp16 rounding).
+  svm_to_image2d_publish(out_svm, (unsigned int)M, (unsigned int)K);
 }
 
 // ============================================================================
