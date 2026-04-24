@@ -451,20 +451,26 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   // its fn_total stops leaking into whatever layer next SVMMap-fences on
   // its output.
   struct LayerWallProfile {
+    const char *tag;
+    bool gated_by_prefill_suppression;
     std::unordered_map<std::string, uint64_t> ns;
     std::unordered_map<std::string, uint64_t> calls;
     uint64_t total_ns{0};
+    LayerWallProfile(const char *t, bool gate)
+        : tag(t), gated_by_prefill_suppression(gate) {}
     ~LayerWallProfile() {
       if (!total_ns) return;
-      if (nntrainer::prefill_profile_suppressed()) return;
+      if (gated_by_prefill_suppression &&
+          nntrainer::prefill_profile_suppressed())
+        return;
       std::vector<std::pair<uint64_t, std::string>> ordered;
       for (auto &p : ns) ordered.emplace_back(p.second, p.first);
       std::sort(ordered.begin(), ordered.end(),
                 std::greater<std::pair<uint64_t, std::string>>());
       fprintf(stderr,
-        "\n[PROFILE NetworkGraph per-layer wall clock (prefill only, "
-        "step_size>1)]\n  total=%.1f ms across all forwarding_op() calls\n",
-        total_ns / 1e6);
+        "\n[PROFILE NetworkGraph per-layer wall clock (%s)]\n"
+        "  total=%.1f ms across all forwarding_op() calls\n",
+        tag, total_ns / 1e6);
       for (auto &p : ordered) {
         fprintf(stderr, "  %-28s %7.1f ms  calls=%lu  avg=%.3f ms\n",
           p.second.c_str(), p.first / 1e6,
@@ -473,7 +479,14 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
       }
     }
   };
-  static LayerWallProfile g_graph_wall_profile;
+  static LayerWallProfile g_graph_wall_profile(
+    "prefill only, step_size>1", /*gate=*/true);
+  // Decode (step_size == 1) wall-profile -- always visible, never gated
+  // by NNTRAINER_SUPPRESS_PREFILL_PROFILE.  Uses the same clFinish fence
+  // below so per-layer numbers reflect real wall-clock, not async queue
+  // tail leaking into the next layer's SVMMap.
+  static LayerWallProfile g_graph_wall_profile_decode(
+    "decode, step_size==1", /*gate=*/false);
   static const bool s_profile_layer_sync =
     std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
   static cl_command_queue s_sync_q = nullptr;
@@ -494,18 +507,23 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
-    const bool profile_this_call = (to - from) > 1;
+    const bool profile_this_call_prefill = (to - from) > 1;
+    const bool profile_this_call_decode  = (to - from) == 1;
     struct timespec ts0, ts1;
-    if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
+    clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
     if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
-    if (profile_this_call) {
-      clock_gettime(CLOCK_MONOTONIC, &ts1);
-      const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
-                          (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
+    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
+                        (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);
+    if (profile_this_call_prefill) {
       g_graph_wall_profile.ns[ln->getType()] += dt;
       g_graph_wall_profile.calls[ln->getType()] += 1;
       g_graph_wall_profile.total_ns += dt;
+    } else if (profile_this_call_decode) {
+      g_graph_wall_profile_decode.ns[ln->getType()] += dt;
+      g_graph_wall_profile_decode.calls[ln->getType()] += 1;
+      g_graph_wall_profile_decode.total_ns += dt;
     }
     PROFILE_TIME_END(profile_keys.at(ln->getType()));
   }
