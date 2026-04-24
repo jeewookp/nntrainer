@@ -3762,12 +3762,16 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Step 1 incremental probe: V0 shape (one WG per (h, m)).  Grid
-  // returns to 128 * num_heads_Q * M so the kernel measurement is
-  // comparable to V0's 1794 ms baseline.  TQ-tile comes back in a
-  // later step once we know where the time is actually going.
-  const int g[3] = {128, nhq, M_i};
-  const int l[3] = {128, 1, 1};
+  // Step 5: WG = (64, 1, 1) = one true Adreno 830 wavefront.  The
+  // debug probe showed qcom_reqd_sub_group_size("full") yields
+  // sub_group_size=64, not 128 — so sub_group_reduce_add with the
+  // previous WG=(128,1,1) reduced only half the partials.  With
+  // WG=64, each thread handles two d lanes (HD/WG = 2) in private
+  // registers; one sub_group_reduce covers the full HD because each
+  // thread's partial already sums its two d values.  Grid shape
+  // stays (WG, num_heads_Q, M) — one WG per (h, m) pair.
+  const int g[3] = {64, nhq, M_i};
+  const int l[3] = {64, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
   blas_cc->command_queue_inst_.enqueueSVMMap(
