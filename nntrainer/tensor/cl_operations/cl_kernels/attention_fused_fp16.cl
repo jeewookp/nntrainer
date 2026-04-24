@@ -1,28 +1,33 @@
-// Step 4 / incremental: step 3b + online softmax + proper acc.
+// Step 4b / incremental: step 3b + branchless all-lane softmax.
 //
-// Timings so far (qk portion, 36 layers, M=437):
-//   Step 1  =  170 ms   K load only
-//   Step 2  =  341 ms   + V load + Q load + per-lane partial
-//   Step 3  = 1872 ms   + work_group_reduce_add per kk
-//   Step 3b =  997 ms   sub_group_reduce_add (1-wavefront WG)
-//   V0      = 1794 ms   full kernel via work_group_reduce_add
-//   NEON    =  866 ms   CPU reference
+// Step 4 (SGR + V0's if(d==0) + __local rescale/score_exp broadcast +
+// barrier) regressed to qk=1414 ms AND produced garbage output.  On
+// the Qualcomm driver the combo of sub_group_reduce_add + a
+// divergent if(d==0) + a workgroup barrier apparently breaks
+// something — either a scheduling interaction with the SGR internal
+// fence, or the compiler reordering the __local write across the
+// barrier.
 //
-// Step 3b proved sub_group_reduce is ~2.3x cheaper than
-// work_group_reduce on a 1-wavefront WG.  On top of that reduce cost
-// (~655 ms after subtracting memory), the missing pieces to make
-// V0 correct are:
-//   * online softmax (running_max, running_sum, rescale, score_exp)
-//   * acc update via `acc * rescale + score_exp * v_val`
-// Both trivial in flops; any cost is from the __local broadcast of
-// rescale / score_exp + the one WG-level barrier per kk.
+// V1 tried the all-lane softmax (no barrier, every thread
+// computes exp redundantly) with WGR and came in at 2397 ms because
+// 128 redundant exp()s ran on a workgroup-reduce-serialized
+// wavefront — each exp waited on the next.  With SGR the picture
+// inverts: all 128 lanes of the wavefront are already issuing in
+// parallel inside a single wavefront, so 128 independent fp32 exp()
+// ops cost roughly the same as 1 exp() broadcast — the wavefront
+// already has 128 ALUs in flight.
 //
-// Step 4 = step 3b + that softmax / rescale / proper acc logic.  It
-// should match V0 behaviour (correct output) and land close to the
-// step 3b timing (~1000 ms).  If softmax + rescale costs are
-// significant, delta vs step 3b shows the overhead.  The single
-// barrier here is WG-wide on a 1-wavefront WG, so it's the cheap
-// kind.
+// Step 4b therefore:
+//   * keeps SGR for the Q.K dot across d (cheap on 1-wavefront WG)
+//   * drops the barrier + if(d==0) + __local broadcast entirely
+//   * has every lane carry its own running_max / running_sum / acc
+//     in private regs.  All lanes get the same score from SGR and
+//     compute the same softmax state, so the "per-lane" running
+//     state is identical across the wavefront — no need to reconcile.
+// Result: correct output (same math as V0) and no barrier cost.
+//
+// Expected: ~1000-1100 ms (step 3b + a handful of per-lane ALU ops
+// for softmax), and correct output.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
@@ -57,9 +62,6 @@ void attention_fused_fp16(
 
   const float q_val = (float)Q[m * W_q + h * HD + d];
 
-  __local float rescale_l;
-  __local float score_exp_l;
-
   float running_max = -INFINITY;
   float running_sum = 0.0f;
   float acc         = 0.0f;
@@ -68,33 +70,24 @@ void attention_fused_fp16(
 
   for (int kk = 0; kk < kk_end; ++kk) {
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
+    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
+
     const float score = sub_group_reduce_add(q_val * k_val) * scale;
 
-    // d==0 advances the running softmax state and publishes
-    // rescale / score_exp via __local for the other 127 lanes.
-    if (d == 0) {
-      const float prev_max = running_max;
-      const float new_max  = fmax(prev_max, score);
-      const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
-                             ? 0.0f
-                             : exp(prev_max - new_max);
-      const float score_exp = exp(score - new_max);
-      rescale_l   = rescale;
-      score_exp_l = score_exp;
-      running_max = new_max;
-      running_sum = running_sum * rescale + score_exp;
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
+    // Every lane redoes the softmax math on the SAME score.  Free
+    // on a 1-wavefront WG: those 128 exp()s issue in parallel.
+    const float prev_max = running_max;
+    const float new_max  = fmax(prev_max, score);
+    const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
+                           ? 0.0f
+                           : exp(prev_max - new_max);
+    const float score_exp = exp(score - new_max);
 
-    const float rescale   = rescale_l;
-    const float score_exp = score_exp_l;
-    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-    acc = acc * rescale + score_exp * v_val;
+    acc         = acc         * rescale + score_exp * v_val;
+    running_sum = running_sum * rescale + score_exp;
+    running_max = new_max;
   }
 
-  __local float sum_l;
-  if (d == 0) sum_l = running_sum;
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  out[m * W_q + h * HD + d] = (half)(acc / sum_l);
+  // running_sum is identical on every lane; no broadcast needed.
+  out[m * W_q + h * HD + d] = (half)(acc / running_sum);
 }
