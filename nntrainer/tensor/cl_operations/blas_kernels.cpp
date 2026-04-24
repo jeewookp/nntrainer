@@ -165,6 +165,50 @@ inline uint64_t now_ns_phase6() {
     .count();
 }
 
+// Phase 2 diagnostic: split gemv_int4_adreno_cl per-call cost into
+// arg setup, kernel dispatch, and blocking SVM map.  Decode path only
+// (gemv_int4_adreno_cl is the M=1 kernel entry point), so no prefill
+// gate.  Prints at process exit via static destructor.
+struct GemvInt4AdrenoCallProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns_args{0};      // SetKernelSVMArguments/Arguments
+  std::atomic<uint64_t> ns_dispatch{0};  // clEnqueueNDRangeKernel
+  std::atomic<uint64_t> ns_svmmap{0};    // blocking clEnqueueSVMMap(read)
+
+  ~GemvInt4AdrenoCallProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0) return;
+    const uint64_t args = ns_args.load();
+    const uint64_t disp = ns_dispatch.load();
+    const uint64_t smap = ns_svmmap.load();
+    const uint64_t tot = args + disp + smap;
+    auto ms = [](uint64_t v) { return v / 1.0e6; };
+    auto pct = [&](uint64_t v) {
+      return tot == 0 ? 0.0 : 100.0 * (double)v / (double)tot;
+    };
+    std::fprintf(stderr,
+                 "\n[PROFILE gemv_int4_adreno_cl decode] calls=%llu "
+                 "total=%.2f ms avg=%.3f ms\n",
+                 (unsigned long long)c, ms(tot),
+                 ms(tot) / (double)c);
+    std::fprintf(stderr,
+                 "  args_setup : %7.2f ms (%5.1f%%)  "
+                 "[SetKernel{SVM,}Arguments]\n",
+                 ms(args), pct(args));
+    std::fprintf(stderr,
+                 "  dispatch   : %7.2f ms (%5.1f%%)  "
+                 "[DispatchCommand = clEnqueueNDRangeKernel]\n",
+                 ms(disp), pct(disp));
+    std::fprintf(stderr,
+                 "  svmmap     : %7.2f ms (%5.1f%%)  "
+                 "[blocking enqueueSVMMap(output) = queue flush + cache "
+                 "invalidate]\n",
+                 ms(smap), pct(smap));
+  }
+};
+
+static GemvInt4AdrenoCallProfile g_gemv_adreno_call_profile;
+
 } // namespace
 
 void gemv_int4_async_cl(std::vector<void *> weights,
@@ -1868,6 +1912,9 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
     return;
   }
 
+  // Phase 2 diagnostic: split per-call cost into args / dispatch / svmmap.
+  const uint64_t t_args_start = now_ns_phase6();
+
   int arg = 0;
 
   result = kernel_ptr->SetKernelSVMArguments(arg++, input);
@@ -1917,6 +1964,7 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   const int work_groups_count[3] = {dim_n, 1, 1};
   const int work_group_size[3] = {16, 1, 1};
 
+  const uint64_t t_dispatch_start = now_ns_phase6();
   result = blas_cc->command_queue_inst_.DispatchCommand(
     kernel_ptr, work_groups_count, work_group_size);
   if (!result) {
@@ -1926,8 +1974,15 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   }
 
   /// @todo synchronize when only needed
+  const uint64_t t_svmmap_start = now_ns_phase6();
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, static_cast<size_t>(N) * sizeof(uint16_t), true);
+  const uint64_t t_end = now_ns_phase6();
+
+  g_gemv_adreno_call_profile.ns_args     += t_dispatch_start - t_args_start;
+  g_gemv_adreno_call_profile.ns_dispatch += t_svmmap_start - t_dispatch_start;
+  g_gemv_adreno_call_profile.ns_svmmap   += t_end - t_svmmap_start;
+  g_gemv_adreno_call_profile.calls++;
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,

@@ -168,7 +168,7 @@ echo ""
 echo "-- Decode-path profiles (M==1, fired per generation token) --"
 echo "   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;"
 echo "    unset it in temp.sh to restore the prefill breakdown.)"
-grep -A 8 "PROFILE MHACoreLayer decode\|PROFILE HalfTensor::dotQInteger decode\|PROFILE TieWordEmbedding (lm_head) decode\|PROFILE TieWordEmbedding (embedding) decode" ${SUMMARY_LOG} \
+grep -A 8 "PROFILE MHACoreLayer decode\|PROFILE HalfTensor::dotQInteger decode\|PROFILE TieWordEmbedding (lm_head) decode\|PROFILE TieWordEmbedding (embedding) decode\|PROFILE gemv_int4_adreno_cl decode" ${SUMMARY_LOG} \
   || echo "(no decode profile lines)"
 
 echo ""
