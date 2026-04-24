@@ -1976,23 +1976,20 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
 
   const uint64_t t_svmmap_start = now_ns_phase6();
   if (sync_output) {
-    // Non-blocking SVMMap -- same pattern as gemm_delegate_fp16_cl
-    // (comments around line 3100).  This enqueues the coherence /
-    // cache-invalidate op on the in-order queue so any downstream
-    // blocking SVMMap (from MHACoreLayer, AdditionLayer, RMSNorm,
-    // etc.) drains the pipeline correctly and sees fresh data, but
-    // the host thread returns immediately instead of waiting the
-    // ~0.6 ms per call the blocking map cost.
-    //
-    // Kill-switch: NNTRAINER_GEMV_BLOCKING_SVMMAP=1 restores the
-    // blocking map for correctness bisection.
-    static const bool s_force_blocking =
-      std::getenv("NNTRAINER_GEMV_BLOCKING_SVMMAP") != nullptr;
-    const cl_bool blk = s_force_blocking ? CL_TRUE : CL_FALSE;
-    cl_command_queue clq = blas_cc->command_queue_inst_.GetCommandQueue();
-    clEnqueueSVMMap(clq, blk, CL_MAP_READ, output,
-                    static_cast<size_t>(N) * sizeof(uint16_t),
-                    0, nullptr, nullptr);
+    // Blocking SVMMap: queue flush + CPU cache invalidate.  The
+    // non-blocking variant (matching prefill's delegate conv
+    // pattern) made this call 113x faster but produced garbage
+    // under LAYER_SYNC off -- Adreno 830's coarse-grained SVM
+    // doesn't guarantee GPU->GPU cross-kernel visibility through
+    // same-queue ordering alone when the prior kernel wrote the
+    // input SVM buffer this kernel now reads.  Investigated
+    // enqueueSVMUnmap(input) + svm_in staging as coherence hints;
+    // neither worked.  Keep blocking until we either (a) move
+    // decode onto the image2d pipeline prefill uses, (b) add
+    // explicit clEnqueueMarkerWithWaitList between kernels, or
+    // (c) understand the missing SVM barrier on Adreno.
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
   }
   const uint64_t t_end = now_ns_phase6();
 

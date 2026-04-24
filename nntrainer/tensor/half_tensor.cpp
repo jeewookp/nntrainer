@@ -990,29 +990,24 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): half zero-copy -- kernel writes directly to
-    // out_u16 (SVM) to skip the svm_out scratch + scalar out-copy and
-    // its blocking SVMMap, but still stages the input via svm_in.
-    //
-    // The CPU scalar read `svm_in[k] = in_u16[k]` does double duty:
-    // it copies the previous FC's output into the kernel's scratch
-    // buffer AND its read triggers Adreno's SVM coherence (the
-    // implicit "CPU is reading this buffer" cue that the driver uses
-    // to make GPU L1/L2 writes visible).  Passing in_u16 straight
-    // to the kernel and dropping the copy left the GPU reading
-    // stale data out of its own cache hierarchy, producing garbage
-    // generations.  Keep svm_in staging until we understand the
-    // missing coherence step.
+    // M=1 (decode/gen): original staged path restored for correctness.
+    // Phase 2 non-blocking SVMMap / zero-copy experiments produced
+    // garbage output without LAYER_SYNC (see commit log between
+    // a115e2a8 and the revert).  Keep the blocking SVMMap + svm_out
+    // scratch + scalar copy until the SVM coherence story is sorted
+    // out; meanwhile attack the other decode buckets (MHA decode
+    // 1.7s, lm_head 0.4s) that don't fight the SVM model.
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
-    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, out_u16, K, N);
+    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
     const uint64_t t_d2 = now_ns();
-    // No out_copy -- kernel wrote directly into out_u16 under a
-    // non-blocking SVMMap that downstream blocking fences drain.
-    const uint64_t t_d3 = t_d2;
+    for (unsigned int n = 0; n < N; ++n) {
+      out_u16[n] = svm_out[n];
+    }
+    const uint64_t t_d3 = now_ns();
     g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
     g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
     g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;
