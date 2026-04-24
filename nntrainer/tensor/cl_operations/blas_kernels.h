@@ -390,6 +390,9 @@ void gemv_int4_image_v1_cl(uint16_t *input, uint16_t *weights,
 void gemv_int4_image_v2_cl(uint16_t *input, uint16_t *weights,
                            uint16_t *scales, uint16_t *output,
                            unsigned int K, unsigned int N);
+void gemv_int4_image_v3_cl(uint16_t *input, uint16_t *weights,
+                           uint16_t *scales, uint16_t *output,
+                           unsigned int K, unsigned int N);
 
 /**
  * @brief INT8 activation x INT4 weight GEMM for Adreno GPUs
