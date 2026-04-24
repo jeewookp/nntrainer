@@ -990,30 +990,38 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): zero-copy SVM output path.
+    // M=1 (decode/gen): fully zero-copy path.
     //
-    // gemv_int4_adreno_cl now issues a NON-blocking enqueueSVMMap on
-    // the output (matching the delegate-conv pattern at
-    // blas_kernels.cpp:~3100).  The coherence op is queued so
-    // downstream blocking SVMMap fences in MHACoreLayer /
-    // AdditionLayer / RMSNormLayer drain the pipeline correctly,
-    // while this call returns immediately.  Since `all_svm` was
-    // checked upstream, `out_u16` is itself SVM -- pass it as the
-    // kernel output directly and skip the svm_out scratch +
-    // scalar copy loop.
+    // Upstream invariant (`all_svm`) guarantees both in_u16 and
+    // out_u16 are SVM pointers.  Pass BOTH directly to the kernel:
     //
-    // An earlier "no SVMMap at all" experiment caused garbage
-    // output; the non-blocking SVMMap is the difference -- it tells
-    // Adreno's coarse-grained driver that the buffer was written
-    // so the next blocking map properly invalidates cache.
+    //   - Skip the svm_in staging + `for (k) svm_in[k] = in_u16[k]`
+    //     scalar copy.  That copy was a CPU read of in_u16 which,
+    //     under non-blocking SVMMap from the previous FC, saw stale
+    //     data without a preceding blocking map (garbage output
+    //     observed in production timing mode).  Passing in_u16 via
+    //     SetKernelSVMArguments keeps the data on the GPU side:
+    //     in-order command queue serialises this kernel after the
+    //     prior kernel that wrote in_u16, so there is no stale
+    //     window.
+    //   - Skip the svm_out staging + scalar out-copy.  out_u16 was
+    //     already zero-copy in the previous revision; the
+    //     non-blocking SVMMap queued by gemv_int4_adreno_cl tells
+    //     Adreno's coarse-grained SVM driver the buffer was written
+    //     so the next blocking map (in MHACoreLayer / AdditionLayer
+    //     / RMSNorm) correctly invalidates cache.
+    //
+    // The only CPU side of this path is the kernel-arg setup.  All
+    // per-token dot-product traffic stays on the GPU pipeline, and
+    // the 7 FCs in a transformer layer can be issued back-to-back
+    // without host waits -- the whole point of non-blocking SVMMap.
     const uint64_t t_d0 = now_ns();
-    for (unsigned int k = 0; k < K; ++k) {
-      svm_in[k] = in_u16[k];
-    }
-    const uint64_t t_d1 = now_ns();
-    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, out_u16, K, N);
+    // in_copy and out_copy stages are both gone in the zero-copy
+    // path; keep the counters at zero so the per-stage breakdown
+    // still sums cleanly.
+    const uint64_t t_d1 = t_d0;
+    gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N);
     const uint64_t t_d2 = now_ns();
-    // No out_copy stage -- kernel wrote directly into out_u16.
     const uint64_t t_d3 = t_d2;
     g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
     g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
