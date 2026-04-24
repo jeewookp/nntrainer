@@ -232,6 +232,45 @@ struct GemvInt4AdrenoCallProfile {
 
 static GemvInt4AdrenoCallProfile g_gemv_adreno_call_profile;
 
+// Parallel profile for the incremental image2d gemv probe series
+// (gpu_int4_gemv_image_v1 = step 1 = weight-load-only).  Only
+// gpu_kernel matters for these builds -- the output is intentional
+// garbage so "correct decode" numbers don't apply.
+struct GemvInt4ImageCallProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns_dispatch{0};
+  std::atomic<uint64_t> ns_svmmap{0};
+  std::atomic<uint64_t> ns_gpu_kernel{0};
+  std::atomic<uint64_t> gpu_events{0};
+
+  ~GemvInt4ImageCallProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0) return;
+    const uint64_t disp = ns_dispatch.load();
+    const uint64_t smap = ns_svmmap.load();
+    const uint64_t gpu = ns_gpu_kernel.load();
+    const uint64_t gpu_c = gpu_events.load();
+    auto ms = [](uint64_t v) { return v / 1.0e6; };
+    std::fprintf(stderr,
+                 "\n[PROFILE gemv_int4_image_v1 decode] calls=%llu "
+                 "avg_wall=%.3f ms avg_gpu=%.3f ms\n",
+                 (unsigned long long)c,
+                 c ? ms(disp + smap) / (double)c : 0.0,
+                 gpu_c ? ms(gpu) / (double)gpu_c : 0.0);
+    std::fprintf(stderr,
+                 "  dispatch   : %7.2f ms   [host wall around clEnqueueNDRangeKernel]\n",
+                 ms(disp));
+    std::fprintf(stderr,
+                 "  svmmap     : %7.2f ms   [blocking enqueueSVMMap(output)]\n",
+                 ms(smap));
+    std::fprintf(stderr,
+                 "  gpu_kernel : %7.2f ms   [cl_event device time, %llu events]\n",
+                 ms(gpu), (unsigned long long)gpu_c);
+  }
+};
+
+static GemvInt4ImageCallProfile g_gemv_image_call_profile;
+
 } // namespace
 
 void gemv_int4_async_cl(std::vector<void *> weights,
@@ -2039,6 +2078,71 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
         g_gemv_adreno_call_profile.ns_gpu_kernel += ev_end - ev_start;
         g_gemv_adreno_call_profile.gpu_events++;
       }
+    }
+    clReleaseEvent(kernel_ev);
+  }
+}
+
+// Step 1 of the incremental image2d gemv rewrite.  Signature matches
+// gemv_int4_adreno_cl so the caller can env-swap them one at a time.
+// Step 1 only LOADS weights and writes zero; output is garbage, but
+// gpu_kernel timing isolates the weight-read cost from everything
+// else we'll layer on in steps 2..4.
+void gemv_int4_image_v1_cl(uint16_t *input, uint16_t *weights,
+                           uint16_t *scales, uint16_t *output,
+                           unsigned int K, unsigned int N) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_image_v1_kernel, "gpu_int4_gemv_image_v1");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to register gpu_int4_gemv_image_v1 kernel");
+  }
+
+  int arg = 0;
+  kernel_ptr->SetKernelSVMArguments(arg++, input);
+  kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  kernel_ptr->SetKernelSVMArguments(arg++, output);
+  kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  // Dispatch: global = align(N, 64), local = {64, 1, 1}.  Matches
+  // the planned final shape so step-by-step gpu_kernel time
+  // comparisons are like-for-like.
+  const int align_N = static_cast<int>(align(N, 64));
+  const int g[3] = {align_N, 1, 1};
+  const int l[3] = {64, 1, 1};
+
+  const uint64_t t_dispatch_start = now_ns_phase6();
+  cl_event kernel_ev = nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
+                                                    &kernel_ev)) {
+    throw std::runtime_error("Failed to dispatch gpu_int4_gemv_image_v1");
+  }
+
+  const uint64_t t_svmmap_start = now_ns_phase6();
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  const uint64_t t_end = now_ns_phase6();
+
+  g_gemv_image_call_profile.ns_dispatch += t_svmmap_start - t_dispatch_start;
+  g_gemv_image_call_profile.ns_svmmap   += t_end - t_svmmap_start;
+  g_gemv_image_call_profile.calls++;
+
+  if (kernel_ev) {
+    cl_ulong ev_start = 0, ev_end = 0;
+    clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_START,
+                            sizeof(ev_start), &ev_start, nullptr);
+    clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_END,
+                            sizeof(ev_end), &ev_end, nullptr);
+    if (ev_end > ev_start) {
+      g_gemv_image_call_profile.ns_gpu_kernel += ev_end - ev_start;
+      g_gemv_image_call_profile.gpu_events++;
     }
     clReleaseEvent(kernel_ev);
   }

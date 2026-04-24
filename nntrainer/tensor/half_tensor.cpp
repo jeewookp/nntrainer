@@ -1003,7 +1003,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     //   4 = + scale + proper output (correctness restored)
     static const char *s_step_env = std::getenv("NNTRAINER_GEMV_IMAGE_STEP");
     static const int s_step = s_step_env ? std::atoi(s_step_env) : 0;
-
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
