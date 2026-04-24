@@ -169,6 +169,11 @@ grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|P
   || echo "(no profile lines)"
 
 echo ""
+echo "-- Decode-path profiles (M==1, fired per generation token) --"
+grep -A 8 "PROFILE MHACoreLayer decode\|PROFILE HalfTensor::dotQInteger decode\|PROFILE TieWordEmbedding (lm_head) decode\|PROFILE TieWordEmbedding (embedding) decode" ${SUMMARY_LOG} \
+  || echo "(no decode profile lines)"
+
+echo ""
 echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
 awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 300
 echo ""
