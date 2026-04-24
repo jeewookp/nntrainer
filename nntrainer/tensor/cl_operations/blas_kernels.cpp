@@ -1903,17 +1903,19 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
     throw std::runtime_error(
       "Failed to set kernel argument 5 (N) for gpu_int4_gemv_adreno");
 
-  // Dispatch (V2 layout):
-  //   global = align(N, 64)   (each WI handles 1 output channel)
-  //   local  = {64, 1, 1}     (one full Adreno 830 wavefront)
+  // Dispatch:
+  //   global = align_N / 4 work-items along dim 0
+  //            (each WI handles 4 output channels)
+  //   local  = {16, 1, 1}
   //
-  // Qwen3-4B FC widths (N in {1024, 2560, 4096, 9728}) are all
-  // multiples of 64, so align_N == N in practice.  The kernel
-  // guards n >= N internally for any future unaligned shape.
-  const int align_N = static_cast<int>(align(N, 64));
+  // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
+  // is at least a multiple of 8. For Qwen3-4B FC widths the values are
+  // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
+  const int align_N = static_cast<int>(align(N, 32));
+  const int dim_n = align_N / 4;
 
-  const int work_groups_count[3] = {align_N, 1, 1};
-  const int work_group_size[3] = {64, 1, 1};
+  const int work_groups_count[3] = {dim_n, 1, 1};
+  const int work_group_size[3] = {16, 1, 1};
 
   result = blas_cc->command_queue_inst_.DispatchCommand(
     kernel_ptr, work_groups_count, work_group_size);

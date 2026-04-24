@@ -1,7 +1,10 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-// Channel-wise int4 GEMV kernel for Adreno 830 (M = 1 path).
+#define CEIL_DIV(a, b) (((a) + (b)-1) / (b))
+#define ALIGN(a, b) (CEIL_DIV(a, b) * (b))
+
+// Channel-wise int4 GEMV kernel for Adreno (M = 1 path).
 //
 // Memory layout (must match Int4Utils::convertKaiToChannelwise -- the
 // same layout consumed by gpu_int4_gemm_adreno):
@@ -24,36 +27,20 @@
 //   output  : half[N]
 //             y[n] = scale[n] * sum_k ((nibble[k,n] - 8) * input[k])
 //
-// Decomposition (V2 — Adreno 830 wavefront-matched):
+// Each work-item produces 4 output channels (n .. n+3) by scanning the
+// full K dimension. There is no cross-work-item reduction; outputs are
+// independent across N. Float accumulators avoid half-precision overflow
+// when K is large.
 //
-//   * WG size = 64 = one native Adreno 830 wavefront (prior version
-//     used WG = 16, one-quarter of a wavefront, wasting occupancy).
-//   * Each work-item produces 1 output channel.  The prior 4-channels/WI
-//     packing saved on the per-(k/4) ushort4 vload vs. four scalar ushorts,
-//     but we now read weights as scalar ushort per WI.  Adreno coalesces
-//     the 64 adjacent-n scalar reads across the wavefront into one or two
-//     cache lines, so arithmetic intensity is unchanged.
-//   * Cooperative input load: every WG loads the full K-length
-//     activation row into __local once, and all 64 WIs MAC against the
-//     shared copy.  Previously every WI fetched the whole K-vector
-//     independently, paying N/(WG*channels_per_wi) redundant reads —
-//     e.g. 40 redundant reads for N=2560, WG=16, channels=4.  The
-//     cooperative load makes it 1 read per WG -> N/64 reads total.  For
-//     Qwen3-4B FC widths (K <= 9728) the __local buffer fits in 19.5 KB
-//     per WG, well under the per-WG local-mem limit.
+// Implementation note: kept to the same scalar element-wise style as
+// gpu_int4_gemm_adreno (per-element ops on .s0/.s1/.s2/.s3) because the
+// fancier vector convert_*/bit-mask form was rejected at runtime by the
+// Adreno OpenCL compiler.
 //
 // Dispatch from the host:
-//   global = align(N, 64)       (each WI handles 1 channel)
-//   local  = {64, 1, 1}
-//
-// All Qwen3-4B FC N values (1024, 2560, 4096, 9728) are already
-// multiples of 64, so align_N == N in practice; the defensive `n < N`
-// guard inside the kernel covers any future shape that isn't aligned.
-
-#define WG    64
-#define MAX_K 9728   // largest K across Qwen3-4B FC layers (down_proj)
-
-__attribute__((reqd_work_group_size(WG, 1, 1)))
+//   global = align_N / 4   (each WI handles 4 channels)
+//   local  = {16, 1, 1}    (any size that divides global cleanly works,
+//                          the kernel does not use any sub-group ops)
 kernel void
 gpu_int4_gemv_adreno(__global const half *input,
                      __global const half *scales,
@@ -61,40 +48,54 @@ gpu_int4_gemv_adreno(__global const half *input,
                      __global const ushort *weights,
                      const int K,
                      const int N) {
-  const int n   = get_global_id(0);
-  const int lid = get_local_id(0);
-  const bool active = (n < N);
+  const int n = get_global_id(0) * 4;
+  // Defensive guard for align_N > N (currently unused since all model N
+  // values are multiples of 32, but keeps the kernel correct if that
+  // assumption ever changes).
+  if (n >= N)
+    return;
 
-  // Cooperative input load.  Every WI in the WG participates
-  // unconditionally (including the inactive lanes n >= N) so the
-  // barrier below doesn't deadlock.  Stride by WG so adjacent lanes
-  // fetch adjacent halves, giving the hardware a coalesced access.
-  __local half input_shared[MAX_K];
-  for (int k = lid; k < K; k += WG) {
-    input_shared[k] = input[k];
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);
+  float acc0 = 0.0f;
+  float acc1 = 0.0f;
+  float acc2 = 0.0f;
+  float acc3 = 0.0f;
 
-  // From here on, inactive lanes have nothing to do -- but OpenCL
-  // doesn't allow returning before a barrier we already crossed, so
-  // we simply skip the MAC loop and the store below.
-  if (!active) return;
-
-  float acc = 0.0f;
-
-  // Each WI scans the full K dim for its single channel n.  Weight
-  // at position (k/4, n) packs 4 nibbles for k..k+3 into one ushort.
   for (int k = 0; k < K; k += 4) {
-    const ushort packed = weights[(k >> 2) * N + n];
-    acc += (float)input_shared[k + 0]
-           * (float)((int)((packed >> 0) & 0xF) - 8);
-    acc += (float)input_shared[k + 1]
-           * (float)((int)((packed >> 4) & 0xF) - 8);
-    acc += (float)input_shared[k + 2]
-           * (float)((int)((packed >> 8) & 0xF) - 8);
-    acc += (float)input_shared[k + 3]
-           * (float)((int)((packed >> 12) & 0xF) - 8);
+    const half4 in_v = vload4(0, input + k);
+    const ushort4 packed = vload4(0, weights + (k / 4) * N + n);
+
+    // Lane k+0 (low 4 bits of each ushort)
+    const float in0 = (float)in_v.s0;
+    acc0 += in0 * (float)((int)(packed.s0 & 0x000F) - 8);
+    acc1 += in0 * (float)((int)(packed.s1 & 0x000F) - 8);
+    acc2 += in0 * (float)((int)(packed.s2 & 0x000F) - 8);
+    acc3 += in0 * (float)((int)(packed.s3 & 0x000F) - 8);
+
+    // Lane k+1
+    const float in1 = (float)in_v.s1;
+    acc0 += in1 * (float)((int)((packed.s0 & 0x00F0) >> 4) - 8);
+    acc1 += in1 * (float)((int)((packed.s1 & 0x00F0) >> 4) - 8);
+    acc2 += in1 * (float)((int)((packed.s2 & 0x00F0) >> 4) - 8);
+    acc3 += in1 * (float)((int)((packed.s3 & 0x00F0) >> 4) - 8);
+
+    // Lane k+2
+    const float in2 = (float)in_v.s2;
+    acc0 += in2 * (float)((int)((packed.s0 & 0x0F00) >> 8) - 8);
+    acc1 += in2 * (float)((int)((packed.s1 & 0x0F00) >> 8) - 8);
+    acc2 += in2 * (float)((int)((packed.s2 & 0x0F00) >> 8) - 8);
+    acc3 += in2 * (float)((int)((packed.s3 & 0x0F00) >> 8) - 8);
+
+    // Lane k+3 (high 4 bits)
+    const float in3 = (float)in_v.s3;
+    acc0 += in3 * (float)((int)((packed.s0 & 0xF000) >> 12) - 8);
+    acc1 += in3 * (float)((int)((packed.s1 & 0xF000) >> 12) - 8);
+    acc2 += in3 * (float)((int)((packed.s2 & 0xF000) >> 12) - 8);
+    acc3 += in3 * (float)((int)((packed.s3 & 0xF000) >> 12) - 8);
   }
 
-  output[n] = (half)(acc * (float)scales[n]);
+  const half4 scale = vload4(0, scales + n);
+  output[n + 0] = (half)(acc0 * (float)scale.s0);
+  output[n + 1] = (half)(acc1 * (float)scale.s1);
+  output[n + 2] = (half)(acc2 * (float)scale.s2);
+  output[n + 3] = (half)(acc3 * (float)scale.s3);
 }
