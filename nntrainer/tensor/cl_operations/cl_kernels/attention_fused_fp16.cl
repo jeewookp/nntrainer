@@ -1,33 +1,31 @@
-// Step 4b / incremental: step 3b + branchless all-lane softmax.
+// DEBUG probe: sub_group_reduce_add + sub_group_size sanity check.
 //
-// Step 4 (SGR + V0's if(d==0) + __local rescale/score_exp broadcast +
-// barrier) regressed to qk=1414 ms AND produced garbage output.  On
-// the Qualcomm driver the combo of sub_group_reduce_add + a
-// divergent if(d==0) + a workgroup barrier apparently breaks
-// something — either a scheduling interaction with the SGR internal
-// fence, or the compiler reordering the __local write across the
-// barrier.
+// Step 4 and 4b both produced garbage output despite algorithmically
+// matching V0.  The reduce intrinsic is the only "magic" difference:
+// all logic downstream of score is identical to V0 (step 4) or to
+// the equivalent V1-style redundant-exp path (step 4b).  So if the
+// reduce returns a wrong value, garbage propagates.
 //
-// V1 tried the all-lane softmax (no barrier, every thread
-// computes exp redundantly) with WGR and came in at 2397 ms because
-// 128 redundant exp()s ran on a workgroup-reduce-serialized
-// wavefront — each exp waited on the next.  With SGR the picture
-// inverts: all 128 lanes of the wavefront are already issuing in
-// parallel inside a single wavefront, so 128 independent fp32 exp()
-// ops cost roughly the same as 1 exp() broadcast — the wavefront
-// already has 128 ALUs in flight.
+// This probe verifies two things on Adreno 830 with
+// qcom_reqd_sub_group_size("full") on a 1D WG of 128 lanes:
 //
-// Step 4b therefore:
-//   * keeps SGR for the Q.K dot across d (cheap on 1-wavefront WG)
-//   * drops the barrier + if(d==0) + __local broadcast entirely
-//   * has every lane carry its own running_max / running_sum / acc
-//     in private regs.  All lanes get the same score from SGR and
-//     compute the same softmax state, so the "per-lane" running
-//     state is identical across the wavefront — no need to reconcile.
-// Result: correct output (same math as V0) and no barrier cost.
+//   (A) get_sub_group_size() should print 128.
+//       If it prints 32 or 64, "full" didn't pin the wavefront width
+//       and our reduce only covers a chunk of d, not all of HD.
 //
-// Expected: ~1000-1100 ms (step 3b + a handful of per-lane ALU ops
-// for softmax), and correct output.
+//   (B) sub_group_reduce_add(1.0f) should be 128.0 (each of 128 lanes
+//       contributes 1).  sub_group_reduce_add((float)d) should be
+//       sum_{d=0..127} d = 8128.0.  If they show 32 / 496 instead,
+//       A is 32 too.
+//
+// The kernel signature stays identical to prior steps so the C++
+// dispatch (V0 shape) does not change.  A single printf from
+// (m, h, d) = (0, 0, 0) fires once per dispatch = 36 lines per run
+// (one per layer), enough to verify without flooding.
+//
+// The output buffer is filled with a harmless derived value so the
+// compiler can't DCE the loads and the downstream model doesn't
+// dereference stale memory.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
@@ -53,6 +51,12 @@ void attention_fused_fp16(
   const int d = get_local_id(0);
   const int h = get_group_id(1);
   const int m = get_group_id(2);
+
+  // Every lane must participate in a sub-group function, so we do
+  // the probe reduces unconditionally (before any early return).
+  const float probe_ones = sub_group_reduce_add(1.0f);
+  const float probe_iota = sub_group_reduce_add((float)d);
+
   if (h >= num_heads_Q || m >= M) return;
 
   const int num_heads_KV = num_heads_Q / gqa_size;
@@ -60,34 +64,22 @@ void attention_fused_fp16(
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
-  const float q_val = (float)Q[m * W_q + h * HD + d];
-
-  float running_max = -INFINITY;
-  float running_sum = 0.0f;
-  float acc         = 0.0f;
-
-  const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
-
-  for (int kk = 0; kk < kk_end; ++kk) {
-    const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
-    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-
-    const float score = sub_group_reduce_add(q_val * k_val) * scale;
-
-    // Every lane redoes the softmax math on the SAME score.  Free
-    // on a 1-wavefront WG: those 128 exp()s issue in parallel.
-    const float prev_max = running_max;
-    const float new_max  = fmax(prev_max, score);
-    const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
-                           ? 0.0f
-                           : exp(prev_max - new_max);
-    const float score_exp = exp(score - new_max);
-
-    acc         = acc         * rescale + score_exp * v_val;
-    running_sum = running_sum * rescale + score_exp;
-    running_max = new_max;
+  // Only one lane in the first WG of the first call prints, so we
+  // get exactly 36 lines per prefill (one per layer).
+  if (m == 0 && h == 0 && d == 0) {
+    const uint sgsz = get_sub_group_size();
+    const uint mwgs = get_max_sub_group_size();
+    const uint ngrp = get_num_sub_groups();
+    printf("[attn-dbg] sub_group_size=%u max=%u num_groups=%u "
+           "ones=%f iota=%f local_size=(%u,%u,%u)\n",
+           sgsz, mwgs, ngrp, probe_ones, probe_iota,
+           (uint)get_local_size(0), (uint)get_local_size(1),
+           (uint)get_local_size(2));
   }
 
-  // running_sum is identical on every lane; no broadcast needed.
-  out[m * W_q + h * HD + d] = (half)(acc / running_sum);
+  // Fill out with a harmless value derived from live inputs so the
+  // model doesn't crash on NaN / stale memory downstream.
+  const float q_val = (float)Q[m * W_q + h * HD + d];
+  const float k0    = (float)K_cache[h_kv * HD + d];
+  out[m * W_q + h * HD + d] = (half)((q_val + k0) * scale);
 }
