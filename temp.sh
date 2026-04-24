@@ -96,6 +96,17 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
 # Single timed run.
+#
+# NOTE on NNTRAINER_PROFILE_LAYER_SYNC:
+#   Setting it to 1 makes the per-layer wall-clock in
+#   [PROFILE NetworkGraph per-layer wall clock (decode, ...)] honest
+#   (clFinish after each forwarding_op), but it DEFEATS the
+#   non-blocking SVMMap win in gemv_int4_adreno_cl / delegate conv --
+#   forced per-layer clFinish makes each FC serialize against the
+#   host, same as the old blocking-map path.  Keep it unset for
+#   production timing.  Set it ad hoc when you need per-layer
+#   breakdown and are willing to trade production speed for
+#   measurement honesty.
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
@@ -103,14 +114,6 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
-  \
-  \# NNTRAINER_PROFILE_LAYER_SYNC=1 makes per-layer wall-clock
-  \# measurement honest by clFinish'ing after every forwarding_op,
-  \# but it DESTROYS the non-blocking SVMMap win on decode -- each
-  \# clFinish per FC ends up doing what blocking SVMMap used to do.
-  \# Keep it off for production timing; turn back on when we need
-  \# per-layer decode breakdown.
-  \# export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
