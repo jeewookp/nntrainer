@@ -1,10 +1,3 @@
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
-KNOX_STORAGE
-LD_LIBRARY_PATH
 LOGNAME
 MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
@@ -28,69 +21,69 @@ sandbox, and code to facilitate future research.<|im_end|>
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ROPE_GPU=(unset) -> NEON compute_rotary_emb_value
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
+ authorised coloured authorised apologise authorised authorised authorised authorised apologise initialised apologise authorised apologise coloured authorised authorised favourite coloured authorised Initialise authorised authorised authorised authorised authorised authorised authorised authorised authorised authorised authorised authorised authorised
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 3643 ms, 119.956 TPS
-generation: 32 tokens, 7542 ms, 4.24291 TPS
-total: 11190 ms
-peak memory: 2809792 KB
+prefill: 437 tokens, 2834 ms, 154.199 TPS
+generation: 32 tokens, 7453 ms, 4.29357 TPS
+total: 10295 ms
+peak memory: 2917136 KB
 ==========================================================
-[e2e time]: 14253 ms 
-Max Resident Set Size: 2809792 KB
+[e2e time]: 13400 ms 
+Max Resident Set Size: 2917136 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    18.2 ms
-  dequant(host):      3.9 ms (49.4%)  cache-miss=252/252
+  resource_setup:    41.0 ms
+  dequant(host):      3.8 ms (49.0%)  cache-miss=252/252
     .alloc:           0.0 ms  (clCreateBuffer + cache insert)
     .svmarg:          0.7 ms  (2x clSetKernelArgSVMPointer)
     .arg:             0.1 ms  (3x clSetKernelArg)
     .dispatch:        3.0 ms  (DispatchCommand = clEnqueueNDRangeKernel)
-  dequant(gpu):     172.2 ms
-  reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
+  dequant(gpu):     178.1 ms
+  reformat_in(host):  0.0 ms ( 0.3%)  pool-hits=252/252
   reformat_in(gpu):   0.0 ms
-  conv(wall):         2.5 ms (31.8%)
-  conv(gpu):        974.8 ms            3.257 TFLOPS
-  readback(host):     1.5 ms (18.5%)
-  readback(gpu):     33.7 ms
+  conv(wall):         2.5 ms (32.4%)
+  conv(gpu):        975.6 ms            3.255 TFLOPS
+  readback(host):     1.4 ms (18.3%)
+  readback(gpu):     33.8 ms
   svmmap(gpu):        0.2 ms
-  sum(steps host):    7.9 ms            401.257 TFLOPS
-  sum(gpu events): 1181.0 ms
-  fn_total(wall):  1376.8 ms            (unaccounted = 169.7 ms = host overhead + non-event sync gaps)
+  sum(steps host):    7.8 ms            405.206 TFLOPS
+  sum(gpu events): 1187.6 ms
+  fn_total(wall):  1418.3 ms            (unaccounted = 181.9 ms = host overhead + non-event sync gaps)
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=3585.1 ms across all forwarding_op() calls
-  mha_core                      1959.8 ms  calls=36  avg=54.440 ms
-  fully_connected               1380.4 ms  calls=252  avg=5.478 ms
-  rms_norm                        65.7 ms  calls=73  avg=0.901 ms
-  swiglu                          58.5 ms  calls=36  avg=1.626 ms
-  addition                        46.6 ms  calls=72  avg=0.648 ms
-  reshaped_rms_norm               40.6 ms  calls=72  avg=0.564 ms
-  tie_word_embeddings             32.8 ms  calls=2  avg=16.391 ms
-  multiout                         0.5 ms  calls=144  avg=0.003 ms
-  input                            0.0 ms  calls=1  avg=0.042 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=30.13 ms calls=1 avg=30.134 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=2.64 ms calls=1 avg=2.640 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=6.27 ms calls=36 avg=0.174 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=12.89 ms calls=73 avg=0.177 ms
-  svm_map      :     1.86 ms ( 14.5%)  [upstream GPU drain]
-  fused        :    10.75 ms ( 83.4%)  [rmsnorm_fused_fp16 NEON]
+  total=2770.2 ms across all forwarding_op() calls
+  fully_connected               1421.9 ms  calls=252  avg=5.643 ms
+  mha_core                      1096.7 ms  calls=36  avg=30.464 ms
+  rms_norm                        67.2 ms  calls=73  avg=0.921 ms
+  swiglu                          62.1 ms  calls=36  avg=1.724 ms
+  addition                        44.5 ms  calls=72  avg=0.618 ms
+  reshaped_rms_norm               42.3 ms  calls=72  avg=0.588 ms
+  tie_word_embeddings             35.0 ms  calls=2  avg=17.514 ms
+  multiout                         0.4 ms  calls=144  avg=0.003 ms
+  input                            0.0 ms  calls=1  avg=0.044 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=29.86 ms calls=1 avg=29.861 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=5.16 ms calls=1 avg=5.157 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=8.22 ms calls=36 avg=0.228 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=14.23 ms calls=73 avg=0.195 ms
+  svm_map      :     1.86 ms ( 13.1%)  [upstream GPU drain]
+  fused        :    12.07 ms ( 84.8%)  [rmsnorm_fused_fp16 NEON]
   publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=40.42 ms calls=72 avg=0.561 ms
-  svm_map      :     1.94 ms (  4.8%)
-  fused        :    38.27 ms ( 94.7%)  [rmsnorm_fused_fp16 NEON]
-[PROFILE MHACoreLayer prefill (M>1)] total=1933.47 ms calls=36 avg=53.707 ms
-  rope_q   :    30.31 ms (  1.6%)  [apply_rotary_emb_v2 query]
-  rope_k   :    12.41 ms (  0.6%)  [apply_rotary_emb_v2 key->cache]
-  v_copy   :    10.85 ms (  0.6%)  [value -> cache copyData]
-  qk       :  1872.60 ms ( 96.9%)  [compute_kcaches Q dot K^T]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=42.07 ms calls=72 avg=0.584 ms
+  svm_map      :     2.15 ms (  5.1%)
+  fused        :    39.70 ms ( 94.3%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1070.62 ms calls=36 avg=29.739 ms
+  rope_q   :    42.37 ms (  4.0%)  [apply_rotary_emb_v2 query]
+  rope_k   :    12.73 ms (  1.2%)  [apply_rotary_emb_v2 key->cache]
+  v_copy   :    10.94 ms (  1.0%)  [value -> cache copyData]
+  qk       :   996.70 ms ( 93.1%)  [compute_kcaches Q dot K^T]
   softmax  :     0.00 ms (  0.0%)  [softmax_triangle]
   av       :     0.00 ms (  0.0%)  [compute_fp16vcache_transposed A*V]
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1377.02 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1418.45 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
   in_stage    :     0.01 ms (  0.0%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :  1376.99 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
+  gpu_call    :  1418.42 ms (100.0%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -104,36 +97,36 @@ Max Resident Set Size: 2809792 KB
 [mha_core] NNTRAINER_ROPE_GPU=(unset) -> NEON compute_rotary_emb_value
 
 -- Perf --
-prefill: 437 tokens, 3643 ms, 119.956 TPS
-generation: 32 tokens, 7542 ms, 4.24291 TPS
-total: 11190 ms
-peak memory: 2809792 KB
-[e2e time]: 14253 ms 
+prefill: 437 tokens, 2834 ms, 154.199 TPS
+generation: 32 tokens, 7453 ms, 4.29357 TPS
+total: 10295 ms
+peak memory: 2917136 KB
+[e2e time]: 13400 ms 
 
 -- Layer profiles (RMSNorm / Reshaped / MHA + sub-stages) --
-[PROFILE RMSNormLayer prefill (M>1)] total=12.89 ms calls=73 avg=0.177 ms
-  svm_map      :     1.86 ms ( 14.5%)  [upstream GPU drain]
-  fused        :    10.75 ms ( 83.4%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE RMSNormLayer prefill (M>1)] total=14.23 ms calls=73 avg=0.195 ms
+  svm_map      :     1.86 ms ( 13.1%)  [upstream GPU drain]
+  fused        :    12.07 ms ( 84.8%)  [rmsnorm_fused_fp16 NEON]
   publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=40.42 ms calls=72 avg=0.561 ms
-  svm_map      :     1.94 ms (  4.8%)
-  fused        :    38.27 ms ( 94.7%)  [rmsnorm_fused_fp16 NEON]
-[PROFILE MHACoreLayer prefill (M>1)] total=1933.47 ms calls=36 avg=53.707 ms
-  rope_q   :    30.31 ms (  1.6%)  [apply_rotary_emb_v2 query]
-  rope_k   :    12.41 ms (  0.6%)  [apply_rotary_emb_v2 key->cache]
-  v_copy   :    10.85 ms (  0.6%)  [value -> cache copyData]
-  qk       :  1872.60 ms ( 96.9%)  [compute_kcaches Q dot K^T]
+[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=42.07 ms calls=72 avg=0.584 ms
+  svm_map      :     2.15 ms (  5.1%)
+  fused        :    39.70 ms ( 94.3%)  [rmsnorm_fused_fp16 NEON]
+[PROFILE MHACoreLayer prefill (M>1)] total=1070.62 ms calls=36 avg=29.739 ms
+  rope_q   :    42.37 ms (  4.0%)  [apply_rotary_emb_v2 query]
+  rope_k   :    12.73 ms (  1.2%)  [apply_rotary_emb_v2 key->cache]
+  v_copy   :    10.94 ms (  1.0%)  [value -> cache copyData]
+  qk       :   996.70 ms ( 93.1%)  [compute_kcaches Q dot K^T]
   softmax  :     0.00 ms (  0.0%)  [softmax_triangle]
   av       :     0.00 ms (  0.0%)  [compute_fp16vcache_transposed A*V]
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1377.02 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=1418.45 ms calls=252
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ROPE_GPU=(unset) -> NEON compute_rotary_emb_value
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-! noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags t
+ authorised coloured authorised apologise authorised authorised authorised authorised apologise initialised apolo
 
 Full log: temp_run.log
 
