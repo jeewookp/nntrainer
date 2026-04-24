@@ -102,6 +102,58 @@ struct HalfDotQInt4Profile {
 
 HalfDotQInt4Profile g_half_dotq_profile;
 
+// Parallel profiler for the M == 1 decode path.  In generation mode
+// dotQInteger is called once per FC per token (~252 calls / token for
+// Qwen3-4B at 36 layers).  Each call has three wall-clock stages:
+//   in_copy   : scalar in_u16 -> svm_in (K elements)
+//   gemv_call : gpu_int4_gemv_adreno (incl. SVM sync)
+//   out_copy  : scalar svm_out -> out_u16 (N elements)
+// The prefill profiler above intentionally skips this path; we add a
+// separate one here so a single run produces two independent
+// breakdowns, one for prefill and one for decode.
+struct HalfDotQInt4DecodeProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns_in_copy{0};
+  std::atomic<uint64_t> ns_gemv_call{0};
+  std::atomic<uint64_t> ns_out_copy{0};
+
+  ~HalfDotQInt4DecodeProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+
+    const uint64_t in_copy = ns_in_copy.load();
+    const uint64_t gemv = ns_gemv_call.load();
+    const uint64_t out_copy = ns_out_copy.load();
+    const uint64_t total = in_copy + gemv + out_copy;
+    const double total_ms = total / 1.0e6;
+
+    auto pct = [&](uint64_t v) -> double {
+      return total == 0 ? 0.0 : (double)v / (double)total * 100.0;
+    };
+    auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
+
+    std::fprintf(stderr,
+                 "\n[PROFILE HalfTensor::dotQInteger decode (M==1)] "
+                 "total=%.2f ms calls=%llu\n",
+                 total_ms, (unsigned long long)c);
+    std::fprintf(stderr,
+                 "  in_copy   : %8.2f ms (%5.1f%%)  [in_u16 -> svm_in "
+                 "scalar loop, K elems]\n",
+                 ms(in_copy), pct(in_copy));
+    std::fprintf(stderr,
+                 "  gemv_call : %8.2f ms (%5.1f%%)  [gpu_int4_gemv_adreno + "
+                 "SVM sync]\n",
+                 ms(gemv), pct(gemv));
+    std::fprintf(stderr,
+                 "  out_copy  : %8.2f ms (%5.1f%%)  [svm_out -> out_u16 "
+                 "scalar loop, N elems]\n",
+                 ms(out_copy), pct(out_copy));
+  }
+};
+
+HalfDotQInt4DecodeProfile g_half_dotq_decode_profile;
+
 inline uint64_t now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
@@ -935,14 +987,24 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.
+    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.  Three
+    // stages instrumented into g_half_dotq_decode_profile: in_copy,
+    // gemv_call, out_copy.
+    const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
+    const uint64_t t_d1 = now_ns();
     gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    const uint64_t t_d2 = now_ns();
     for (unsigned int n = 0; n < N; ++n) {
       out_u16[n] = svm_out[n];
     }
+    const uint64_t t_d3 = now_ns();
+    g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
+    g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
+    g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;
+    g_half_dotq_decode_profile.calls++;
   } else {
     // M>1 (prefill). Two paths:
     //   1) Delegate (preferred when N%32==0, K%8==0): zero-copy. Tensor

@@ -62,6 +62,32 @@ struct TieWordEmbProfile {
 TieWordEmbProfile g_tie_embedding_profile{"embedding"};
 TieWordEmbProfile g_tie_lmhead_profile{"lm_head"};
 
+// Decode-path (M == 1) counterparts.  lm_head is hit once per decode
+// step and embedding once per decode step as well (each token looks
+// up one row of the embedding table then emits one row of logits).
+struct TieWordEmbDecodeProfile {
+  const char *mode;
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+
+  TieWordEmbDecodeProfile(const char *m) : mode(m) {}
+
+  ~TieWordEmbDecodeProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    std::fprintf(stderr,
+                 "[PROFILE TieWordEmbedding (%s) decode (M==1)] "
+                 "total=%.2f ms calls=%llu avg=%.3f ms\n",
+                 mode, t / 1.0e6, (unsigned long long)c,
+                 (t / 1.0e6) / static_cast<double>(c));
+  }
+};
+
+TieWordEmbDecodeProfile g_tie_embedding_decode_profile{"embedding"};
+TieWordEmbDecodeProfile g_tie_lmhead_decode_profile{"lm_head"};
+
 inline uint64_t now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
@@ -224,8 +250,10 @@ void TieWordEmbedding::incremental_forwarding(
   nntrainer::RunLayerContext &context, unsigned int from, unsigned int to,
   bool training) {
 
-  const bool profile_this_call = (to - from) > 1;
-  const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
+  const bool profile_this_call   = (to - from) > 1;
+  const bool profile_this_decode = (to - from) == 1;
+  const uint64_t t_layer_start =
+    (profile_this_call || profile_this_decode) ? now_ns() : 0;
 
   if (mode_ == mode::embedding)
     incremental_forwarding_embedding(context, from, to, training);
@@ -242,6 +270,15 @@ void TieWordEmbedding::incremental_forwarding(
     } else if (mode_ == mode::lm_head) {
       g_tie_lmhead_profile.ns += dt;
       g_tie_lmhead_profile.calls++;
+    }
+  } else if (profile_this_decode) {
+    const uint64_t dt = now_ns() - t_layer_start;
+    if (mode_ == mode::embedding) {
+      g_tie_embedding_decode_profile.ns += dt;
+      g_tie_embedding_decode_profile.calls++;
+    } else if (mode_ == mode::lm_head) {
+      g_tie_lmhead_decode_profile.ns += dt;
+      g_tie_lmhead_decode_profile.calls++;
     }
   }
 }

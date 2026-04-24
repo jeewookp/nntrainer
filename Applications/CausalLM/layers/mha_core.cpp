@@ -88,6 +88,57 @@ struct MHACoreProfile {
 
 MHACoreProfile g_mha_core_profile;
 
+// Decode-path (M == 1) version of the profiler.  Parallel to
+// g_mha_core_profile, but fires for M==1 calls so we can see per-
+// token attention costs during generation.  The "rope_q", "rope_k",
+// "v_copy", "qk+softmax+av" (or fused) stages each attribute to a
+// separate bucket.  Totals divided by calls give avg per-token MHA.
+struct MHACoreDecodeProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+  std::atomic<uint64_t> ns_rope_q{0};
+  std::atomic<uint64_t> ns_rope_k{0};
+  std::atomic<uint64_t> ns_v_copy{0};
+  std::atomic<uint64_t> ns_qk{0};
+  std::atomic<uint64_t> ns_softmax{0};
+  std::atomic<uint64_t> ns_av{0};
+
+  ~MHACoreDecodeProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t t = ns.load();
+    const double T = t / 1.0e6;
+    auto pct = [&](uint64_t v) {
+      return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
+    };
+    std::fprintf(stderr,
+                 "[PROFILE MHACoreLayer decode (M==1)] total=%.2f ms "
+                 "calls=%llu avg=%.3f ms\n",
+                 T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  rope_q   : %8.2f ms (%5.1f%%)\n",
+                 ns_rope_q / 1.0e6, pct(ns_rope_q));
+    std::fprintf(stderr,
+                 "  rope_k   : %8.2f ms (%5.1f%%)\n",
+                 ns_rope_k / 1.0e6, pct(ns_rope_k));
+    std::fprintf(stderr,
+                 "  v_copy   : %8.2f ms (%5.1f%%)\n",
+                 ns_v_copy / 1.0e6, pct(ns_v_copy));
+    std::fprintf(stderr,
+                 "  qk       : %8.2f ms (%5.1f%%)\n",
+                 ns_qk / 1.0e6, pct(ns_qk));
+    std::fprintf(stderr,
+                 "  softmax  : %8.2f ms (%5.1f%%)\n",
+                 ns_softmax / 1.0e6, pct(ns_softmax));
+    std::fprintf(stderr,
+                 "  av       : %8.2f ms (%5.1f%%)\n",
+                 ns_av / 1.0e6, pct(ns_av));
+  }
+};
+
+MHACoreDecodeProfile g_mha_core_decode_profile;
+
 inline uint64_t mha_now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
@@ -272,7 +323,9 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                           unsigned int _from, unsigned int _to,
                                           bool training) {
   const bool profile_this_call = (_to - _from) > 1;
-  const uint64_t t_layer_start = profile_this_call ? mha_now_ns() : 0;
+  const bool profile_this_decode = (_to - _from) == 1;
+  const uint64_t t_layer_start =
+    (profile_this_call || profile_this_decode) ? mha_now_ns() : 0;
 
   /// @todo replace step_size into input height
   unsigned int step_size = _to - _from;
@@ -474,6 +527,9 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   if (profile_this_call) {
     g_mha_core_profile.ns += mha_now_ns() - t_layer_start;
     g_mha_core_profile.calls++;
+  } else if (profile_this_decode) {
+    g_mha_core_decode_profile.ns += mha_now_ns() - t_layer_start;
+    g_mha_core_decode_profile.calls++;
   }
 }
 
@@ -626,38 +682,48 @@ void MHACoreLayer::one_batch_incremental_forwarding(
                                       cache_index * cache_value_dim.width(),
                                     true);
 
-  // Sub-stage profile gate: only count prefill calls (to-from > 1) so
-  // decode noise doesn't dilute the breakdown. This is the Qwen3-style
-  // overload (no sink_step / no GPT-OSS sliding window).
+  // Sub-stage profile routing: prefill (M>1) buckets into
+  // g_mha_core_profile, decode (M==1) buckets into
+  // g_mha_core_decode_profile.  Timestamps are cheap so we take them
+  // unconditionally and just route at accumulate time.
   const bool profile_substage = (to - from) > 1;
+  const bool profile_decode   = (to - from) == 1;
+  auto acc_rope_q = [&](uint64_t dt) {
+    if (profile_substage) g_mha_core_profile.ns_rope_q += dt;
+    else if (profile_decode) g_mha_core_decode_profile.ns_rope_q += dt;
+  };
+  auto acc_rope_k = [&](uint64_t dt) {
+    if (profile_substage) g_mha_core_profile.ns_rope_k += dt;
+    else if (profile_decode) g_mha_core_decode_profile.ns_rope_k += dt;
+  };
+  auto acc_v_copy = [&](uint64_t dt) {
+    if (profile_substage) g_mha_core_profile.ns_v_copy += dt;
+    else if (profile_decode) g_mha_core_decode_profile.ns_v_copy += dt;
+  };
 
   // apply rotary embedding for query
-  const uint64_t t_rope_q0 = profile_substage ? mha_now_ns() : 0;
+  const uint64_t t_rope_q0 = mha_now_ns();
   apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
                              false);
-  if (profile_substage)
-    g_mha_core_profile.ns_rope_q += mha_now_ns() - t_rope_q0;
+  acc_rope_q(mha_now_ns() - t_rope_q0);
 
   // append kcache with rotary embedding
-  const uint64_t t_rope_k0 = profile_substage ? mha_now_ns() : 0;
+  const uint64_t t_rope_k0 = mha_now_ns();
   apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim, cache_index,
                              false);
-  if (profile_substage)
-    g_mha_core_profile.ns_rope_k += mha_now_ns() - t_rope_k0;
+  acc_rope_k(mha_now_ns() - t_rope_k0);
 
   // append vcache without rotary embedding
   if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
-    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
+    const uint64_t t_v0 = mha_now_ns();
     apply_rotary_emb_tensor_v2(value_step, b_cache_value_step, head_dim,
                                cache_index, true);
-    if (profile_substage)
-      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
+    acc_v_copy(mha_now_ns() - t_v0);
   } else if (query_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
-    const uint64_t t_v0 = profile_substage ? mha_now_ns() : 0;
+    const uint64_t t_v0 = mha_now_ns();
     b_cache_value_step.copyData(value_step);
-    if (profile_substage)
-      g_mha_core_profile.ns_v_copy += mha_now_ns() - t_v0;
+    acc_v_copy(mha_now_ns() - t_v0);
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
@@ -709,7 +775,7 @@ void MHACoreLayer::one_batch_incremental_forwarding(
       query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       head_dim == 128 &&
       (num_heads_Q % gqa_size) == 0) {
-    const uint64_t t_fused0 = profile_substage ? mha_now_ns() : 0;
+    const uint64_t t_fused0 = mha_now_ns();
     nntrainer::attention_fused_fp16_cl(
       (void *)query_step.getData<_FP16>(),
       (void *)b_cached_key.getData<_FP16>(),
@@ -719,11 +785,13 @@ void MHACoreLayer::one_batch_incremental_forwarding(
       (unsigned int)cache_from,
       (unsigned int)num_heads_Q, (unsigned int)gqa_size,
       (unsigned int)head_dim, is_causal ? 1 : 0);
-    if (profile_substage) {
+    {
       // Fused kernel covers all three sub-stages; record the combined
       // time under ns_qk for the moment (ns_softmax and ns_av stay at
       // zero so the profile makes the shift obvious at a glance).
-      g_mha_core_profile.ns_qk += mha_now_ns() - t_fused0;
+      const uint64_t dt = mha_now_ns() - t_fused0;
+      if (profile_substage)      g_mha_core_profile.ns_qk += dt;
+      else if (profile_decode)   g_mha_core_decode_profile.ns_qk += dt;
     }
     return;
   }
@@ -736,23 +804,32 @@ void MHACoreLayer::one_batch_incremental_forwarding(
               : (step_size * cache_to),
     num_heads_Q, query_step.getTensorType());
 
-  const uint64_t t_qk0 = profile_substage ? mha_now_ns() : 0;
+  const uint64_t t_qk0 = mha_now_ns();
   compute_kcaches(query_step, b_cached_key, out_, cache_from,
                   cache_to - cache_from, num_heads_Q, gqa_size, head_dim, pool);
-  if (profile_substage)
-    g_mha_core_profile.ns_qk += mha_now_ns() - t_qk0;
+  {
+    const uint64_t dt = mha_now_ns() - t_qk0;
+    if (profile_substage)     g_mha_core_profile.ns_qk += dt;
+    else if (profile_decode)  g_mha_core_decode_profile.ns_qk += dt;
+  }
 
-  const uint64_t t_sm0 = profile_substage ? mha_now_ns() : 0;
+  const uint64_t t_sm0 = mha_now_ns();
   softmax_triangle(out_, step_size, num_heads_Q, cache_from, pool);
-  if (profile_substage)
-    g_mha_core_profile.ns_softmax += mha_now_ns() - t_sm0;
+  {
+    const uint64_t dt = mha_now_ns() - t_sm0;
+    if (profile_substage)     g_mha_core_profile.ns_softmax += dt;
+    else if (profile_decode)  g_mha_core_decode_profile.ns_softmax += dt;
+  }
 
-  const uint64_t t_av0 = profile_substage ? mha_now_ns() : 0;
+  const uint64_t t_av0 = mha_now_ns();
   compute_fp16vcache_transposed(out_, b_cached_value, attention_output_step,
                                 cache_from, num_heads_KV, gqa_size, head_dim,
                                 cache_to, pool);
-  if (profile_substage)
-    g_mha_core_profile.ns_av += mha_now_ns() - t_av0;
+  {
+    const uint64_t dt = mha_now_ns() - t_av0;
+    if (profile_substage)     g_mha_core_profile.ns_av += dt;
+    else if (profile_decode)  g_mha_core_decode_profile.ns_av += dt;
+  }
 }
 
 void MHACoreLayer::one_batch_incremental_forwarding(
