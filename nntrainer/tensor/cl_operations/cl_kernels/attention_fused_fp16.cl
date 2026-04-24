@@ -1,47 +1,49 @@
-// Step 5 / incremental: WG=(64,1,1) = 1 true Adreno wavefront.
+// Step 6 / incremental: step 5 + TQ=2 per-thread Q-tile.
 //
-// DEBUG PROBE FINDING (commit b5ba0f7d):
-//   Adreno 830 reports sub_group_size = 64 under
-//   qcom_reqd_sub_group_size("full") — NOT 128 as I had assumed.
-//   WG = 128 threads therefore splits into 2 sub-groups of 64, and
-//   sub_group_reduce_add only sees half the partials.  That's why
-//   step 4 / step 4b / V3a / V3d all produced garbage despite the
-//   softmax math being algorithmically correct.  The earlier "2D
-//   WG lane-mapping" explanation was wrong — it was the width all
-//   along.
+// Step 5 landed at qk = 748 ms (correct output) — already beats NEON's
+// 866 ms by 14%.  Breakdown:
+//   ~340 ms  memory   (K+V+Q loads, from step 2 measurement)
+//   ~410 ms  reduce + softmax + acc
 //
-// Step 5 fixes the premise by shrinking the WG to 64 threads = one
-// real wavefront.  HD=128 is still covered; each of the 64 threads
-// now handles TWO d values (d_a = d, d_b = d + 64) in its private
-// registers.
+// Step 6 attacks the ~340 ms memory component by packing TQ=2
+// consecutive Q positions into the same WG.  Each thread still
+// handles DPT=2 d values per row (HD / WG = 128 / 64 = 2), now
+// across TQ=2 rows -> four fp32 q_val slots per thread.  One K/V
+// fetch per kk feeds TQ=2 rows, halving K/V reads.
 //
-// Per kk:
-//   * two K half-loads (d_a and d_b of the same cache line)
-//   * two V half-loads
-//   * two MACs into a local partial (q_a*k_a + q_b*k_b)
-//   * one sub_group_reduce_add across all 64 lanes -> score
-//   * all 64 lanes compute the same softmax step (no divergence,
-//     no barrier, no __local broadcast)
-//   * two acc updates (acc_a, acc_b)
+// Per kk inner loop:
+//   * Load K[kk, h_kv, d_a], K[kk, h_kv, d_b]        (shared across rows)
+//   * Load V[kk, h_kv, d_a], V[kk, h_kv, d_b]        (shared across rows)
+//   * Per row q in [0, TQ):
+//       partial[q] = q_val[q][0]*k_val[0] + q_val[q][1]*k_val[1]
+//       score[q]   = sub_group_reduce_add(partial[q]) * scale
+//       (branchless softmax update for running_max[q] / running_sum[q])
+//       acc[q][0]  = acc[q][0]*rescale + score_exp*v_val[0]
+//       acc[q][1]  = acc[q][1]*rescale + score_exp*v_val[1]
 //
-// Expected: correct output AND low cost.  The reduce now covers the
-// full HD (since partial already sums the two d lanes per thread
-// before reducing across threads), softmax is branchless (same
-// design as step 4b), and every barrier except the trivial
-// wavefront-internal reduce is gone.  Target: step 3b-ish (~1000
-// ms) or lower — beats NEON 866 with TQ tiling layered on top
-// later.
+// Register budget at TQ=2 DPT=2:
+//   q_val[2][2] = 4 fp32
+//   acc[2][2]   = 4 fp32
+//   running_max[2], running_sum[2] = 4 fp32
+//   + a few scratches -> ~16 regs/thread = well under the wavefront
+//   register file.
 //
-// Dispatch side needs the matching shape change: local = (64,1,1),
-// global = (64, num_heads_Q, M).
+// Tail (M not divisible by TQ) is handled per-row via kk_end_row[q]
+// gating: each row loops only up to its own causal end, other rows
+// contribute a zero-partial / neutral softmax step (rescale=1,
+// score_exp=0 -> acc unchanged).
+//
+// Expected: qk ~500-600 ms if memory fraction scales cleanly.
+// Dispatch shape changes: global = (64, num_heads_Q, ceil(M/TQ)).
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 #pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
-#define HD 128
-#define WG 64            // Adreno 830 native wavefront width.
-#define DPT (HD / WG)    // d values per thread = 2
+#define HD  128
+#define WG  64
+#define DPT (HD / WG)          // 2
+#define TQ  2
 
 __attribute__((qcom_reqd_sub_group_size("full")))
 __kernel __attribute__((reqd_work_group_size(WG, 1, 1)))
@@ -58,34 +60,47 @@ void attention_fused_fp16(
     const int is_causal,
     const float scale) {
 
-  const int d = get_local_id(0);            // 0..WG-1 (64)
-  const int h = get_group_id(1);
-  const int m = get_group_id(2);
-  if (h >= num_heads_Q || m >= M) return;
+  const int d      = get_local_id(0);         // 0..WG-1
+  const int h      = get_group_id(1);
+  const int m_base = get_group_id(2) * TQ;
 
   const int num_heads_KV = num_heads_Q / gqa_size;
   const int h_kv = h / gqa_size;
   const int W_q  = num_heads_Q  * HD;
   const int W_k  = num_heads_KV * HD;
 
-  // Two d values handled by this thread: d_a = d, d_b = d + WG.
-  // Q is loaded once outside the kk loop.
-  float q_val[DPT];
+  // Per-row validity and causal bounds.
+  int  kk_end_row[TQ];
+  bool row_valid [TQ];
+  int  kk_end_tile = 0;
   #pragma unroll
-  for (int i = 0; i < DPT; ++i) {
-    const int dd = d + i * WG;
-    q_val[i] = (float)Q[m * W_q + h * HD + dd];
+  for (int q = 0; q < TQ; ++q) {
+    const int m = m_base + q;
+    row_valid [q] = (m < M);
+    kk_end_row[q] = row_valid[q]
+                    ? ((is_causal != 0) ? (from + m + 1) : T)
+                    : 0;
+    if (kk_end_row[q] > kk_end_tile) kk_end_tile = kk_end_row[q];
   }
 
-  float running_max = -INFINITY;
-  float running_sum = 0.0f;
-  float acc[DPT] = {0.0f, 0.0f};
+  // Load Q once per row × DPT.
+  float q_val[TQ][DPT];
+  #pragma unroll
+  for (int q = 0; q < TQ; ++q) {
+    const int m = m_base + q;
+    #pragma unroll
+    for (int i = 0; i < DPT; ++i) {
+      const int dd = d + i * WG;
+      q_val[q][i] = row_valid[q] ? (float)Q[m * W_q + h * HD + dd] : 0.0f;
+    }
+  }
 
-  const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
+  float running_max[TQ] = {-INFINITY, -INFINITY};
+  float running_sum[TQ] = { 0.0f,      0.0f     };
+  float acc        [TQ][DPT] = { {0.0f, 0.0f}, {0.0f, 0.0f} };
 
-  for (int kk = 0; kk < kk_end; ++kk) {
-    // Local partial = sum over the DPT d values this thread owns.
-    float partial = 0.0f;
+  for (int kk = 0; kk < kk_end_tile; ++kk) {
+    // Shared per-kk K/V loads (DPT lanes per thread).
     float k_val[DPT];
     float v_val[DPT];
     #pragma unroll
@@ -93,37 +108,51 @@ void attention_fused_fp16(
       const int dd = d + i * WG;
       k_val[i] = (float)K_cache[kk * W_k + h_kv * HD + dd];
       v_val[i] = (float)V_cache[kk * W_k + h_kv * HD + dd];
-      partial += q_val[i] * k_val[i];
     }
-
-    // One reduce covers the full HD because the per-thread partial
-    // already sums the DPT lanes, and sub_group_reduce_add covers
-    // all WG=64 lanes of the true wavefront.
-    const float score = sub_group_reduce_add(partial) * scale;
-
-    // Every lane recomputes softmax redundantly (branchless, no
-    // barrier, no __local).  Each lane gets the identical score,
-    // so running_max / running_sum / rescale / score_exp stay in
-    // sync across the wavefront.
-    const float prev_max = running_max;
-    const float new_max  = fmax(prev_max, score);
-    const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
-                           ? 0.0f
-                           : exp(prev_max - new_max);
-    const float score_exp = exp(score - new_max);
 
     #pragma unroll
-    for (int i = 0; i < DPT; ++i) {
-      acc[i] = acc[i] * rescale + score_exp * v_val[i];
+    for (int q = 0; q < TQ; ++q) {
+      const bool row_active = row_valid[q] && (kk < kk_end_row[q]);
+
+      // Local partial over DPT lanes, masked on inactive rows.
+      float partial = 0.0f;
+      #pragma unroll
+      for (int i = 0; i < DPT; ++i) partial += q_val[q][i] * k_val[i];
+      if (!row_active) partial = 0.0f;
+
+      const float score = sub_group_reduce_add(partial) * scale;
+
+      // Neutral softmax step on inactive rows: rescale=1,
+      // score_exp=0 -> acc / running_sum unchanged.
+      const float prev_max = running_max[q];
+      const float new_max  = row_active ? fmax(prev_max, score) : prev_max;
+      const float rescale  = (!row_active)
+                             ? 1.0f
+                             : ((isinf(prev_max) && prev_max < 0.0f)
+                                ? 0.0f
+                                : exp(prev_max - new_max));
+      const float score_exp = row_active ? exp(score - new_max) : 0.0f;
+
+      #pragma unroll
+      for (int i = 0; i < DPT; ++i) {
+        acc[q][i] = acc[q][i] * rescale + score_exp * v_val[i];
+      }
+      running_sum[q] = running_sum[q] * rescale + score_exp;
+      running_max[q] = new_max;
     }
-    running_sum = running_sum * rescale + score_exp;
-    running_max = new_max;
   }
 
-  // Write both d lanes per thread.
+  // Write all valid rows × DPT.
   #pragma unroll
-  for (int i = 0; i < DPT; ++i) {
-    const int dd = d + i * WG;
-    out[m * W_q + h * HD + dd] = (half)(acc[i] / running_sum);
+  for (int q = 0; q < TQ; ++q) {
+    if (!row_valid[q]) continue;
+    const int m = m_base + q;
+    const float s = running_sum[q];
+    const float inv = (s > 0.0f) ? (1.0f / s) : 0.0f;
+    #pragma unroll
+    for (int i = 0; i < DPT; ++i) {
+      const int dd = d + i * WG;
+      out[m * W_q + h * HD + dd] = (half)(acc[q][i] * inv);
+    }
   }
 }

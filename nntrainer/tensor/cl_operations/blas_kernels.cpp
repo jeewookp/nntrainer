@@ -3762,15 +3762,13 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
   s_kern->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Step 5: WG = (64, 1, 1) = one true Adreno 830 wavefront.  The
-  // debug probe showed qcom_reqd_sub_group_size("full") yields
-  // sub_group_size=64, not 128 — so sub_group_reduce_add with the
-  // previous WG=(128,1,1) reduced only half the partials.  With
-  // WG=64, each thread handles two d lanes (HD/WG = 2) in private
-  // registers; one sub_group_reduce covers the full HD because each
-  // thread's partial already sums its two d values.  Grid shape
-  // stays (WG, num_heads_Q, M) — one WG per (h, m) pair.
-  const int g[3] = {64, nhq, M_i};
+  // Step 6: WG still (64, 1, 1) = one real wavefront, but the WG now
+  // processes TQ consecutive Q rows via per-thread register tiling.
+  // One K / V fetch per kk feeds TQ rows -> K/V traffic drops by TQ.
+  // TQ must match the attention_fused_fp16.cl #define (=2 here).
+  constexpr int TQ = 2;
+  const int m_tiles = (M_i + TQ - 1) / TQ;
+  const int g[3] = {64, nhq, m_tiles};
   const int l[3] = {64, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
