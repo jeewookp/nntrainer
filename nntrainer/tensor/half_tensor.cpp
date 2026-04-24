@@ -990,66 +990,33 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): route through the prefill delegate-conv
-    // pipeline.  Rationale: the previous per-call blocking SVMMap
-    // cost ~4.8 s / decode (98.7% of gemv_call).  Switching the gemv
-    // helper to non-blocking SVMMap produced garbage generations
-    // because Adreno 830's coarse-grained SVM doesn't give
-    // GPU -> GPU cross-kernel visibility through same-queue order
-    // alone.  gemm_delegate_fp16_cl avoids the problem structurally:
-    // it uses an image2d pipeline (svm_to_image2d + conv_wave_memory
-    // + image_to_svm) whose image objects have stronger intrinsic
-    // coherence than raw SVM buffers, and ends with its own
-    // non-blocking SVMMap on output that downstream fences drain.
+    // M=1 (decode/gen): staged gemv path (blocking SVMMap).
     //
-    // The same kernel is already used at M>1 in the branch below and
-    // at 2.72 TFLOPS on Qwen3-4B shapes.  M=1 is a valid input: the
-    // delegate's image2d cache is keyed by (M, K) so the M=1 entry
-    // is separate from the prefill M=437 entry and doesn't conflict.
-    //
-    // Fall back to the original staged gemv path when the delegate
-    // can't accept the shape (requires N%32==0 and K%8==0).  Qwen3-4B
-    // FC widths all satisfy this; other models may miss.
-    static const bool s_disable_delegate_decode =
-      std::getenv("NNTRAINER_DISABLE_DELEGATE_DECODE") != nullptr;
-    const bool use_delegate_decode =
-      !s_disable_delegate_decode && (N % 32) == 0 && (K % 8) == 0;
-
-    if (use_delegate_decode) {
-      const uint64_t t_d0 = now_ns();
-      // Zero-copy on both sides.  in_u16 / out_u16 are both SVM
-      // (all_svm invariant).  svm_in_T is the per-call scratch the
-      // delegate needs internally; pass clbuffInstance.getSVMQuant(0)
-      // so it stays a valid SVM scratch ptr regardless of the M=1
-      // caller path.
-      uint16_t *svm_in_T =
-        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
-      gemm_delegate_fp16_cl(in_u16, svm_in_T, weight_u16, scale_u16,
-                            out_u16, M, N, K);
-      const uint64_t t_d1 = now_ns();
-      // All stage counters lumped into gemv_call for the decode
-      // profiler -- no scalar staging happens on this path.
-      g_half_dotq_decode_profile.ns_gemv_call += t_d1 - t_d0;
-      g_half_dotq_decode_profile.calls++;
-    } else {
-      // Fallback: original staged gemv path (blocking SVMMap,
-      // correct-by-construction).
-      const uint64_t t_d0 = now_ns();
-      for (unsigned int k = 0; k < K; ++k) {
-        svm_in[k] = in_u16[k];
-      }
-      const uint64_t t_d1 = now_ns();
-      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
-      const uint64_t t_d2 = now_ns();
-      for (unsigned int n = 0; n < N; ++n) {
-        out_u16[n] = svm_out[n];
-      }
-      const uint64_t t_d3 = now_ns();
-      g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
-      g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
-      g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;
-      g_half_dotq_decode_profile.calls++;
+    // Tried routing M=1 through gemm_delegate_fp16_cl (the prefill
+    // conv_wave_memory pipeline) -- generation got 2.1x SLOWER and
+    // produced garbage.  conv_wave_memory was tuned for M>>1 and
+    // has an unsafe code path / indexing bug at M=1, and the
+    // svm_to_image2d + image_to_svm reformats dominate per call
+    // when the compute is a single row's worth.  True "decode on
+    // image2d" would need an M=1-specific image2d gemv kernel; for
+    // now keep the raw SVM gemv with its 0.6 ms / call blocking
+    // sync and chase other buckets (MHA decode 1.7 s, lm_head
+    // 0.4 s) instead.
+    const uint64_t t_d0 = now_ns();
+    for (unsigned int k = 0; k < K; ++k) {
+      svm_in[k] = in_u16[k];
     }
+    const uint64_t t_d1 = now_ns();
+    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    const uint64_t t_d2 = now_ns();
+    for (unsigned int n = 0; n < N; ++n) {
+      out_u16[n] = svm_out[n];
+    }
+    const uint64_t t_d3 = now_ns();
+    g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
+    g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
+    g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;
+    g_half_dotq_decode_profile.calls++;
   } else {
     // M>1 (prefill). Two paths:
     //   1) Delegate (preferred when N%32==0, K%8==0): zero-copy. Tensor
