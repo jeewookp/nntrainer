@@ -378,11 +378,16 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          uint16_t *output, unsigned int K, unsigned int N,
                          bool sync_output = true);
 
-// Step 1 of the incremental image2d M=1 gemv rewrite.  Only loads
-// weights; writes deterministic zero to output.  Useful for per-
-// kernel timing via cl_event; NOT correct by design.  Env-gated
-// via NNTRAINER_GEMV_IMAGE_STEP=1 in HalfTensor::dotQInteger M=1.
+// Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
+// loads more of the gemv work (step 1 = weight only, step 2 = +
+// input, ...) but all write deterministic zero until correctness
+// is restored in step 4.  Useful for per-kernel timing via
+// cl_event; NOT correct by design for steps 1..3.  Env-gated via
+// NNTRAINER_GEMV_IMAGE_STEP=N in HalfTensor::dotQInteger M=1.
 void gemv_int4_image_v1_cl(uint16_t *input, uint16_t *weights,
+                           uint16_t *scales, uint16_t *output,
+                           unsigned int K, unsigned int N);
+void gemv_int4_image_v2_cl(uint16_t *input, uint16_t *weights,
                            uint16_t *scales, uint16_t *output,
                            unsigned int K, unsigned int N);
 

@@ -12,6 +12,7 @@ cl_op_kernels = [
   'int4_gemv.cl',
   'int4_gemv_adreno.cl',
   'int4_gemv_image_v1.cl',
+  'int4_gemv_image_v2.cl',
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'delegate_conv_wave.cl',

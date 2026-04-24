@@ -1011,6 +1011,9 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     if (s_step == 1) {
       nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, svm_out,
                                        K, N);
+    } else if (s_step == 2) {
+      nntrainer::gemv_int4_image_v2_cl(svm_in, weight_u16, scale_u16, svm_out,
+                                       K, N);
     } else {
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
     }

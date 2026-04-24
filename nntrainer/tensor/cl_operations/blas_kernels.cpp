@@ -2148,6 +2148,70 @@ void gemv_int4_image_v1_cl(uint16_t *input, uint16_t *weights,
   }
 }
 
+// Step 2 of the incremental rewrite: adds scalar input-load loop
+// alongside the step-1 weight load, still no MAC / dequant / scale.
+// Delta vs step 1's gpu_kernel isolates the cost of the input feed.
+// Same dispatch shape so the numbers are directly comparable.
+void gemv_int4_image_v2_cl(uint16_t *input, uint16_t *weights,
+                           uint16_t *scales, uint16_t *output,
+                           unsigned int K, unsigned int N) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_image_v2_kernel, "gpu_int4_gemv_image_v2");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to register gpu_int4_gemv_image_v2 kernel");
+  }
+
+  int arg = 0;
+  kernel_ptr->SetKernelSVMArguments(arg++, input);
+  kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  kernel_ptr->SetKernelSVMArguments(arg++, output);
+  kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  const int align_N = static_cast<int>(align(N, 64));
+  const int g[3] = {align_N, 1, 1};
+  const int l[3] = {64, 1, 1};
+
+  const uint64_t t_dispatch_start = now_ns_phase6();
+  cl_event kernel_ev = nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
+                                                    &kernel_ev)) {
+    throw std::runtime_error("Failed to dispatch gpu_int4_gemv_image_v2");
+  }
+
+  const uint64_t t_svmmap_start = now_ns_phase6();
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  const uint64_t t_end = now_ns_phase6();
+
+  // Share the image profile bucket with step 1 -- they don't co-
+  // dispatch (env gate picks one) so concatenating their
+  // measurements just means a single unified number per run.
+  g_gemv_image_call_profile.ns_dispatch += t_svmmap_start - t_dispatch_start;
+  g_gemv_image_call_profile.ns_svmmap   += t_end - t_svmmap_start;
+  g_gemv_image_call_profile.calls++;
+
+  if (kernel_ev) {
+    cl_ulong ev_start = 0, ev_end = 0;
+    clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_START,
+                            sizeof(ev_start), &ev_start, nullptr);
+    clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_END,
+                            sizeof(ev_end), &ev_end, nullptr);
+    if (ev_end > ev_start) {
+      g_gemv_image_call_profile.ns_gpu_kernel += ev_end - ev_start;
+      g_gemv_image_call_profile.gpu_events++;
+    }
+    clReleaseEvent(kernel_ev);
+  }
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;
