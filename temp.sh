@@ -102,8 +102,15 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export ${VERIFY_ENV}; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
-  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
+  \
+  \# NNTRAINER_PROFILE_LAYER_SYNC=1 makes per-layer wall-clock
+  \# measurement honest by clFinish'ing after every forwarding_op,
+  \# but it DESTROYS the non-blocking SVMMap win on decode -- each
+  \# clFinish per FC ends up doing what blocking SVMMap used to do.
+  \# Keep it off for production timing; turn back on when we need
+  \# per-layer decode breakdown.
+  \# export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
