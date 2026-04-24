@@ -1,22 +1,28 @@
-// Step 3b / incremental: reduce via sub_group_reduce_add (1D WG).
+// Step 4 / incremental: step 3b + online softmax + proper acc.
 //
-// Step 3 (work_group_reduce_add) added 1531 ms over step 2 across
-// 36 layers.  That's ~85% of V0's 1794 ms concentrated in a single
-// intrinsic call.  On a 1-wavefront WG (HD=128, the Adreno native
-// wavefront width) sub_group_reduce_add is logically equivalent to
-// work_group_reduce_add but stays on a single wavefront the driver
-// already has in flight, skipping the workgroup-barrier machinery.
+// Timings so far (qk portion, 36 layers, M=437):
+//   Step 1  =  170 ms   K load only
+//   Step 2  =  341 ms   + V load + Q load + per-lane partial
+//   Step 3  = 1872 ms   + work_group_reduce_add per kk
+//   Step 3b =  997 ms   sub_group_reduce_add (1-wavefront WG)
+//   V0      = 1794 ms   full kernel via work_group_reduce_add
+//   NEON    =  866 ms   CPU reference
 //
-// The V3a/V3d sub-group experiments failed at TM>=4 because 2D WGs
-// have non-linear lane ordering on Qualcomm.  Here WG is 1D
-// ((HD, 1, 1)), so lanes 0..127 ARE threads 0..127 in both
-// local-id and sub-group-id spaces — no ambiguity.
+// Step 3b proved sub_group_reduce is ~2.3x cheaper than
+// work_group_reduce on a 1-wavefront WG.  On top of that reduce cost
+// (~655 ms after subtracting memory), the missing pieces to make
+// V0 correct are:
+//   * online softmax (running_max, running_sum, rescale, score_exp)
+//   * acc update via `acc * rescale + score_exp * v_val`
+// Both trivial in flops; any cost is from the __local broadcast of
+// rescale / score_exp + the one WG-level barrier per kk.
 //
-// If step 3b lands well below step 3 (say ~500-800 ms qk), the
-// bottleneck of V0 really is the workgroup-level reduce intrinsic,
-// and swapping to sub_group_reduce is the hot fix for attention.
-// From there, the V5-style per-thread Q-tile (TQ=4) on top of
-// sub_group_reduce would be step 6.
+// Step 4 = step 3b + that softmax / rescale / proper acc logic.  It
+// should match V0 behaviour (correct output) and land close to the
+// step 3b timing (~1000 ms).  If softmax + rescale costs are
+// significant, delta vs step 3b shows the overhead.  The single
+// barrier here is WG-wide on a 1-wavefront WG, so it's the cheap
+// kind.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
@@ -51,17 +57,44 @@ void attention_fused_fp16(
 
   const float q_val = (float)Q[m * W_q + h * HD + d];
 
+  __local float rescale_l;
+  __local float score_exp_l;
+
+  float running_max = -INFINITY;
+  float running_sum = 0.0f;
+  float acc         = 0.0f;
+
   const int kk_end = (is_causal != 0) ? (from + m + 1) : T;
 
-  float acc = 0.0f;
   for (int kk = 0; kk < kk_end; ++kk) {
     const float k_val = (float)K_cache[kk * W_k + h_kv * HD + d];
-    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
-
     const float score = sub_group_reduce_add(q_val * k_val) * scale;
 
-    acc += score * v_val;
+    // d==0 advances the running softmax state and publishes
+    // rescale / score_exp via __local for the other 127 lanes.
+    if (d == 0) {
+      const float prev_max = running_max;
+      const float new_max  = fmax(prev_max, score);
+      const float rescale  = (isinf(prev_max) && prev_max < 0.0f)
+                             ? 0.0f
+                             : exp(prev_max - new_max);
+      const float score_exp = exp(score - new_max);
+      rescale_l   = rescale;
+      score_exp_l = score_exp;
+      running_max = new_max;
+      running_sum = running_sum * rescale + score_exp;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    const float rescale   = rescale_l;
+    const float score_exp = score_exp_l;
+    const float v_val = (float)V_cache[kk * W_k + h_kv * HD + d];
+    acc = acc * rescale + score_exp * v_val;
   }
 
-  out[m * W_q + h * HD + d] = (half)acc;
+  __local float sum_l;
+  if (d == 0) sum_l = running_sum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  out[m * W_q + h * HD + d] = (half)(acc / sum_l);
 }
