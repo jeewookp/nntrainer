@@ -103,6 +103,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+  export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
@@ -164,12 +165,9 @@ grep -E "prefill:|generation:|total:|peak memory|e2e time" ${SUMMARY_LOG} | head
   || echo "(no perf lines)"
 
 echo ""
-echo "-- Layer profiles (RMSNorm / Reshaped / MHA + sub-stages) --"
-grep -A 8 "PROFILE RMSNormLayer prefill\|PROFILE ReshapedRMSNormLayer prefill\|PROFILE MHACoreLayer prefill" ${SUMMARY_LOG} \
-  || echo "(no profile lines)"
-
-echo ""
 echo "-- Decode-path profiles (M==1, fired per generation token) --"
+echo "   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;"
+echo "    unset it in temp.sh to restore the prefill breakdown.)"
 grep -A 8 "PROFILE MHACoreLayer decode\|PROFILE HalfTensor::dotQInteger decode\|PROFILE TieWordEmbedding (lm_head) decode\|PROFILE TieWordEmbedding (embedding) decode" ${SUMMARY_LOG} \
   || echo "(no decode profile lines)"
 

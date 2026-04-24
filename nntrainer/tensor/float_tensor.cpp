@@ -17,6 +17,7 @@
 #include <cpu_backend.h>
 #include <float_tensor.h>
 #include <int4_tensor.h>
+#include <profile_gate.h>
 #include <q4_0_utils.h>
 
 #include <tensor.h>
@@ -54,6 +55,8 @@ struct DotQInt4Profile {
   ~DotQInt4Profile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
 
     const uint64_t in = ns_in_convert.load();

@@ -21,6 +21,7 @@
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 #include <node_exporter.h>
+#include <profile_gate.h>
 #include <util_func.h>
 
 namespace causallm {
@@ -34,6 +35,8 @@ struct EmbeddingProfile {
   ~EmbeddingProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
     const uint64_t t = ns.load();
     std::fprintf(stderr,

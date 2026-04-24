@@ -14,6 +14,7 @@ util_sources = [
 util_headers = [
   'base_properties.h',
   'node_exporter.h',
+  'profile_gate.h',
   'util_func.h',
   'profiler.h',
   'nntr_threads.h',

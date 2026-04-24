@@ -21,6 +21,7 @@
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 #include <node_exporter.h>
+#include <profile_gate.h>
 #include <tensor.h>
 #include <tensor_dim.h>
 #include <tie_word_embedding.h>
@@ -49,6 +50,8 @@ struct TieWordEmbProfile {
   ~TieWordEmbProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
     const uint64_t t = ns.load();
     std::fprintf(stderr,

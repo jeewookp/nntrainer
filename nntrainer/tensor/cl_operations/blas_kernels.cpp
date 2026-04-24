@@ -17,6 +17,7 @@
 #include "util_func.h"
 #include <fp16.h>
 #include <gpu_image_pool.h>
+#include <profile_gate.h>
 
 #include <atomic>
 #include <chrono>
@@ -77,6 +78,8 @@ struct Int4AdrenoGemmProfile {
   ~Int4AdrenoGemmProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
 
     const uint64_t mem_c = ns_cl_mem_create.load();
@@ -2510,6 +2513,7 @@ void gemm_delegate_fp16_cl(uint16_t *input, uint16_t * /*input_transposed*/,
     ~DelegateProfileDump2() {
       uint64_t c = t_calls.load();
       if (!c) return;
+      if (nntrainer::prefill_profile_suppressed()) return;
       double g = t_gflops_x1000.load() / 1000.0;
       double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
       double conv_gpu_ms = t_conv_gpu_ns.load() / 1e6;
@@ -3143,6 +3147,7 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
     ~BatchedProfileDump() {
       uint64_t c = t_calls.load();
       if (!c) return;
+      if (nntrainer::prefill_profile_suppressed()) return;
       double g = t_gflops_x1000.load() / 1000.0;
       double tot = (t_dequant+t_reformat+t_conv+t_readback)/1e6;
       fprintf(stderr,
@@ -3772,6 +3777,7 @@ void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total) {
     ~DelegateProfileDump() {
       uint64_t c = t_calls.load();
       if (c == 0) return;
+      if (nntrainer::prefill_profile_suppressed()) return;
       double total_ms = (t_dequant+t_in_reformat+t_conv+t_out_reformat)/1e6;
       double gflops = t_total_gflops_x1000.load() / 1000.0;
       fprintf(stderr,

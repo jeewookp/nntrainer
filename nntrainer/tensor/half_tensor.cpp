@@ -20,6 +20,7 @@
 
 #include <cpu_backend.h>
 #include <half_tensor.h>
+#include <profile_gate.h>
 #include <tensor.h>
 #include <util_func.h>
 
@@ -58,6 +59,8 @@ struct HalfDotQInt4Profile {
   ~HalfDotQInt4Profile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
 
     const uint64_t in = ns_in_stage.load();

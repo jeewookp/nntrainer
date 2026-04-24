@@ -31,6 +31,7 @@ static std::mutex rope_init_mtx;
 #include <mha_core.h>
 #include <nntrainer_error.h>
 #include <node_exporter.h>
+#include <profile_gate.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <blas_kernels.h>
@@ -55,6 +56,8 @@ struct MHACoreProfile {
   ~MHACoreProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
     const uint64_t t = ns.load();
     const double T = t / 1.0e6;

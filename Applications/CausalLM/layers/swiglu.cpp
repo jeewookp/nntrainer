@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <profile_gate.h>
 #include <util_simd.h>
 
 #include "swiglu.h"
@@ -37,6 +38,8 @@ struct SwiGLUProfile {
   ~SwiGLUProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
     const uint64_t t = ns.load();
     std::fprintf(stderr,

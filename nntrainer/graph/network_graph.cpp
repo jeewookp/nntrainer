@@ -42,6 +42,7 @@
 #include <network_graph.h>
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
+#include <profile_gate.h>
 #include <profiler.h>
 #include <rnn.h>
 #include <rnncell.h>
@@ -455,6 +456,7 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     uint64_t total_ns{0};
     ~LayerWallProfile() {
       if (!total_ns) return;
+      if (nntrainer::prefill_profile_suppressed()) return;
       std::vector<std::pair<uint64_t, std::string>> ordered;
       for (auto &p : ns) ordered.emplace_back(p.second, p.first);
       std::sort(ordered.begin(), ordered.end(),

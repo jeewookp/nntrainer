@@ -19,6 +19,8 @@
 #include <iostream>
 #include <unordered_map>
 
+#include <profile_gate.h>
+
 #include "rms_norm.h"
 #include "rmsnorm_fused_fp16.h"
 
@@ -49,6 +51,8 @@ struct RMSNormProfile {
   ~RMSNormProfile() {
     const uint64_t c = calls.load();
     if (c == 0)
+      return;
+    if (nntrainer::prefill_profile_suppressed())
       return;
     const uint64_t t = ns.load();
     const double T = t / 1.0e6;
