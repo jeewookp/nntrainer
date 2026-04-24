@@ -1,6 +1,3 @@
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
 EXTERNAL_STORAGE
 HOME
 HOSTNAME
@@ -34,27 +31,27 @@ Okay, the user wants a summary of this abstract in three sentences. Let me read 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2488 ms, 175.643 TPS
-generation: 32 tokens, 8336 ms, 3.83877 TPS
-total: 10831 ms
-peak memory: 2748728 KB
+prefill: 437 tokens, 2429 ms, 179.909 TPS
+generation: 32 tokens, 19064 ms, 1.67856 TPS
+total: 21498 ms
+peak memory: 2719588 KB
 ==========================================================
-[e2e time]: 13782 ms 
-Max Resident Set Size: 2748728 KB
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=399.34 ms calls=32 avg=12.479 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=70.08 ms calls=32 avg=2.190 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1737.21 ms calls=1152 avg=1.508 ms
-  rope_q   :     1.15 ms (  0.1%)
-  rope_k   :     1.48 ms (  0.1%)
-  v_copy   :     1.12 ms (  0.1%)
-  qk       :  1533.38 ms ( 88.3%)
+[e2e time]: 24518 ms 
+Max Resident Set Size: 2719588 KB
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=734.71 ms calls=32 avg=22.960 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=32.88 ms calls=32 avg=1.028 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1875.42 ms calls=1152 avg=1.628 ms
+  rope_q   :     3.41 ms (  0.2%)
+  rope_k   :     4.48 ms (  0.2%)
+  v_copy   :     2.84 ms (  0.2%)
+  qk       :  1623.27 ms ( 86.6%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4988.42 ms calls=8064
-  in_copy   :     2.99 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4980.70 ms ( 99.8%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     4.73 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=14783.77 ms calls=8064
+  in_copy   :     7.96 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call : 14763.91 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :    11.90 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -65,29 +62,29 @@ Max Resident Set Size: 2748728 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2488 ms, 175.643 TPS
-generation: 32 tokens, 8336 ms, 3.83877 TPS
-total: 10831 ms
-peak memory: 2748728 KB
-[e2e time]: 13782 ms 
+prefill: 437 tokens, 2429 ms, 179.909 TPS
+generation: 32 tokens, 19064 ms, 1.67856 TPS
+total: 21498 ms
+peak memory: 2719588 KB
+[e2e time]: 24518 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=399.34 ms calls=32 avg=12.479 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=70.08 ms calls=32 avg=2.190 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1737.21 ms calls=1152 avg=1.508 ms
-  rope_q   :     1.15 ms (  0.1%)
-  rope_k   :     1.48 ms (  0.1%)
-  v_copy   :     1.12 ms (  0.1%)
-  qk       :  1533.38 ms ( 88.3%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=734.71 ms calls=32 avg=22.960 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=32.88 ms calls=32 avg=1.028 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1875.42 ms calls=1152 avg=1.628 ms
+  rope_q   :     3.41 ms (  0.2%)
+  rope_k   :     4.48 ms (  0.2%)
+  v_copy   :     2.84 ms (  0.2%)
+  qk       :  1623.27 ms ( 86.6%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4988.42 ms calls=8064
-  in_copy   :     2.99 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4980.70 ms ( 99.8%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     4.73 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=14783.77 ms calls=8064
+  in_copy   :     7.96 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call : 14763.91 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :    11.90 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
