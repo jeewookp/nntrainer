@@ -483,6 +483,14 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
   }
 
+  // Timing honesty under non-blocking SVMMap: when LAYER_SYNC is on,
+  // clFinish after EVERY forwarding_op regardless of prefill vs decode
+  // so the per-layer time measured reflects actual wall-clock rather
+  // than the GPU queue tail leaking into the next layer's SVMMap.
+  // Wall-profile accumulates only prefill (step_size > 1) as before --
+  // the decode-layer breakdown lives in the decode profilers
+  // (g_mha_core_decode_profile, g_half_dotq_decode_profile,
+  // g_gemv_adreno_call_profile, etc.).
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
@@ -490,8 +498,8 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     struct timespec ts0, ts1;
     if (profile_this_call) clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
+    if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
     if (profile_this_call) {
-      if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
       clock_gettime(CLOCK_MONOTONIC, &ts1);
       const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
                           (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);

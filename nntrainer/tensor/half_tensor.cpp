@@ -990,28 +990,31 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.  Three
-    // stages instrumented into g_half_dotq_decode_profile: in_copy,
-    // gemv_call, out_copy.
+    // M=1 (decode/gen): zero-copy SVM output path.
     //
-    // A zero-copy variant (kernel writes out_u16 directly,
-    // sync_output=false) was tried and produced garbage generations
-    // despite MHACore/RMSNorm/Addition downstreams having their own
-    // enqueueSVMMap fences -- the exact missing consumer fence is
-    // still unidentified.  The potential 150 ms/token win is parked
-    // here until the correctness regression is diagnosed; for now we
-    // keep the per-call blocking sync (sync_output default = true).
+    // gemv_int4_adreno_cl now issues a NON-blocking enqueueSVMMap on
+    // the output (matching the delegate-conv pattern at
+    // blas_kernels.cpp:~3100).  The coherence op is queued so
+    // downstream blocking SVMMap fences in MHACoreLayer /
+    // AdditionLayer / RMSNormLayer drain the pipeline correctly,
+    // while this call returns immediately.  Since `all_svm` was
+    // checked upstream, `out_u16` is itself SVM -- pass it as the
+    // kernel output directly and skip the svm_out scratch +
+    // scalar copy loop.
+    //
+    // An earlier "no SVMMap at all" experiment caused garbage
+    // output; the non-blocking SVMMap is the difference -- it tells
+    // Adreno's coarse-grained driver that the buffer was written
+    // so the next blocking map properly invalidates cache.
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
-    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, out_u16, K, N);
     const uint64_t t_d2 = now_ns();
-    for (unsigned int n = 0; n < N; ++n) {
-      out_u16[n] = svm_out[n];
-    }
-    const uint64_t t_d3 = now_ns();
+    // No out_copy stage -- kernel wrote directly into out_u16.
+    const uint64_t t_d3 = t_d2;
     g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
     g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
     g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;
