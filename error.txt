@@ -1,3 +1,42 @@
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.5 MB/s (45284848 bytes in 1.331s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.2 MB/s (44809312 bytes in 1.325s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.2 MB/s (3960072 bytes in 0.125s)
+3 files pushed. 32.2 MB/s (94054232 bytes in 2.784s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 33.2 MB/s (11153192 bytes in 0.320s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 23.8 MB/s (129304 bytes in 0.005s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 30.8 MB/s (1822720 bytes in 0.056s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
 PATH
 SHELL
 STANDALONE_SYSTEMSERVER_JARS
@@ -5,62 +44,37 @@ SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2987 ms, 146.301 TPS
-generation: 32 tokens, 8626 ms, 3.70971 TPS
-total: 11618 ms
-peak memory: 2728076 KB
-==========================================================
-[e2e time]: 14648 ms 
-Max Resident Set Size: 2728076 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=8537.6 ms across all forwarding_op() calls
-  fully_connected               5002.2 ms  calls=8064  avg=0.620 ms
-  mha_core                      1963.9 ms  calls=1152  avg=1.705 ms
-  rms_norm                       609.9 ms  calls=2336  avg=0.261 ms
-  addition                       416.0 ms  calls=2304  avg=0.181 ms
-  tie_word_embeddings            400.6 ms  calls=64  avg=6.260 ms
-  reshaped_rms_norm              104.3 ms  calls=2304  avg=0.045 ms
-  swiglu                          34.2 ms  calls=1152  avg=0.030 ms
-  multiout                         6.4 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=358.77 ms calls=32 avg=11.211 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=41.75 ms calls=32 avg=1.305 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1786.60 ms calls=1152 avg=1.551 ms
-  rope_q   :     1.32 ms (  0.1%)
-  rope_k   :     1.60 ms (  0.1%)
-  v_copy   :     1.26 ms (  0.1%)
-  qk       :  1595.37 ms ( 89.3%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=115.17 ms calls=8064
-  in_copy   :     3.37 ms (  2.9%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   111.80 ms ( 97.1%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=80.62 ms avg=0.010 ms
-  args_setup :    6.97 ms (  8.6%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   67.88 ms ( 84.2%)  [DispatchCommand = clEnqueueNDRangeKernel]
-  svmmap     :    5.77 ms (  7.2%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/system/bin/sh: #: inaccessible or not found
+/system/bin/sh: no closing quote
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -68,65 +82,18 @@ Max Resident Set Size: 2728076 KB
 ==========================================
 
 -- Gate resolution --
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2987 ms, 146.301 TPS
-generation: 32 tokens, 8626 ms, 3.70971 TPS
-total: 11618 ms
-peak memory: 2728076 KB
-[e2e time]: 14648 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=8537.6 ms across all forwarding_op() calls
-  fully_connected               5002.2 ms  calls=8064  avg=0.620 ms
-  mha_core                      1963.9 ms  calls=1152  avg=1.705 ms
-  rms_norm                       609.9 ms  calls=2336  avg=0.261 ms
-  addition                       416.0 ms  calls=2304  avg=0.181 ms
-  tie_word_embeddings            400.6 ms  calls=64  avg=6.260 ms
-  reshaped_rms_norm              104.3 ms  calls=2304  avg=0.045 ms
-  swiglu                          34.2 ms  calls=1152  avg=0.030 ms
-  multiout                         6.4 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=358.77 ms calls=32 avg=11.211 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=41.75 ms calls=32 avg=1.305 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1786.60 ms calls=1152 avg=1.551 ms
-  rope_q   :     1.32 ms (  0.1%)
-  rope_k   :     1.60 ms (  0.1%)
+(no graph wall-clock decode block)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=358.77 ms calls=32 avg=11.211 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=41.75 ms calls=32 avg=1.305 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1786.60 ms calls=1152 avg=1.551 ms
-  rope_q   :     1.32 ms (  0.1%)
-  rope_k   :     1.60 ms (  0.1%)
-  v_copy   :     1.26 ms (  0.1%)
-  qk       :  1595.37 ms ( 89.3%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=115.17 ms calls=8064
-  in_copy   :     3.37 ms (  2.9%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   111.80 ms ( 97.1%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=80.62 ms avg=0.010 ms
-  args_setup :    6.97 ms (  8.6%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   67.88 ms ( 84.2%)  [DispatchCommand = clEnqueueNDRangeKernel]
-  svmmap     :    5.77 ms (  7.2%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+(no decode profile lines)
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-
-
-=================[ LLM with
 
 Full log: temp_run.log
 
