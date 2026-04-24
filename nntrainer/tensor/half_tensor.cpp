@@ -990,20 +990,34 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): dispatch via gpu_int4_gemv_adreno.  Three
-    // stages instrumented into g_half_dotq_decode_profile: in_copy,
-    // gemv_call, out_copy.
+    // M=1 (decode/gen): zero-copy SVM output path.
+    //
+    // Profile (phase 1) showed gemv_int4_adreno_cl's per-call cost was
+    // 0.6 ms of which 98.7% (0.595 ms) was the blocking
+    // enqueueSVMMap(output) inside the helper.  On Adreno 830 coarse-
+    // grained SVM a blocking map is a full queue flush + CPU cache
+    // invalidate, and we were paying it 252 times per token = ~150 ms
+    // of decode spent on sync alone.
+    //
+    // Since `all_svm` was checked upstream, `out_u16` is itself an SVM
+    // pointer.  Pass it directly as the kernel output, skip both the
+    // post-kernel SVMMap and the svm_out->out_u16 scalar copy loop.
+    // The next consumer of the output tensor (either a downstream GPU
+    // kernel enqueued on the same queue, which sees the write
+    // automatically, or a CPU NEON layer that issues its own
+    // enqueueSVMMap) handles the sync.  Input staging still goes
+    // through svm_in because the caller's in_u16 may not be properly
+    // unmapped for GPU read.
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
-    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, out_u16, K, N,
+                        /*sync_output=*/false);
     const uint64_t t_d2 = now_ns();
-    for (unsigned int n = 0; n < N; ++n) {
-      out_u16[n] = svm_out[n];
-    }
-    const uint64_t t_d3 = now_ns();
+    // No out_copy needed -- kernel wrote directly into out_u16.
+    const uint64_t t_d3 = t_d2;
     g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
     g_half_dotq_decode_profile.ns_gemv_call += t_d2 - t_d1;
     g_half_dotq_decode_profile.ns_out_copy  += t_d3 - t_d2;

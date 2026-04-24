@@ -1899,7 +1899,8 @@ void gemm_int4_adreno_v3_cl(uint16_t *input, uint16_t *input_transposed,
 }
 
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
-                         uint16_t *output, unsigned int K, unsigned int N) {
+                         uint16_t *output, unsigned int K, unsigned int N,
+                         bool sync_output) {
   bool result = false;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
@@ -1973,10 +1974,13 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
     return;
   }
 
-  /// @todo synchronize when only needed
   const uint64_t t_svmmap_start = now_ns_phase6();
-  blas_cc->command_queue_inst_.enqueueSVMMap(
-    output, static_cast<size_t>(N) * sizeof(uint16_t), true);
+  if (sync_output) {
+    // Blocking map: queue flush + CPU cache invalidate so the caller can
+    // scalar-read output immediately.
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), true);
+  }
   const uint64_t t_end = now_ns_phase6();
 
   g_gemv_adreno_call_profile.ns_args     += t_dispatch_start - t_args_start;

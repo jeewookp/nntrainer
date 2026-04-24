@@ -368,8 +368,15 @@ void gemm_int4_adreno_v3_cl(uint16_t *input, uint16_t *input_transposed,
  * @param[in] K input dimension
  * @param[in] N output dimension
  */
+// sync_output=true (default): helper issues a blocking enqueueSVMMap(output)
+// before returning, so the caller can scalar-read output immediately.  Set
+// false when the caller writes the kernel result to an SVM output tensor
+// that the DOWNSTREAM GPU kernel (on the same queue) or a dedicated later
+// CPU fence will consume -- saves the 200-400 us per-call sync on
+// Adreno 830 coarse-grained SVM.
 void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
-                         uint16_t *output, unsigned int K, unsigned int N);
+                         uint16_t *output, unsigned int K, unsigned int N,
+                         bool sync_output = true);
 
 /**
  * @brief INT8 activation x INT4 weight GEMM for Adreno GPUs
