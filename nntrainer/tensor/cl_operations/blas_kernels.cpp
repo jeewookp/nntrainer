@@ -1913,6 +1913,16 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
     return;
   }
 
+  // Adreno coarse-grained SVM coherence: a buffer that was previously
+  // SVMMap'd (even non-blocking) sits in "host-accessible" state and
+  // GPU can't read from it via SetKernelSVMArguments.  Enqueue an
+  // SVMUnmap on the input to return it to device-accessible before
+  // the kernel launch.  On the in-order queue this is ordered after
+  // whatever kernel wrote the buffer upstream, so same-queue
+  // GPU->GPU hand-off stays correct.  Same pattern that prefill
+  // delegate conv uses (blas_kernels.cpp:~3578).
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(input);
+
   // Phase 2 diagnostic: split per-call cost into args / dispatch / svmmap.
   const uint64_t t_args_start = now_ns_phase6();
 
