@@ -169,11 +169,25 @@ inline uint64_t now_ns_phase6() {
 // arg setup, kernel dispatch, and blocking SVM map.  Decode path only
 // (gemv_int4_adreno_cl is the M=1 kernel entry point), so no prefill
 // gate.  Prints at process exit via static destructor.
+//
+// Phase 3 addition: cl_event-based kernel compute timing.  The
+// wall-clock dispatch bucket measures the HOST time around
+// clEnqueueNDRangeKernel (typically tiny since it returns async),
+// and the svmmap bucket measures the BLOCKING host wait for the
+// queue to drain.  Neither directly tells us how long the GPU
+// actually spent inside the kernel.  Attaching a cl_event on
+// DispatchCommand lets us read GPU-side PROFILING_START / END on
+// the event and accumulate true compute time separately from host
+// overhead.  Used for "is the kernel itself the hot path, or is it
+// the sync?" questions without contaminating the measurement with
+// the host-side wait.
 struct GemvInt4AdrenoCallProfile {
   std::atomic<uint64_t> calls{0};
-  std::atomic<uint64_t> ns_args{0};      // SetKernelSVMArguments/Arguments
-  std::atomic<uint64_t> ns_dispatch{0};  // clEnqueueNDRangeKernel
-  std::atomic<uint64_t> ns_svmmap{0};    // blocking clEnqueueSVMMap(read)
+  std::atomic<uint64_t> ns_args{0};        // SetKernelSVMArguments/Arguments
+  std::atomic<uint64_t> ns_dispatch{0};    // host wall around clEnqueueNDRangeKernel
+  std::atomic<uint64_t> ns_svmmap{0};      // blocking clEnqueueSVMMap(read)
+  std::atomic<uint64_t> ns_gpu_kernel{0};  // device PROFILING_START..END for kernel
+  std::atomic<uint64_t> gpu_events{0};     // how many calls contributed a valid event
 
   ~GemvInt4AdrenoCallProfile() {
     const uint64_t c = calls.load();
@@ -181,6 +195,8 @@ struct GemvInt4AdrenoCallProfile {
     const uint64_t args = ns_args.load();
     const uint64_t disp = ns_dispatch.load();
     const uint64_t smap = ns_svmmap.load();
+    const uint64_t gpu  = ns_gpu_kernel.load();
+    const uint64_t gpu_c = gpu_events.load();
     const uint64_t tot = args + disp + smap;
     auto ms = [](uint64_t v) { return v / 1.0e6; };
     auto pct = [&](uint64_t v) {
@@ -197,13 +213,20 @@ struct GemvInt4AdrenoCallProfile {
                  ms(args), pct(args));
     std::fprintf(stderr,
                  "  dispatch   : %7.2f ms (%5.1f%%)  "
-                 "[DispatchCommand = clEnqueueNDRangeKernel]\n",
+                 "[host wall around clEnqueueNDRangeKernel]\n",
                  ms(disp), pct(disp));
     std::fprintf(stderr,
                  "  svmmap     : %7.2f ms (%5.1f%%)  "
                  "[blocking enqueueSVMMap(output) = queue flush + cache "
                  "invalidate]\n",
                  ms(smap), pct(smap));
+    if (gpu_c > 0) {
+      std::fprintf(stderr,
+                   "  gpu_kernel : %7.2f ms             "
+                   "[cl_event PROFILING_START..END, true GPU compute, "
+                   "%llu events]\n",
+                   ms(gpu), (unsigned long long)gpu_c);
+    }
   }
 };
 
@@ -1966,8 +1989,9 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   const int work_group_size[3] = {16, 1, 1};
 
   const uint64_t t_dispatch_start = now_ns_phase6();
+  cl_event kernel_ev = nullptr;
   result = blas_cc->command_queue_inst_.DispatchCommand(
-    kernel_ptr, work_groups_count, work_group_size);
+    kernel_ptr, work_groups_count, work_group_size, &kernel_ev);
   if (!result) {
     throw std::runtime_error(
       "Failed to dispatch kernel for gpu_int4_gemv_adreno");
@@ -1997,6 +2021,27 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   g_gemv_adreno_call_profile.ns_dispatch += t_svmmap_start - t_dispatch_start;
   g_gemv_adreno_call_profile.ns_svmmap   += t_end - t_svmmap_start;
   g_gemv_adreno_call_profile.calls++;
+
+  // Query the kernel event for true device-side compute time.  Safe
+  // to query unconditionally AFTER the svmmap above drained the
+  // queue (event is guaranteed complete).  When sync_output is
+  // false the event may not be done yet; skip profiling in that
+  // case to avoid blocking on clWaitForEvents here (defeats the
+  // purpose of non-blocking).
+  if (kernel_ev) {
+    if (sync_output) {
+      cl_ulong ev_start = 0, ev_end = 0;
+      clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_START,
+                              sizeof(ev_start), &ev_start, nullptr);
+      clGetEventProfilingInfo(kernel_ev, CL_PROFILING_COMMAND_END,
+                              sizeof(ev_end), &ev_end, nullptr);
+      if (ev_end > ev_start) {
+        g_gemv_adreno_call_profile.ns_gpu_kernel += ev_end - ev_start;
+        g_gemv_adreno_call_profile.gpu_events++;
+      }
+    }
+    clReleaseEvent(kernel_ev);
+  }
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
