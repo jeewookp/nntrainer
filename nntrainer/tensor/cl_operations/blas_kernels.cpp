@@ -3766,7 +3766,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   // processes TQ consecutive Q rows via per-thread register tiling.
   // One K / V fetch per kk feeds TQ rows -> K/V traffic drops by TQ.
   // TQ must match the attention_fused_fp16.cl #define (=2 here).
-  constexpr int TQ = 2;
+  constexpr int TQ = 4;
   const int m_tiles = (M_i + TQ - 1) / TQ;
   const int g[3] = {64, nhq, m_tiles};
   const int l[3] = {64, 1, 1};

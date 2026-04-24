@@ -43,7 +43,7 @@
 #define HD  128
 #define WG  64
 #define DPT (HD / WG)          // 2
-#define TQ  2
+#define TQ  4
 
 __attribute__((qcom_reqd_sub_group_size("full")))
 __kernel __attribute__((reqd_work_group_size(WG, 1, 1)))
@@ -95,9 +95,16 @@ void attention_fused_fp16(
     }
   }
 
-  float running_max[TQ] = {-INFINITY, -INFINITY};
-  float running_sum[TQ] = { 0.0f,      0.0f     };
-  float acc        [TQ][DPT] = { {0.0f, 0.0f}, {0.0f, 0.0f} };
+  float running_max[TQ];
+  float running_sum[TQ];
+  float acc        [TQ][DPT];
+  #pragma unroll
+  for (int q = 0; q < TQ; ++q) {
+    running_max[q] = -INFINITY;
+    running_sum[q] = 0.0f;
+    #pragma unroll
+    for (int i = 0; i < DPT; ++i) acc[q][i] = 0.0f;
+  }
 
   for (int kk = 0; kk < kk_end_tile; ++kk) {
     // Shared per-kk K/V loads (DPT lanes per thread).
