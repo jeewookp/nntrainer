@@ -254,58 +254,6 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
 
 #ifdef ENABLE_FP16
 /**
- * @brief Qwen-style fp16 rotary embedding on the GPU queue.
- *
- * Both input and output are flat fp16 SVM pointers of length
- * M * W (W = num_heads * dim). cos_table_fp16 / sin_table_fp16 are
- * flattened (seq_len_max * dim) fp16 buffers — caller maintains them
- * alongside the precomputed std::vector<std::vector<_FP16>> tables in
- * MHACoreLayer; this helper caches a cl_mem per pointer.
- *
- * In-place is safe (in_svm == out_svm).  Issues a blocking SVMMap on
- * out_svm at the end so the immediate downstream NEON consumer
- * (compute_kcaches / compute_fp16vcache_transposed) sees coherent data.
- */
-void apply_rotary_emb_qwen_fp16_cl(void *in_svm, void *out_svm,
-                                    const _FP16 *cos_table_fp16,
-                                    const _FP16 *sin_table_fp16,
-                                    unsigned int seq_len_max,
-                                    unsigned int M, unsigned int W,
-                                    unsigned int dim, unsigned int from);
-
-/**
- * @brief GPU Qwen-style Q dot K^T attention scoring (causal-triangle output).
- *
- * @param q_svm        fp16 SVM, [M, num_heads_Q, head_dim] (the layer's Q
- *                     after RoPE).
- * @param k_cache_svm  fp16 SVM, [T_max, num_heads_KV, head_dim] (KV cache
- *                     base; only rows [0, T) are read).
- * @param out_host     fp16 host buffer of length total_scores * num_heads_Q
- *                     where total_scores = (causal ? sum_{i=0..M-1}(from+i+1)
- *                                                  : M*T). The helper
- *                     stages through an internal SVM scratch and copies
- *                     the result into out_host on completion (caller's
- *                     out_ tensor is heap-allocated, not SVM).
- * @param M            number of query rows for this layer call.
- * @param T            cached row count (= from + sequence_len).
- * @param from         starting cache row (0 for the typical single-call
- *                     prefill, increases per token in decode).
- * @param num_heads_Q, gqa_size, head_dim   GQA layout.
- * @param is_causal    1 for causal-triangle output, 0 for full M x T.
- *
- * Issues a blocking SVMMap on the staging buffer + memcpy into out_host
- * before returning, so downstream NEON code (softmax_triangle,
- * compute_fp16vcache_transposed) sees coherent data.
- */
-void compute_kcaches_qwen_fp16_cl(void *q_svm, void *k_cache_svm,
-                                   _FP16 *out_host,
-                                   unsigned int M, unsigned int T,
-                                   unsigned int from,
-                                   unsigned int num_heads_Q,
-                                   unsigned int gqa_size,
-                                   unsigned int head_dim, int is_causal);
-
-/**
  * @brief Fused FlashAttention dispatch on the GPU queue.
  *
  * Replaces the NEON compute_kcaches + softmax_triangle +

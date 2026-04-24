@@ -256,15 +256,6 @@ void ClContext::initBlasClKernels() {
   registerClKernel(rmsnorm_image2d_v2_kernel, "rmsnorm_image2d_v2");
 
 #ifdef ENABLE_FP16
-  // GPU Qwen-style rotary embedding (rotary_emb_qwen_fp16.cl) — fp16
-  // in/out + fp16 cos/sin tables, env-gated via NNTRAINER_ROPE_GPU=1
-  // in MHACoreLayer.
-  registerClKernel(rotary_emb_qwen_fp16_kernel, "rotary_emb_qwen_fp16");
-
-  // GPU Q dot K^T attention scoring — tiled wave variant with __local
-  // Q + K tiles.  Env-gated via NNTRAINER_QK_GPU=1 in MHACoreLayer.
-  registerClKernel(attn_qk_wave_fp16_kernel, "attn_qk_wave_fp16");
-
   // Fused FlashAttention (qk + softmax + av in one dispatch per layer).
   // Env-gated via NNTRAINER_ATTN_GPU=1 in MHACoreLayer.  Uses
   // work_group_reduce_add (OpenCL 2.0) so the build must pass -cl-std=CL2.0.

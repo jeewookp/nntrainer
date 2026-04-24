@@ -561,40 +561,6 @@ void MHACoreLayer::compute_kcaches(
           group_size, tile_size, local_window_size, head_kv, head_kv + 1);
       }
     } else {
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-      // NNTRAINER_QK_GPU=1 routes the prefill (sequence_len > 1) Q dot K^T
-      // through compute_kcaches_qwen_fp16 on the GPU instead of the
-      // per-row pool.submit_task NEON loop below. Default off until we
-      // verify timing.
-      static const bool s_qk_gpu =
-        std::getenv("NNTRAINER_QK_GPU") != nullptr;
-      static bool s_qk_gpu_logged = false;
-      if (!s_qk_gpu_logged) {
-        std::fprintf(stderr,
-                     "[mha_core] NNTRAINER_QK_GPU=%s -> %s\n",
-                     std::getenv("NNTRAINER_QK_GPU")
-                       ? std::getenv("NNTRAINER_QK_GPU")
-                       : "(unset)",
-                     s_qk_gpu ? "GPU compute_kcaches_qwen_fp16"
-                              : "NEON compute_kcaches");
-        s_qk_gpu_logged = true;
-      }
-      if (s_qk_gpu &&
-          local_window_size >= sequence_len + (size_t)from &&
-          in.getMemoryData() && in.getMemoryData()->isSVM() &&
-          cache.getMemoryData() && cache.getMemoryData()->isSVM() &&
-          (num_head % group_size) == 0 &&
-          head_dim == 128) {
-        const unsigned int T = (unsigned int)from + (unsigned int)sequence_len;
-        nntrainer::compute_kcaches_qwen_fp16_cl(
-          (void *)in.getData<_FP16>(),
-          (void *)cache.getData<_FP16>(),
-          out.getData<_FP16>(),
-          (unsigned int)sequence_len, T, (unsigned int)from,
-          (unsigned int)num_head, (unsigned int)group_size,
-          (unsigned int)head_dim, is_causal ? 1 : 0);
-      } else
-#endif
       {
         std::vector<std::future<void>> futures;
         unsigned int seq_start =
@@ -1161,63 +1127,6 @@ void MHACoreLayer::apply_rotary_emb_tensor_v2(nntrainer::Tensor &in,
         precompute_freqs(head_dim, max_position_embeddings, theta, true);
       }
     }
-
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    // NNTRAINER_ROPE_GPU=1 dispatches rotary_emb_qwen_fp16 on the GPU
-    // queue instead of the per-row NEON loop below. Default off.
-    static const bool s_rope_gpu =
-      std::getenv("NNTRAINER_ROPE_GPU") != nullptr;
-    static bool s_rope_gpu_logged = false;
-    if (!s_rope_gpu_logged) {
-      std::fprintf(stderr,
-                   "[mha_core] NNTRAINER_ROPE_GPU=%s -> %s\n",
-                   std::getenv("NNTRAINER_ROPE_GPU")
-                     ? std::getenv("NNTRAINER_ROPE_GPU")
-                     : "(unset)",
-                   s_rope_gpu ? "GPU rotary_emb_qwen_fp16"
-                              : "NEON compute_rotary_emb_value");
-      s_rope_gpu_logged = true;
-    }
-    if (s_rope_gpu &&
-        in.getMemoryData() && in.getMemoryData()->isSVM() &&
-        out.getMemoryData() && out.getMemoryData()->isSVM() &&
-        !convert_only && in.batch() == 1 && in.channel() == 1 &&
-        (in.width() % dim) == 0) {
-      // Flatten the per-position cos/sin tables once (vector<vector>
-      // is non-contiguous between rows). Both tables live forever as
-      // namespace-local statics keyed by the source pointer.
-      static const _FP16 *s_cos_src_ptr = nullptr;
-      static const _FP16 *s_sin_src_ptr = nullptr;
-      static std::vector<_FP16> s_cos_flat;
-      static std::vector<_FP16> s_sin_flat;
-      const _FP16 *cos_src = (*freqs_cos_fp16)[0].data();
-      const _FP16 *sin_src = (*freqs_sin_fp16)[0].data();
-      if (s_cos_src_ptr != cos_src ||
-          s_cos_flat.size() != freqs_cos_fp16->size() * head_dim) {
-        const size_t seq_len_t = freqs_cos_fp16->size();
-        s_cos_flat.assign(seq_len_t * head_dim, (_FP16)0);
-        s_sin_flat.assign(seq_len_t * head_dim, (_FP16)0);
-        for (size_t t = 0; t < seq_len_t; ++t) {
-          std::memcpy(s_cos_flat.data() + t * head_dim,
-                      (*freqs_cos_fp16)[t].data(),
-                      head_dim * sizeof(_FP16));
-          std::memcpy(s_sin_flat.data() + t * head_dim,
-                      (*freqs_sin_fp16)[t].data(),
-                      head_dim * sizeof(_FP16));
-        }
-        s_cos_src_ptr = cos_src;
-        s_sin_src_ptr = sin_src;
-      }
-      const unsigned int M = in.height();
-      const unsigned int W = in.width();
-      nntrainer::apply_rotary_emb_qwen_fp16_cl(
-        (void *)in.getData<_FP16>(),
-        (void *)out.getData<_FP16>(),
-        s_cos_flat.data(), s_sin_flat.data(),
-        (unsigned int)freqs_cos_fp16->size(), M, W, (unsigned int)dim, from);
-      return;
-    }
-#endif
 
     std::vector<_FP16> *cos_ = nullptr;
     std::vector<_FP16> *sin_ = nullptr;
