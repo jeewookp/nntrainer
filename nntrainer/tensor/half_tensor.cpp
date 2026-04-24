@@ -990,24 +990,31 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   // since per-call stage costs are tiny on decode and we want the prefill
   // bottleneck breakdown.
   if (M == 1) {
-    // M=1 (decode/gen): staged gemv path (blocking SVMMap).
+    // M=1 (decode/gen): staged gemv path (blocking SVMMap, correct).
     //
-    // Tried routing M=1 through gemm_delegate_fp16_cl (the prefill
-    // conv_wave_memory pipeline) -- generation got 2.1x SLOWER and
-    // produced garbage.  conv_wave_memory was tuned for M>>1 and
-    // has an unsafe code path / indexing bug at M=1, and the
-    // svm_to_image2d + image_to_svm reformats dominate per call
-    // when the compute is a single row's worth.  True "decode on
-    // image2d" would need an M=1-specific image2d gemv kernel; for
-    // now keep the raw SVM gemv with its 0.6 ms / call blocking
-    // sync and chase other buckets (MHA decode 1.7 s, lm_head
-    // 0.4 s) instead.
+    // NNTRAINER_GEMV_IMAGE_STEP selects an experimental image2d
+    // gemv probe INSTEAD of the correct baseline.  Output will be
+    // garbage for steps 1..3 (partial implementations).  Used to
+    // isolate per-call GPU time via cl_event while the new kernel
+    // is built up:
+    //   1 = weight-load-only
+    //   2 = + input load (planned)
+    //   3 = + dequant + MAC (planned)
+    //   4 = + scale + proper output (correctness restored)
+    static const char *s_step_env = std::getenv("NNTRAINER_GEMV_IMAGE_STEP");
+    static const int s_step = s_step_env ? std::atoi(s_step_env) : 0;
+
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
-    gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    if (s_step == 1) {
+      nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, svm_out,
+                                       K, N);
+    } else {
+      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+    }
     const uint64_t t_d2 = now_ns();
     for (unsigned int n = 0; n < N; ++n) {
       out_u16[n] = svm_out[n];
