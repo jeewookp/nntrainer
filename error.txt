@@ -1,3 +1,8 @@
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
 USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
@@ -17,32 +22,32 @@ Okay, the user wants a summary of this abstract in three sentences. Let me read 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2456 ms, 177.932 TPS
-generation: 32 tokens, 8261 ms, 3.87362 TPS
-total: 10724 ms
-peak memory: 2859372 KB
+prefill: 437 tokens, 3013 ms, 145.038 TPS
+generation: 32 tokens, 8682 ms, 3.68579 TPS
+total: 11700 ms
+peak memory: 2697436 KB
 ==========================================================
-[e2e time]: 13662 ms 
-Max Resident Set Size: 2859372 KB
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=413.60 ms calls=32 avg=12.925 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.62 ms calls=32 avg=0.082 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1703.15 ms calls=1152 avg=1.478 ms
-  rope_q   :     1.06 ms (  0.1%)
-  rope_k   :     1.45 ms (  0.1%)
-  v_copy   :     1.10 ms (  0.1%)
-  qk       :  1502.55 ms ( 88.2%)
+[e2e time]: 14625 ms 
+Max Resident Set Size: 2697436 KB
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=362.42 ms calls=32 avg=11.326 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=35.40 ms calls=32 avg=1.106 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1792.91 ms calls=1152 avg=1.556 ms
+  rope_q   :     1.33 ms (  0.1%)
+  rope_k   :     1.72 ms (  0.1%)
+  v_copy   :     1.31 ms (  0.1%)
+  qk       :  1598.11 ms ( 89.1%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4958.72 ms calls=8064
-  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4952.43 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     3.66 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=109.89 ms calls=8064
+  in_copy   :     3.32 ms (  3.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :   106.57 ms ( 97.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=4922.21 ms avg=0.610 ms
-  args_setup :    5.76 ms (  0.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   53.25 ms (  1.1%)  [DispatchCommand = clEnqueueNDRangeKernel]
-  svmmap     : 4863.20 ms ( 98.8%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=79.14 ms avg=0.010 ms
+  args_setup :    7.12 ms (  9.0%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   66.08 ms ( 83.5%)  [DispatchCommand = clEnqueueNDRangeKernel]
+  svmmap     :    5.94 ms (  7.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -53,34 +58,34 @@ Max Resident Set Size: 2859372 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2456 ms, 177.932 TPS
-generation: 32 tokens, 8261 ms, 3.87362 TPS
-total: 10724 ms
-peak memory: 2859372 KB
-[e2e time]: 13662 ms 
+prefill: 437 tokens, 3013 ms, 145.038 TPS
+generation: 32 tokens, 8682 ms, 3.68579 TPS
+total: 11700 ms
+peak memory: 2697436 KB
+[e2e time]: 14625 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=413.60 ms calls=32 avg=12.925 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.62 ms calls=32 avg=0.082 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1703.15 ms calls=1152 avg=1.478 ms
-  rope_q   :     1.06 ms (  0.1%)
-  rope_k   :     1.45 ms (  0.1%)
-  v_copy   :     1.10 ms (  0.1%)
-  qk       :  1502.55 ms ( 88.2%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=362.42 ms calls=32 avg=11.326 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=35.40 ms calls=32 avg=1.106 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1792.91 ms calls=1152 avg=1.556 ms
+  rope_q   :     1.33 ms (  0.1%)
+  rope_k   :     1.72 ms (  0.1%)
+  v_copy   :     1.31 ms (  0.1%)
+  qk       :  1598.11 ms ( 89.1%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4958.72 ms calls=8064
-  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4952.43 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     3.66 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=109.89 ms calls=8064
+  in_copy   :     3.32 ms (  3.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :   106.57 ms ( 97.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=4922.21 ms avg=0.610 ms
-  args_setup :    5.76 ms (  0.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   53.25 ms (  1.1%)  [DispatchCommand = clEnqueueNDRangeKernel]
-  svmmap     : 4863.20 ms ( 98.8%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=79.14 ms avg=0.010 ms
+  args_setup :    7.12 ms (  9.0%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   66.08 ms ( 83.5%)  [DispatchCommand = clEnqueueNDRangeKernel]
+  svmmap     :    5.94 ms (  7.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
@@ -97,3 +102,5 @@ Full log: temp_run.log
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
