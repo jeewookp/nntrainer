@@ -5,6 +5,14 @@
 # attached Android device.  Mirrors the build flow temp.sh uses for
 # the full causallm app, but compiles only the unit tests via
 # ndk-build under test/jni.
+
+# Re-exec under bash when invoked via `sh` (dash): this script uses
+# pushd/popd, set -e, and other bash-isms that dash chokes on.
+# Without the guard `sh run_gemv_compare.sh` dies on the first
+# pushd with "pushd: not found".
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
 #
 # Output: per-shape lines like
 #   [gemv_compare] K=2560 N=4096  GPU=0.61 ms  CPU=0.20 ms  ratio(GPU/CPU)=3.05x
