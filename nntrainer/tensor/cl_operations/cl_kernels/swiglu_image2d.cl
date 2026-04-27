@@ -49,12 +49,13 @@ __kernel void swiglu_image2d(
   silu.w = u.w / (1.0f + exp(-u.w));
   half4 out_v = convert_half4(g * silu);
 
-  // Write image2d (for image-aware consumers like the next FC) AND
-  // SVM (for consumers that read SVM directly, plus correctness
-  // verification against the SVM swiglu_fp16 baseline).  Mirrors the
-  // gpu_int4_gemv_image2d kernel's dual-output pattern.  svm_output
-  // layout: [m * K + s*4 + 0..3] -- same M-major / interleaved
-  // channel layout the SVM swiglu_fp16 path uses.
+  // SVM write only for now -- image2d write disabled to bisect why
+  // sentinel reads as 0.  If sentinel becomes 42 with image write
+  // disabled, the dual-output write_imageh + vstore4 in the same
+  // kernel is what's wedging the SVM binding.  Re-enable after we
+  // know the answer.
   vstore4(out_v, 0, svm_output + (m * K + s * 4));
-  write_imageh(output, (int2)(m, s), out_v);
+  // write_imageh(output, (int2)(m, s), out_v);
+  // Silence unused-arg warning while image2d write is commented out.
+  (void)output;
 }
