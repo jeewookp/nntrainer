@@ -132,6 +132,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # IMAGE2D path publishes its own output directly).
   export NNTRAINER_GEMV_NOSYNC=1; \
   export NNTRAINER_GEMV_IMAGE2D=1; \
+  export NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
