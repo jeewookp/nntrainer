@@ -122,8 +122,26 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       in1.batch() == 1 && (in1.width() % 4) == 0) {
     const unsigned int M = (unsigned int)in1.channel() * (unsigned int)iter;
     const unsigned int K = (unsigned int)in1.width();
+    static int s_swiglu_diag_calls = 0;
+    if (s_swiglu_diag_calls < 5) {
+      s_swiglu_diag_calls++;
+      std::fprintf(stderr,
+                   "[DIAG SwiGLU image2d] call=%d  in1.batch=%u channel=%u "
+                   "height=%u width=%u  iter=%u  M=%u K=%u  in1=%p in2=%p "
+                   "out=%p\n",
+                   s_swiglu_diag_calls, (unsigned)in1.batch(),
+                   (unsigned)in1.channel(), (unsigned)in1.height(),
+                   (unsigned)in1.width(), (unsigned)iter, M, K,
+                   (void *)in1.getData<char>(), (void *)in2.getData<char>(),
+                   (void *)out.getData<char>());
+    }
     const bool dispatched = nntrainer::swiglu_image2d_cl(
       in1.getData<char>(), in2.getData<char>(), out.getData<char>(), M, K);
+    if (s_swiglu_diag_calls <= 5) {
+      std::fprintf(stderr,
+                   "[DIAG SwiGLU image2d] call=%d  dispatched=%d\n",
+                   s_swiglu_diag_calls, (int)dispatched);
+    }
     if (dispatched) {
       if (profile_this_call) {
         g_swiglu_profile.ns += now_ns() - t_layer_start;
