@@ -395,6 +395,14 @@ TEST(nntrainer_gemv_compare, swiglu_image2d_correctness) {
   blas_cc->command_queue_inst_.enqueueSVMMap(
     img_out, bytes, /*read_only=*/true);
 
+  // DIAG: kernel stamps a 42.0 sentinel at img_out[0] before doing
+  // any other work.  If we don't see that, SVM arg binding /
+  // dispatch failed (kernel never landed on the SVM pointer).
+  const float sentinel = compute_fp16_to_fp32(img_out[0]);
+  std::cout << "[swiglu_compare] sentinel img_out[0]=" << sentinel
+            << " (expect 42 if kernel landed; 0 means binding failed)"
+            << std::endl;
+
   // 3. Compare.  Allow some half-precision slack from the fp32-vs-fp16
   //    silu math difference, but anything > 1e-2 is the kernel being
   //    actually wrong.

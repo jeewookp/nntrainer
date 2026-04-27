@@ -18,6 +18,18 @@ __kernel void swiglu_image2d(
 
   int m = get_global_id(0);
   int s = get_global_id(1);
+
+  // DIAG: confirm SVM arg binding + dispatch landed.  Every WI
+  // unconditionally stamps a unique sentinel at position
+  // (m * K + s*4) regardless of M/slices guard so the host can see:
+  //  - svm_output[0] = 42.0           : kernel reached at all
+  //  - svm_output[(M-1)*K + ...]       : last WI also reached
+  //  - svm_output[non-WI position]    : remains 0 (no random writes)
+  // After the diag we'd expect at most M*slices*4 sentinels.
+  if (m == 0 && s == 0) {
+    svm_output[0] = (half)42.0h;
+  }
+
   if (m >= M || s >= slices) return;
 
   half4 g_h = read_imageh(gate, smp, (int2)(m, s));
