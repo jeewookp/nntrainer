@@ -348,13 +348,35 @@ TEST(nntrainer_gemv_compare, recordable_queue_probe) {
                                   nullptr),
             CL_SUCCESS);
 
-  // Create a recordable queue.  Two property layouts seen in practice;
-  // try the more common one first.
+  // Create a recordable queue.  Driver accepts the property in either
+  // of two formats depending on platform version; try both, matching
+  // the litert_lm probe.
   cl_int err = 0;
-  cl_queue_properties props[] = {CL_QUEUE_RECORDABLE_QCOM, 1, 0};
-  cl_command_queue rec_q = p_CreateQP(ctx, dev, props, &err);
-  std::cout << "[rq_probe] CreateRecordableQueue err=" << err
-            << " (0=CL_SUCCESS)" << std::endl;
+  cl_command_queue rec_q = nullptr;
+  // Attempt 1: enable bit named directly + value 1.
+  {
+    cl_queue_properties props[] = {CL_QUEUE_RECORDABLE_QCOM, 1, 0};
+    rec_q = p_CreateQP(ctx, dev, props, &err);
+    std::cout << "[rq_probe] CreateRecordableQueue attempt 1 err=" << err
+              << std::endl;
+  }
+  // Attempt 2: as a bit inside CL_QUEUE_PROPERTIES (=0x1093).
+  if (!rec_q || err != CL_SUCCESS) {
+    cl_queue_properties props[] = {0x1093, CL_QUEUE_RECORDABLE_QCOM, 0};
+    rec_q = p_CreateQP(ctx, dev, props, &err);
+    std::cout << "[rq_probe] CreateRecordableQueue attempt 2 err=" << err
+              << std::endl;
+  }
+  // Attempt 3: combined with profiling (some Adreno drivers require it).
+  if (!rec_q || err != CL_SUCCESS) {
+    cl_queue_properties props[] = {0x1093,
+                                    CL_QUEUE_RECORDABLE_QCOM |
+                                      CL_QUEUE_PROFILING_ENABLE,
+                                    0};
+    rec_q = p_CreateQP(ctx, dev, props, &err);
+    std::cout << "[rq_probe] CreateRecordableQueue attempt 3 err=" << err
+              << std::endl;
+  }
   if (!rec_q || err != CL_SUCCESS) {
     GTEST_SKIP() << "Recordable queue creation rejected by driver";
   }
