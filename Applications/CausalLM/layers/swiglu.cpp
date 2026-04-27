@@ -231,6 +231,27 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     }
   } else if (in1.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // CPU-NEON entry fence on the upstream gate/up FC outputs.  Decode
+    // (from > 0) always falls through here from the gated GPU swiglu
+    // path above, and the in-place CPU read of in1/in2 SVM tensors
+    // sees stale data on Adreno coarse-grained SVM unless we drain
+    // the queue first.  Mirrors the entry-fence pattern in
+    // ReshapedRMSNorm / AdditionLayer fallback / etc.  Lets us drop
+    // NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC (per-FC blocking SVMMap inside
+    // the gemv image2d helper) and still get correct output.
+    if (in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
+        in2.getMemoryData() && in2.getMemoryData()->isSVM()) {
+      auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+        nntrainer::Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          in1.getData<char>(), in1.bytes(), /*read_only=*/true);
+        cl_ctx->command_queue_inst_.enqueueSVMMap(
+          in2.getData<char>(), in2.bytes(), /*read_only=*/true);
+      }
+    }
+#endif
     for (unsigned int b = 0; b < in1.batch(); b++) {
       for (unsigned int c = 0; c < in1.channel(); c++) {
         for (unsigned int h = 0; h < iter; h++) {

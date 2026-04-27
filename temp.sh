@@ -132,27 +132,25 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # the kernel itself is faster, and required because consumer entry
   # fences in mha_core / addition / swiglu CPU don't fully cover
   # Adreno coarse-grained SVM coherence on this hardware).
+  # Drop DEBUG_SYNC entirely and shift coherence to the consumer
+  # entry fences:
+  #   * mha_core: SVMMap on Q/K/V at MHA entry (existing)
+  #   * addition: SVMMap on inputs at CPU fallback (existing)
+  #   * swiglu CPU NEON: SVMMap on gate/up at decode entry (just
+  #     added in this commit -- previously absent)
+  #   * lm_head: SVMMap on input at TieWordEmbedding (existing)
+  # With these the per-FC blocking SVMMap inside gemv_int4_image2d_cl
+  # becomes redundant; consumers drain the queue when they actually
+  # need the data.  Expected: TPS up vs the 4.10 we saw with
+  # DEBUG_SYNC=1 since 252 per-FC SVMMaps are replaced by ~5
+  # per-layer consumer fences.
   export NNTRAINER_GEMV_NOSYNC=1; \
   export NNTRAINER_GEMV_IMAGE2D=1; \
-  export NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1; \
-  # Now that the swiglu_image2d_cl unittest verified bit-exact
-  # equivalence with swiglu_fp16_svm_cl (max_abs=0 across the
-  # Qwen3-4B intermediate FFN shape), re-enable the consumer's
-  # image2d path in production.  Each gate/up FC's image2d output
-  # feeds directly into swiglu (image-cache only), and swiglu's
-  # output is published for the next consumer (down_proj, already
-  # image2d-aware via gemv_int4_image2d_cl).  This drops the per-
-  # FC svm_to_image2d publish cost on the gate/up outputs and
-  # lets the swiglu intermediate stay on image cache.
-  export NNTRAINER_SWIGLU_IMAGE2D=1; \
-  # Bisect: with NO_PUBLISH=1, swiglu reads image2d input but doesn't
-  # publish the image2d output so down_proj misses GpuImagePool and
-  # falls back to gemv_int4_adreno_cl (SVM read, sync forced true).
-  # If output becomes correct under NO_PUBLISH=1, we know the swiglu
-  # IMAGE2D INPUT chain is fine and the corruption is somewhere in
-  # the publish->consumer side.  If still garbage, the input image2d
-  # data itself is the broken link.
-  export NNTRAINER_SWIGLU_NO_PUBLISH=1; \
+  # NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC unset -> no per-FC SVMMap inside
+  # the helper.  Re-enable if output regresses to garbage.
+  # SWIGLU_IMAGE2D wiring still produced garbage in production despite
+  # the kernel being bit-exact in unittest -- leave OFF until that's
+  # debugged separately.
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
