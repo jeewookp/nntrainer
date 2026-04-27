@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <dlfcn.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
@@ -289,6 +290,168 @@ DECLARE_gemv_compare_K_N(2560, 1024);  // K / V proj
 DECLARE_gemv_compare_K_N(4096, 2560);  // O proj
 DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
+
+// =====================================================================
+// Phase 1 RecordableQueue probe.  Confirms whether Adreno 830 supports
+// cl_qcom_recordable_queues and measures replay throughput vs naive
+// per-call SetKernelArg + EnqueueNDRange.  Pattern copied from
+// litert_lm's runtime/cl_bench/delegate_kernel_bench.cc.
+// =====================================================================
+namespace {
+typedef void *(*pfn_clNewRecordingQCOM)(cl_command_queue, cl_int *);
+typedef cl_int (*pfn_clEndRecordingQCOM)(void *);
+typedef cl_int (*pfn_clEnqueueRecordingQCOM)(cl_command_queue, void *,
+                                              cl_uint, const void *,
+                                              cl_uint, const cl_event *,
+                                              cl_event *);
+typedef cl_int (*pfn_clReleaseRecordingQCOM)(void *);
+typedef cl_command_queue (*pfn_clCreateCommandQueueWithProperties)(
+  cl_context, cl_device_id, const cl_queue_properties *, cl_int *);
+
+#define CL_QUEUE_RECORDABLE_QCOM 0x40E6
+} // namespace
+
+TEST(nntrainer_gemv_compare, recordable_queue_probe) {
+  void *libcl = dlopen("libOpenCL.so", RTLD_NOW);
+  if (!libcl) {
+    libcl = dlopen("/system/vendor/lib64/libOpenCL.so", RTLD_NOW);
+  }
+  ASSERT_NE(libcl, nullptr) << "Failed to dlopen libOpenCL.so";
+
+  auto p_NewRec   = (pfn_clNewRecordingQCOM)dlsym(libcl, "clNewRecordingQCOM");
+  auto p_EndRec   = (pfn_clEndRecordingQCOM)dlsym(libcl, "clEndRecordingQCOM");
+  auto p_EnqRec   = (pfn_clEnqueueRecordingQCOM)dlsym(
+                      libcl, "clEnqueueRecordingQCOM");
+  auto p_RelRec   = (pfn_clReleaseRecordingQCOM)dlsym(
+                      libcl, "clReleaseRecordingQCOM");
+  auto p_CreateQP = (pfn_clCreateCommandQueueWithProperties)dlsym(
+                      libcl, "clCreateCommandQueueWithProperties");
+
+  std::cout << "[rq_probe] symbols  NewRec=" << (void *)p_NewRec
+            << " EndRec=" << (void *)p_EndRec
+            << " EnqRec=" << (void *)p_EnqRec
+            << " RelRec=" << (void *)p_RelRec
+            << " CreateQP=" << (void *)p_CreateQP << std::endl;
+  if (!p_NewRec || !p_EndRec || !p_EnqRec || !p_RelRec || !p_CreateQP) {
+    GTEST_SKIP() << "cl_qcom_recordable_queues entry points missing";
+  }
+
+  // Reuse the device + context the global ClContext already brought
+  // up (so we don't have to pick the right Adreno device manually).
+  auto *blas_cc = static_cast<ClContext *>(
+    Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+  cl_context ctx     = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+  cl_device_id dev   = nullptr;
+  ASSERT_EQ(clGetCommandQueueInfo(q, CL_QUEUE_DEVICE, sizeof(dev), &dev,
+                                  nullptr),
+            CL_SUCCESS);
+
+  // Create a recordable queue.  Two property layouts seen in practice;
+  // try the more common one first.
+  cl_int err = 0;
+  cl_queue_properties props[] = {CL_QUEUE_RECORDABLE_QCOM, 1, 0};
+  cl_command_queue rec_q = p_CreateQP(ctx, dev, props, &err);
+  std::cout << "[rq_probe] CreateRecordableQueue err=" << err
+            << " (0=CL_SUCCESS)" << std::endl;
+  if (!rec_q || err != CL_SUCCESS) {
+    GTEST_SKIP() << "Recordable queue creation rejected by driver";
+  }
+
+  // Now run a single gemv_int4_adreno_cl-shaped dispatch, but on the
+  // recordable queue.  Easiest way: bring up SVM buffers + register
+  // the existing nntrainer kernel, then drive its enqueue manually.
+  const unsigned int K = 2560, N = 4096;
+  std::vector<float> wf =
+    generate_random_vector<float>((size_t)N * K, -1.0f, 1.0f);
+  std::vector<float> xf = generate_random_vector<float>(K, -1.0f, 1.0f);
+  std::vector<uint16_t> wb, sb;
+  PackInt4ChannelwiseAdreno(wf.data(), N, K, wb, sb);
+
+  uint16_t *in_svm  = (uint16_t *)allocateSVM(K * sizeof(uint16_t));
+  uint16_t *out_svm = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+  uint16_t *w_svm   = (uint16_t *)allocateSVM(wb.size() * sizeof(uint16_t));
+  uint16_t *s_svm   = (uint16_t *)allocateSVM(sb.size() * sizeof(uint16_t));
+  ASSERT_NE(in_svm, nullptr);
+  ASSERT_NE(out_svm, nullptr);
+  for (unsigned int k = 0; k < K; ++k)
+    in_svm[k] = compute_fp32_to_fp16(xf[k]);
+  std::memcpy(w_svm, wb.data(), wb.size() * sizeof(uint16_t));
+  std::memcpy(s_svm, sb.data(), sb.size() * sizeof(uint16_t));
+  std::memset(out_svm, 0, N * sizeof(uint16_t));
+
+  // Warm + baseline: 252 naive dispatches (one decode "token" of FC
+  // calls, all the same shape) on the normal queue.
+  for (int i = 0; i < 5; ++i)
+    nntrainer::gemv_int4_adreno_cl(in_svm, w_svm, s_svm, out_svm, K, N);
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < 252; ++i)
+    nntrainer::gemv_int4_adreno_cl(in_svm, w_svm, s_svm, out_svm, K, N);
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  const double naive_ms =
+    std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+  // Record one dispatch.  We cheat: call the helper once on the
+  // RECORDABLE queue.  But our helper hardcodes the global queue, so
+  // we have to redo the dispatch manually.
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    int4_gemv_adreno_kernel, "gpu_int4_gemv_adreno");
+  ASSERT_NE(kp, nullptr);
+  int arg = 0;
+  kp->SetKernelSVMArguments(arg++, in_svm);
+  kp->SetKernelSVMArguments(arg++, s_svm);
+  kp->SetKernelSVMArguments(arg++, out_svm);
+  kp->SetKernelSVMArguments(arg++, w_svm);
+  int sk = (int)K, sn = (int)N;
+  kp->SetKernelArguments(arg++, &sk, sizeof(int));
+  kp->SetKernelArguments(arg++, &sn, sizeof(int));
+
+  void *rec = p_NewRec(rec_q, &err);
+  std::cout << "[rq_probe] NewRecording err=" << err << std::endl;
+  ASSERT_EQ(err, CL_SUCCESS);
+  ASSERT_NE(rec, nullptr);
+
+  const size_t global[3] = {(size_t)((N + 31u) / 32u * 32u) / 4, 1, 1};
+  const size_t local[3]  = {16, 1, 1};
+  err = clEnqueueNDRangeKernel(rec_q, kp->GetKernel(), 1, nullptr,
+                               global, local, 0, nullptr, nullptr);
+  std::cout << "[rq_probe] EnqueueND (record) err=" << err << std::endl;
+  ASSERT_EQ(err, CL_SUCCESS);
+  err = p_EndRec(rec);
+  std::cout << "[rq_probe] EndRecording err=" << err << std::endl;
+  ASSERT_EQ(err, CL_SUCCESS);
+
+  // Warmup replay.
+  for (int i = 0; i < 5; ++i) {
+    p_EnqRec(rec_q, rec, 0, nullptr, 0, nullptr, nullptr);
+  }
+  clFinish(rec_q);
+
+  // Timed: replay 252 times.
+  const auto r0 = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < 252; ++i) {
+    p_EnqRec(rec_q, rec, 0, nullptr, 0, nullptr, nullptr);
+  }
+  clFinish(rec_q);
+  const auto r1 = std::chrono::high_resolution_clock::now();
+  const double rec_ms =
+    std::chrono::duration<double, std::milli>(r1 - r0).count();
+
+  std::cout << "[rq_probe] K=" << K << " N=" << N
+            << "  naive_252_dispatches=" << naive_ms << " ms"
+            << "  record+replay_252=" << rec_ms << " ms"
+            << "  speedup=" << (naive_ms / std::max(0.001, rec_ms))
+            << "x" << std::endl;
+
+  p_RelRec(rec);
+  clReleaseCommandQueue(rec_q);
+  freeSVM(in_svm);
+  freeSVM(out_svm);
+  freeSVM(w_svm);
+  freeSVM(s_svm);
+  dlclose(libcl);
+}
 
 // Defining main() directly in this .o file is the only reliable way to
 // keep gtest as the program entry point.  Without it, the linker pulls
