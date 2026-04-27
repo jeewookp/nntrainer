@@ -1020,6 +1020,9 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     } else if (s_step == 4) {
       nntrainer::gemv_int4_image_v4_cl(svm_in, weight_u16, scale_u16, svm_out,
                                        K, N);
+    } else if (s_step == 5) {
+      nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, svm_out,
+                                       K, N);
     } else {
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
     }
