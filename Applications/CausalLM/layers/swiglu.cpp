@@ -96,13 +96,24 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   // Image2d fast path (extends the FC -> consumer image-cache chain
-  // past the SVM coherence wall): if both gate and up SVM pointers
-  // are already in GpuImagePool (typical when upstream gate_proj /
-  // up_proj went through gemv_int4_image2d_cl), dispatch
-  // swiglu_image2d_cl which reads/writes purely on image cache and
-  // publishes the output image2d for the down_proj that follows.
-  // Falls through to the existing SVM/CPU paths on pool miss.
-  if (in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
+  // past the SVM coherence wall): both gate and up SVM pointers
+  // already in GpuImagePool (upstream FC went through
+  // gemv_int4_image2d_cl) -> dispatch swiglu_image2d_cl, publish
+  // output image2d for down_proj.
+  //
+  // Gated on NNTRAINER_SWIGLU_IMAGE2D=1 because the first wiring
+  // attempt produced garbage tokens even after switching the
+  // OpenCL silu math from half exp() to fp32 -- root cause not
+  // pinned yet (suspect swiglu output pointer mismatching the
+  // down_proj input pointer in the graph, so down_proj pool-hits
+  // an OLD image2d under that key from a previous layer's swiglu
+  // output that hasn't been overwritten because we only
+  // GpuImagePool::set without any generational invalidation).
+  // Leave the wiring in place but env-gated until we have a fix.
+  static const bool s_swiglu_image2d =
+    std::getenv("NNTRAINER_SWIGLU_IMAGE2D") != nullptr;
+  if (s_swiglu_image2d &&
+      in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
       in2.getMemoryData() && in2.getMemoryData()->isSVM() &&
       out.getMemoryData() && out.getMemoryData()->isSVM() &&
       in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
