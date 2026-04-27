@@ -95,67 +95,6 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   int iter = to - from;
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Image2d fast path (extends the FC -> consumer image-cache chain
-  // past the SVM coherence wall): both gate and up SVM pointers
-  // already in GpuImagePool (upstream FC went through
-  // gemv_int4_image2d_cl) -> dispatch swiglu_image2d_cl, publish
-  // output image2d for down_proj.
-  //
-  // Gated on NNTRAINER_SWIGLU_IMAGE2D=1 because the first wiring
-  // attempt produced garbage tokens even after switching the
-  // OpenCL silu math from half exp() to fp32 -- root cause not
-  // pinned yet (suspect swiglu output pointer mismatching the
-  // down_proj input pointer in the graph, so down_proj pool-hits
-  // an OLD image2d under that key from a previous layer's swiglu
-  // output that hasn't been overwritten because we only
-  // GpuImagePool::set without any generational invalidation).
-  // Leave the wiring in place but env-gated until we have a fix.
-  static const bool s_swiglu_image2d =
-    std::getenv("NNTRAINER_SWIGLU_IMAGE2D") != nullptr;
-  if (s_swiglu_image2d &&
-      in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
-      in2.getMemoryData() && in2.getMemoryData()->isSVM() &&
-      out.getMemoryData() && out.getMemoryData()->isSVM() &&
-      in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-      in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-      in1.batch() == 1 && (in1.width() % 4) == 0) {
-    const unsigned int M = (unsigned int)in1.channel() * (unsigned int)iter;
-    const unsigned int K = (unsigned int)in1.width();
-    // Decode-only diagnostic (iter==1).  prefill iter=437 burns the
-    // counter without telling us whether decode is hitting the
-    // pool, so filter to decode and bump the cap.
-    static int s_swiglu_diag_calls = 0;
-    const bool diag_this = (iter == 1) && (s_swiglu_diag_calls < 8);
-    if (diag_this) {
-      s_swiglu_diag_calls++;
-      std::fprintf(stderr,
-                   "[DIAG SwiGLU image2d decode] call=%d  in1.batch=%u "
-                   "channel=%u height=%u width=%u  iter=%u from=%u  "
-                   "M=%u K=%u  in1=%p in2=%p out=%p\n",
-                   s_swiglu_diag_calls, (unsigned)in1.batch(),
-                   (unsigned)in1.channel(), (unsigned)in1.height(),
-                   (unsigned)in1.width(), (unsigned)iter, (unsigned)_from,
-                   M, K, (void *)in1.getData<char>(),
-                   (void *)in2.getData<char>(),
-                   (void *)out.getData<char>());
-    }
-    const bool dispatched = nntrainer::swiglu_image2d_cl(
-      in1.getData<char>(), in2.getData<char>(), out.getData<char>(), M, K);
-    if (diag_this) {
-      std::fprintf(stderr,
-                   "[DIAG SwiGLU image2d decode] call=%d  dispatched=%d\n",
-                   s_swiglu_diag_calls, (int)dispatched);
-    }
-    if (dispatched) {
-      if (profile_this_call) {
-        g_swiglu_profile.ns += now_ns() - t_layer_start;
-        g_swiglu_profile.calls++;
-      }
-      return;
-    }
-  }
-
   // Phase B fast path: if all three tensors are fp16 SVM and the
   // flat element count is a safe multiple of the dispatch local size,
   // run swiglu_cl_fp16 on the GPU queue instead of the NEON CPU
@@ -231,13 +170,6 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     }
   } else if (in1.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
-    // BISECT: SwiGLU CPU NEON entry fence temporarily disabled to test
-    // hypothesis that this fence (added to enable IMAGE2D + NOSYNC
-    // chain) is what flipped baseline canonical output to a different
-    // sampled chain-of-thought.  If output reverts to canonical
-    // 'Okay, the user wants...' with this disabled, the fence is the
-    // culprit and we can either accept the alternate output or find a
-    // different way to plug the SVM coherence gap during decode.
     for (unsigned int b = 0; b < in1.batch(); b++) {
       for (unsigned int c = 0; c < in1.channel(); c++) {
         for (unsigned int h = 0; h < iter; h++) {
@@ -248,22 +180,6 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         }
       }
     }
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    // BISECT: also disabling decode-side svm_to_image2d_publish to
-    // verify the bisect.  This publish reads in/out SVM and dispatches
-    // a kernel that writes image2d -- if it has any side effect on
-    // the SVM out tensor (e.g. write barrier ordering with subsequent
-    // reads) it could be the canonical-output flipper instead of the
-    // entry fence above.  Both are env-needed for IMAGE2D track but
-    // unused when production runs on the SVM-only baseline path.
-    if (false &&
-        out.getMemoryData() && out.getMemoryData()->isSVM() &&
-        (out.width() % 4) == 0 && out.batch() == 1) {
-      const int pub_M = (int)out.channel() * (int)iter;
-      nntrainer::svm_to_image2d_publish(
-        out.getData<char>(), pub_M, (unsigned int)out.width());
-    }
-#endif
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
