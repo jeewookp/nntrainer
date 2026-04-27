@@ -53,11 +53,25 @@ ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk \
           $TEST_BIN -j$(nproc)
 popd > /dev/null
 
-TEST_EXE=test/libs/arm64-v8a/$TEST_BIN
-[ -x "$TEST_EXE" ] || [ -f "$TEST_EXE" ] || {
-  echo "[gemv_compare.sh] ERROR: $TEST_EXE not produced by ndk-build"
+# ndk-build with NDK_PROJECT_PATH=. from test/jni produces the
+# executable under test/jni/libs/<abi>/.  The previous version
+# of this script looked under test/libs/ (off by one) and
+# spuriously bailed even after a successful build.  Search both
+# locations to be tolerant of either layout.
+TEST_EXE=""
+for cand in test/jni/libs/arm64-v8a/$TEST_BIN test/libs/arm64-v8a/$TEST_BIN; do
+  if [ -f "$cand" ]; then
+    TEST_EXE="$cand"
+    break
+  fi
+done
+if [ -z "$TEST_EXE" ]; then
+  echo "[gemv_compare.sh] ERROR: $TEST_BIN not found under test/jni/libs/ or test/libs/"
+  echo "  ndk-build output above said it was produced -- where did it land?"
+  find test -name "$TEST_BIN" -type f 2>/dev/null | head
   exit 1
-}
+fi
+echo "[gemv_compare.sh] Test exe: $TEST_EXE"
 
 # 3. Push the executable + the nntrainer / ccapi / c++ shared libs
 #    that it depends on.  The existing causallm runs already drop
