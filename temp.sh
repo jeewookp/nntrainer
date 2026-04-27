@@ -114,42 +114,8 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
-  # NNTRAINER_PROFILE_LAYER_SYNC -- INTENTIONALLY NOT EXPORTED.
-  # Setting it to anything (including =0) is treated as "on" by
-  # network_graph.cpp:491 (getenv() != nullptr).  Leave unexported so
-  # GPU dispatch can pipeline; per-layer wall-clock numbers in the
-  # NetworkGraph profile are inaccurate without it but generation TPS
-  # is honest.
-  export NNTRAINER_GEMV_IMAGE_STEP=0; \
-  export NNTRAINER_GEMV_BATCH_SYNC=1; \
-  # B-track: combine the production-ready WG=64 SVM gemv (small win
-  # alone, +4% TPS) with the image2d gemv path (input image2d via
-  # GpuImagePool + image2d output + concurrent SVM vstore4) which the
-  # gemv_compare unittest just showed is ~2.4x the SVM kernel at
-  # WG=64.  Coherence: NOSYNC + IMAGE2D_DEBUG_SYNC keeps a single
-  # blocking SVMMap on the SVM-output companion at the end of the
-  # image2d helper (cheaper than the original per-call SVMMap because
-  # the kernel itself is faster, and required because consumer entry
-  # fences in mha_core / addition / swiglu CPU don't fully cover
-  # Adreno coarse-grained SVM coherence on this hardware).
-  # Final ship config: keep ONLY the bit-exact-safe optimizations.
-  #   - WG=64 in gemv_int4_adreno_cl (kernel-internal, no behavioural
-  #     change vs WG=16 since the kernel has no reqd_work_group_size
-  #     attribute and indexing is purely on get_global_id(0))
-  #   - NOSYNC and IMAGE2D both DISABLED.  The IMAGE2D path was bit-
-  #     exact in unittest but in production its image2d input came
-  #     from rmsnorm_image2d_v2 (vs unittest's svm_to_image2d), and
-  #     the fp16 precision difference accumulated over 8064 FC
-  #     calls/token, flipping the first sampled token to a different
-  #     (still meaningful) chain-of-thought.  NOSYNC alone hung in
-  #     the IMAGE2D=0 configuration -- consumer fences alone aren't
-  #     sufficient when the FC outputs feed addition's GPU fast path
-  #     without entry fence.
-  # Net: ~3.94 TPS (was 3.79) with bit-exact canonical output
-  # 'Okay, the user wants...'.  All other infra (image2d helpers,
-  # swiglu CPU fence, batch sync, image2d kernel) stays in tree
-  # behind their env gates for future re-enable once the
-  # numerical-drift / hang issues are addressed.
+  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+  export NNTRAINER_GEMV_IMAGE_STEP=5; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
