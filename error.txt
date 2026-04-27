@@ -1,66 +1,127 @@
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+1 warning generated.
+[arm64-v8a] Compile++      : nntr_quantize <= gemma3_causallm.cpp
+In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+In file included from ./../models/gemma3/gemma3_causallm.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+2 warnings generated.
+[arm64-v8a] Executable     : nntr_quantize
+-e [SUCCESS] Build completed successfully
+-e [INFO] Build artifacts:
+-e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
+-e   [OK] libcausallm_core.so (44M) (Copied from obj)
+-e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
+-e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
+-e   [WARN] nntr_quantize found in obj but not in libs. Copying...
+-e   [OK] nntr_quantize (43M) (Copied from obj)
+-e 
+========================================
+-e  Build Summary 
+-e ========================================
+-e [SUCCESS] Build completed successfully!
+-e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
+-e [INFO] Executables:
+-e [INFO]   - nntrainer_causallm (main application), nntr_quantize
+-e [INFO] Libraries:
+-e [INFO]   - libcausallm_core.so (CausalLM Core library)
+-e [INFO]   - libnntrainer.so (nntrainer library)
+-e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
+-e [INFO]   - libc++_shared.so (C++ runtime)
+-e [INFO] To build API library, run:
+-e [INFO]   ./build_api_lib.sh
+-e [INFO] To install and run:
+-e [INFO]   ./install_android.sh
+jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (45297560 bytes in 1.335s)
+jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.4 MB/s (44821992 bytes in 1.279s)
+jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.8 MB/s (3960072 bytes in 0.119s)
+3 files pushed. 32.8 MB/s (94079624 bytes in 2.735s)
+../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.8 MB/s (11199784 bytes in 0.326s)
+../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.4 MB/s (129304 bytes in 0.006s)
+../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 31.2 MB/s (1822720 bytes in 0.056s)
+[temp.sh] patched on-device nntr_config.json:
+    "model_tensor_type": "QINT4-FP16",
+    "num_to_generate": 32,
+    "init_seq_len": 1024,
+    "max_seq_len": 2048,
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
 TMPDIR
 USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
-
-</think>
-
-</think>
-
-The paper introduces Thyme (Think Beyond Images), a new paradigm that extends the "think with images" approach by enabling multimodal large
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2790 ms, 156.631 TPS
-generation: 32 tokens, 6475 ms, 4.94208 TPS
-total: 9270 ms
-peak memory: 2756572 KB
-==========================================================
-[e2e time]: 12264 ms 
-Max Resident Set Size: 2756572 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6395.9 ms across all forwarding_op() calls
-  rms_norm                      2233.8 ms  calls=2336  avg=0.956 ms
-  mha_core                      1850.0 ms  calls=1152  avg=1.606 ms
-  swiglu                         887.6 ms  calls=1152  avg=0.770 ms
-  reshaped_rms_norm              879.1 ms  calls=2304  avg=0.382 ms
-  tie_word_embeddings            466.2 ms  calls=64  avg=7.284 ms
-  fully_connected                 73.4 ms  calls=8064  avg=0.009 ms
-  addition                         4.0 ms  calls=2304  avg=0.002 ms
-  multiout                         1.9 ms  calls=4608  avg=0.000 ms
-  input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=445.71 ms calls=32 avg=13.928 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=20.40 ms calls=32 avg=0.638 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1849.51 ms calls=1152 avg=1.605 ms
-  rope_q   :     0.54 ms (  0.0%)
-  rope_k   :     0.96 ms (  0.1%)
-  v_copy   :     0.80 ms (  0.0%)
-  qk       :  1278.78 ms ( 69.1%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
-  hit   K=2560 N=1024  count=2304
-  hit   K=2560 N=4096  count=1152
-  hit   K=2560 N=9728  count=2304
-  hit   K=4096 N=2560  count=1152
-  hit   K=9728 N=2560  count=1152
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=62.82 ms calls=8064
-  in_copy   :     1.53 ms (  2.4%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    61.10 ms ( 97.3%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.19 ms (  0.3%)  [svm_out -> out_u16 scalar loop, N elems]
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -68,63 +129,18 @@ Max Resident Set Size: 2756572 KB
 ==========================================
 
 -- Gate resolution --
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2790 ms, 156.631 TPS
-generation: 32 tokens, 6475 ms, 4.94208 TPS
-total: 9270 ms
-peak memory: 2756572 KB
-[e2e time]: 12264 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6395.9 ms across all forwarding_op() calls
-  rms_norm                      2233.8 ms  calls=2336  avg=0.956 ms
-  mha_core                      1850.0 ms  calls=1152  avg=1.606 ms
-  swiglu                         887.6 ms  calls=1152  avg=0.770 ms
-  reshaped_rms_norm              879.1 ms  calls=2304  avg=0.382 ms
-  tie_word_embeddings            466.2 ms  calls=64  avg=7.284 ms
-  fully_connected                 73.4 ms  calls=8064  avg=0.009 ms
-  addition                         4.0 ms  calls=2304  avg=0.002 ms
-  multiout                         1.9 ms  calls=4608  avg=0.000 ms
-  input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=445.71 ms calls=32 avg=13.928 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=20.40 ms calls=32 avg=0.638 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1849.51 ms calls=1152 avg=1.605 ms
-  rope_q   :     0.54 ms (  0.0%)
-  rope_k   :     0.96 ms (  0.1%)
+(no graph wall-clock decode block)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=445.71 ms calls=32 avg=13.928 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=20.40 ms calls=32 avg=0.638 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1849.51 ms calls=1152 avg=1.605 ms
-  rope_q   :     0.54 ms (  0.0%)
-  rope_k   :     0.96 ms (  0.1%)
-  v_copy   :     0.80 ms (  0.0%)
-  qk       :  1278.78 ms ( 69.1%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
---
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=62.82 ms calls=8064
-  in_copy   :     1.53 ms (  2.4%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    61.10 ms ( 97.3%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.19 ms (  0.3%)  [svm_out -> out_u16 scalar loop, N elems]
+(no decode profile lines)
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
-
-</think>
-
-</think>
-
-The paper introduces Thyme (Think Beyond Images), a new paradigm t
 
 Full log: temp_run.log
 
