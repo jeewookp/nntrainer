@@ -378,7 +378,55 @@ TEST(nntrainer_gemv_compare, recordable_queue_probe) {
               << std::endl;
   }
   if (!rec_q || err != CL_SUCCESS) {
-    GTEST_SKIP() << "Recordable queue creation rejected by driver";
+    // Diagnostic: dump the device's CL_DEVICE_EXTENSIONS so we know
+    // whether RecordableQueue is even advertised.  Then try the
+    // standard cl_khr_command_buffer alternative (different API but
+    // same goal: amortize host dispatch overhead by recording).
+    {
+      size_t ext_size = 0;
+      clGetDeviceInfo(dev, CL_DEVICE_EXTENSIONS, 0, nullptr, &ext_size);
+      std::string exts(ext_size, '\0');
+      clGetDeviceInfo(dev, CL_DEVICE_EXTENSIONS, ext_size, &exts[0], nullptr);
+      std::cout << "[rq_probe] CL_DEVICE_EXTENSIONS:\n" << exts << std::endl;
+    }
+
+    typedef void *(*pfn_clCreateCommandBufferKHR)(cl_uint,
+                                                   const cl_command_queue *,
+                                                   const void *, cl_int *);
+    typedef cl_int (*pfn_clCommandNDRangeKernelKHR)(
+      void *, void *, const void *, cl_kernel, cl_uint, const size_t *,
+      const size_t *, const size_t *, cl_uint, const void *, void *, void *);
+    typedef cl_int (*pfn_clFinalizeCommandBufferKHR)(void *);
+    typedef cl_int (*pfn_clEnqueueCommandBufferKHR)(cl_uint,
+                                                     const cl_command_queue *,
+                                                     void *, cl_uint,
+                                                     const cl_event *,
+                                                     cl_event *);
+    typedef cl_int (*pfn_clReleaseCommandBufferKHR)(void *);
+
+    auto p_CreateCB = (pfn_clCreateCommandBufferKHR)dlsym(
+                        libcl, "clCreateCommandBufferKHR");
+    auto p_NDRangeCB = (pfn_clCommandNDRangeKernelKHR)dlsym(
+                         libcl, "clCommandNDRangeKernelKHR");
+    auto p_FinalizeCB = (pfn_clFinalizeCommandBufferKHR)dlsym(
+                          libcl, "clFinalizeCommandBufferKHR");
+    auto p_EnqueueCB = (pfn_clEnqueueCommandBufferKHR)dlsym(
+                         libcl, "clEnqueueCommandBufferKHR");
+    auto p_ReleaseCB = (pfn_clReleaseCommandBufferKHR)dlsym(
+                         libcl, "clReleaseCommandBufferKHR");
+
+    std::cout << "[rq_probe] command_buffer symbols  CreateCB="
+              << (void *)p_CreateCB << "  NDRangeCB="
+              << (void *)p_NDRangeCB << "  FinalizeCB="
+              << (void *)p_FinalizeCB << "  EnqueueCB="
+              << (void *)p_EnqueueCB << std::endl;
+
+    if (!p_CreateCB || !p_NDRangeCB || !p_FinalizeCB || !p_EnqueueCB) {
+      GTEST_SKIP() << "Neither RecordableQueue nor command_buffer "
+                      "extensions usable on this device";
+    }
+    GTEST_SKIP() << "RecordableQueue rejected; command_buffer route "
+                    "available -- next probe will exercise it";
   }
 
   // Use a tiny inline kernel so we don't depend on builddir-generated
