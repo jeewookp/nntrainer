@@ -1003,32 +1003,55 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     //   4 = + scale + proper output (correctness restored)
     static const char *s_step_env = std::getenv("NNTRAINER_GEMV_IMAGE_STEP");
     static const int s_step = s_step_env ? std::atoi(s_step_env) : 0;
+    // NNTRAINER_GEMV_NOSYNC=1 drops the per-call blocking SVMMap inside
+    // gemv_int4_adreno_cl, the 96.5% of decode FC wall time per the
+    // gemv_compare unittest.  Safe because every CPU consumer of the
+    // FC output already does its own entry SVMMap fence
+    // (ReshapedRMSNorm / AdditionLayer fallback / etc.) and every GPU
+    // consumer sits on the same in-order queue.  Pre-req: write the
+    // gemv output directly into the SVM-backed output tensor (out_u16)
+    // instead of the clbuffInstance staging buffer (svm_out), and
+    // drop the scalar copy that brought svm_out -> out_u16.
+    static const bool s_nosync =
+      std::getenv("NNTRAINER_GEMV_NOSYNC") != nullptr;
+    static bool s_nosync_diag = false;
+    if (!s_nosync_diag) {
+      s_nosync_diag = true;
+      std::fprintf(stderr,
+                   "[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=%d"
+                   "  step=%d\n", (int)s_nosync, s_step);
+    }
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
+    uint16_t *gemv_out = s_nosync ? out_u16 : svm_out;
+    const bool sync_after = !s_nosync;
     if (s_step == 1) {
-      nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, svm_out,
+      nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else if (s_step == 2) {
-      nntrainer::gemv_int4_image_v2_cl(svm_in, weight_u16, scale_u16, svm_out,
+      nntrainer::gemv_int4_image_v2_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else if (s_step == 3) {
-      nntrainer::gemv_int4_image_v3_cl(svm_in, weight_u16, scale_u16, svm_out,
+      nntrainer::gemv_int4_image_v3_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else if (s_step == 4) {
-      nntrainer::gemv_int4_image_v4_cl(svm_in, weight_u16, scale_u16, svm_out,
+      nntrainer::gemv_int4_image_v4_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else if (s_step == 5) {
-      nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, svm_out,
+      nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else {
-      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, gemv_out, K, N,
+                          sync_after);
     }
     const uint64_t t_d2 = now_ns();
-    for (unsigned int n = 0; n < N; ++n) {
-      out_u16[n] = svm_out[n];
+    if (!s_nosync) {
+      for (unsigned int n = 0; n < N; ++n) {
+        out_u16[n] = svm_out[n];
+      }
     }
     const uint64_t t_d3 = now_ns();
     g_half_dotq_decode_profile.ns_in_copy   += t_d1 - t_d0;
