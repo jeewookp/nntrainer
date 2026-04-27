@@ -2567,8 +2567,11 @@ bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
     }
   }
 
+  // Use _v2 name so the kernel cache (keyed on name + compile_options,
+  // NOT source) doesn't hand us back a stale binary built from the
+  // pre-svm_output 5-arg signature.
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    swiglu_image2d_kernel, "swiglu_image2d");
+    swiglu_image2d_kernel, "swiglu_image2d_v2");
   if (!kp) return false;
   int a = 0;
   kp->SetKernelArguments(a++, &g_img,  sizeof(cl_mem));

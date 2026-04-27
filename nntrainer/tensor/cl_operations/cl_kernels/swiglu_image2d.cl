@@ -7,7 +7,13 @@
 __constant sampler_t smp = CLK_NORMALIZED_COORDS_FALSE |
                             CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
-__kernel void swiglu_image2d(
+// Renamed from swiglu_image2d -> swiglu_image2d_v2 to dodge nntrainer's
+// kernel cache (cl_context.cpp:289 keys on kernel_name + compile_options
+// only, NOT the source string).  The original swiglu_image2d binary is
+// cached on disk under the old 5-arg signature and gets handed back
+// regardless of any source change, which is why our SVM-output sentinel
+// stayed 0 across edits to the .cl file.
+__kernel void swiglu_image2d_v2(
     __read_only image2d_t gate,
     __read_only image2d_t up,
     __write_only image2d_t output,
@@ -49,13 +55,8 @@ __kernel void swiglu_image2d(
   silu.w = u.w / (1.0f + exp(-u.w));
   half4 out_v = convert_half4(g * silu);
 
-  // SVM write only for now -- image2d write disabled to bisect why
-  // sentinel reads as 0.  If sentinel becomes 42 with image write
-  // disabled, the dual-output write_imageh + vstore4 in the same
-  // kernel is what's wedging the SVM binding.  Re-enable after we
-  // know the answer.
+  // Write image2d (for image-aware consumers) AND SVM (for SVM-reading
+  // consumers + correctness verification).  Mirrors gpu_int4_gemv_image2d.
   vstore4(out_v, 0, svm_output + (m * K + s * 4));
-  // write_imageh(output, (int2)(m, s), out_v);
-  // Silence unused-arg warning while image2d write is commented out.
-  (void)output;
+  write_imageh(output, (int2)(m, s), out_v);
 }
