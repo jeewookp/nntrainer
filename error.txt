@@ -1,28 +1,156 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 3, done.
-remote: Counting objects: 100% (2/2), done.
-remote: Total 3 (delta 2), reused 2 (delta 2), pack-reused 1 (from 1)
-Unpacking objects: 100% (3/3), 1.26 KiB | 644.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   abb9e32b..2ce617a7  all_gpu    -> upstream/all_gpu
-Updating abb9e32b..2ce617a7
-Fast-forward
- run_gemv_compare.sh | 22 ++++++++++++++++++----
- 1 file changed, 18 insertions(+), 4 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
 Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
 make: Nothing to be done for 'unittest_opencl_kernels_gemv_compare'.
-[gemv_compare.sh] ERROR: unittest_opencl_kernels_gemv_compare not found under test/jni/libs/ or test/libs/
-  ndk-build output above said it was produced -- where did it land?
-test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
-[gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
-Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-make: Nothing to be done for 'unittest_opencl_kernels_gemv_compare'.
-[gemv_compare.sh] ERROR: unittest_opencl_kernels_gemv_compare not found under test/jni/libs/ or test/libs/
-  ndk-build output above said it was produced -- where did it land?
-test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+[gemv_compare.sh] Test exe: test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+
+[gemv_compare.sh] Running on device ...
+* Options given/available:
+    -platform 0 [=default]
+    -device 0 [=default]
+    -precision 32 (single) [=default]
+    -runs 10 [=default]
+    -m -1 [=default]
+    -n -1 [=default]
+    -k -1 [=default]
+
+* The GEMM routine tuner requires already tuned kernels
+  Applying tuning results from disk if they exist...
+
+* Looking for tuning results in the current folder: 'clblast_xgemm_1_32.json'
+  Not found: assuming the kernel 'xgemm_1' is already tuned
+
+* Looking for tuning results in the current folder: 'clblast_xgemm_direct_1_32.json'
+  Not found: assuming the kernel 'xgemm_direct_1' is already tuned
+
+* Looking for tuning results in the current folder: 'clblast_copy_32.json'
+  Not found: assuming the kernel 'copy' is already tuned
+
+* Looking for tuning results in the current folder: 'clblast_pad_32.json'
+  Not found: assuming the kernel 'pad' is already tuned
+
+* Looking for tuning results in the current folder: 'clblast_transpose_32.json'
+  Not found: assuming the kernel 'transpose' is already tuned
+
+* Looking for tuning results in the current folder: 'clblast_padtranspose_32.json'
+  Not found: assuming the kernel 'padtranspose' is already tuned
+
+
+* Testing the in-direct gemm routine for m=n=k
+|  value |         time |
+x--------x--------------x
+|     64 |      0.65 ms |
+|    128 |      0.68 ms |
+|    192 |      0.82 ms |
+|    256 |      0.97 ms |
+|    320 |      1.29 ms |
+|    384 |      1.59 ms |
+|    448 |      2.74 ms |
+|    512 |      3.41 ms |
+|    576 |      5.23 ms |
+|    640 |      6.43 ms |
+|    704 |      7.79 ms |
+|    768 |      9.48 ms |
+|    832 |     11.12 ms |
+|    896 |     12.91 ms |
+|    960 |     14.87 ms |
+|   1024 |     17.72 ms |
+|   1088 |     20.09 ms |
+|   1152 |     22.68 ms |
+|   1216 |     22.62 ms |
+|   1280 |     25.60 ms |
+|   1344 |     28.22 ms |
+|   1408 |     33.27 ms |
+|   1472 |     31.66 ms |
+|   1536 |     38.20 ms |
+|   1600 |     29.17 ms |
+|   1664 |     48.67 ms |
+|   1728 |     45.68 ms |
+|   1792 |     51.57 ms |
+|   1856 |     54.98 ms |
+|   1920 |     61.06 ms |
+|   1984 |     63.93 ms |
+x--------x--------------x
+
+* Testing the direct gemm routine for m=n=k
+|  value |         time |
+x--------x--------------x
+|     64 |      0.12 ms |
+|    128 |      0.17 ms |
+|    192 |      0.28 ms |
+|    256 |      0.51 ms |
+|    320 |      0.87 ms |
+|    384 |      1.56 ms |
+|    448 |      2.31 ms |
+|    512 |      3.31 ms |
+|    576 |      5.14 ms |
+|    640 |      6.84 ms |
+|    704 |      8.77 ms |
+|    768 |     11.07 ms |
+|    832 |     13.46 ms |
+|    896 |     16.97 ms |
+|    960 |     20.26 ms |
+|   1024 |     27.05 ms |
+|   1088 |     29.90 ms |
+|   1152 |     35.10 ms |
+|   1216 |     40.96 ms |
+|   1280 |     47.99 ms |
+|   1344 |     55.17 ms |
+|   1408 |     65.46 ms |
+|   1472 |     71.89 ms |
+|   1536 |     81.24 ms |
+|   1600 |     91.56 ms |
+|   1664 |    103.22 ms |
+|   1728 |    117.58 ms |
+|   1792 |    127.97 ms |
+|   1856 |    142.41 ms |
+|   1920 |    157.58 ms |
+|   1984 |    176.04 ms |
+x--------x--------------x
+
+* Collecting results
+|         ||         gemm indirect ||         gemm direct ||          |
+|   m=n=k ||    ms    |   GFLOPS   ||    ms    |  GFLOPS  ||  score   | (lowest score == best switching point)
+x---------xx----------x------------xx----------x----------xx----------x
+|      64 ||     0.65 |        0.8 ||     0.12 |      4.3 ||    7.142 |
+|     128 ||     0.68 |        6.2 ||     0.17 |     25.3 ||    5.474 |
+|     192 ||     0.82 |       17.3 ||     0.28 |     51.0 ||    4.029 |
+|     256 ||     0.97 |       34.6 ||     0.51 |     65.3 ||    2.806 |
+|     320 ||     1.29 |       51.0 ||     0.87 |     75.1 ||    1.805 |
+|     384 ||     1.59 |       71.3 ||     1.56 |     72.6 ||    1.026 |
+|     448 ||     2.74 |       65.6 ||     2.31 |     77.7 ||    0.469 |
+|     512 ||     3.41 |       78.6 ||     3.31 |     81.2 ||    0.135 |
+|     576 ||     5.23 |       73.0 ||     5.14 |     74.4 ||    0.023 |
+|     640 ||     6.43 |       81.6 ||     6.84 |     76.6 ||    0.022 |
+|     704 ||     7.79 |       89.6 ||     8.77 |     79.6 ||    0.132 |
+|     768 ||     9.48 |       95.5 ||    11.07 |     81.9 ||    0.464 |
+|     832 ||    11.12 |      103.6 ||    13.46 |     85.5 ||    1.019 |
+|     896 ||    12.91 |      111.5 ||    16.97 |     84.8 ||    1.796 |
+|     960 ||    14.87 |      119.0 ||    20.26 |     87.3 ||    2.795 |
+|    1024 ||    17.72 |      121.2 ||    27.05 |     79.4 ||    4.016 |
+|    1088 ||    20.09 |      128.2 ||    29.90 |     86.1 ||    5.459 |
+|    1152 ||    22.68 |      134.8 ||    35.10 |     87.1 ||    7.125 |
+|    1216 ||    22.62 |      159.0 ||    40.96 |     87.8 ||    9.013 |
+|    1280 ||    25.60 |      163.8 ||    47.99 |     87.4 ||   11.123 |
+|    1344 ||    28.22 |      172.1 ||    55.17 |     88.0 ||   13.455 |
+|    1408 ||    33.27 |      167.8 ||    65.46 |     85.3 ||   16.010 |
+|    1472 ||    31.66 |      201.5 ||    71.89 |     88.7 ||   18.787 |
+|    1536 ||    38.20 |      189.7 ||    81.24 |     89.2 ||   21.786 |
+|    1600 ||    29.17 |      280.8 ||    91.56 |     89.5 ||   25.007 |
+|    1664 ||    48.67 |      189.4 ||   103.22 |     89.3 ||   28.450 |
+|    1728 ||    45.68 |      225.9 ||   117.58 |     87.8 ||   32.116 |
+|    1792 ||    51.57 |      223.2 ||   127.97 |     89.9 ||   36.004 |
+|    1856 ||    54.98 |      232.6 ||   142.41 |     89.8 ||   40.114 |
+|    1920 ||    61.06 |      231.8 ||   157.58 |     89.8 ||   44.446 |
+|    1984 ||    63.93 |      244.3 ||   176.04 |     88.7 ||   49.001 |
+x---------xx----------x------------xx----------x----------xx----------x
+
+* Writing a total of 31 results to 'clblast_gemm_routine_32.json'
+* Completed tuning process
+
+
+[gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
+[gemv_compare.sh] Summary lines:
+  (no [gemv_compare] lines -- run failed?)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
