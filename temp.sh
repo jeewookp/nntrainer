@@ -122,12 +122,19 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # is honest.
   export NNTRAINER_GEMV_IMAGE_STEP=0; \
   export NNTRAINER_GEMV_BATCH_SYNC=1; \
-  # B-track: the SVM gemv kernel itself is now dispatched with WG=64
-  # (was 16) so it fully fills the Adreno 830 wavefront -- the easy
-  # 2.4x win the gemv_compare unittest exposed.  IMAGE2D + NOSYNC are
-  # left off (the image2d production path had stale-pool issues with
-  # tensor_pool memory reuse; the WG=64 baseline gives most of the
-  # win without touching the coherence chain).
+  # B-track: combine the production-ready WG=64 SVM gemv (small win
+  # alone, +4% TPS) with the image2d gemv path (input image2d via
+  # GpuImagePool + image2d output + concurrent SVM vstore4) which the
+  # gemv_compare unittest just showed is ~2.4x the SVM kernel at
+  # WG=64.  Coherence: NOSYNC + IMAGE2D_DEBUG_SYNC keeps a single
+  # blocking SVMMap on the SVM-output companion at the end of the
+  # image2d helper (cheaper than the original per-call SVMMap because
+  # the kernel itself is faster, and required because consumer entry
+  # fences in mha_core / addition / swiglu CPU don't fully cover
+  # Adreno coarse-grained SVM coherence on this hardware).
+  export NNTRAINER_GEMV_NOSYNC=1; \
+  export NNTRAINER_GEMV_IMAGE2D=1; \
+  export NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
