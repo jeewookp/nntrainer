@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
+remote: Enumerating objects: 17, done.
+remote: Counting objects: 100% (17/17), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 2.02 KiB | 414.00 KiB/s, done.
+remote: Total 9 (delta 8), reused 9 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (9/9), 2.73 KiB | 349.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   a2833cda..7c7f4cfe  all_gpu    -> upstream/all_gpu
-Updating a2833cda..7c7f4cfe
+   cbce56ba..987213b6  all_gpu    -> upstream/all_gpu
+Updating cbce56ba..987213b6
 Fast-forward
- test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 50 +++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 49 insertions(+), 1 deletion(-)
+ nntrainer/tensor/cl_operations/blas_kernels.cpp        | 10 +++++++---
+ test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 60 insertions(+), 8 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
 Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
@@ -38,48 +39,48 @@ Note: Google Test filter = nntrainer_gemv_compare.*
 [----------] 6 tests from nntrainer_gemv_compare
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
 [gemv_compare] K=2560 N=4096  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/4096
-[gemv_compare] K=2560 N=4096  GPU=0.453343 ms  CPU=0.0958001 ms  ratio(GPU/CPU)=4.73217  (gpu_iters=1046, cpu_iters=922)
-[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1406 ms)
+[gemv_compare] K=2560 N=4096  GPU=0.445317 ms  IMG2D=0.213952 ms  CPU=0.122517 ms  ratio(GPU/CPU)=3.63474  ratio(IMG2D/GPU)=0.480449
+[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1820 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
 [gemv_compare] K=2560 N=1024  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/1024
-[gemv_compare] K=2560 N=1024  GPU=0.42182 ms  CPU=0.0252881 ms  ratio(GPU/CPU)=16.6806  (gpu_iters=1279, cpu_iters=21505)
-[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1116 ms)
+[gemv_compare] K=2560 N=1024  GPU=0.438375 ms  IMG2D=0.164444 ms  CPU=0.215097 ms  ratio(GPU/CPU)=2.03804  ratio(IMG2D/GPU)=0.375122
+[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (2811 ms)
 [ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
 [gemv_compare] K=4096 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=4096 N=2560  GPU=0.567387 ms  CPU=0.0921471 ms  ratio(GPU/CPU)=6.1574  (gpu_iters=840, cpu_iters=5582)
-[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1072 ms)
+[gemv_compare] K=4096 N=2560  GPU=0.758075 ms  IMG2D=0.297783 ms  CPU=0.236638 ms  ratio(GPU/CPU)=3.20352  ratio(IMG2D/GPU)=0.392815
+[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1655 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
 [gemv_compare] K=2560 N=9728  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
-[gemv_compare] K=2560 N=9728  GPU=0.608145 ms  CPU=0.219739 ms  ratio(GPU/CPU)=2.76758  (gpu_iters=807, cpu_iters=2351)
-[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1232 ms)
+[gemv_compare] K=2560 N=9728  GPU=0.778101 ms  IMG2D=0.372931 ms  CPU=0.34573 ms  ratio(GPU/CPU)=2.2506  ratio(IMG2D/GPU)=0.479284
+[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1665 ms)
 [ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
 [gemv_compare] K=9728 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=9728 N=2560  GPU=1.16278 ms  CPU=0.219372 ms  ratio(GPU/CPU)=5.30049  (gpu_iters=424, cpu_iters=2295)
-[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1229 ms)
+[gemv_compare] K=9728 N=2560  GPU=1.16414 ms  IMG2D=0.782129 ms  CPU=0.399126 ms  ratio(GPU/CPU)=2.91672  ratio(IMG2D/GPU)=0.67185
+[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1543 ms)
 [ RUN      ] nntrainer_gemv_compare.recordable_queue_probe
-[rq_probe] symbols  NewRec=0x7fa0fb3bd4 EndRec=0x7fa0fb3c14 EnqRec=0x7fa0fb3cb0 RelRec=0x7fa0fb3c48 CreateQP=0x7fa0fb2db0
+[rq_probe] symbols  NewRec=0x7f5d721bd4 EndRec=0x7f5d721c14 EnqRec=0x7f5d721cb0 RelRec=0x7f5d721c48 CreateQP=0x7f5d720db0
 [rq_probe] CreateRecordableQueue attempt 1 err=-30
 [rq_probe] CreateRecordableQueue attempt 2 err=-30
 [rq_probe] CreateRecordableQueue attempt 3 err=-30
 [rq_probe] CL_DEVICE_EXTENSIONS:
 cl_ext_image_from_buffer cl_ext_image_requirements_info cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_egl_event cl_khr_egl_image cl_khr_extended_bit_ops cl_khr_external_memory cl_khr_external_memory_dma_buf cl_khr_external_memory_opaque_fd cl_khr_external_semaphore cl_khr_external_semaphore_sync_fd cl_khr_fp16 cl_khr_gl_sharing cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_image2d_from_buffer cl_khr_integer_dot_product cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_semaphore cl_khr_srgb_image_writes cl_khr_subgroups cl_khr_subgroup_ballot cl_khr_subgroup_extended_types cl_khr_subgroup_non_uniform_arithmetic cl_khr_subgroup_non_uniform_vote cl_khr_subgroup_rotate cl_khr_subgroup_shuffle cl_khr_subgroup_shuffle_relative cl_khr_suggested_local_work_size cl_qcom_accelerated_image_ops cl_qcom_android_ahardwarebuffer_host_ptr cl_qcom_android_native_buffer_host_ptr cl_qcom_bfloat16_product cl_qcom_bitreverse cl_qcom_compressed_image cl_qcom_create_buffer_from_image cl_qcom_dmabuf_host_ptr cl_qcom_dot_product8 cl_qcom_ext_host_ptr cl_qcom_ext_host_ptr_iocoherent cl_qcom_extended_query_image_info cl_qcom_extract_image_plane cl_qcom_filter_bicubic cl_qcom_ml_ops cl_qcom_other_image cl_qcom_perf_hint cl_qcom_priority_hint cl_qcom_protected_context cl_qcom_recordable_queues cl_qcom_subgroup_shuffle cl_qcom_vector_image_ops cl_qcom_onchip_global_memory cl_qcom_large_buffer cl_qcom_ahardwarebuffer_direct_import cl_qcom_local_memory_control 
 [rq_probe] command_buffer symbols  CreateCB=0x0  NDRangeCB=0x0  FinalizeCB=0x0  EnqueueCB=0x0
-./../unittest/unittest_opencl_kernels_gemv_compare.cpp:425: Skipped
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:473: Skipped
 Neither RecordableQueue nor command_buffer extensions usable on this device
 [  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe (0 ms)
-[----------] 6 tests from nntrainer_gemv_compare (6058 ms total)
+[----------] 6 tests from nntrainer_gemv_compare (9497 ms total)
 
 [----------] Global test environment tear-down
-[==========] 6 tests from 1 test suite ran. (6058 ms total)
+[==========] 6 tests from 1 test suite ran. (9509 ms total)
 [  PASSED  ] 5 tests.
 [  SKIPPED ] 1 test, listed below:
 [  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe
 
-[PROFILE gemv_int4_adreno_cl decode] calls=4441 total=2516.77 ms avg=0.567 ms
-  args_setup :    3.71 ms (  0.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   89.71 ms (  3.6%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 2423.35 ms ( 96.3%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
-  gpu_kernel : 1626.30 ms             [cl_event PROFILING_START..END, true GPU compute, 4441 events]
+[PROFILE gemv_int4_adreno_cl decode] calls=4535 total=2878.70 ms avg=0.635 ms
+  args_setup :    5.56 ms (  0.2%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   88.77 ms (  3.1%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 2784.36 ms ( 96.7%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 1705.42 ms             [cl_event PROFILING_START..END, true GPU compute, 4535 events]
 
 [gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
 [gemv_compare.sh] Summary lines:
