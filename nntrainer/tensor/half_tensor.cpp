@@ -157,6 +157,27 @@ struct HalfDotQInt4DecodeProfile {
 
 HalfDotQInt4DecodeProfile g_half_dotq_decode_profile;
 
+// IMAGE2D pool hit/miss counters (Phase 2 image2d gemv path).  Live
+// outside the dispatch function so the static destructor fires on
+// process exit and the totals are printed alongside the other decode
+// profilers, regardless of whether NNTRAINER_GEMV_IMAGE2D was set.
+struct HalfDotQImage2dCounters {
+  std::atomic<uint64_t> hit{0};
+  std::atomic<uint64_t> miss{0};
+  ~HalfDotQImage2dCounters() {
+    const uint64_t h = hit.load();
+    const uint64_t m = miss.load();
+    if (h == 0 && m == 0)
+      return;
+    std::fprintf(stderr,
+                 "\n[PROFILE HalfTensor::dotQInteger image2d path] "
+                 "hit=%llu miss=%llu  hit_rate=%.1f%%\n",
+                 (unsigned long long)h, (unsigned long long)m,
+                 (h + m) ? 100.0 * (double)h / (double)(h + m) : 0.0);
+  }
+};
+HalfDotQImage2dCounters g_half_dotq_image2d_counters;
+
 inline uint64_t now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
@@ -1025,13 +1046,24 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // kernel on Adreno 830).  Pairs with NOSYNC=1.
     static const bool s_image_publish =
       std::getenv("NNTRAINER_GEMV_IMAGE_PUBLISH") != nullptr;
+    // NNTRAINER_GEMV_IMAGE2D=1: try the Phase 2 image2d-in/image2d-out
+    // gemv kernel first; fall back to the SVM gemv (gemv_int4_adreno_cl
+    // with sync_output=true) on pool miss / shape mismatch so
+    // correctness is always preserved.  The image2d path keeps the
+    // FC -> consumer chain entirely on image-cache and avoids the
+    // Adreno coarse-grained SVM cross-kernel coherence hazard that
+    // killed Phase 1 (NOSYNC + svm_to_image2d_publish).
+    static const bool s_image2d =
+      std::getenv("NNTRAINER_GEMV_IMAGE2D") != nullptr;
     static bool s_nosync_diag = false;
     if (!s_nosync_diag) {
       s_nosync_diag = true;
       std::fprintf(stderr,
                    "[DIAG HalfTensor::dotQInteger M=1] "
-                   "NNTRAINER_GEMV_NOSYNC=%d  IMAGE_PUBLISH=%d  step=%d\n",
-                   (int)s_nosync, (int)s_image_publish, s_step);
+                   "NNTRAINER_GEMV_NOSYNC=%d  IMAGE_PUBLISH=%d  IMAGE2D=%d  "
+                   "step=%d\n",
+                   (int)s_nosync, (int)s_image_publish, (int)s_image2d,
+                   s_step);
     }
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
@@ -1040,6 +1072,12 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     const uint64_t t_d1 = now_ns();
     uint16_t *gemv_out = s_nosync ? out_u16 : svm_out;
     const bool sync_after = !s_nosync;
+    // image2d_dispatched is needed both inside the dispatch chain (to
+    // pick the SVM fallback) and at the end of the M=1 block (to skip
+    // the svm_out -> out_u16 staging copy, which would clobber out_u16
+    // with stale staging-buffer contents when the image2d kernel landed
+    // and never touched the SVM path).  Lift it to block scope.
+    bool image2d_dispatched = false;
     if (s_step == 1) {
       nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
@@ -1056,8 +1094,35 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else {
-      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, gemv_out, K, N,
-                          sync_after);
+      // Phase 2 image2d gemv: try the image-in/image-out path first.
+      // Falls back to the SVM gemv on pool miss (e.g. first layer of
+      // the network where no upstream RMSNorm has published, or any
+      // call where the input pointer doesn't have a pool entry).  When
+      // the image path lands the output is in GpuImagePool for the
+      // next consumer; SVM out_u16 stays untouched, so the
+      // svm_out -> out_u16 scalar copy below MUST be skipped (it
+      // would corrupt out_u16 with stale staging data).
+      if (s_image2d) {
+        image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
+          in_u16, weight_u16, scale_u16, out_u16, K, N);
+        if (image2d_dispatched)
+          g_half_dotq_image2d_counters.hit.fetch_add(
+            1, std::memory_order_relaxed);
+        else
+          g_half_dotq_image2d_counters.miss.fetch_add(
+            1, std::memory_order_relaxed);
+      }
+      if (!image2d_dispatched) {
+        // Pool miss fallback: with IMAGE2D=1 we still want an
+        // SVM-coherent output for whichever consumer reads SVM
+        // (TieWordEmbedding sampler, addition CPU path, etc.) so
+        // FORCE sync_output=true here regardless of NOSYNC -- no
+        // image2d means no image-cache route, so the per-call SVMMap
+        // is the only thing keeping the chain coherent.
+        const bool fallback_sync = s_image2d ? true : sync_after;
+        gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, gemv_out, K, N,
+                            fallback_sync);
+      }
     }
     // Phase 1 image2d publish: enqueue svm_to_image2d on the FC output so
     // the next image2d-aware consumer (rmsnorm_image2d_cl /
@@ -1067,11 +1132,22 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // routes coherence through image cache and avoids the
     // GPU->GPU SVM staleness that NOSYNC=1 alone hit.  Only meaningful
     // when paired with NOSYNC=1; SVMMap path already drains the queue.
-    if (s_nosync && s_image_publish && (N % 4) == 0) {
+    // Skipped when IMAGE2D path landed (it already published to pool).
+    if (s_nosync && s_image_publish && !s_image2d && (N % 4) == 0) {
       nntrainer::svm_to_image2d_publish(out_u16, /*M=*/1u, /*K=*/N);
     }
     const uint64_t t_d2 = now_ns();
-    if (!s_nosync) {
+    // Copy from staging svm_out to the SVM-backed tensor only when
+    //   (a) NOSYNC=0 (the gemv wrote svm_out and we still need to
+    //       publish it into out_u16, with the per-call SVMMap inside
+    //       gemv_int4_adreno_cl having already drained the queue), AND
+    //   (b) we did NOT take the image2d path (image2d_dispatched=false
+    //       means either IMAGE2D=0 or pool miss; in both cases out_u16
+    //       receives data via either svm_out staging or fallback gemv).
+    // When image2d_dispatched=true, gemv_out was unused, svm_out holds
+    // stale data from a previous iteration, and copying it would
+    // corrupt out_u16.
+    if (!s_nosync && !image2d_dispatched) {
       for (unsigned int n = 0; n < N; ++n) {
         out_u16[n] = svm_out[n];
       }

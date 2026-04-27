@@ -2401,6 +2401,89 @@ void gemv_int4_image_v5_cl(uint16_t *input, uint16_t *weights,
   }
 }
 
+// Phase 2 image2d gemv: reads input via image2d (from GpuImagePool,
+// published by upstream RMSNorm) and writes output to image2d
+// (registered in pool for downstream consumer).  Bypasses Adreno 830
+// coarse-grained SVM cross-kernel staleness entirely -- the
+// FC -> consumer chain stays on image-cache.
+//
+// Returns true on dispatch success, false on pool miss / fall-through
+// (caller is expected to fall back to gemv_int4_adreno_cl with
+// sync_output=true so correctness is preserved).
+bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
+                          uint16_t *scales, uint16_t *output_svm,
+                          unsigned int K, unsigned int N) {
+  if (!input_svm || !output_svm || !weights || !scales) return false;
+  if ((K & 3u) != 0u || (N & 3u) != 0u) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // 1. Input image2d from GpuImagePool (published by upstream RMSNorm).
+  //    Pool layout for an M=1 K-wide tensor: width=1, height=K/4.
+  int pool_M = 0, pool_slices = 0;
+  cl_mem in_img = GpuImagePool::Global().get(input_svm, &pool_M, &pool_slices);
+  const int slices_k = (int)K / 4;
+  if (!in_img || pool_M != 1 || pool_slices != slices_k) {
+    return false;  // miss -- caller falls back to SVM gemv
+  }
+
+  // 2. Output image2d -- allocate/cache per output_svm pointer
+  //    (mirrors the cached-by-ptr pattern in svm_to_image2d_publish).
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  const int slices_n = (int)N / 4;
+  cl_mem out_img = nullptr;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(output_svm);
+  cl_int err = 0;
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == 1 &&
+        it->second.slices == slices_n) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = 1; d.image_height = slices_n;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, 1, slices_n};
+    }
+  }
+
+  // 3. Dispatch the new image2d gemv kernel.
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_image2d_kernel, "gpu_int4_gemv_image2d");
+  if (!kernel_ptr) return false;
+
+  int arg = 0;
+  kernel_ptr->SetKernelArguments(arg++, &in_img, sizeof(cl_mem));
+  kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  kernel_ptr->SetKernelArguments(arg++, &out_img, sizeof(cl_mem));
+  kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  // 4 output channels per WI, baseline-style local of 16.
+  const int align_N = static_cast<int>(align(N, 64));
+  const int g[3] = {align_N / 4, 1, 1};
+  const int l[3] = {16, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l)) {
+    return false;
+  }
+
+  // 4. Publish the output image2d under output_svm so the next consumer
+  //    pool-hits and reads via image cache.
+  GpuImagePool::Global().set(output_svm, out_img, /*M=*/1, slices_n);
+  return true;
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;

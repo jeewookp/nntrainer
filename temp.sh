@@ -122,18 +122,16 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # is honest.
   export NNTRAINER_GEMV_IMAGE_STEP=0; \
   export NNTRAINER_GEMV_BATCH_SYNC=1; \
-  # NOSYNC=1 alone gave 4.58 TPS (+23%) but garbage tokens because
-  # Adreno 830 coarse-grained SVM doesn't honour GPU->GPU same-queue
-  # coherence.  IMAGE_PUBLISH=1 routes the FC output through
-  # svm_to_image2d_publish so the next image2d-aware consumer
-  # (rmsnorm_image2d_cl) reads via image cache (independent of SVM
-  # coherence), recovering coherence without a per-call queue drain.
-  # If consumers that don't pick up the pool image2d (swiglu_cl,
-  # add2_fp16_svm, attention_fused_fp16) still read SVM directly the
-  # output may still be garbage -- in that case Phase 2 (gemv kernel
-  # that writes image2d directly) is required.
+  # IMAGE2D=1 takes the Phase 2 path: gemv reads input image2d (from
+  # GpuImagePool, published by upstream RMSNorm) + writes output
+  # image2d (registered for next consumer).  Falls back to
+  # gemv_int4_adreno_cl with sync_output=true on pool miss so
+  # correctness is preserved.  Pair with NOSYNC=1: when the image2d
+  # path lands, no SVM was written so the per-call SVMMap is
+  # unnecessary.  IMAGE_PUBLISH from Phase 1 is no longer needed (the
+  # IMAGE2D path publishes its own output directly).
   export NNTRAINER_GEMV_NOSYNC=1; \
-  export NNTRAINER_GEMV_IMAGE_PUBLISH=1; \
+  export NNTRAINER_GEMV_IMAGE2D=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
