@@ -132,30 +132,24 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # the kernel itself is faster, and required because consumer entry
   # fences in mha_core / addition / swiglu CPU don't fully cover
   # Adreno coarse-grained SVM coherence on this hardware).
-  # Drop DEBUG_SYNC entirely and shift coherence to the consumer
-  # entry fences:
-  #   * mha_core: SVMMap on Q/K/V at MHA entry (existing)
-  #   * addition: SVMMap on inputs at CPU fallback (existing)
-  #   * swiglu CPU NEON: SVMMap on gate/up at decode entry (just
-  #     added in this commit -- previously absent)
-  #   * lm_head: SVMMap on input at TieWordEmbedding (existing)
-  # With these the per-FC blocking SVMMap inside gemv_int4_image2d_cl
-  # becomes redundant; consumers drain the queue when they actually
-  # need the data.  Expected: TPS up vs the 4.10 we saw with
-  # DEBUG_SYNC=1 since 252 per-FC SVMMaps are replaced by ~5
-  # per-layer consumer fences.
-  export NNTRAINER_GEMV_NOSYNC=1; \
-  # IMAGE2D path was producing meaningful but non-canonical output
-  # ('The paper introduces Thyme...' vs canonical 'Okay, the user
-  # wants...').  Even though gemv_int4_image2d kernel is bit-exact
-  # vs the SVM gemv in our unittest, the production input image2d
-  # is populated by rmsnorm_image2d_v2 (not svm_to_image2d), and
-  # any fp16 precision difference accumulates over 8064 FC calls
-  # per token batch, flipping the first sampled token.  Switch
-  # back to the SVM kernel (gemv_int4_adreno_cl) -- still WG=64,
-  # still NOSYNC=1, still consumer-fence-only coherence -- so we
-  # keep most of the speedup AND get canonical output.
-  # export NNTRAINER_GEMV_IMAGE2D=1; \
+  # Final ship config: keep ONLY the bit-exact-safe optimizations.
+  #   - WG=64 in gemv_int4_adreno_cl (kernel-internal, no behavioural
+  #     change vs WG=16 since the kernel has no reqd_work_group_size
+  #     attribute and indexing is purely on get_global_id(0))
+  #   - NOSYNC and IMAGE2D both DISABLED.  The IMAGE2D path was bit-
+  #     exact in unittest but in production its image2d input came
+  #     from rmsnorm_image2d_v2 (vs unittest's svm_to_image2d), and
+  #     the fp16 precision difference accumulated over 8064 FC
+  #     calls/token, flipping the first sampled token to a different
+  #     (still meaningful) chain-of-thought.  NOSYNC alone hung in
+  #     the IMAGE2D=0 configuration -- consumer fences alone aren't
+  #     sufficient when the FC outputs feed addition's GPU fast path
+  #     without entry fence.
+  # Net: ~3.94 TPS (was 3.79) with bit-exact canonical output
+  # 'Okay, the user wants...'.  All other infra (image2d helpers,
+  # swiglu CPU fence, batch sync, image2d kernel) stays in tree
+  # behind their env gates for future re-enable once the
+  # numerical-drift / hang issues are addressed.
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
