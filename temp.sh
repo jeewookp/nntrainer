@@ -145,12 +145,17 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # DEBUG_SYNC=1 since 252 per-FC SVMMaps are replaced by ~5
   # per-layer consumer fences.
   export NNTRAINER_GEMV_NOSYNC=1; \
-  export NNTRAINER_GEMV_IMAGE2D=1; \
-  # NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC unset -> no per-FC SVMMap inside
-  # the helper.  Re-enable if output regresses to garbage.
-  # SWIGLU_IMAGE2D wiring still produced garbage in production despite
-  # the kernel being bit-exact in unittest -- leave OFF until that's
-  # debugged separately.
+  # IMAGE2D path was producing meaningful but non-canonical output
+  # ('The paper introduces Thyme...' vs canonical 'Okay, the user
+  # wants...').  Even though gemv_int4_image2d kernel is bit-exact
+  # vs the SVM gemv in our unittest, the production input image2d
+  # is populated by rmsnorm_image2d_v2 (not svm_to_image2d), and
+  # any fp16 precision difference accumulates over 8064 FC calls
+  # per token batch, flipping the first sampled token.  Switch
+  # back to the SVM kernel (gemv_int4_adreno_cl) -- still WG=64,
+  # still NOSYNC=1, still consumer-fence-only coherence -- so we
+  # keep most of the speedup AND get canonical output.
+  # export NNTRAINER_GEMV_IMAGE2D=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
