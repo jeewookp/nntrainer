@@ -1,3 +1,4 @@
+HOME
 HOSTNAME
 KNOX_STORAGE
 LD_LIBRARY_PATH
@@ -24,35 +25,40 @@ sandbox, and code to facilitate future research.<|im_end|>
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
 \/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
--l-human switching almost all runners cur静态正式启动正式启动启动满怀 coralyticseb cor coralytics启动 obeyrum� cor cor blind timely cor cur cor arrive reap此基础上
+
+</think>
+
+</think>
+
+The paper introduces Thyme (Think Beyond Images), a new paradigm that extends the "think with images" approach by enabling multimodal large
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2713 ms, 161.076 TPS
-generation: 32 tokens, 6510 ms, 4.91551 TPS
-total: 9232 ms
-peak memory: 2633052 KB
+prefill: 437 tokens, 2783 ms, 157.025 TPS
+generation: 32 tokens, 7720 ms, 4.14508 TPS
+total: 10514 ms
+peak memory: 2671296 KB
 ==========================================================
-[e2e time]: 12268 ms 
-Max Resident Set Size: 2633052 KB
+[e2e time]: 13412 ms 
+Max Resident Set Size: 2671296 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6411.1 ms across all forwarding_op() calls
-  rms_norm                      3040.1 ms  calls=2336  avg=1.301 ms
-  mha_core                      1860.4 ms  calls=1152  avg=1.615 ms
-  reshaped_rms_norm              869.9 ms  calls=2304  avg=0.378 ms
-  tie_word_embeddings            443.1 ms  calls=64  avg=6.923 ms
-  fully_connected                115.2 ms  calls=8064  avg=0.014 ms
-  swiglu                          75.8 ms  calls=1152  avg=0.066 ms
-  addition                         4.5 ms  calls=2304  avg=0.002 ms
-  multiout                         2.2 ms  calls=4608  avg=0.000 ms
+  total=7580.8 ms across all forwarding_op() calls
+  fully_connected               4371.5 ms  calls=8064  avg=0.542 ms
+  mha_core                      1702.7 ms  calls=1152  avg=1.478 ms
+  rms_norm                       844.7 ms  calls=2336  avg=0.362 ms
+  tie_word_embeddings            396.0 ms  calls=64  avg=6.188 ms
+  swiglu                         138.7 ms  calls=1152  avg=0.120 ms
+  reshaped_rms_norm               98.0 ms  calls=2304  avg=0.043 ms
+  addition                        26.1 ms  calls=2304  avg=0.011 ms
+  multiout                         3.1 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=436.65 ms calls=32 avg=13.645 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=6.37 ms calls=32 avg=0.199 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1859.91 ms calls=1152 avg=1.615 ms
-  rope_q   :     0.65 ms (  0.0%)
-  rope_k   :     1.04 ms (  0.1%)
-  v_copy   :     0.85 ms (  0.0%)
-  qk       :  1313.66 ms ( 70.6%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=391.98 ms calls=32 avg=12.249 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.93 ms calls=32 avg=0.123 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1701.94 ms calls=1152 avg=1.477 ms
+  rope_q   :     0.96 ms (  0.1%)
+  rope_k   :     1.48 ms (  0.1%)
+  v_copy   :     1.04 ms (  0.1%)
+  qk       :  1524.36 ms ( 89.6%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
@@ -63,10 +69,10 @@ Max Resident Set Size: 2633052 KB
   hit   K=4096 N=2560  count=1152
   hit   K=9728 N=2560  count=1152
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=103.42 ms calls=8064
-  in_copy   :     1.82 ms (  1.8%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   101.38 ms ( 98.0%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.22 ms (  0.2%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4353.96 ms calls=8064
+  in_copy   :     2.53 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4351.15 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -77,55 +83,60 @@ Max Resident Set Size: 2633052 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2713 ms, 161.076 TPS
-generation: 32 tokens, 6510 ms, 4.91551 TPS
-total: 9232 ms
-peak memory: 2633052 KB
-[e2e time]: 12268 ms 
+prefill: 437 tokens, 2783 ms, 157.025 TPS
+generation: 32 tokens, 7720 ms, 4.14508 TPS
+total: 10514 ms
+peak memory: 2671296 KB
+[e2e time]: 13412 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6411.1 ms across all forwarding_op() calls
-  rms_norm                      3040.1 ms  calls=2336  avg=1.301 ms
-  mha_core                      1860.4 ms  calls=1152  avg=1.615 ms
-  reshaped_rms_norm              869.9 ms  calls=2304  avg=0.378 ms
-  tie_word_embeddings            443.1 ms  calls=64  avg=6.923 ms
-  fully_connected                115.2 ms  calls=8064  avg=0.014 ms
-  swiglu                          75.8 ms  calls=1152  avg=0.066 ms
-  addition                         4.5 ms  calls=2304  avg=0.002 ms
-  multiout                         2.2 ms  calls=4608  avg=0.000 ms
+  total=7580.8 ms across all forwarding_op() calls
+  fully_connected               4371.5 ms  calls=8064  avg=0.542 ms
+  mha_core                      1702.7 ms  calls=1152  avg=1.478 ms
+  rms_norm                       844.7 ms  calls=2336  avg=0.362 ms
+  tie_word_embeddings            396.0 ms  calls=64  avg=6.188 ms
+  swiglu                         138.7 ms  calls=1152  avg=0.120 ms
+  reshaped_rms_norm               98.0 ms  calls=2304  avg=0.043 ms
+  addition                        26.1 ms  calls=2304  avg=0.011 ms
+  multiout                         3.1 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=436.65 ms calls=32 avg=13.645 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=6.37 ms calls=32 avg=0.199 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1859.91 ms calls=1152 avg=1.615 ms
-  rope_q   :     0.65 ms (  0.0%)
-  rope_k   :     1.04 ms (  0.1%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=391.98 ms calls=32 avg=12.249 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.93 ms calls=32 avg=0.123 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1701.94 ms calls=1152 avg=1.477 ms
+  rope_q   :     0.96 ms (  0.1%)
+  rope_k   :     1.48 ms (  0.1%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=436.65 ms calls=32 avg=13.645 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=6.37 ms calls=32 avg=0.199 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1859.91 ms calls=1152 avg=1.615 ms
-  rope_q   :     0.65 ms (  0.0%)
-  rope_k   :     1.04 ms (  0.1%)
-  v_copy   :     0.85 ms (  0.0%)
-  qk       :  1313.66 ms ( 70.6%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=391.98 ms calls=32 avg=12.249 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.93 ms calls=32 avg=0.123 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1701.94 ms calls=1152 avg=1.477 ms
+  rope_q   :     0.96 ms (  0.1%)
+  rope_k   :     1.48 ms (  0.1%)
+  v_copy   :     1.04 ms (  0.1%)
+  qk       :  1524.36 ms ( 89.6%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
 [PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
 --
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=103.42 ms calls=8064
-  in_copy   :     1.82 ms (  1.8%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   101.38 ms ( 98.0%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.22 ms (  0.2%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4353.96 ms calls=8064
+  in_copy   :     2.53 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4351.15 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
 \/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
--l-human switching almost all runners cur静态正式启动正式启动启动满怀 cor
+
+</think>
+
+</think>
+
+The paper introduces Thyme (Think Beyond Images), a new paradigm t
 
 Full log: temp_run.log
 
