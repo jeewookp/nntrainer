@@ -2021,11 +2021,17 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
   // is at least a multiple of 8. For Qwen3-4B FC widths the values are
   // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
-  const int align_N = static_cast<int>(align(N, 32));
+  // Adreno 830 wavefront width is 64; align global to 256 / WG to 64
+  // so each work-group fully fills a wavefront.  Earlier WG=16 left
+  // 75% of every wavefront idle and was the easy 2.4x win the
+  // gemv_compare unittest exposed.  Kernel itself has no
+  // reqd_work_group_size attribute so the change is purely on the
+  // dispatch side.
+  const int align_N = static_cast<int>(align(N, 256));
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_n, 1, 1};
-  const int work_group_size[3] = {16, 1, 1};
+  const int work_group_size[3] = {64, 1, 1};
 
   const uint64_t t_dispatch_start = now_ns_phase6();
   cl_event kernel_ev = nullptr;
