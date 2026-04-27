@@ -17,6 +17,9 @@
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <map>
+#include <mutex>
+#include <utility>
 
 #include <cpu_backend.h>
 #include <half_tensor.h>
@@ -164,6 +167,20 @@ HalfDotQInt4DecodeProfile g_half_dotq_decode_profile;
 struct HalfDotQImage2dCounters {
   std::atomic<uint64_t> hit{0};
   std::atomic<uint64_t> miss{0};
+  // Per-shape miss tally so we can see which FC types (Q, K, V, O,
+  // gate, up, down -- distinguishable by their (K,N) pairs) are the
+  // ones missing the GpuImagePool lookup.  Bounded mutex is fine, fires
+  // only on miss which is the rarer event.
+  std::mutex mu;
+  std::map<std::pair<unsigned, unsigned>, uint64_t> miss_by_shape;
+  std::map<std::pair<unsigned, unsigned>, uint64_t> hit_by_shape;
+  void record(unsigned K, unsigned N, bool hit_flag) {
+    if (hit_flag) hit.fetch_add(1, std::memory_order_relaxed);
+    else          miss.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lk(mu);
+    auto &m = hit_flag ? hit_by_shape : miss_by_shape;
+    m[{K, N}]++;
+  }
   ~HalfDotQImage2dCounters() {
     const uint64_t h = hit.load();
     const uint64_t m = miss.load();
@@ -174,6 +191,19 @@ struct HalfDotQImage2dCounters {
                  "hit=%llu miss=%llu  hit_rate=%.1f%%\n",
                  (unsigned long long)h, (unsigned long long)m,
                  (h + m) ? 100.0 * (double)h / (double)(h + m) : 0.0);
+    std::lock_guard<std::mutex> lk(mu);
+    for (const auto &kv : miss_by_shape) {
+      std::fprintf(stderr,
+                   "  miss  K=%u N=%u  count=%llu\n",
+                   kv.first.first, kv.first.second,
+                   (unsigned long long)kv.second);
+    }
+    for (const auto &kv : hit_by_shape) {
+      std::fprintf(stderr,
+                   "  hit   K=%u N=%u  count=%llu\n",
+                   kv.first.first, kv.first.second,
+                   (unsigned long long)kv.second);
+    }
   }
 };
 HalfDotQImage2dCounters g_half_dotq_image2d_counters;
@@ -1105,12 +1135,7 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       if (s_image2d) {
         image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
           in_u16, weight_u16, scale_u16, out_u16, K, N);
-        if (image2d_dispatched)
-          g_half_dotq_image2d_counters.hit.fetch_add(
-            1, std::memory_order_relaxed);
-        else
-          g_half_dotq_image2d_counters.miss.fetch_add(
-            1, std::memory_order_relaxed);
+        g_half_dotq_image2d_counters.record(K, N, image2d_dispatched);
       }
       if (!image2d_dispatched) {
         // Pool miss fallback: with IMAGE2D=1 we still want an
