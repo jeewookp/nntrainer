@@ -1,3 +1,18 @@
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
 PATH
 SHELL
@@ -18,48 +33,48 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  step=0
+\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=1  step=0
  noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2798 ms, 156.183 TPS
-generation: 32 tokens, 6985 ms, 4.58125 TPS
-total: 9788 ms
-peak memory: 2653168 KB
+prefill: 437 tokens, 2787 ms, 156.799 TPS
+generation: 32 tokens, 7463 ms, 4.28782 TPS
+total: 10253 ms
+peak memory: 2690928 KB
 ==========================================================
-[e2e time]: 12758 ms 
-Max Resident Set Size: 2653168 KB
+[e2e time]: 13194 ms 
+Max Resident Set Size: 2690928 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6916.4 ms across all forwarding_op() calls
-  rms_norm                      3465.2 ms  calls=2336  avg=1.483 ms
-  mha_core                      1918.6 ms  calls=1152  avg=1.665 ms
-  reshaped_rms_norm              994.4 ms  calls=2304  avg=0.432 ms
-  tie_word_embeddings            427.1 ms  calls=64  avg=6.673 ms
-  fully_connected                 88.0 ms  calls=8064  avg=0.011 ms
-  swiglu                          15.6 ms  calls=1152  avg=0.014 ms
-  addition                         5.0 ms  calls=2304  avg=0.002 ms
-  multiout                         2.5 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=390.86 ms calls=32 avg=12.214 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=36.17 ms calls=32 avg=1.130 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1917.96 ms calls=1152 avg=1.665 ms
-  rope_q   :     0.66 ms (  0.0%)
-  rope_k   :     1.08 ms (  0.1%)
-  v_copy   :     0.88 ms (  0.0%)
-  qk       :  1290.21 ms ( 67.3%)
+  total=7345.7 ms across all forwarding_op() calls
+  rms_norm                      3704.0 ms  calls=2336  avg=1.586 ms
+  mha_core                      1943.6 ms  calls=1152  avg=1.687 ms
+  reshaped_rms_norm             1021.6 ms  calls=2304  avg=0.443 ms
+  tie_word_embeddings            412.9 ms  calls=64  avg=6.452 ms
+  fully_connected                235.6 ms  calls=8064  avg=0.029 ms
+  swiglu                          19.5 ms  calls=1152  avg=0.017 ms
+  addition                         5.8 ms  calls=2304  avg=0.003 ms
+  multiout                         2.7 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.003 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=410.77 ms calls=32 avg=12.837 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.05 ms calls=32 avg=0.064 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1942.93 ms calls=1152 avg=1.687 ms
+  rope_q   :     0.82 ms (  0.0%)
+  rope_k   :     1.35 ms (  0.1%)
+  v_copy   :     1.03 ms (  0.1%)
+  qk       :  1297.94 ms ( 66.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=75.14 ms calls=8064
-  in_copy   :     1.78 ms (  2.4%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    73.14 ms ( 97.3%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.22 ms (  0.3%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=220.79 ms calls=8064
+  in_copy   :     2.01 ms (  0.9%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :   218.52 ms ( 99.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.25 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=44.66 ms avg=0.006 ms
-  args_setup :    3.79 ms (  8.5%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   40.66 ms ( 91.0%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     :    0.22 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=50.12 ms avg=0.006 ms
+  args_setup :    4.43 ms (  8.8%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   45.44 ms ( 90.7%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     :    0.25 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -70,61 +85,62 @@ Max Resident Set Size: 2653168 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2798 ms, 156.183 TPS
-generation: 32 tokens, 6985 ms, 4.58125 TPS
-total: 9788 ms
-peak memory: 2653168 KB
-[e2e time]: 12758 ms 
+prefill: 437 tokens, 2787 ms, 156.799 TPS
+generation: 32 tokens, 7463 ms, 4.28782 TPS
+total: 10253 ms
+peak memory: 2690928 KB
+[e2e time]: 13194 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6916.4 ms across all forwarding_op() calls
-  rms_norm                      3465.2 ms  calls=2336  avg=1.483 ms
-  mha_core                      1918.6 ms  calls=1152  avg=1.665 ms
-  reshaped_rms_norm              994.4 ms  calls=2304  avg=0.432 ms
-  tie_word_embeddings            427.1 ms  calls=64  avg=6.673 ms
-  fully_connected                 88.0 ms  calls=8064  avg=0.011 ms
-  swiglu                          15.6 ms  calls=1152  avg=0.014 ms
-  addition                         5.0 ms  calls=2304  avg=0.002 ms
-  multiout                         2.5 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=390.86 ms calls=32 avg=12.214 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=36.17 ms calls=32 avg=1.130 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1917.96 ms calls=1152 avg=1.665 ms
-  rope_q   :     0.66 ms (  0.0%)
-  rope_k   :     1.08 ms (  0.1%)
+  total=7345.7 ms across all forwarding_op() calls
+  rms_norm                      3704.0 ms  calls=2336  avg=1.586 ms
+  mha_core                      1943.6 ms  calls=1152  avg=1.687 ms
+  reshaped_rms_norm             1021.6 ms  calls=2304  avg=0.443 ms
+  tie_word_embeddings            412.9 ms  calls=64  avg=6.452 ms
+  fully_connected                235.6 ms  calls=8064  avg=0.029 ms
+  swiglu                          19.5 ms  calls=1152  avg=0.017 ms
+  addition                         5.8 ms  calls=2304  avg=0.003 ms
+  multiout                         2.7 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.003 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=410.77 ms calls=32 avg=12.837 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.05 ms calls=32 avg=0.064 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1942.93 ms calls=1152 avg=1.687 ms
+  rope_q   :     0.82 ms (  0.0%)
+  rope_k   :     1.35 ms (  0.1%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=390.86 ms calls=32 avg=12.214 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=36.17 ms calls=32 avg=1.130 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1917.96 ms calls=1152 avg=1.665 ms
-  rope_q   :     0.66 ms (  0.0%)
-  rope_k   :     1.08 ms (  0.1%)
-  v_copy   :     0.88 ms (  0.0%)
-  qk       :  1290.21 ms ( 67.3%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=410.77 ms calls=32 avg=12.837 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.05 ms calls=32 avg=0.064 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1942.93 ms calls=1152 avg=1.687 ms
+  rope_q   :     0.82 ms (  0.0%)
+  rope_k   :     1.35 ms (  0.1%)
+  v_copy   :     1.03 ms (  0.1%)
+  qk       :  1297.94 ms ( 66.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=75.14 ms calls=8064
-  in_copy   :     1.78 ms (  2.4%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    73.14 ms ( 97.3%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.22 ms (  0.3%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=220.79 ms calls=8064
+  in_copy   :     2.01 ms (  0.9%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :   218.52 ms ( 99.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.25 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=44.66 ms avg=0.006 ms
-  args_setup :    3.79 ms (  8.5%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   40.66 ms ( 91.0%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     :    0.22 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=50.12 ms avg=0.006 ms
+  args_setup :    4.43 ms (  8.8%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   45.44 ms ( 90.7%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     :    0.25 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  step=0
- noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu
+\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=1  step=0
+ noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake
 
 Full log: temp_run.log
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
