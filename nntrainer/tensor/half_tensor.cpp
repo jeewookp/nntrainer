@@ -1124,14 +1124,14 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, gemv_out,
                                        K, N);
     } else {
-      // Phase 2 image2d gemv: try the image-in/image-out path first.
-      // Falls back to the SVM gemv on pool miss (e.g. first layer of
-      // the network where no upstream RMSNorm has published, or any
-      // call where the input pointer doesn't have a pool entry).  When
-      // the image path lands the output is in GpuImagePool for the
-      // next consumer; SVM out_u16 stays untouched, so the
-      // svm_out -> out_u16 scalar copy below MUST be skipped (it
-      // would corrupt out_u16 with stale staging data).
+      // Phase 2 image2d gemv: try the image-in / image2d+SVM-out path
+      // first.  When the image path lands the kernel writes BOTH the
+      // image2d (for image-aware consumers, registered in
+      // GpuImagePool) AND the SVM output tensor directly (for
+      // consumers that read SVM, like mha_core's enqueueSVMMap entry
+      // fence on Q/K/V or addition_layer's add2_fp16_svm_cl).  No
+      // svm_out staging copy needed in either branch.  Falls back to
+      // the SVM gemv on pool miss with sync_output forced true.
       if (s_image2d) {
         image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
           in_u16, weight_u16, scale_u16, out_u16, K, N);

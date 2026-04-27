@@ -2466,6 +2466,7 @@ bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
   kernel_ptr->SetKernelSVMArguments(arg++, scales);
   kernel_ptr->SetKernelArguments(arg++, &out_img, sizeof(cl_mem));
   kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  kernel_ptr->SetKernelSVMArguments(arg++, output_svm);
   int size_k = (int)K, size_n = (int)N;
   kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
   kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
