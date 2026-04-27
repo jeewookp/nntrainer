@@ -44,9 +44,17 @@ if [ ! -f builddir/android_build_result/lib/arm64-v8a/libnntrainer.so ]; then
 fi
 
 # 2. Build the unit test via the test/jni Android.mk.  ndk-build
-#    drops the executable in test/libs/arm64-v8a/.
+#    drops the executable in test/jni/obj/local/<abi>/ (and the
+#    .o for our cpp under test/jni/obj/local/<abi>/objs/$TEST_BIN/).
+#    Force-remove both so a) link-config changes (e.g. dropping a
+#    static lib that was previously linked) actually take effect
+#    and b) "Nothing to be done" never silently leaves a stale
+#    binary on the filesystem.
 echo "[gemv_compare.sh] Building $TEST_BIN ..."
 pushd test/jni > /dev/null
+rm -f obj/local/arm64-v8a/$TEST_BIN \
+      libs/arm64-v8a/$TEST_BIN \
+      obj/local/arm64-v8a/objs/$TEST_BIN/*.o 2>/dev/null || true
 ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk \
           APP_PLATFORM=android-29 APP_ABI=arm64-v8a \
           APP_STL=c++_shared MESON_ENABLE_OPENCL=1 \

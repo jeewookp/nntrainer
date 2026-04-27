@@ -219,3 +219,27 @@ DECLARE_gemv_compare_K_N(2560, 1024);  // K / V proj
 DECLARE_gemv_compare_K_N(4096, 2560);  // O proj
 DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
+
+// Defining main() directly in this .o file is the only reliable way to
+// keep gtest as the program entry point.  Without it, the linker pulls
+// `main` from one of the static archives (googletest_main *or* xgemm.o
+// from libclblast.a, which has its own benchmark `main()`), and link
+// order on ndk-build sometimes picks the CLBlast tuner main -- the
+// resulting binary then runs the CLBlast m=n=k sweep instead of any
+// gtest at all.  unittest_opencl_kernels_int4_adreno.cpp dodges the
+// same trap by defining its own main(); copy the pattern here.
+GTEST_API_ int main(int argc, char **argv) {
+  int result = -1;
+  try {
+    testing::InitGoogleTest(&argc, argv);
+  } catch (...) {
+    std::cerr << "Error during InitGoogleTest" << std::endl;
+    return 0;
+  }
+  try {
+    result = RUN_ALL_TESTS();
+  } catch (...) {
+    std::cerr << "Error during RUN_ALL_TESTS()" << std::endl;
+  }
+  return result;
+}
