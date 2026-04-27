@@ -1,3 +1,21 @@
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
 TMPDIR
 USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
@@ -13,35 +31,35 @@ sandbox, and code to facilitate future research.<|im_end|>
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
 \/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
- enjoyable座谈会上と同じftyfty滴说кажө достат所述 المستقبل^\座谈会上dependent quel可信座谈会上艇座谈会上[urlfty經過讯座谈会上àn zienquadqua座谈会上 тек
+ partir座谈会上とするftyftyàn enjoyable существуетө достат所述 críticaandra座谈会上fty.说不大胱fty座谈会上gte说暮[url座谈会上 sposób[url说àn座谈会上fty
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2406 ms, 181.629 TPS
-generation: 32 tokens, 7500 ms, 4.26667 TPS
-total: 9911 ms
-peak memory: 2856184 KB
+prefill: 437 tokens, 2869 ms, 152.318 TPS
+generation: 32 tokens, 7489 ms, 4.27293 TPS
+total: 10370 ms
+peak memory: 2664728 KB
 ==========================================================
-[e2e time]: 12965 ms 
-Max Resident Set Size: 2856184 KB
+[e2e time]: 13343 ms 
+Max Resident Set Size: 2664728 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7425.5 ms across all forwarding_op() calls
-  fully_connected               4159.6 ms  calls=8064  avg=0.516 ms
-  mha_core                      1780.7 ms  calls=1152  avg=1.546 ms
-  rms_norm                       855.0 ms  calls=2336  avg=0.366 ms
-  tie_word_embeddings            468.6 ms  calls=64  avg=7.322 ms
-  reshaped_rms_norm              108.2 ms  calls=2304  avg=0.047 ms
-  swiglu                          27.9 ms  calls=1152  avg=0.024 ms
-  addition                        22.6 ms  calls=2304  avg=0.010 ms
+  total=7345.8 ms across all forwarding_op() calls
+  fully_connected               4193.1 ms  calls=8064  avg=0.520 ms
+  mha_core                      1726.9 ms  calls=1152  avg=1.499 ms
+  rms_norm                       853.5 ms  calls=2336  avg=0.365 ms
+  tie_word_embeddings            416.1 ms  calls=64  avg=6.501 ms
+  reshaped_rms_norm              101.8 ms  calls=2304  avg=0.044 ms
+  swiglu                          29.8 ms  calls=1152  avg=0.026 ms
+  addition                        21.8 ms  calls=2304  avg=0.009 ms
   multiout                         2.8 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=416.63 ms calls=32 avg=13.020 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=51.93 ms calls=32 avg=1.623 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1780.01 ms calls=1152 avg=1.545 ms
-  rope_q   :     0.90 ms (  0.1%)
-  rope_k   :     1.31 ms (  0.1%)
-  v_copy   :     1.04 ms (  0.1%)
-  qk       :  1586.00 ms ( 89.1%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=413.63 ms calls=32 avg=12.926 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.34 ms calls=32 avg=0.073 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1726.19 ms calls=1152 avg=1.498 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.30 ms (  0.1%)
+  v_copy   :     1.03 ms (  0.1%)
+  qk       :  1542.30 ms ( 89.3%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
@@ -52,9 +70,9 @@ Max Resident Set Size: 2856184 KB
   hit   K=4096 N=2560  count=1152
   hit   K=9728 N=2560  count=1152
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4143.89 ms calls=8064
-  in_copy   :     2.55 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4141.07 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4177.10 ms calls=8064
+  in_copy   :     2.45 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4174.38 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -66,47 +84,47 @@ Max Resident Set Size: 2856184 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2406 ms, 181.629 TPS
-generation: 32 tokens, 7500 ms, 4.26667 TPS
-total: 9911 ms
-peak memory: 2856184 KB
-[e2e time]: 12965 ms 
+prefill: 437 tokens, 2869 ms, 152.318 TPS
+generation: 32 tokens, 7489 ms, 4.27293 TPS
+total: 10370 ms
+peak memory: 2664728 KB
+[e2e time]: 13343 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7425.5 ms across all forwarding_op() calls
-  fully_connected               4159.6 ms  calls=8064  avg=0.516 ms
-  mha_core                      1780.7 ms  calls=1152  avg=1.546 ms
-  rms_norm                       855.0 ms  calls=2336  avg=0.366 ms
-  tie_word_embeddings            468.6 ms  calls=64  avg=7.322 ms
-  reshaped_rms_norm              108.2 ms  calls=2304  avg=0.047 ms
-  swiglu                          27.9 ms  calls=1152  avg=0.024 ms
-  addition                        22.6 ms  calls=2304  avg=0.010 ms
+  total=7345.8 ms across all forwarding_op() calls
+  fully_connected               4193.1 ms  calls=8064  avg=0.520 ms
+  mha_core                      1726.9 ms  calls=1152  avg=1.499 ms
+  rms_norm                       853.5 ms  calls=2336  avg=0.365 ms
+  tie_word_embeddings            416.1 ms  calls=64  avg=6.501 ms
+  reshaped_rms_norm              101.8 ms  calls=2304  avg=0.044 ms
+  swiglu                          29.8 ms  calls=1152  avg=0.026 ms
+  addition                        21.8 ms  calls=2304  avg=0.009 ms
   multiout                         2.8 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=416.63 ms calls=32 avg=13.020 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=51.93 ms calls=32 avg=1.623 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1780.01 ms calls=1152 avg=1.545 ms
-  rope_q   :     0.90 ms (  0.1%)
-  rope_k   :     1.31 ms (  0.1%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=413.63 ms calls=32 avg=12.926 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.34 ms calls=32 avg=0.073 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1726.19 ms calls=1152 avg=1.498 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.30 ms (  0.1%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=416.63 ms calls=32 avg=13.020 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=51.93 ms calls=32 avg=1.623 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1780.01 ms calls=1152 avg=1.545 ms
-  rope_q   :     0.90 ms (  0.1%)
-  rope_k   :     1.31 ms (  0.1%)
-  v_copy   :     1.04 ms (  0.1%)
-  qk       :  1586.00 ms ( 89.1%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=413.63 ms calls=32 avg=12.926 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.34 ms calls=32 avg=0.073 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1726.19 ms calls=1152 avg=1.498 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.30 ms (  0.1%)
+  v_copy   :     1.03 ms (  0.1%)
+  qk       :  1542.30 ms ( 89.3%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
 [PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
 --
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4143.89 ms calls=8064
-  in_copy   :     2.55 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4141.07 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4177.10 ms calls=8064
+  in_copy   :     2.45 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4174.38 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
@@ -114,7 +132,7 @@ peak memory: 2856184 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
 \/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
- enjoyable座谈会上と同じftyfty滴说кажө достат所述 المستقبل
+ partir座谈会上とするftyftyàn enjoyable существуетө достат所�
 
 Full log: temp_run.log
 
