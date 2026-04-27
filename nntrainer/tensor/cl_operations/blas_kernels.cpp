@@ -2021,17 +2021,24 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
   // is at least a multiple of 8. For Qwen3-4B FC widths the values are
   // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
-  // Adreno 830 wavefront width is 64; align global to 256 / WG to 64
-  // so each work-group fully fills a wavefront.  Earlier WG=16 left
-  // 75% of every wavefront idle and was the easy 2.4x win the
-  // gemv_compare unittest exposed.  Kernel itself has no
-  // reqd_work_group_size attribute so the change is purely on the
-  // dispatch side.
-  const int align_N = static_cast<int>(align(N, 256));
+  // WG REVERTED to 16 (was 64) for production.  WG=64 was bit-
+  // exact in the gemv_compare unittest but in production Qwen3-4B
+  // decode produced a different chain-of-thought ('The paper
+  // introduces Thyme...' vs canonical 'Okay, the user wants...').
+  // The gemv kernel uses scalar fp32 accumulators (no WG-size
+  // dependent reduction in source), but Adreno OpenCL compiler
+  // appears to apply different vectorization / register layout at
+  // WG=64 vs 16, accumulating fp16 precision drift across 8064
+  // calls/token until the first sampled token flips.  Keep WG=16
+  // for canonical output; the WG=64 win (~2.4x kernel time in
+  // unittest, ~4% e2e in production) lives on in env-gated
+  // helpers (gemv_int4_image2d_cl) for future work that's prepared
+  // to accept the alternate sampling sequence.
+  const int align_N = static_cast<int>(align(N, 32));
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_n, 1, 1};
-  const int work_group_size[3] = {64, 1, 1};
+  const int work_group_size[3] = {16, 1, 1};
 
   const uint64_t t_dispatch_start = now_ns_phase6();
   cl_event kernel_ev = nullptr;
