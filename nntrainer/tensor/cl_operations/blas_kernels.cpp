@@ -2511,6 +2511,142 @@ bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
   return true;
 }
 
+// Phase 2 image-only consumer helpers: swiglu_image2d_cl + addition_image2d_cl.
+// Used to extend the FC -> consumer image-cache chain past mha_core
+// so that DEBUG_SYNC (per-FC blocking SVMMap) can eventually be
+// dropped: when every consumer reads/writes via image cache, no
+// downstream layer ever reads the SVM output of an image2d FC, and
+// Adreno's coarse-grained SVM coherence becomes irrelevant.
+
+// SwiGLU on image2d: gate_svm and up_svm must be in GpuImagePool
+// (typically the gate_proj/up_proj FC outputs registered via
+// gemv_int4_image2d_cl).  Output image2d is registered in the pool
+// keyed by out_svm, AND the SVM pointer is also written via vstore4
+// in the kernel for any SVM-reading consumer (e.g. fall-through
+// addition CPU path).  Returns false on miss so the caller can fall
+// back to the SVM swiglu path.
+bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
+                       unsigned int M, unsigned int K) {
+  if (!gate_svm || !up_svm || !out_svm || M == 0 || K == 0) return false;
+  if ((K & 3u) != 0u) return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int slices = (int)K / 4;
+  int gM = 0, gS = 0, uM = 0, uS = 0;
+  cl_mem g_img = GpuImagePool::Global().get(gate_svm, &gM, &gS);
+  cl_mem u_img = GpuImagePool::Global().get(up_svm,   &uM, &uS);
+  if (!g_img || !u_img || gM != (int)M || gS != slices ||
+      uM != (int)M || uS != slices) {
+    return false;
+  }
+
+  // Output image2d: cache per out_svm.
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  cl_mem out_img = nullptr;
+  cl_int err = 0;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(out_svm);
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, (int)M, slices};
+    }
+  }
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    swiglu_image2d_kernel, "swiglu_image2d");
+  if (!kp) return false;
+  int a = 0;
+  kp->SetKernelArguments(a++, &g_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &u_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &out_img, sizeof(cl_mem));
+  int sm = (int)M, ss = slices;
+  kp->SetKernelArguments(a++, &sm, sizeof(int));
+  kp->SetKernelArguments(a++, &ss, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16, (slices + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  return true;
+}
+
+// Element-wise addition on image2d.  a_svm and b_svm must be in
+// GpuImagePool with matching shape; output is published like
+// swiglu_image2d_cl above.
+bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
+                         unsigned int M, unsigned int K) {
+  if (!a_svm || !b_svm || !out_svm || M == 0 || K == 0) return false;
+  if ((K & 3u) != 0u) return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int slices = (int)K / 4;
+  int aM = 0, aS = 0, bM = 0, bS = 0;
+  cl_mem a_img = GpuImagePool::Global().get(a_svm, &aM, &aS);
+  cl_mem b_img = GpuImagePool::Global().get(b_svm, &bM, &bS);
+  if (!a_img || !b_img || aM != (int)M || aS != slices ||
+      bM != (int)M || bS != slices) {
+    return false;
+  }
+
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  cl_mem out_img = nullptr;
+  cl_int err = 0;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(out_svm);
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, (int)M, slices};
+    }
+  }
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    addition_image2d_kernel, "addition_image2d");
+  if (!kp) return false;
+  int ia = 0;
+  kp->SetKernelArguments(ia++, &a_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(ia++, &b_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(ia++, &out_img, sizeof(cl_mem));
+  int sm = (int)M, ss = slices;
+  kp->SetKernelArguments(ia++, &sm, sizeof(int));
+  kp->SetKernelArguments(ia++, &ss, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16, (slices + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  return true;
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;

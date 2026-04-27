@@ -95,6 +95,33 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   int iter = to - from;
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Image2d fast path (extends the FC -> consumer image-cache chain
+  // past the SVM coherence wall): if both gate and up SVM pointers
+  // are already in GpuImagePool (typical when upstream gate_proj /
+  // up_proj went through gemv_int4_image2d_cl), dispatch
+  // swiglu_image2d_cl which reads/writes purely on image cache and
+  // publishes the output image2d for the down_proj that follows.
+  // Falls through to the existing SVM/CPU paths on pool miss.
+  if (in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
+      in2.getMemoryData() && in2.getMemoryData()->isSVM() &&
+      out.getMemoryData() && out.getMemoryData()->isSVM() &&
+      in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in1.batch() == 1 && (in1.width() % 4) == 0) {
+    const unsigned int M = (unsigned int)in1.channel() * (unsigned int)iter;
+    const unsigned int K = (unsigned int)in1.width();
+    const bool dispatched = nntrainer::swiglu_image2d_cl(
+      in1.getData<char>(), in2.getData<char>(), out.getData<char>(), M, K);
+    if (dispatched) {
+      if (profile_this_call) {
+        g_swiglu_profile.ns += now_ns() - t_layer_start;
+        g_swiglu_profile.calls++;
+      }
+      return;
+    }
+  }
+
   // Phase B fast path: if all three tensors are fp16 SVM and the
   // flat element count is a safe multiple of the dispatch local size,
   // run swiglu_cl_fp16 on the GPU queue instead of the NEON CPU
