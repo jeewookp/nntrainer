@@ -36,9 +36,18 @@ TEST_BIN=unittest_opencl_kernels_gemv_compare
 
 cd "$REPO_ROOT"
 
-# 1. Ensure nntrainer shared libs exist (rebuild if missing).
-if [ ! -f builddir/android_build_result/lib/arm64-v8a/libnntrainer.so ]; then
-  echo "[gemv_compare.sh] libnntrainer.so missing -- running package_android.sh first"
+# 1. Ensure nntrainer shared libs are up to date.  meson configure_file
+# turns each .cl source into a baked C++ string symbol (e.g.
+# swiglu_image2d_kernel) inside libnntrainer.so; ndk-build for the
+# unittest does NOT rebuild libnntrainer.so, so any kernel source
+# edit since the last package_android.sh run is silently ignored
+# until we re-run it.
+#
+# Set NNTRAINER_GEMV_COMPARE_SKIP_LIB_REBUILD=1 if you really want to
+# skip (only valid when no .cl source has changed since last build).
+if [ -z "${NNTRAINER_GEMV_COMPARE_SKIP_LIB_REBUILD:-}" ] || \
+   [ ! -f builddir/android_build_result/lib/arm64-v8a/libnntrainer.so ]; then
+  echo "[gemv_compare.sh] (re)building libnntrainer.so via package_android.sh"
   ./tools/package_android.sh -Dmmap-read=false -Domp-num-threads=1 \
                              -Dthread-backend=omp -Denable-opencl=true
 fi
