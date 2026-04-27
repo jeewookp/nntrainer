@@ -1,34 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 19, done.
-remote: Counting objects: 100% (19/19), done.
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 10 (delta 9), reused 10 (delta 9), pack-reused 0 (from 0)
-Unpacking objects: 100% (10/10), 1.99 KiB | 340.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.45 KiB | 495.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   742c03ab..9708e691  all_gpu    -> upstream/all_gpu
-Updating 742c03ab..9708e691
+   e4a62263..3077cb21  all_gpu    -> upstream/all_gpu
+Updating e4a62263..3077cb21
 Fast-forward
- nntrainer/tensor/cl_operations/cl_kernels/swiglu_image2d.cl | 12 ++++++++++++
- test/unittest/unittest_opencl_kernels_gemv_compare.cpp      |  8 ++++++++
- 2 files changed, 20 insertions(+)
+ nntrainer/tensor/cl_operations/cl_kernels/swiglu_image2d.cl | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
 Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Compile++      : unittest_opencl_kernels_gemv_compare <= unittest_opencl_kernels_gemv_compare.cpp
-In file included from ./../unittest/unittest_opencl_kernels_gemv_compare.cpp:27:
-In file included from ../include/nntrainer_test_util.h:37:
-In file included from ./../../nntrainer/models/neuralnet.h:39:
-In file included from ./../../nntrainer/engine.h:34:
-In file included from ./../../nntrainer/cl_context.h:34:
-In file included from ./../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from ./../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from ./../../nntrainer/opencl/CL/cl.h:20:
-In file included from ./../../nntrainer/opencl/CL/cl_platform.h:20:
-./../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
 [arm64-v8a] Executable     : unittest_opencl_kernels_gemv_compare
 [gemv_compare.sh] Test exe: test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
 
@@ -39,30 +24,30 @@ Note: Google Test filter = nntrainer_gemv_compare.*
 [----------] 7 tests from nntrainer_gemv_compare
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
 [gemv_compare] K=2560 N=4096  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/4096
-[gemv_compare] K=2560 N=4096  GPU=0.438087 ms  IMG2D=0.213821 ms  CPU=0.122024 ms  ratio(GPU/CPU)=3.59016  ratio(IMG2D/GPU)=0.488079
-[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1831 ms)
+[gemv_compare] K=2560 N=4096  GPU=0.452653 ms  IMG2D=0.205238 ms  CPU=0.106963 ms  ratio(GPU/CPU)=4.23187  ratio(IMG2D/GPU)=0.453412
+[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1801 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
 [gemv_compare] K=2560 N=1024  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/1024
-[gemv_compare] K=2560 N=1024  GPU=0.557619 ms  IMG2D=0.195445 ms  CPU=0.0418206 ms  ratio(GPU/CPU)=13.3336  ratio(IMG2D/GPU)=0.3505
-[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1035 ms)
+[gemv_compare] K=2560 N=1024  GPU=0.439319 ms  IMG2D=0.197735 ms  CPU=0.0265098 ms  ratio(GPU/CPU)=16.572  ratio(IMG2D/GPU)=0.450094
+[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1234 ms)
 [ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
 [gemv_compare] K=4096 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=4096 N=2560  GPU=0.720621 ms  IMG2D=0.306887 ms  CPU=0.249432 ms  ratio(GPU/CPU)=2.88904  ratio(IMG2D/GPU)=0.425864
-[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1632 ms)
+[gemv_compare] K=4096 N=2560  GPU=0.619499 ms  IMG2D=0.345057 ms  CPU=0.0953803 ms  ratio(GPU/CPU)=6.49504  ratio(IMG2D/GPU)=0.556994
+[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1289 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
 [gemv_compare] K=2560 N=9728  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
-[gemv_compare] K=2560 N=9728  GPU=0.575735 ms  IMG2D=0.25623 ms  CPU=0.424324 ms  ratio(GPU/CPU)=1.35683  ratio(IMG2D/GPU)=0.445048
-[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1572 ms)
+[gemv_compare] K=2560 N=9728  GPU=0.480471 ms  IMG2D=0.259122 ms  CPU=0.222409 ms  ratio(GPU/CPU)=2.1603  ratio(IMG2D/GPU)=0.539308
+[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1467 ms)
 [ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
 [gemv_compare] K=9728 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=9728 N=2560  GPU=1.78773 ms  IMG2D=0.804495 ms  CPU=0.405165 ms  ratio(GPU/CPU)=4.41234  ratio(IMG2D/GPU)=0.450011
-[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1861 ms)
+[gemv_compare] K=9728 N=2560  GPU=1.21914 ms  IMG2D=0.815877 ms  CPU=0.23314 ms  ratio(GPU/CPU)=5.22924  ratio(IMG2D/GPU)=0.669222
+[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1541 ms)
 [ RUN      ] nntrainer_gemv_compare.swiglu_image2d_correctness
 [swiglu_compare] sentinel img_out[0]=0 (expect 42 if kernel landed; 0 means binding failed)
 [swiglu_compare] M=1 K=9728  max_abs=3.51953  rel_l2=1  big_diff(>1e-2)=9072/9728  first@i=0  base=0.0950317  img=0
-[       OK ] nntrainer_gemv_compare.swiglu_image2d_correctness (30 ms)
+[       OK ] nntrainer_gemv_compare.swiglu_image2d_correctness (37 ms)
 [ RUN      ] nntrainer_gemv_compare.recordable_queue_probe
-[rq_probe] symbols  NewRec=0x74a6ddabd4 EndRec=0x74a6ddac14 EnqRec=0x74a6ddacb0 RelRec=0x74a6ddac48 CreateQP=0x74a6dd9db0
+[rq_probe] symbols  NewRec=0x7aabd94bd4 EndRec=0x7aabd94c14 EnqRec=0x7aabd94cb0 RelRec=0x7aabd94c48 CreateQP=0x7aabd93db0
 [rq_probe] CreateRecordableQueue attempt 1 err=-30
 [rq_probe] CreateRecordableQueue attempt 2 err=-30
 [rq_probe] CreateRecordableQueue attempt 3 err=-30
@@ -72,21 +57,22 @@ cl_ext_image_from_buffer cl_ext_image_requirements_info cl_khr_3d_image_writes c
 ./../unittest/unittest_opencl_kernels_gemv_compare.cpp:576: Skipped
 Neither RecordableQueue nor command_buffer extensions usable on this device
 [  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe (0 ms)
-[----------] 7 tests from nntrainer_gemv_compare (7964 ms total)
+[----------] 7 tests from nntrainer_gemv_compare (7373 ms total)
 
 [----------] Global test environment tear-down
-[==========] 7 tests from 1 test suite ran. (7967 ms total)
+[==========] 7 tests from 1 test suite ran. (7373 ms total)
 [  PASSED  ] 6 tests.
 [  SKIPPED ] 1 test, listed below:
 [  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe
 
-[PROFILE gemv_int4_adreno_cl decode] calls=4368 total=2978.74 ms avg=0.682 ms
-  args_setup :    6.15 ms (  0.2%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   91.92 ms (  3.1%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 2880.67 ms ( 96.7%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
-  gpu_kernel : 1649.48 ms             [cl_event PROFILING_START..END, true GPU compute, 4368 events]
+[PROFILE gemv_int4_adreno_cl decode] calls=4316 total=2438.47 ms avg=0.565 ms
+  args_setup :    3.49 ms (  0.1%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   65.96 ms (  2.7%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 2369.02 ms ( 97.2%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 1625.34 ms             [cl_event PROFILING_START..END, true GPU compute, 4316 events]
 
 [gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
 [gemv_compare.sh] Summary lines:
 grep: gemv_compare_run.log: binary file matches
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
