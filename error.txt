@@ -1,75 +1,143 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.84 KiB | 472.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   5f954404..a2c98759  all_gpu    -> upstream/all_gpu
-Updating 5f954404..a2c98759
-Fast-forward
- run_gemv_compare.sh                                    | 10 +++++++++-
- test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 24 ++++++++++++++++++++++++
- 2 files changed, 33 insertions(+), 1 deletion(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
-[gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
-Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Compile++      : unittest_opencl_kernels_gemv_compare <= unittest_opencl_kernels_gemv_compare.cpp
-In file included from ./../unittest/unittest_opencl_kernels_gemv_compare.cpp:26:
-In file included from ../include/nntrainer_test_util.h:37:
-In file included from ./../../nntrainer/models/neuralnet.h:39:
-In file included from ./../../nntrainer/engine.h:34:
-In file included from ./../../nntrainer/cl_context.h:34:
-In file included from ./../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from ./../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from ./../../nntrainer/opencl/CL/cl.h:20:
-In file included from ./../../nntrainer/opencl/CL/cl_platform.h:20:
-./../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Executable     : unittest_opencl_kernels_gemv_compare
-[gemv_compare.sh] Test exe: test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-[gemv_compare.sh] Running on device ...
-Note: Google Test filter = nntrainer_gemv_compare.*
-[==========] Running 5 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 5 tests from nntrainer_gemv_compare
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
-[gemv_compare] K=2560 N=4096  GPU=0.441298 ms  CPU=0.117921 ms  ratio(GPU/CPU)=3.74233  (gpu_iters=963, cpu_iters=923)
-[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1332 ms)
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
-[gemv_compare] K=2560 N=1024  GPU=0.456426 ms  CPU=0.0248436 ms  ratio(GPU/CPU)=18.372  (gpu_iters=1262, cpu_iters=21052)
-[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1131 ms)
-[ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
-[gemv_compare] K=4096 N=2560  GPU=0.651048 ms  CPU=0.0919953 ms  ratio(GPU/CPU)=7.07697  (gpu_iters=881, cpu_iters=5685)
-[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1197 ms)
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
-[gemv_compare] K=2560 N=9728  GPU=0.609385 ms  CPU=0.216987 ms  ratio(GPU/CPU)=2.8084  (gpu_iters=814, cpu_iters=2217)
-[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1199 ms)
-[ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
-[gemv_compare] K=9728 N=2560  GPU=1.15931 ms  CPU=0.216153 ms  ratio(GPU/CPU)=5.36336  (gpu_iters=432, cpu_iters=2291)
-[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1226 ms)
-[----------] 5 tests from nntrainer_gemv_compare (6088 ms total)
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-[----------] Global test environment tear-down
-[==========] 5 tests from 1 test suite ran. (6092 ms total)
-[  PASSED  ] 5 tests.
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+<think>
+Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
 
-[PROFILE gemv_int4_adreno_cl decode] calls=4392 total=2609.61 ms avg=0.594 ms
-  args_setup :    3.86 ms (  0.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   86.68 ms (  3.3%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 2519.07 ms ( 96.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
-  gpu_kernel : 1678.97 ms             [cl_event PROFILING_START..END, true GPU compute, 4392 events]
 
-[gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
-[gemv_compare.sh] Summary lines:
-[gemv_compare] K=2560 N=4096  GPU=0.441298 ms  CPU=0.117921 ms  ratio(GPU/CPU)=3.74233  (gpu_iters=963, cpu_iters=923)
-[gemv_compare] K=2560 N=1024  GPU=0.456426 ms  CPU=0.0248436 ms  ratio(GPU/CPU)=18.372  (gpu_iters=1262, cpu_iters=21052)
-[gemv_compare] K=4096 N=2560  GPU=0.651048 ms  CPU=0.0919953 ms  ratio(GPU/CPU)=7.07697  (gpu_iters=881, cpu_iters=5685)
-[gemv_compare] K=2560 N=9728  GPU=0.609385 ms  CPU=0.216987 ms  ratio(GPU/CPU)=2.8084  (gpu_iters=814, cpu_iters=2217)
-[gemv_compare] K=9728 N=2560  GPU=1.15931 ms  CPU=0.216153 ms  ratio(GPU/CPU)=5.36336  (gpu_iters=432, cpu_iters=2291)
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 2510 ms, 174.104 TPS
+generation: 32 tokens, 8522 ms, 3.75499 TPS
+total: 11037 ms
+peak memory: 2865228 KB
+==========================================================
+[e2e time]: 13969 ms 
+Max Resident Set Size: 2865228 KB
+
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=8449.9 ms across all forwarding_op() calls
+  fully_connected               4995.0 ms  calls=8064  avg=0.619 ms
+  mha_core                      1834.8 ms  calls=1152  avg=1.593 ms
+  rms_norm                       601.8 ms  calls=2336  avg=0.258 ms
+  tie_word_embeddings            458.0 ms  calls=64  avg=7.156 ms
+  addition                       412.6 ms  calls=2304  avg=0.179 ms
+  reshaped_rms_norm              113.0 ms  calls=2304  avg=0.049 ms
+  swiglu                          28.6 ms  calls=1152  avg=0.025 ms
+  multiout                         6.0 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.003 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=408.10 ms calls=32 avg=12.753 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=49.75 ms calls=32 avg=1.555 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1655.15 ms calls=1152 avg=1.437 ms
+  rope_q   :     1.17 ms (  0.1%)
+  rope_k   :     1.63 ms (  0.1%)
+  v_copy   :     1.23 ms (  0.1%)
+  qk       :  1460.98 ms ( 88.3%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4970.87 ms calls=8064
+  in_copy   :     3.03 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4963.48 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     4.35 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=4930.10 ms avg=0.611 ms
+  args_setup :    6.16 ms (  0.1%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   61.57 ms (  1.2%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 4862.37 ms ( 98.6%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 3442.11 ms             [cl_event PROFILING_START..END, true GPU compute, 8064 events]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+prefill: 437 tokens, 2510 ms, 174.104 TPS
+generation: 32 tokens, 8522 ms, 3.75499 TPS
+total: 11037 ms
+peak memory: 2865228 KB
+[e2e time]: 13969 ms 
+
+-- Decode-path profiles (M==1, fired per generation token) --
+   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
+    unset it in temp.sh to restore the prefill breakdown.)
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=8449.9 ms across all forwarding_op() calls
+  fully_connected               4995.0 ms  calls=8064  avg=0.619 ms
+  mha_core                      1834.8 ms  calls=1152  avg=1.593 ms
+  rms_norm                       601.8 ms  calls=2336  avg=0.258 ms
+  tie_word_embeddings            458.0 ms  calls=64  avg=7.156 ms
+  addition                       412.6 ms  calls=2304  avg=0.179 ms
+  reshaped_rms_norm              113.0 ms  calls=2304  avg=0.049 ms
+  swiglu                          28.6 ms  calls=1152  avg=0.025 ms
+  multiout                         6.0 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.003 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=408.10 ms calls=32 avg=12.753 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=49.75 ms calls=32 avg=1.555 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1655.15 ms calls=1152 avg=1.437 ms
+  rope_q   :     1.17 ms (  0.1%)
+  rope_k   :     1.63 ms (  0.1%)
+
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=408.10 ms calls=32 avg=12.753 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=49.75 ms calls=32 avg=1.555 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1655.15 ms calls=1152 avg=1.437 ms
+  rope_q   :     1.17 ms (  0.1%)
+  rope_k   :     1.63 ms (  0.1%)
+  v_copy   :     1.23 ms (  0.1%)
+  qk       :  1460.98 ms ( 88.3%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4970.87 ms calls=8064
+  in_copy   :     3.03 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4963.48 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     4.35 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE gemv_int4_adreno_cl decode] calls=8064 total=4930.10 ms avg=0.611 ms
+  args_setup :    6.16 ms (  0.1%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   61.57 ms (  1.2%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 4862.37 ms ( 98.6%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 3442.11 ms             [cl_event PROFILING_START..END, true GPU compute, 8064 events]
+
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+<think>
+Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
+
+
+
+=================[ LLM with
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
