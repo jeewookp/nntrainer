@@ -180,6 +180,22 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         }
       }
     }
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // Decode-side publish: the fast GPU swiglu_cl_fp16 path above is
+    // gated on `_from == 0` so decode (where from=current_pos > 0)
+    // always falls through to this CPU loop and never publishes.
+    // Without a publish, the down_proj that consumes this output
+    // misses GpuImagePool and goes through the slow SVM gemv path
+    // (per-call blocking SVMMap = ~0.5 ms).  Mirroring the prefill
+    // publish here lets gemv_int4_image2d_cl pool-hit on down_proj
+    // and stay on the image-cache coherence chain.
+    if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
+        (out.width() % 4) == 0 && out.batch() == 1) {
+      const int pub_M = (int)out.channel() * (int)iter;
+      nntrainer::svm_to_image2d_publish(
+        out.getData<char>(), pub_M, (unsigned int)out.width());
+    }
+#endif
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
 #endif
