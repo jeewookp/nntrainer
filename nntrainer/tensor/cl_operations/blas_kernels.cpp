@@ -2610,6 +2610,40 @@ bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
   return true;
 }
 
+// Diagnostic helper: read an image2d from GpuImagePool back into a
+// fresh SVM buffer using the existing image_reformat::image2d_to_svm
+// kernel.  Lets the unittest cross-check the kernel's image2d write
+// against its SVM write (both should be derived from the same out_v
+// half4).  Returns false on pool miss / shape mismatch.
+bool image2d_to_svm_for_test(void *src_svm_key, void *dst_svm,
+                              unsigned int M, unsigned int N) {
+  if (!src_svm_key || !dst_svm || M == 0 || N == 0 || (N & 3u) != 0u)
+    return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  int pool_M = 0, pool_slices = 0;
+  cl_mem src_img = GpuImagePool::Global().get(src_svm_key, &pool_M,
+                                                &pool_slices);
+  if (!src_img || pool_M != (int)M || pool_slices != (int)N / 4)
+    return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    image_reformat_kernel, "image2d_to_svm");
+  if (!kp) return false;
+  int a = 0;
+  kp->SetKernelArguments(a++, &src_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, dst_svm);
+  int sm = (int)M, sn = (int)N;
+  kp->SetKernelArguments(a++, &sm, sizeof(int));
+  kp->SetKernelArguments(a++, &sn, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16,
+                    ((int)N / 4 + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(kp, g, l);
+}
+
 // Element-wise addition on image2d.  a_svm and b_svm must be in
 // GpuImagePool with matching shape; output is published like
 // swiglu_image2d_cl above.

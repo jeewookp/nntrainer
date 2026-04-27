@@ -445,6 +445,15 @@ bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
                          unsigned int M, unsigned int K);
 
 /**
+ * @brief Diagnostic-only helper: read a published image2d from
+ * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
+ * unittest cross-check what a producer kernel wrote to image2d
+ * vs the SVM companion it wrote in parallel.
+ */
+bool image2d_to_svm_for_test(void *src_svm_key, void *dst_svm,
+                              unsigned int M, unsigned int N);
+
+/**
  * @brief INT8 activation x INT4 weight GEMM for Adreno GPUs
  *        (gpu_int8_int4_gemm_adreno kernel).
  *

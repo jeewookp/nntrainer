@@ -340,6 +340,108 @@ DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
 
 // =====================================================================
+// gemv_int4_image2d image2d-output correctness probe.  We already
+// know the kernel's SVM vstore4 matches the baseline gemv exactly
+// (max_abs=0 in the gemv_compare suite).  The OTHER write,
+// write_imageh, was never verified; production swiglu image2d input
+// gives garbage tokens even when bisected to bypass swiglu's own
+// publish, which points the finger at gate/up FC's image2d output
+// being inconsistent with what later kernels read back.
+//
+// Round-trip: dispatch gemv_int4_image2d_cl (writes image2d + SVM
+// at same out_svm key), then read the published image2d back to
+// SVM via the existing image_reformat::image2d_to_svm kernel, and
+// compare against the SVM output the same dispatch wrote in
+// parallel.  Any mismatch means the two writes disagree -- i.e.,
+// downstream consumers that read via image cache see different
+// bytes than ones that read via SVM.
+// =====================================================================
+TEST(nntrainer_gemv_compare, gemv_int4_image2d_image_vs_svm_output) {
+  auto *blas_cc = static_cast<ClContext *>(
+    Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Q-proj-shape exercise (K=2560 N=4096) is enough -- if the format
+  // is wrong it'll show on any shape.
+  const unsigned int K = 2560, N = 4096;
+
+  std::vector<float> wf =
+    generate_random_vector<float>((size_t)N * K, -1.0f, 1.0f);
+  std::vector<float> xf = generate_random_vector<float>(K, -1.0f, 1.0f);
+  std::vector<uint16_t> wb, sb;
+  PackInt4ChannelwiseAdreno(wf.data(), N, K, wb, sb);
+
+  uint16_t *in_svm  = (uint16_t *)allocateSVM(K * sizeof(uint16_t));
+  uint16_t *w_svm   = (uint16_t *)allocateSVM(wb.size() * sizeof(uint16_t));
+  uint16_t *s_svm   = (uint16_t *)allocateSVM(sb.size() * sizeof(uint16_t));
+  uint16_t *gemv_svm_out = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+  uint16_t *image_to_svm_out = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+  ASSERT_NE(in_svm, nullptr);
+  ASSERT_NE(w_svm, nullptr);
+  ASSERT_NE(s_svm, nullptr);
+  ASSERT_NE(gemv_svm_out, nullptr);
+  ASSERT_NE(image_to_svm_out, nullptr);
+
+  for (unsigned int k = 0; k < K; ++k)
+    in_svm[k] = compute_fp32_to_fp16(xf[k]);
+  std::memcpy(w_svm, wb.data(), wb.size() * sizeof(uint16_t));
+  std::memcpy(s_svm, sb.data(), sb.size() * sizeof(uint16_t));
+  std::memset(gemv_svm_out, 0, N * sizeof(uint16_t));
+  std::memset(image_to_svm_out, 0, N * sizeof(uint16_t));
+
+  // Publish input + dispatch the image2d gemv, which writes both
+  // the image2d (to GpuImagePool keyed by gemv_svm_out) and the SVM
+  // companion.
+  nntrainer::svm_to_image2d_publish(in_svm, /*M=*/1u, K);
+  ASSERT_TRUE(nntrainer::gemv_int4_image2d_cl(
+    in_svm, w_svm, s_svm, gemv_svm_out, K, N));
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    gemv_svm_out, N * sizeof(uint16_t), /*read_only=*/true);
+
+  // Pull the published image2d out of the pool and convert it back
+  // to a fresh SVM buffer using the diagnostic helper (avoids needing
+  // the meson-generated image_reformat_kernel string symbol that
+  // ndk-build's test/jni Android.mk doesn't add to the include path).
+  ASSERT_TRUE(nntrainer::image2d_to_svm_for_test(
+    gemv_svm_out, image_to_svm_out, /*M=*/1u, N));
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    image_to_svm_out, N * sizeof(uint16_t), /*read_only=*/true);
+
+  // Compare the kernel's two outputs.  They should be byte-identical
+  // since both are derived from the same out_v half4 in the kernel.
+  double max_abs = 0.0;
+  unsigned int big_diff = 0;
+  unsigned int first_mismatch = N;
+  for (unsigned int n = 0; n < N; ++n) {
+    const float a_ = compute_fp16_to_fp32(gemv_svm_out[n]);
+    const float b_ = compute_fp16_to_fp32(image_to_svm_out[n]);
+    const double d = std::fabs((double)a_ - (double)b_);
+    if (d > max_abs) max_abs = d;
+    if (d > 1e-3) {
+      if (first_mismatch == N) first_mismatch = n;
+      big_diff++;
+    }
+  }
+  std::cout << "[gemv_image_check] K=" << K << " N=" << N
+            << "  max_abs(SVM_kernel_write vs image2d_readback)=" << max_abs
+            << "  big_diff(>1e-3)=" << big_diff << "/" << N;
+  if (first_mismatch < N) {
+    std::cout << "  first@n=" << first_mismatch
+              << "  svm=" << compute_fp16_to_fp32(gemv_svm_out[first_mismatch])
+              << "  img=" << compute_fp16_to_fp32(
+                                image_to_svm_out[first_mismatch]);
+  }
+  std::cout << std::endl;
+
+  freeSVM(in_svm);
+  freeSVM(w_svm);
+  freeSVM(s_svm);
+  freeSVM(gemv_svm_out);
+  freeSVM(image_to_svm_out);
+}
+
+// =====================================================================
 // swiglu_image2d_cl correctness probe.  Verifies the new image2d
 // helper produces SVM output bit-equivalent to the SVM swiglu_fp16
 // path on the same gate/up inputs.  Pinning down whether the
