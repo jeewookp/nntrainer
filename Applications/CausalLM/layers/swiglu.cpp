@@ -231,27 +231,13 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     }
   } else if (in1.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    // CPU-NEON entry fence on the upstream gate/up FC outputs.  Decode
-    // (from > 0) always falls through here from the gated GPU swiglu
-    // path above, and the in-place CPU read of in1/in2 SVM tensors
-    // sees stale data on Adreno coarse-grained SVM unless we drain
-    // the queue first.  Mirrors the entry-fence pattern in
-    // ReshapedRMSNorm / AdditionLayer fallback / etc.  Lets us drop
-    // NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC (per-FC blocking SVMMap inside
-    // the gemv image2d helper) and still get correct output.
-    if (in1.getMemoryData() && in1.getMemoryData()->isSVM() &&
-        in2.getMemoryData() && in2.getMemoryData()->isSVM()) {
-      auto *cl_ctx = static_cast<nntrainer::ClContext *>(
-        nntrainer::Engine::Global().getRegisteredContext("gpu"));
-      if (cl_ctx) {
-        cl_ctx->command_queue_inst_.enqueueSVMMap(
-          in1.getData<char>(), in1.bytes(), /*read_only=*/true);
-        cl_ctx->command_queue_inst_.enqueueSVMMap(
-          in2.getData<char>(), in2.bytes(), /*read_only=*/true);
-      }
-    }
-#endif
+    // BISECT: SwiGLU CPU NEON entry fence temporarily disabled to test
+    // hypothesis that this fence (added to enable IMAGE2D + NOSYNC
+    // chain) is what flipped baseline canonical output to a different
+    // sampled chain-of-thought.  If output reverts to canonical
+    // 'Okay, the user wants...' with this disabled, the fence is the
+    // culprit and we can either accept the alternate output or find a
+    // different way to plug the SVM coherence gap during decode.
     for (unsigned int b = 0; b < in1.batch(); b++) {
       for (unsigned int c = 0; c < in1.channel(); c++) {
         for (unsigned int h = 0; h < iter; h++) {
@@ -263,15 +249,15 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       }
     }
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    // Decode-side publish: the fast GPU swiglu_cl_fp16 path above is
-    // gated on `_from == 0` so decode (where from=current_pos > 0)
-    // always falls through to this CPU loop and never publishes.
-    // Without a publish, the down_proj that consumes this output
-    // misses GpuImagePool and goes through the slow SVM gemv path
-    // (per-call blocking SVMMap = ~0.5 ms).  Mirroring the prefill
-    // publish here lets gemv_int4_image2d_cl pool-hit on down_proj
-    // and stay on the image-cache coherence chain.
-    if (out.getMemoryData() && out.getMemoryData()->isSVM() &&
+    // BISECT: also disabling decode-side svm_to_image2d_publish to
+    // verify the bisect.  This publish reads in/out SVM and dispatches
+    // a kernel that writes image2d -- if it has any side effect on
+    // the SVM out tensor (e.g. write barrier ordering with subsequent
+    // reads) it could be the canonical-output flipper instead of the
+    // entry fence above.  Both are env-needed for IMAGE2D track but
+    // unused when production runs on the SVM-only baseline path.
+    if (false &&
+        out.getMemoryData() && out.getMemoryData()->isSVM() &&
         (out.width() % 4) == 0 && out.batch() == 1) {
       const int pub_M = (int)out.channel() * (int)iter;
       nntrainer::svm_to_image2d_publish(
