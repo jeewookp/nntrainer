@@ -359,63 +359,74 @@ TEST(nntrainer_gemv_compare, recordable_queue_probe) {
     GTEST_SKIP() << "Recordable queue creation rejected by driver";
   }
 
-  // Now run a single gemv_int4_adreno_cl-shaped dispatch, but on the
-  // recordable queue.  Easiest way: bring up SVM buffers + register
-  // the existing nntrainer kernel, then drive its enqueue manually.
-  const unsigned int K = 2560, N = 4096;
-  std::vector<float> wf =
-    generate_random_vector<float>((size_t)N * K, -1.0f, 1.0f);
-  std::vector<float> xf = generate_random_vector<float>(K, -1.0f, 1.0f);
-  std::vector<uint16_t> wb, sb;
-  PackInt4ChannelwiseAdreno(wf.data(), N, K, wb, sb);
+  // Use a tiny inline kernel so we don't depend on builddir-generated
+  // kernel headers.  The arithmetic doesn't matter: we're measuring
+  // record+replay dispatch overhead, not GEMV throughput.  This kernel
+  // touches every output element so the driver can't optimise it away.
+  const char *src =
+    "__kernel void rq_probe(__global float *out, __global const float *in,\n"
+    "                       const float scale) {\n"
+    "  const int i = get_global_id(0);\n"
+    "  out[i] = in[i] * scale + 1.0f;\n"
+    "}\n";
 
-  uint16_t *in_svm  = (uint16_t *)allocateSVM(K * sizeof(uint16_t));
-  uint16_t *out_svm = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
-  uint16_t *w_svm   = (uint16_t *)allocateSVM(wb.size() * sizeof(uint16_t));
-  uint16_t *s_svm   = (uint16_t *)allocateSVM(sb.size() * sizeof(uint16_t));
-  ASSERT_NE(in_svm, nullptr);
-  ASSERT_NE(out_svm, nullptr);
-  for (unsigned int k = 0; k < K; ++k)
-    in_svm[k] = compute_fp32_to_fp16(xf[k]);
-  std::memcpy(w_svm, wb.data(), wb.size() * sizeof(uint16_t));
-  std::memcpy(s_svm, sb.data(), sb.size() * sizeof(uint16_t));
-  std::memset(out_svm, 0, N * sizeof(uint16_t));
+  cl_int build_err = 0;
+  cl_program prog = clCreateProgramWithSource(ctx, 1, &src, nullptr, &err);
+  ASSERT_EQ(err, CL_SUCCESS);
+  build_err = clBuildProgram(prog, 1, &dev, nullptr, nullptr, nullptr);
+  ASSERT_EQ(build_err, CL_SUCCESS);
+  cl_kernel kern = clCreateKernel(prog, "rq_probe", &err);
+  ASSERT_EQ(err, CL_SUCCESS);
 
-  // Warm + baseline: 252 naive dispatches (one decode "token" of FC
-  // calls, all the same shape) on the normal queue.
-  for (int i = 0; i < 5; ++i)
-    nntrainer::gemv_int4_adreno_cl(in_svm, w_svm, s_svm, out_svm, K, N);
+  // Buffers.  Use plain cl_mem (recording is what we're testing,
+  // not SVM coherence; SVM args complicate replay arg tracking on
+  // some drivers).
+  const size_t N_elems = 4096;
+  std::vector<float> host_in(N_elems, 0.5f);
+  std::vector<float> host_out(N_elems, 0.0f);
+  cl_mem buf_in =
+    clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                    sizeof(float) * N_elems, host_in.data(), &err);
+  ASSERT_EQ(err, CL_SUCCESS);
+  cl_mem buf_out = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY,
+                                   sizeof(float) * N_elems, nullptr, &err);
+  ASSERT_EQ(err, CL_SUCCESS);
+
+  float scale_arg = 2.0f;
+  ASSERT_EQ(clSetKernelArg(kern, 0, sizeof(cl_mem), &buf_out), CL_SUCCESS);
+  ASSERT_EQ(clSetKernelArg(kern, 1, sizeof(cl_mem), &buf_in), CL_SUCCESS);
+  ASSERT_EQ(clSetKernelArg(kern, 2, sizeof(float), &scale_arg), CL_SUCCESS);
+
+  const size_t global[1] = {N_elems};
+  const size_t local[1]  = {64};
+
+  // Warm naive path on the regular (non-recordable) queue first.
+  for (int i = 0; i < 5; ++i) {
+    err = clEnqueueNDRangeKernel(q, kern, 1, nullptr, global, local,
+                                  0, nullptr, nullptr);
+    ASSERT_EQ(err, CL_SUCCESS);
+  }
+  clFinish(q);
+
+  const int iters = 252;
+  // Naive: re-enqueue 252 times.
   const auto t0 = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 252; ++i)
-    nntrainer::gemv_int4_adreno_cl(in_svm, w_svm, s_svm, out_svm, K, N);
+  for (int i = 0; i < iters; ++i) {
+    clEnqueueNDRangeKernel(q, kern, 1, nullptr, global, local,
+                            0, nullptr, nullptr);
+  }
+  clFinish(q);
   const auto t1 = std::chrono::high_resolution_clock::now();
   const double naive_ms =
     std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-  // Record one dispatch.  We cheat: call the helper once on the
-  // RECORDABLE queue.  But our helper hardcodes the global queue, so
-  // we have to redo the dispatch manually.
-  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    int4_gemv_adreno_kernel, "gpu_int4_gemv_adreno");
-  ASSERT_NE(kp, nullptr);
-  int arg = 0;
-  kp->SetKernelSVMArguments(arg++, in_svm);
-  kp->SetKernelSVMArguments(arg++, s_svm);
-  kp->SetKernelSVMArguments(arg++, out_svm);
-  kp->SetKernelSVMArguments(arg++, w_svm);
-  int sk = (int)K, sn = (int)N;
-  kp->SetKernelArguments(arg++, &sk, sizeof(int));
-  kp->SetKernelArguments(arg++, &sn, sizeof(int));
-
+  // Record on the recordable queue.
   void *rec = p_NewRec(rec_q, &err);
   std::cout << "[rq_probe] NewRecording err=" << err << std::endl;
   ASSERT_EQ(err, CL_SUCCESS);
   ASSERT_NE(rec, nullptr);
-
-  const size_t global[3] = {(size_t)((N + 31u) / 32u * 32u) / 4, 1, 1};
-  const size_t local[3]  = {16, 1, 1};
-  err = clEnqueueNDRangeKernel(rec_q, kp->GetKernel(), 1, nullptr,
-                               global, local, 0, nullptr, nullptr);
+  err = clEnqueueNDRangeKernel(rec_q, kern, 1, nullptr, global, local,
+                                0, nullptr, nullptr);
   std::cout << "[rq_probe] EnqueueND (record) err=" << err << std::endl;
   ASSERT_EQ(err, CL_SUCCESS);
   err = p_EndRec(rec);
@@ -423,14 +434,12 @@ TEST(nntrainer_gemv_compare, recordable_queue_probe) {
   ASSERT_EQ(err, CL_SUCCESS);
 
   // Warmup replay.
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i)
     p_EnqRec(rec_q, rec, 0, nullptr, 0, nullptr, nullptr);
-  }
   clFinish(rec_q);
 
-  // Timed: replay 252 times.
   const auto r0 = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 252; ++i) {
+  for (int i = 0; i < iters; ++i) {
     p_EnqRec(rec_q, rec, 0, nullptr, 0, nullptr, nullptr);
   }
   clFinish(rec_q);
@@ -438,18 +447,29 @@ TEST(nntrainer_gemv_compare, recordable_queue_probe) {
   const double rec_ms =
     std::chrono::duration<double, std::milli>(r1 - r0).count();
 
-  std::cout << "[rq_probe] K=" << K << " N=" << N
-            << "  naive_252_dispatches=" << naive_ms << " ms"
-            << "  record+replay_252=" << rec_ms << " ms"
-            << "  speedup=" << (naive_ms / std::max(0.001, rec_ms))
-            << "x" << std::endl;
+  // Verify output is correct.
+  ASSERT_EQ(clEnqueueReadBuffer(q, buf_out, CL_TRUE, 0,
+                                 sizeof(float) * N_elems, host_out.data(),
+                                 0, nullptr, nullptr),
+            CL_SUCCESS);
+  const float expected = 0.5f * scale_arg + 1.0f;
+  unsigned int wrong = 0;
+  for (size_t i = 0; i < N_elems; ++i) {
+    if (std::fabs(host_out[i] - expected) > 1e-4f) wrong++;
+  }
+
+  std::cout << "[rq_probe] iters=" << iters
+            << "  naive=" << naive_ms << " ms"
+            << "  record+replay=" << rec_ms << " ms"
+            << "  speedup=" << (naive_ms / std::max(0.001, rec_ms)) << "x"
+            << "  output_wrong=" << wrong << "/" << N_elems << std::endl;
 
   p_RelRec(rec);
+  clReleaseMemObject(buf_in);
+  clReleaseMemObject(buf_out);
+  clReleaseKernel(kern);
+  clReleaseProgram(prog);
   clReleaseCommandQueue(rec_q);
-  freeSVM(in_svm);
-  freeSVM(out_svm);
-  freeSVM(w_svm);
-  freeSVM(s_svm);
   dlclose(libcl);
 }
 
