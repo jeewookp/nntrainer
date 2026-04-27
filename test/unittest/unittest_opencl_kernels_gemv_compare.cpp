@@ -340,6 +340,101 @@ DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
 
 // =====================================================================
+// swiglu_image2d_cl correctness probe.  Verifies the new image2d
+// helper produces SVM output bit-equivalent to the SVM swiglu_fp16
+// path on the same gate/up inputs.  Pinning down whether the
+// swiglu_image2d kernel itself is wrong (production wiring produced
+// garbage tokens) without having to rerun the full causallm.
+// =====================================================================
+TEST(nntrainer_gemv_compare, swiglu_image2d_correctness) {
+  auto *blas_cc = static_cast<ClContext *>(
+    Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+
+  // Pick a representative shape: Qwen3-4B intermediate dim is 9728,
+  // M=1 in decode.  Layout: SVM contiguous half[M*K].
+  const unsigned int M = 1;
+  const unsigned int K = 9728;
+  const size_t bytes = (size_t)M * K * sizeof(uint16_t);
+
+  std::vector<float> gate_fp32 =
+    generate_random_vector<float>(M * K, -2.0f, 2.0f);
+  std::vector<float> up_fp32 =
+    generate_random_vector<float>(M * K, -2.0f, 2.0f);
+
+  uint16_t *gate_svm = (uint16_t *)allocateSVM(bytes);
+  uint16_t *up_svm   = (uint16_t *)allocateSVM(bytes);
+  uint16_t *svm_out  = (uint16_t *)allocateSVM(bytes);
+  uint16_t *img_out  = (uint16_t *)allocateSVM(bytes);
+  ASSERT_NE(gate_svm, nullptr);
+  ASSERT_NE(up_svm,   nullptr);
+  ASSERT_NE(svm_out,  nullptr);
+  ASSERT_NE(img_out,  nullptr);
+
+  for (unsigned int i = 0; i < M * K; ++i) {
+    gate_svm[i] = compute_fp32_to_fp16(gate_fp32[i]);
+    up_svm[i]   = compute_fp32_to_fp16(up_fp32[i]);
+  }
+  std::memset(svm_out, 0, bytes);
+  std::memset(img_out, 0, bytes);
+
+  // 1. Baseline: SVM swiglu_fp16.
+  nntrainer::swiglu_fp16_svm_cl(gate_svm, up_svm, svm_out,
+                                 (size_t)M * K);
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    svm_out, bytes, /*read_only=*/true);
+
+  // 2. Image2d swiglu: publish gate/up to GpuImagePool first, then
+  //    call the helper which dispatches the swiglu_image2d kernel
+  //    (writes both image2d AND img_out SVM via vstore4).
+  nntrainer::svm_to_image2d_publish(gate_svm, M, K);
+  nntrainer::svm_to_image2d_publish(up_svm,   M, K);
+  const bool dispatched = nntrainer::swiglu_image2d_cl(
+    gate_svm, up_svm, img_out, M, K);
+  ASSERT_TRUE(dispatched) << "swiglu_image2d_cl pool miss in unittest";
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    img_out, bytes, /*read_only=*/true);
+
+  // 3. Compare.  Allow some half-precision slack from the fp32-vs-fp16
+  //    silu math difference, but anything > 1e-2 is the kernel being
+  //    actually wrong.
+  double max_abs = 0.0;
+  double sum_sq_diff = 0.0;
+  double sum_sq_base = 0.0;
+  unsigned int big_diff = 0;
+  unsigned int first_mismatch = M * K;
+  for (unsigned int i = 0; i < M * K; ++i) {
+    const float a = compute_fp16_to_fp32(svm_out[i]);
+    const float b = compute_fp16_to_fp32(img_out[i]);
+    const double d = std::fabs((double)a - (double)b);
+    if (d > max_abs) max_abs = d;
+    sum_sq_diff += d * d;
+    sum_sq_base += (double)a * (double)a;
+    if (d > 1e-2) {
+      if (first_mismatch == M * K) first_mismatch = i;
+      big_diff++;
+    }
+  }
+  const double rel_l2 = sum_sq_base > 0.0
+    ? std::sqrt(sum_sq_diff / sum_sq_base) : 0.0;
+  std::cout << "[swiglu_compare] M=" << M << " K=" << K
+            << "  max_abs=" << max_abs
+            << "  rel_l2=" << rel_l2
+            << "  big_diff(>1e-2)=" << big_diff << "/" << (M * K);
+  if (first_mismatch < M * K) {
+    std::cout << "  first@i=" << first_mismatch
+              << "  base=" << compute_fp16_to_fp32(svm_out[first_mismatch])
+              << "  img="  << compute_fp16_to_fp32(img_out[first_mismatch]);
+  }
+  std::cout << std::endl;
+
+  freeSVM(gate_svm);
+  freeSVM(up_svm);
+  freeSVM(svm_out);
+  freeSVM(img_out);
+}
+
+// =====================================================================
 // Phase 1 RecordableQueue probe.  Confirms whether Adreno 830 supports
 // cl_qcom_recordable_queues and measures replay throughput vs naive
 // per-call SetKernelArg + EnqueueNDRange.  Pattern copied from

@@ -2574,9 +2574,11 @@ bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
   kp->SetKernelArguments(a++, &g_img,  sizeof(cl_mem));
   kp->SetKernelArguments(a++, &u_img,  sizeof(cl_mem));
   kp->SetKernelArguments(a++, &out_img, sizeof(cl_mem));
-  int sm = (int)M, ss = slices;
+  kp->SetKernelSVMArguments(a++, out_svm);
+  int sm = (int)M, ss = slices, sk = (int)K;
   kp->SetKernelArguments(a++, &sm, sizeof(int));
   kp->SetKernelArguments(a++, &ss, sizeof(int));
+  kp->SetKernelArguments(a++, &sk, sizeof(int));
   const int g[3] = {((int)M + 15) / 16 * 16, (slices + 15) / 16 * 16, 1};
   const int l[3] = {16, 16, 1};
   if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
