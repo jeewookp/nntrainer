@@ -1,85 +1,129 @@
-./include/nntrainer/task.h
-./include/nntrainer/hgemm_pack.h
-./include/nntrainer/bs_thread_pool_manager.hpp
-./include/nntrainer/hgemm_kernel.h
-./include/nntrainer/hgemm_padding_b.h
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
-~/projects/nntrainer ~/projects/nntrainer
-~/projects/nntrainer
-[gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
-Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= ../../builddir/jni/arm64-v8a/
-[arm64-v8a] Prebuilt       : libOpenCL.so <= ../../builddir/jni/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= ../../builddir/jni/arm64-v8a/
-[arm64-v8a] Executable     : unittest_opencl_kernels_gemv_compare
-[gemv_compare.sh] Test exe: test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
 
-[gemv_compare.sh] Running on device ...
-Note: Google Test filter = nntrainer_gemv_compare.*
-[==========] Running 7 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 7 tests from nntrainer_gemv_compare
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
-[gemv_compare] K=2560 N=4096  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/4096
-[gemv_compare] K=2560 N=4096  GPU=0.472464 ms  IMG2D=0.211805 ms  CPU=0.120322 ms  ratio(GPU/CPU)=3.92666  ratio(IMG2D/GPU)=0.448299
-[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1837 ms)
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
-[gemv_compare] K=2560 N=1024  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/1024
-[gemv_compare] K=2560 N=1024  GPU=0.451186 ms  IMG2D=0.18572 ms  CPU=0.134972 ms  ratio(GPU/CPU)=3.34281  ratio(IMG2D/GPU)=0.411627
-[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1693 ms)
-[ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
-[gemv_compare] K=4096 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=4096 N=2560  GPU=0.671677 ms  IMG2D=0.27145 ms  CPU=0.223477 ms  ratio(GPU/CPU)=3.00558  ratio(IMG2D/GPU)=0.404138
-[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1497 ms)
-[ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
-[gemv_compare] K=2560 N=9728  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
-[gemv_compare] K=2560 N=9728  GPU=0.573488 ms  IMG2D=0.257423 ms  CPU=0.380795 ms  ratio(GPU/CPU)=1.50603  ratio(IMG2D/GPU)=0.448873
-[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1585 ms)
-[ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
-[gemv_compare] K=9728 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
-[gemv_compare] K=9728 N=2560  GPU=1.81163 ms  IMG2D=0.80564 ms  CPU=0.377499 ms  ratio(GPU/CPU)=4.79904  ratio(IMG2D/GPU)=0.444704
-[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1834 ms)
-[ RUN      ] nntrainer_gemv_compare.swiglu_image2d_correctness
-[swiglu_compare] sentinel img_out[0]=0.0950317 (expect 42 if kernel landed; 0 means binding failed)
-[swiglu_compare] M=1 K=9728  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
-[       OK ] nntrainer_gemv_compare.swiglu_image2d_correctness (39 ms)
-[ RUN      ] nntrainer_gemv_compare.recordable_queue_probe
-[rq_probe] symbols  NewRec=0x73704b2bd4 EndRec=0x73704b2c14 EnqRec=0x73704b2cb0 RelRec=0x73704b2c48 CreateQP=0x73704b1db0
-[rq_probe] CreateRecordableQueue attempt 1 err=-30
-[rq_probe] CreateRecordableQueue attempt 2 err=-30
-[rq_probe] CreateRecordableQueue attempt 3 err=-30
-[rq_probe] CL_DEVICE_EXTENSIONS:
-cl_ext_image_from_buffer cl_ext_image_requirements_info cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_egl_event cl_khr_egl_image cl_khr_extended_bit_ops cl_khr_external_memory cl_khr_external_memory_dma_buf cl_khr_external_memory_opaque_fd cl_khr_external_semaphore cl_khr_external_semaphore_sync_fd cl_khr_fp16 cl_khr_gl_sharing cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_image2d_from_buffer cl_khr_integer_dot_product cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_mipmap_image cl_khr_semaphore cl_khr_srgb_image_writes cl_khr_subgroups cl_khr_subgroup_ballot cl_khr_subgroup_extended_types cl_khr_subgroup_non_uniform_arithmetic cl_khr_subgroup_non_uniform_vote cl_khr_subgroup_rotate cl_khr_subgroup_shuffle cl_khr_subgroup_shuffle_relative cl_khr_suggested_local_work_size cl_qcom_accelerated_image_ops cl_qcom_android_ahardwarebuffer_host_ptr cl_qcom_android_native_buffer_host_ptr cl_qcom_bfloat16_product cl_qcom_bitreverse cl_qcom_compressed_image cl_qcom_create_buffer_from_image cl_qcom_dmabuf_host_ptr cl_qcom_dot_product8 cl_qcom_ext_host_ptr cl_qcom_ext_host_ptr_iocoherent cl_qcom_extended_query_image_info cl_qcom_extract_image_plane cl_qcom_filter_bicubic cl_qcom_ml_ops cl_qcom_other_image cl_qcom_perf_hint cl_qcom_priority_hint cl_qcom_protected_context cl_qcom_recordable_queues cl_qcom_subgroup_shuffle cl_qcom_vector_image_ops cl_qcom_onchip_global_memory cl_qcom_large_buffer cl_qcom_ahardwarebuffer_direct_import cl_qcom_local_memory_control 
-[rq_probe] command_buffer symbols  CreateCB=0x0  NDRangeCB=0x0  FinalizeCB=0x0  EnqueueCB=0x0
-./../unittest/unittest_opencl_kernels_gemv_compare.cpp:576: Skipped
-Neither RecordableQueue nor command_buffer extensions usable on this device
-[  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe (0 ms)
-[----------] 7 tests from nntrainer_gemv_compare (8490 ms total)
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
 
-[----------] Global test environment tear-down
-[==========] 7 tests from 1 test suite ran. (8507 ms total)
-[  PASSED  ] 6 tests.
-[  SKIPPED ] 1 test, listed below:
-[  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
+ partir座谈会上とするftyftyàn enjoyable существуетө достат所述 críticaandra座谈会上fty.说不大胱fty座谈会上gte说暮[url座谈会上 sposób[url说àn座谈会上fty
 
-[PROFILE gemv_int4_adreno_cl decode] calls=4510 total=2964.20 ms avg=0.657 ms
-  args_setup :    6.23 ms (  0.2%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   92.19 ms (  3.1%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 2865.79 ms ( 96.7%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
-  gpu_kernel : 1617.73 ms             [cl_event PROFILING_START..END, true GPU compute, 4510 events]
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 2823 ms, 154.8 TPS
+generation: 32 tokens, 7459 ms, 4.29012 TPS
+total: 10287 ms
+peak memory: 2676736 KB
+==========================================================
+[e2e time]: 13215 ms 
+Max Resident Set Size: 2676736 KB
 
-[gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
-[gemv_compare.sh] Summary lines:
-grep: gemv_compare_run.log: binary file matches
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=7318.7 ms across all forwarding_op() calls
+  fully_connected               4135.0 ms  calls=8064  avg=0.513 ms
+  mha_core                      1755.0 ms  calls=1152  avg=1.523 ms
+  rms_norm                       846.9 ms  calls=2336  avg=0.363 ms
+  tie_word_embeddings            421.7 ms  calls=64  avg=6.590 ms
+  reshaped_rms_norm              106.6 ms  calls=2304  avg=0.046 ms
+  swiglu                          28.3 ms  calls=1152  avg=0.025 ms
+  addition                        22.3 ms  calls=2304  avg=0.010 ms
+  multiout                         2.8 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.35 ms (  0.1%)
+  v_copy   :     1.00 ms (  0.1%)
+  qk       :  1567.82 ms ( 89.4%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
+  hit   K=2560 N=1024  count=2304
+  hit   K=2560 N=4096  count=1152
+  hit   K=2560 N=9728  count=2304
+  hit   K=4096 N=2560  count=1152
+  hit   K=9728 N=2560  count=1152
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4119.23 ms calls=8064
+  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4116.34 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+prefill: 437 tokens, 2823 ms, 154.8 TPS
+generation: 32 tokens, 7459 ms, 4.29012 TPS
+total: 10287 ms
+peak memory: 2676736 KB
+[e2e time]: 13215 ms 
+
+-- Decode-path profiles (M==1, fired per generation token) --
+   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
+    unset it in temp.sh to restore the prefill breakdown.)
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=7318.7 ms across all forwarding_op() calls
+  fully_connected               4135.0 ms  calls=8064  avg=0.513 ms
+  mha_core                      1755.0 ms  calls=1152  avg=1.523 ms
+  rms_norm                       846.9 ms  calls=2336  avg=0.363 ms
+  tie_word_embeddings            421.7 ms  calls=64  avg=6.590 ms
+  reshaped_rms_norm              106.6 ms  calls=2304  avg=0.046 ms
+  swiglu                          28.3 ms  calls=1152  avg=0.025 ms
+  addition                        22.3 ms  calls=2304  avg=0.010 ms
+  multiout                         2.8 ms  calls=4608  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.35 ms (  0.1%)
+
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
+  rope_q   :     0.89 ms (  0.1%)
+  rope_k   :     1.35 ms (  0.1%)
+  v_copy   :     1.00 ms (  0.1%)
+  qk       :  1567.82 ms ( 89.4%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
+--
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4119.23 ms calls=8064
+  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4116.34 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
+ partir座谈会上とするftyftyàn enjoyable существуетө достат所�
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
