@@ -3,14 +3,14 @@ remote: Enumerating objects: 9, done.
 remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 3.62 KiB | 926.00 KiB/s, done.
+Unpacking objects: 100% (5/5), 2.43 KiB | 622.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   b475bd72..7c53e7bd  all_gpu    -> upstream/all_gpu
-Updating b475bd72..7c53e7bd
+   b512af9c..31a14fc2  all_gpu    -> upstream/all_gpu
+Updating b512af9c..31a14fc2
 Fast-forward
- test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 163 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 163 insertions(+)
+ test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 140 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++------------------------------------------------------------
+ 1 file changed, 80 insertions(+), 60 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
 Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
@@ -27,10 +27,66 @@ In file included from ./../../nntrainer/opencl/CL/cl_platform.h:20:
 ./../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
 #pragma message(                                                               \
         ^
-./../unittest/unittest_opencl_kernels_gemv_compare.cpp:399:5: error: use of undeclared identifier 'int4_gemv_adreno_kernel'
-    int4_gemv_adreno_kernel, "gpu_int4_gemv_adreno");
-    ^
-1 warning and 1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/unittest_opencl_kernels_gemv_compare/__/unittest/unittest_opencl_kernels_gemv_compare.o] Error 1
+1 warning generated.
+[arm64-v8a] Executable     : unittest_opencl_kernels_gemv_compare
+[gemv_compare.sh] Test exe: test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+
+[gemv_compare.sh] Running on device ...
+Note: Google Test filter = nntrainer_gemv_compare.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from nntrainer_gemv_compare
+[ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
+[gemv_compare] K=2560 N=4096  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/4096
+[gemv_compare] K=2560 N=4096  GPU=0.446501 ms  CPU=0.114563 ms  ratio(GPU/CPU)=3.89742  (gpu_iters=843, cpu_iters=922)
+[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1297 ms)
+[ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
+[gemv_compare] K=2560 N=1024  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/1024
+[gemv_compare] K=2560 N=1024  GPU=0.439298 ms  CPU=0.0252259 ms  ratio(GPU/CPU)=17.4146  (gpu_iters=1270, cpu_iters=21333)
+[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (1129 ms)
+[ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
+[gemv_compare] K=4096 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
+[gemv_compare] K=4096 N=2560  GPU=0.596649 ms  CPU=0.0924354 ms  ratio(GPU/CPU)=6.45477  (gpu_iters=866, cpu_iters=5649)
+[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (1141 ms)
+[ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
+[gemv_compare] K=2560 N=9728  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
+[gemv_compare] K=2560 N=9728  GPU=0.607642 ms  CPU=0.219729 ms  ratio(GPU/CPU)=2.76541  (gpu_iters=815, cpu_iters=2267)
+[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1219 ms)
+[ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
+[gemv_compare] K=9728 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
+[gemv_compare] K=9728 N=2560  GPU=1.16766 ms  CPU=0.219576 ms  ratio(GPU/CPU)=5.31777  (gpu_iters=429, cpu_iters=2272)
+[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (1234 ms)
+[ RUN      ] nntrainer_gemv_compare.recordable_queue_probe
+[rq_probe] symbols  NewRec=0x7cadfe9bd4 EndRec=0x7cadfe9c14 EnqRec=0x7cadfe9cb0 RelRec=0x7cadfe9c48 CreateQP=0x7cadfe8db0
+[rq_probe] CreateRecordableQueue err=-30 (0=CL_SUCCESS)
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:359: Skipped
+Recordable queue creation rejected by driver
+[  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe (0 ms)
+[----------] 6 tests from nntrainer_gemv_compare (6022 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (6024 ms total)
+[  PASSED  ] 5 tests.
+[  SKIPPED ] 1 test, listed below:
+[  SKIPPED ] nntrainer_gemv_compare.recordable_queue_probe
+
+[PROFILE gemv_int4_adreno_cl decode] calls=4268 total=2490.73 ms avg=0.584 ms
+  args_setup :    4.05 ms (  0.2%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   82.43 ms (  3.3%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 2404.24 ms ( 96.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 1634.27 ms             [cl_event PROFILING_START..END, true GPU compute, 4268 events]
+
+[gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
+[gemv_compare.sh] Summary lines:
+[gemv_compare] K=2560 N=4096  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/4096
+[gemv_compare] K=2560 N=4096  GPU=0.446501 ms  CPU=0.114563 ms  ratio(GPU/CPU)=3.89742  (gpu_iters=843, cpu_iters=922)
+[gemv_compare] K=2560 N=1024  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/1024
+[gemv_compare] K=2560 N=1024  GPU=0.439298 ms  CPU=0.0252259 ms  ratio(GPU/CPU)=17.4146  (gpu_iters=1270, cpu_iters=21333)
+[gemv_compare] K=4096 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
+[gemv_compare] K=4096 N=2560  GPU=0.596649 ms  CPU=0.0924354 ms  ratio(GPU/CPU)=6.45477  (gpu_iters=866, cpu_iters=5649)
+[gemv_compare] K=2560 N=9728  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/9728
+[gemv_compare] K=2560 N=9728  GPU=0.607642 ms  CPU=0.219729 ms  ratio(GPU/CPU)=2.76541  (gpu_iters=815, cpu_iters=2267)
+[gemv_compare] K=9728 N=2560  IMAGE2D vs baseline:  max_abs=0  rel_l2=0  big_diff(>1e-2)=0/2560
+[gemv_compare] K=9728 N=2560  GPU=1.16766 ms  CPU=0.219576 ms  ratio(GPU/CPU)=5.31777  (gpu_iters=429, cpu_iters=2272)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
