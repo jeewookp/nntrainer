@@ -122,15 +122,18 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # is honest.
   export NNTRAINER_GEMV_IMAGE_STEP=0; \
   export NNTRAINER_GEMV_BATCH_SYNC=1; \
-  # NNTRAINER_GEMV_NOSYNC=1 dropped per-call SVMMap inside
-  # gemv_int4_adreno_cl, getting decode from 3.79 to 4.58 TPS BUT
-  # producing garbage tokens.  Adreno 830 coarse-grained SVM does NOT
-  # honour same-queue GPU->GPU SVM coherence, and the cheap publish
-  # hints (enqueueSVMUnmap, svm_in staging) all failed when previously
-  # tested -- see comment in blas_kernels.cpp:2042.  Keep NOSYNC OFF
-  # for now; recover the TPS via proper cl_event chaining or
-  # image2d-backed decode buffers (separate workstream).
-  # export NNTRAINER_GEMV_NOSYNC=1; \
+  # NOSYNC=1 alone gave 4.58 TPS (+23%) but garbage tokens because
+  # Adreno 830 coarse-grained SVM doesn't honour GPU->GPU same-queue
+  # coherence.  IMAGE_PUBLISH=1 routes the FC output through
+  # svm_to_image2d_publish so the next image2d-aware consumer
+  # (rmsnorm_image2d_cl) reads via image cache (independent of SVM
+  # coherence), recovering coherence without a per-call queue drain.
+  # If consumers that don't pick up the pool image2d (swiglu_cl,
+  # add2_fp16_svm, attention_fused_fp16) still read SVM directly the
+  # output may still be garbage -- in that case Phase 2 (gemv kernel
+  # that writes image2d directly) is required.
+  export NNTRAINER_GEMV_NOSYNC=1; \
+  export NNTRAINER_GEMV_IMAGE_PUBLISH=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 

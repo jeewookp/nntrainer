@@ -1014,12 +1014,24 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // drop the scalar copy that brought svm_out -> out_u16.
     static const bool s_nosync =
       std::getenv("NNTRAINER_GEMV_NOSYNC") != nullptr;
+    // NNTRAINER_GEMV_IMAGE_PUBLISH=1: after the gemv dispatch (still
+    // SVM-output) call svm_to_image2d_publish on the result so a
+    // downstream image2d-aware consumer (rmsnorm_image2d_cl,
+    // gemm_delegate_fp16_cl) can pick up the image2d via GpuImagePool
+    // and skip its own svm_to_image2d reformat.  Goal: route the
+    // GPU->GPU coherence chain through image cache (well-behaved on
+    // Adreno) instead of coarse-grained SVM cache (which the earlier
+    // NOSYNC=1 + LAYER_SYNC unset run proved is not honoured cross-
+    // kernel on Adreno 830).  Pairs with NOSYNC=1.
+    static const bool s_image_publish =
+      std::getenv("NNTRAINER_GEMV_IMAGE_PUBLISH") != nullptr;
     static bool s_nosync_diag = false;
     if (!s_nosync_diag) {
       s_nosync_diag = true;
       std::fprintf(stderr,
-                   "[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=%d"
-                   "  step=%d\n", (int)s_nosync, s_step);
+                   "[DIAG HalfTensor::dotQInteger M=1] "
+                   "NNTRAINER_GEMV_NOSYNC=%d  IMAGE_PUBLISH=%d  step=%d\n",
+                   (int)s_nosync, (int)s_image_publish, s_step);
     }
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
@@ -1046,6 +1058,17 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     } else {
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, gemv_out, K, N,
                           sync_after);
+    }
+    // Phase 1 image2d publish: enqueue svm_to_image2d on the FC output so
+    // the next image2d-aware consumer (rmsnorm_image2d_cl /
+    // gemm_delegate_fp16_cl) can pick up the image2d via GpuImagePool.
+    // Image cache on Adreno is independent of coarse-grained SVM cache,
+    // so a chain of {gemv -> svm_to_image2d -> consumer reads image2d}
+    // routes coherence through image cache and avoids the
+    // GPU->GPU SVM staleness that NOSYNC=1 alone hit.  Only meaningful
+    // when paired with NOSYNC=1; SVMMap path already drains the queue.
+    if (s_nosync && s_image_publish && (N % 4) == 0) {
+      nntrainer::svm_to_image2d_publish(out_u16, /*M=*/1u, /*K=*/N);
     }
     const uint64_t t_d2 = now_ns();
     if (!s_nosync) {
