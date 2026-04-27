@@ -114,10 +114,23 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
-  unset NNTRAINER_PROFILE_LAYER_SYNC; \
+  # NNTRAINER_PROFILE_LAYER_SYNC -- INTENTIONALLY NOT EXPORTED.
+  # Setting it to anything (including =0) is treated as "on" by
+  # network_graph.cpp:491 (getenv() != nullptr).  Leave unexported so
+  # GPU dispatch can pipeline; per-layer wall-clock numbers in the
+  # NetworkGraph profile are inaccurate without it but generation TPS
+  # is honest.
   export NNTRAINER_GEMV_IMAGE_STEP=0; \
   export NNTRAINER_GEMV_BATCH_SYNC=1; \
-  export NNTRAINER_GEMV_NOSYNC=1; \
+  # NNTRAINER_GEMV_NOSYNC=1 dropped per-call SVMMap inside
+  # gemv_int4_adreno_cl, getting decode from 3.79 to 4.58 TPS BUT
+  # producing garbage tokens.  Adreno 830 coarse-grained SVM does NOT
+  # honour same-queue GPU->GPU SVM coherence, and the cheap publish
+  # hints (enqueueSVMUnmap, svm_in staging) all failed when previously
+  # tested -- see comment in blas_kernels.cpp:2042.  Keep NOSYNC OFF
+  # for now; recover the TPS via proper cl_event chaining or
+  # image2d-backed decode buffers (separate workstream).
+  # export NNTRAINER_GEMV_NOSYNC=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
