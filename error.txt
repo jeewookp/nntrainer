@@ -1,36 +1,28 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (5/5), 1.51 KiB | 516.00 KiB/s, done.
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (2/2), done.
+remote: Total 3 (delta 2), reused 2 (delta 2), pack-reused 1 (from 1)
+Unpacking objects: 100% (3/3), 1.26 KiB | 644.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   3154b103..311973a1  all_gpu    -> upstream/all_gpu
-Updating 3154b103..311973a1
+   abb9e32b..2ce617a7  all_gpu    -> upstream/all_gpu
+Updating abb9e32b..2ce617a7
 Fast-forward
- test/unittest/unittest_opencl_kernels_gemv_compare.cpp | 20 ++++++++++++++++----
- 1 file changed, 16 insertions(+), 4 deletions(-)
+ run_gemv_compare.sh | 22 ++++++++++++++++++----
+ 1 file changed, 18 insertions(+), 4 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
 Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
-[arm64-v8a] StaticLibrary  : libtest_util.a
-[arm64-v8a] StaticLibrary  : libgoogletest_main.a
-[arm64-v8a] Compile++      : unittest_opencl_kernels_gemv_compare <= unittest_opencl_kernels_gemv_compare.cpp
-In file included from ./../unittest/unittest_opencl_kernels_gemv_compare.cpp:26:
-In file included from ../include/nntrainer_test_util.h:37:
-In file included from ./../../nntrainer/models/neuralnet.h:39:
-In file included from ./../../nntrainer/engine.h:34:
-In file included from ./../../nntrainer/cl_context.h:34:
-In file included from ./../../nntrainer/opencl/opencl_buffer_manager.h:19:
-In file included from ./../../nntrainer/opencl/opencl_buffer.h:17:
-In file included from ./../../nntrainer/opencl/CL/cl.h:20:
-In file included from ./../../nntrainer/opencl/CL/cl_platform.h:20:
-./../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Executable     : unittest_opencl_kernels_gemv_compare
-[gemv_compare.sh] ERROR: test/libs/arm64-v8a/unittest_opencl_kernels_gemv_compare not produced by ndk-build
+make: Nothing to be done for 'unittest_opencl_kernels_gemv_compare'.
+[gemv_compare.sh] ERROR: unittest_opencl_kernels_gemv_compare not found under test/jni/libs/ or test/libs/
+  ndk-build output above said it was produced -- where did it land?
+test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ sh run_gemv_compare.sh 
+[gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
+Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+make: Nothing to be done for 'unittest_opencl_kernels_gemv_compare'.
+[gemv_compare.sh] ERROR: unittest_opencl_kernels_gemv_compare not found under test/jni/libs/ or test/libs/
+  ndk-build output above said it was produced -- where did it land?
+test/jni/obj/local/arm64-v8a/unittest_opencl_kernels_gemv_compare
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
