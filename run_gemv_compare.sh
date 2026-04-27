@@ -59,14 +59,17 @@ popd > /dev/null
 # spuriously bailed even after a successful build.  Search both
 # locations to be tolerant of either layout.
 TEST_EXE=""
-for cand in test/jni/libs/arm64-v8a/$TEST_BIN test/libs/arm64-v8a/$TEST_BIN; do
+for cand in \
+    test/jni/obj/local/arm64-v8a/$TEST_BIN \
+    test/jni/libs/arm64-v8a/$TEST_BIN \
+    test/libs/arm64-v8a/$TEST_BIN; do
   if [ -f "$cand" ]; then
     TEST_EXE="$cand"
     break
   fi
 done
 if [ -z "$TEST_EXE" ]; then
-  echo "[gemv_compare.sh] ERROR: $TEST_BIN not found under test/jni/libs/ or test/libs/"
+  echo "[gemv_compare.sh] ERROR: $TEST_BIN not found under any candidate path"
   echo "  ndk-build output above said it was produced -- where did it land?"
   find test -name "$TEST_BIN" -type f 2>/dev/null | head
   exit 1
