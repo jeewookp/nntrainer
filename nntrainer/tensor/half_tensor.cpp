@@ -1206,20 +1206,72 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   if (M == 1) {
     // M=1 (decode): dispatch gpu_int4_gemv_adreno per weight; the
     // shared activation has already been staged into svm_in above.
-    for (unsigned int i = 0; i < input.size(); ++i) {
-      auto *weight_u16 =
-        reinterpret_cast<uint16_t *>(input[i]->getData<char>());
-      auto *scale_u16 = input[i]->getScale<uint16_t>();
-      const unsigned int Ni = output[i]->getDim().width();
-      uint16_t *svm_out_i =
-        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
+    //
+    // NNTRAINER_GEMV_BATCH_SYNC=1 takes the prefill batched pattern
+    // (blas_kernels.cpp ~ line 3838): dispatch all FCs without per-call
+    // SVMMap, write straight into the SVM-backed output tensor (no
+    // svm_out_i staging), then issue ONE blocking SVMMap at the end of
+    // the batch.  Decode profile showed 96.5% of gemv wall time was
+    // the per-call blocking SVMMap (0.5 ms each, fixed cost dominated
+    // by N=1024 K/V projections), and qkv_layer batches Q/K/V into one
+    // dot(vec,vec) call -- so 3 SVMMaps per layer collapse to 1.
+    static const bool s_batch_sync =
+      std::getenv("NNTRAINER_GEMV_BATCH_SYNC") != nullptr;
 
-      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out_i, K, Ni);
+    if (s_batch_sync) {
+      // === Phase 1: dispatch every FC, sync_output=false ===
+      // Output goes straight to out_u16 (SVM-backed per the all_svm
+      // invariant above); no svm_out_i staging buffer is needed because
+      // gemv_int4_adreno_cl uses SetKernelSVMArguments (no cl_mem
+      // wrap, no page-alignment requirement).
+      for (unsigned int i = 0; i < input.size(); ++i) {
+        auto *weight_u16 =
+          reinterpret_cast<uint16_t *>(input[i]->getData<char>());
+        auto *scale_u16 = input[i]->getScale<uint16_t>();
+        const unsigned int Ni = output[i]->getDim().width();
+        auto *out_u16 =
+          reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
 
-      auto *out_u16 =
-        reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-      for (unsigned int n = 0; n < Ni; ++n) {
-        out_u16[n] = svm_out_i[n];
+        gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, out_u16, K, Ni,
+                            /*sync_output=*/false);
+      }
+      // === Phase 2: end-of-batch SVMMap drain ===
+      // CommandQueueManager::enqueueSVMMap is hardcoded CL_TRUE, so all
+      // calls block.  The win is queue amortization: the FIRST SVMMap
+      // here waits for every dispatched kernel (in-order queue) to
+      // finish, then the remaining N-1 SVMMaps just do cache-invalidate
+      // per buffer with the queue already drained.  Net per-batch wall
+      // time = max(GPU compute) + N*(cache-invalidate) instead of
+      // N*(GPU compute + cache-invalidate).  Mirrors the prefill
+      // pattern in gemm_delegate_fp16_cl (~ blas_kernels.cpp:3838).
+      auto *cl_ctx = static_cast<ClContext *>(
+        Engine::Global().getRegisteredContext("gpu"));
+      if (cl_ctx) {
+        for (unsigned int i = 0; i < input.size(); ++i) {
+          const unsigned int Ni = output[i]->getDim().width();
+          auto *out_u16 =
+            reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            out_u16, static_cast<size_t>(Ni) * sizeof(uint16_t),
+            /*read_only=*/true);
+        }
+      }
+    } else {
+      for (unsigned int i = 0; i < input.size(); ++i) {
+        auto *weight_u16 =
+          reinterpret_cast<uint16_t *>(input[i]->getData<char>());
+        auto *scale_u16 = input[i]->getScale<uint16_t>();
+        const unsigned int Ni = output[i]->getDim().width();
+        uint16_t *svm_out_i =
+          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
+
+        gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out_i, K, Ni);
+
+        auto *out_u16 =
+          reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+        for (unsigned int n = 0; n < Ni; ++n) {
+          out_u16[n] = svm_out_i[n];
+        }
       }
     }
   } else {
