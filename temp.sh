@@ -135,6 +135,16 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_GEMV_NOSYNC=1; \
   export NNTRAINER_GEMV_IMAGE2D=1; \
   export NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1; \
+  # Now that the swiglu_image2d_cl unittest verified bit-exact
+  # equivalence with swiglu_fp16_svm_cl (max_abs=0 across the
+  # Qwen3-4B intermediate FFN shape), re-enable the consumer's
+  # image2d path in production.  Each gate/up FC's image2d output
+  # feeds directly into swiglu (image-cache only), and swiglu's
+  # output is published for the next consumer (down_proj, already
+  # image2d-aware via gemv_int4_image2d_cl).  This drops the per-
+  # FC svm_to_image2d publish cost on the gate/up outputs and
+  # lets the swiglu intermediate stay on image cache.
+  export NNTRAINER_SWIGLU_IMAGE2D=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
