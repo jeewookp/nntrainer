@@ -114,7 +114,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
-  export NNTRAINER_PROFILE_LAYER_SYNC=1; \
+  export NNTRAINER_PROFILE_LAYER_SYNC=0; \
   export NNTRAINER_GEMV_IMAGE_STEP=0; \
   export NNTRAINER_GEMV_BATCH_SYNC=1; \
   export NNTRAINER_GEMV_NOSYNC=1; \
