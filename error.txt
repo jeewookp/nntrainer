@@ -1,3 +1,42 @@
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
 PATH
 SHELL
 STANDALONE_SYSTEMSERVER_JARS
@@ -17,36 +56,1229 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+[DIAG SwiGLU image2d] call=1  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=1  dispatched=0
+[DIAG SwiGLU image2d] call=2  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=2  dispatched=0
+[DIAG SwiGLU image2d] call=3  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=3  dispatched=0
+[DIAG SwiGLU image2d] call=4  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=4  dispatched=0
+[DIAG SwiGLU image2d] call=5  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
+[DIAG SwiGLU image2d] call=5  dispatched=0
 \/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
- partir座谈会上とするftyftyàn enjoyable существуетө достат所述 críticaandra座谈会上fty.说不大胱fty座谈会上gte说暮[url座谈会上 sposób[url说àn座谈会上fty
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ partir[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+座谈会上[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+とする[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+fty[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+fty[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+àn[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ enjoyable[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ существует[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ө[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ достат[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+所述[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ crítica[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+andra[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+座谈会上[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+fty[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+.[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+说[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+不大[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+胱[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+fty[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+座谈会上[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+gte[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+说[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+暮[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[url[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+座谈会上[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+ sposób[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[url[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+说[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+àn[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+座谈会上[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+[DIAG SwiGLU image2d] call=5  dispatched=1
+fty
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2823 ms, 154.8 TPS
-generation: 32 tokens, 7459 ms, 4.29012 TPS
-total: 10287 ms
-peak memory: 2676736 KB
+prefill: 437 tokens, 2745 ms, 159.199 TPS
+generation: 32 tokens, 7242 ms, 4.41867 TPS
+total: 10004 ms
+peak memory: 2693948 KB
 ==========================================================
-[e2e time]: 13215 ms 
-Max Resident Set Size: 2676736 KB
+[e2e time]: 12849 ms 
+Max Resident Set Size: 2693948 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7318.7 ms across all forwarding_op() calls
-  fully_connected               4135.0 ms  calls=8064  avg=0.513 ms
-  mha_core                      1755.0 ms  calls=1152  avg=1.523 ms
-  rms_norm                       846.9 ms  calls=2336  avg=0.363 ms
-  tie_word_embeddings            421.7 ms  calls=64  avg=6.590 ms
-  reshaped_rms_norm              106.6 ms  calls=2304  avg=0.046 ms
-  swiglu                          28.3 ms  calls=1152  avg=0.025 ms
-  addition                        22.3 ms  calls=2304  avg=0.010 ms
-  multiout                         2.8 ms  calls=4608  avg=0.001 ms
+  total=7134.2 ms across all forwarding_op() calls
+  fully_connected               4099.9 ms  calls=8064  avg=0.508 ms
+  mha_core                      1636.4 ms  calls=1152  avg=1.420 ms
+  rms_norm                       831.7 ms  calls=2336  avg=0.356 ms
+  tie_word_embeddings            403.1 ms  calls=64  avg=6.299 ms
+  reshaped_rms_norm               95.4 ms  calls=2304  avg=0.041 ms
+  swiglu                          37.9 ms  calls=1152  avg=0.033 ms
+  addition                        27.2 ms  calls=2304  avg=0.012 ms
+  multiout                         2.6 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
-  rope_q   :     0.89 ms (  0.1%)
-  rope_k   :     1.35 ms (  0.1%)
-  v_copy   :     1.00 ms (  0.1%)
-  qk       :  1567.82 ms ( 89.4%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=393.30 ms calls=32 avg=12.291 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=9.78 ms calls=32 avg=0.305 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1635.71 ms calls=1152 avg=1.420 ms
+  rope_q   :     0.75 ms (  0.0%)
+  rope_k   :     1.20 ms (  0.1%)
+  v_copy   :     0.96 ms (  0.1%)
+  qk       :  1451.72 ms ( 88.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
@@ -57,10 +1289,10 @@ Max Resident Set Size: 2676736 KB
   hit   K=4096 N=2560  count=1152
   hit   K=9728 N=2560  count=1152
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4119.23 ms calls=8064
-  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4116.34 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4085.09 ms calls=8064
+  in_copy   :     2.25 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4082.60 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.25 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -71,59 +1303,58 @@ Max Resident Set Size: 2676736 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2823 ms, 154.8 TPS
-generation: 32 tokens, 7459 ms, 4.29012 TPS
-total: 10287 ms
-peak memory: 2676736 KB
-[e2e time]: 13215 ms 
+prefill: 437 tokens, 2745 ms, 159.199 TPS
+generation: 32 tokens, 7242 ms, 4.41867 TPS
+total: 10004 ms
+peak memory: 2693948 KB
+[e2e time]: 12849 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7318.7 ms across all forwarding_op() calls
-  fully_connected               4135.0 ms  calls=8064  avg=0.513 ms
-  mha_core                      1755.0 ms  calls=1152  avg=1.523 ms
-  rms_norm                       846.9 ms  calls=2336  avg=0.363 ms
-  tie_word_embeddings            421.7 ms  calls=64  avg=6.590 ms
-  reshaped_rms_norm              106.6 ms  calls=2304  avg=0.046 ms
-  swiglu                          28.3 ms  calls=1152  avg=0.025 ms
-  addition                        22.3 ms  calls=2304  avg=0.010 ms
-  multiout                         2.8 ms  calls=4608  avg=0.001 ms
+  total=7134.2 ms across all forwarding_op() calls
+  fully_connected               4099.9 ms  calls=8064  avg=0.508 ms
+  mha_core                      1636.4 ms  calls=1152  avg=1.420 ms
+  rms_norm                       831.7 ms  calls=2336  avg=0.356 ms
+  tie_word_embeddings            403.1 ms  calls=64  avg=6.299 ms
+  reshaped_rms_norm               95.4 ms  calls=2304  avg=0.041 ms
+  swiglu                          37.9 ms  calls=1152  avg=0.033 ms
+  addition                        27.2 ms  calls=2304  avg=0.012 ms
+  multiout                         2.6 ms  calls=4608  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
-  rope_q   :     0.89 ms (  0.1%)
-  rope_k   :     1.35 ms (  0.1%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=393.30 ms calls=32 avg=12.291 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=9.78 ms calls=32 avg=0.305 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1635.71 ms calls=1152 avg=1.420 ms
+  rope_q   :     0.75 ms (  0.0%)
+  rope_k   :     1.20 ms (  0.1%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=419.65 ms calls=32 avg=13.114 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.01 ms calls=32 avg=0.063 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1754.34 ms calls=1152 avg=1.523 ms
-  rope_q   :     0.89 ms (  0.1%)
-  rope_k   :     1.35 ms (  0.1%)
-  v_copy   :     1.00 ms (  0.1%)
-  qk       :  1567.82 ms ( 89.4%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=393.30 ms calls=32 avg=12.291 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=9.78 ms calls=32 avg=0.305 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1635.71 ms calls=1152 avg=1.420 ms
+  rope_q   :     0.75 ms (  0.0%)
+  rope_k   :     1.20 ms (  0.1%)
+  v_copy   :     0.96 ms (  0.1%)
+  qk       :  1451.72 ms ( 88.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
 [PROFILE HalfTensor::dotQInteger image2d path] hit=8064 miss=0  hit_rate=100.0%
 --
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4119.23 ms calls=8064
-  in_copy   :     2.63 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4116.34 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.27 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4085.09 ms calls=8064
+  in_copy   :     2.25 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  4082.60 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.25 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/[DIAG HalfTensor::dotQInteger M=1] NNTRAINER_GEMV_NOSYNC=1  IMAGE_PUBLISH=0  IMAGE2D=1  step=0
- partir座谈会上とするftyftyàn enjoyable существуетө достат所�
+[DIAG SwiGLU image2d] call=1  in1.batch=1 channel=1 height=1024 width=9728  iter=437  M=437 K=9728  in1=0x3f84678000 in2=0x3f83378000 out=0x3f85978000
+[DIAG SwiGLU image2d] call=1  dis
 
 Full log: temp_run.log
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
