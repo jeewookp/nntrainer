@@ -161,6 +161,76 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
   // ---- 5. CPU output buffer ----
   std::vector<float> cpu_output(N, 0.0f);
 
+  // ---- 5b. image2d gemv correctness check vs baseline gemv_int4_adreno_cl ---
+  // Capture baseline gemv output (one warm call), then capture image2d
+  // gemv output for the SAME input/weight/scale, and report
+  //   max abs diff   (should be tiny if both kernels are equivalent)
+  //   N nonzero diffs > 1e-2
+  //   first few mismatches
+  // This decides between "Phase 2 numerical drift" and "Phase 2 bug":
+  // a sub-ulp diff (max ~ 1e-3) means the two kernels are equivalent
+  // and the model output divergence is from sampling argmax flipping
+  // on a near-tie token; a large diff (max > 1e-1) means the image2d
+  // kernel is producing wrong values somewhere.
+  {
+    nntrainer::gemv_int4_adreno_cl(input_svm, weight_svm, scale_svm,
+                                    output_svm, K, N);
+    std::vector<uint16_t> baseline_out(output_svm, output_svm + N);
+
+    uint16_t *image2d_out_svm =
+      (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+    ASSERT_NE(image2d_out_svm, nullptr);
+    std::memset(image2d_out_svm, 0, N * sizeof(uint16_t));
+
+    // Publish input as image2d so gemv_int4_image2d_cl can find it in
+    // GpuImagePool.  Same publish call rms_norm.cpp does in production.
+    nntrainer::svm_to_image2d_publish(input_svm, /*M=*/1u, K);
+
+    const bool dispatched = nntrainer::gemv_int4_image2d_cl(
+      input_svm, weight_svm, scale_svm, image2d_out_svm, K, N);
+    if (!dispatched) {
+      std::cout << "[gemv_compare] K=" << K << " N=" << N
+                << "  IMAGE2D dispatch FAILED (pool miss?)" << std::endl;
+    } else {
+      // Drain the queue + invalidate host cache so we can read SVM out.
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        image2d_out_svm, N * sizeof(uint16_t), /*read_only=*/true);
+
+      double max_abs = 0.0;
+      double sum_sq_diff = 0.0;
+      double sum_sq_base = 0.0;
+      unsigned int big_diff_count = 0;
+      unsigned int first_mismatch = N;
+      for (unsigned int n = 0; n < N; ++n) {
+        const float a = compute_fp16_to_fp32(baseline_out[n]);
+        const float b = compute_fp16_to_fp32(image2d_out_svm[n]);
+        const double d = std::fabs((double)a - (double)b);
+        if (d > max_abs) max_abs = d;
+        sum_sq_diff += d * d;
+        sum_sq_base += (double)a * (double)a;
+        if (d > 1e-2) {
+          if (first_mismatch == N) first_mismatch = n;
+          big_diff_count++;
+        }
+      }
+      const double rel_l2 = sum_sq_base > 0.0
+        ? std::sqrt(sum_sq_diff / sum_sq_base) : 0.0;
+      std::cout << "[gemv_compare] K=" << K << " N=" << N
+                << "  IMAGE2D vs baseline:"
+                << "  max_abs=" << max_abs
+                << "  rel_l2=" << rel_l2
+                << "  big_diff(>1e-2)=" << big_diff_count << "/" << N;
+      if (first_mismatch < N) {
+        const float a = compute_fp16_to_fp32(baseline_out[first_mismatch]);
+        const float b = compute_fp16_to_fp32(image2d_out_svm[first_mismatch]);
+        std::cout << "  first@n=" << first_mismatch
+                  << " base=" << a << " img=" << b;
+      }
+      std::cout << std::endl;
+    }
+    freeSVM(image2d_out_svm);
+  }
+
   // ---- 6. Warmup + auto-tune iter count so each path runs ~0.5 s ----
   TimeGpuGemv(input_svm, weight_svm, scale_svm, output_svm, K, N, /*iters=*/3);
   TimeCpuQ4_0Gemv(input_fp32.data(), q4_weight_repack.data(), cpu_output.data(),
