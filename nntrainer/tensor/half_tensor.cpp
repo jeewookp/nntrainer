@@ -1161,6 +1161,17 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   if (!all_svm) {
     // Fall back to per-weight dot() which throws the descriptive SVM
     // error message from HalfTensor::dotQInteger.
+    static bool s_diag_fb_printed = false;
+    if (!s_diag_fb_printed) {
+      s_diag_fb_printed = true;
+      std::fprintf(stderr,
+                   "[DIAG HalfTensor::dot(vec,vec)] all_svm=false, falling "
+                   "back to per-weight dot. input[0]->isSVM=%d  "
+                   "output[0]->isSVM=%d  this->isSVM=%d  size=%zu\n",
+                   (int)input[0]->getMemoryData()->isSVM(),
+                   (int)output[0]->getMemoryData()->isSVM(),
+                   (int)getMemoryData()->isSVM(), input.size());
+    }
     for (unsigned int i = 0; i < input.size(); ++i) {
       dot(*input[i], *output[i], trans, trans_in, beta);
     }
@@ -1217,6 +1228,21 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
     // dot(vec,vec) call -- so 3 SVMMaps per layer collapse to 1.
     static const bool s_batch_sync =
       std::getenv("NNTRAINER_GEMV_BATCH_SYNC") != nullptr;
+
+    // Diagnostic: print which decode dispatch path is taken once, so we
+    // can see whether NNTRAINER_GEMV_BATCH_SYNC=1 is actually wired in.
+    // The earlier all_svm fall-through (line ~1161) bypasses this entire
+    // batched M=1 block and goes through per-weight dotQInteger instead,
+    // making any batch-sync change here a no-op -- guard against that.
+    static bool s_diag_printed = false;
+    if (!s_diag_printed) {
+      s_diag_printed = true;
+      std::fprintf(
+        stderr,
+        "[DIAG HalfTensor::dot(vec,vec) M=1] reached batched path, "
+        "input.size=%zu  s_batch_sync=%d\n",
+        input.size(), (int)s_batch_sync);
+    }
 
     if (s_batch_sync) {
       // === Phase 1: dispatch every FC, sync_output=false ===
