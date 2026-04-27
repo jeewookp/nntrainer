@@ -18,15 +18,23 @@ __kernel void swiglu_image2d(
   int s = get_global_id(1);
   if (m >= M || s >= slices) return;
 
-  half4 g = read_imageh(gate, smp, (int2)(m, s));
-  half4 u = read_imageh(up, smp, (int2)(m, s));
+  half4 g_h = read_imageh(gate, smp, (int2)(m, s));
+  half4 u_h = read_imageh(up, smp, (int2)(m, s));
 
   // silu(x) = x / (1 + exp(-x))
-  half4 silu;
-  silu.x = u.x / ((half)1.0h + exp(-u.x));
-  silu.y = u.y / ((half)1.0h + exp(-u.y));
-  silu.z = u.z / ((half)1.0h + exp(-u.z));
-  silu.w = u.w / ((half)1.0h + exp(-u.w));
+  // Compute in fp32 -- half-precision exp() accuracy is driver-
+  // dependent on Adreno and was producing wrong activations in our
+  // first integration test (model output became random multilingual
+  // tokens).  fp32 silu + final half conversion matches the SVM
+  // swiglu_fp16 path's NEON math (which also computes silu in fp32)
+  // and avoids the discrepancy.
+  float4 g = convert_float4(g_h);
+  float4 u = convert_float4(u_h);
+  float4 silu;
+  silu.x = u.x / (1.0f + exp(-u.x));
+  silu.y = u.y / (1.0f + exp(-u.y));
+  silu.z = u.z / (1.0f + exp(-u.z));
+  silu.w = u.w / (1.0f + exp(-u.w));
 
-  write_imageh(output, (int2)(m, s), g * silu);
+  write_imageh(output, (int2)(m, s), convert_half4(g * silu));
 }
