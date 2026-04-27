@@ -2586,7 +2586,27 @@ bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
   const int l[3] = {16, 16, 1};
   if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
 
-  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  // NNTRAINER_SWIGLU_NO_PUBLISH=1: skip the GpuImagePool::set for the
+  // swiglu output so the immediate consumer (down_proj) misses the
+  // pool and falls back to the SVM gemv path (with sync_output=true)
+  // -- which reads from the SVM companion the kernel just vstore4'd
+  // to.  Diagnostic: if turning this on restores correct output,
+  // we know the swiglu image2d INPUT path is fine and the issue is
+  // either (a) consumer reading swiglu's image2d output incorrectly
+  // or (b) the image2d we publish doesn't match what consumers
+  // expect.  If output stays garbage with this on, the swiglu
+  // image2d INPUT (gate/up image2d data) is the broken link.
+  static const bool s_no_publish =
+    std::getenv("NNTRAINER_SWIGLU_NO_PUBLISH") != nullptr;
+  if (!s_no_publish) {
+    GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  }
+  // Always blocking SVMMap on out_svm for now -- mirrors the
+  // gemv DEBUG_SYNC fence so SVM-reading consumers (down_proj
+  // fallback when no_publish, or any future SVM reader) see
+  // coherent data.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    out_svm, (size_t)M * K * sizeof(uint16_t), /*read_only=*/true);
   return true;
 }
 

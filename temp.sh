@@ -145,6 +145,14 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # FC svm_to_image2d publish cost on the gate/up outputs and
   # lets the swiglu intermediate stay on image cache.
   export NNTRAINER_SWIGLU_IMAGE2D=1; \
+  # Bisect: with NO_PUBLISH=1, swiglu reads image2d input but doesn't
+  # publish the image2d output so down_proj misses GpuImagePool and
+  # falls back to gemv_int4_adreno_cl (SVM read, sync forced true).
+  # If output becomes correct under NO_PUBLISH=1, we know the swiglu
+  # IMAGE2D INPUT chain is fine and the corruption is somewhere in
+  # the publish->consumer side.  If still garbage, the input image2d
+  # data itself is the broken link.
+  export NNTRAINER_SWIGLU_NO_PUBLISH=1; \
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
