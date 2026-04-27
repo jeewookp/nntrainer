@@ -2471,10 +2471,14 @@ bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
   kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
   kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
 
-  // 4 output channels per WI, baseline-style local of 16.
-  const int align_N = static_cast<int>(align(N, 64));
+  // 4 output channels per WI; WG=64 to fully fill the Adreno 830
+  // wavefront (the previous local=16 left 75% of every wavefront idle
+  // for kernels with no extra parallelism per call).  Round N up to a
+  // multiple of 256 so global_x = align_N/4 is divisible by WG=64
+  // even for shapes where N itself isn't.
+  const int align_N = static_cast<int>(align(N, 256));
   const int g[3] = {align_N / 4, 1, 1};
-  const int l[3] = {16, 1, 1};
+  const int l[3] = {64, 1, 1};
   if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l)) {
     return false;
   }

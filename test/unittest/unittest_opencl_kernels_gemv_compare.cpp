@@ -96,6 +96,31 @@ double TimeGpuGemv(uint16_t *input_svm, uint16_t *weight_svm,
   return std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
+// Run gemv_int4_image2d_cl `iters` times.  Pre-condition: caller has
+// already published input_svm to GpuImagePool (otherwise every call
+// pool-misses and the helper short-circuits without dispatching).
+// We also drain the queue at the end with a blocking SVMMap on the
+// SVM-output companion so the per-call wall reflects host-visible
+// completion (matches what the decode path's consumer fence does).
+double TimeGpuImage2dGemv(uint16_t *input_svm, uint16_t *weight_svm,
+                          uint16_t *scale_svm, uint16_t *output_svm,
+                          unsigned int K, unsigned int N,
+                          unsigned int iters) {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  for (unsigned int i = 0; i < iters; ++i) {
+    nntrainer::gemv_int4_image2d_cl(input_svm, weight_svm, scale_svm,
+                                    output_svm, K, N);
+  }
+  if (blas_cc) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
 // Run gemm_q4_0 with M=1 `iters` times.  This is the CPU path
 // HalfTensor::dotQInteger takes when the GPU short-circuit is
 // disabled, and is the actual 20-TPS baseline reference.
@@ -254,16 +279,39 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
     TimeCpuQ4_0Gemv(input_fp32.data(), q4_weight_repack.data(),
                     cpu_output.data(), K, N, cpu_iters);
 
-  const double gpu_avg = gpu_total / gpu_iters;
-  const double cpu_avg = cpu_total / cpu_iters;
-  const double ratio   = cpu_avg > 0.0 ? gpu_avg / cpu_avg : 0.0;
+  // Image2d gemv timing (now part of the production decode path):
+  // input must be in GpuImagePool to skip the SVM-fallback branch, so
+  // re-publish here and use a separate output SVM buffer.
+  uint16_t *image2d_out_svm = (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+  ASSERT_NE(image2d_out_svm, nullptr);
+  std::memset(image2d_out_svm, 0, N * sizeof(uint16_t));
+  nntrainer::svm_to_image2d_publish(input_svm, /*M=*/1u, K);
+  TimeGpuImage2dGemv(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                     K, N, /*iters=*/3);
+  const double img2d_warm =
+    TimeGpuImage2dGemv(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                       K, N, 5) / 5.0;
+  const unsigned int img2d_iters =
+    std::max(20u,
+              static_cast<unsigned int>(500.0 / std::max(0.001, img2d_warm)));
+  const double img2d_total =
+    TimeGpuImage2dGemv(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                       K, N, img2d_iters);
+
+  const double gpu_avg   = gpu_total / gpu_iters;
+  const double cpu_avg   = cpu_total / cpu_iters;
+  const double img2d_avg = img2d_total / img2d_iters;
+  const double ratio     = cpu_avg > 0.0 ? gpu_avg / cpu_avg : 0.0;
+  const double img_ratio_vs_baseline = gpu_avg > 0.0 ? img2d_avg / gpu_avg : 0.0;
 
   std::cout << "[gemv_compare] K=" << K << " N=" << N
             << "  GPU=" << gpu_avg << " ms"
+            << "  IMG2D=" << img2d_avg << " ms"
             << "  CPU=" << cpu_avg << " ms"
             << "  ratio(GPU/CPU)=" << ratio
-            << "  (gpu_iters=" << gpu_iters
-            << ", cpu_iters=" << cpu_iters << ")" << std::endl;
+            << "  ratio(IMG2D/GPU)=" << img_ratio_vs_baseline
+            << std::endl;
+  freeSVM(image2d_out_svm);
 
   freeSVM(input_svm);
   freeSVM(weight_svm);
