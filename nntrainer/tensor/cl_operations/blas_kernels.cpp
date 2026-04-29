@@ -2613,6 +2613,82 @@ bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
   return true;
 }
 
+// Phase 1A step 1: fused RMSNorm + Q/K/V projection on a single
+// GPU dispatch.  Replaces the current 4 dispatches per layer
+// (rms_norm + 3x fully_connected) -- saves 3 SVMMap drains, 3
+// dispatch overheads, and the SVM round-trip for the normalised
+// hidden vector.  See cl_kernels/fused_rmsnorm_qkv.cl for the
+// kernel itself.  All weights/scales are channel-wise int4
+// quantised, same layout as gemv_int4_adreno_cl.
+//
+// All buffers are SVM ptrs, output included.  M == 1 only.
+bool fused_rmsnorm_qkv_cl(uint16_t *input_svm,
+                          const float *gamma_svm,
+                          uint16_t *q_weights, uint16_t *q_scales,
+                          uint16_t *q_out,
+                          uint16_t *k_weights, uint16_t *k_scales,
+                          uint16_t *k_out,
+                          uint16_t *v_weights, uint16_t *v_scales,
+                          uint16_t *v_out,
+                          unsigned int K_in,
+                          unsigned int N_q,
+                          unsigned int N_k,
+                          unsigned int N_v,
+                          float epsilon) {
+  if (!input_svm || !gamma_svm) return false;
+  if ((K_in & 3u) || (N_q & 63u) || (N_k & 63u) || (N_v & 63u))
+    return false;  // each partition aligned to WG=64 * 4 ch/WI = 256? actually 64*4=256, but 64*1=64
+  if (K_in > 2560) return false;  // local mem cache assumes K_in <= 2560
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    fused_rmsnorm_qkv_kernel, "gpu_fused_rmsnorm_qkv");
+  if (!kp) return false;
+
+  int a = 0;
+  kp->SetKernelSVMArguments(a++, input_svm);
+  kp->SetKernelSVMArguments(a++, gamma_svm);
+  kp->SetKernelSVMArguments(a++, q_weights);
+  kp->SetKernelSVMArguments(a++, q_scales);
+  kp->SetKernelSVMArguments(a++, q_out);
+  kp->SetKernelSVMArguments(a++, k_weights);
+  kp->SetKernelSVMArguments(a++, k_scales);
+  kp->SetKernelSVMArguments(a++, k_out);
+  kp->SetKernelSVMArguments(a++, v_weights);
+  kp->SetKernelSVMArguments(a++, v_scales);
+  kp->SetKernelSVMArguments(a++, v_out);
+  int sk = (int)K_in, snq = (int)N_q, snk = (int)N_k, snv = (int)N_v;
+  kp->SetKernelArguments(a++, &sk,  sizeof(int));
+  kp->SetKernelArguments(a++, &snq, sizeof(int));
+  kp->SetKernelArguments(a++, &snk, sizeof(int));
+  kp->SetKernelArguments(a++, &snv, sizeof(int));
+  kp->SetKernelArguments(a++, &epsilon, sizeof(float));
+
+  // Each WI handles 4 output channels; 64 WIs/WG.  Total channels =
+  // N_q + N_k + N_v.
+  const int total_wi = (int)((N_q + N_k + N_v) / 4u);
+  // Round up to multiple of 64 so dispatch is whole WGs.
+  const int aligned = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  // Output fence -- same contract as gemv_int4_adreno_cl with
+  // sync_output=true.  All three outputs live on the same in-order
+  // queue; the LAST blocking SVMMap drains the queue, the prior
+  // ones just do cache invalidate.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    q_out, (size_t)N_q * sizeof(uint16_t), /*read_only=*/true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    k_out, (size_t)N_k * sizeof(uint16_t), /*read_only=*/true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
+  return true;
+}
+
 // Diagnostic helper: read an image2d from GpuImagePool back into a
 // fresh SVM buffer using the existing image_reformat::image2d_to_svm
 // kernel.  Lets the unittest cross-check the kernel's image2d write

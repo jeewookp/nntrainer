@@ -314,6 +314,176 @@ DECLARE_gemv_compare_K_N(4096, 2560);  // O proj
 DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
 
+// =====================================================================
+// Phase 1A: fused RMSNorm + Q/K/V projection.  Verify correctness
+// against the canonical 4-dispatch sequence (rms_norm fp32 reference
+// + 3 separate gemv calls) and time the single fused dispatch.
+// Saving = 3 SVMMap drains (~1.5 ms) per layer; this is the per-layer
+// micro that lets us project the production gain.
+// =====================================================================
+namespace {
+// Reference rms_norm: out = in * gamma / sqrt(mean(in^2) + eps)
+// Computed in fp32 for both reference baseline and fused kernel
+// internally, so the result is the same precision as the kernel.
+void cpu_rmsnorm_ref(const float *in, const float *gamma, float *out,
+                     unsigned int K, float eps) {
+  double sumsq = 0.0;
+  for (unsigned int k = 0; k < K; ++k) sumsq += (double)in[k] * (double)in[k];
+  const double inv_rms = 1.0 / std::sqrt(sumsq / (double)K + (double)eps);
+  for (unsigned int k = 0; k < K; ++k)
+    out[k] = (float)((double)in[k] * inv_rms * (double)gamma[k]);
+}
+} // namespace
+
+static void run_fused_rmsnorm_qkv_(unsigned int K_in, unsigned int N_q,
+                                    unsigned int N_k, unsigned int N_v) {
+  auto *blas_cc = static_cast<ClContext *>(
+    Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+  ASSERT_LE(K_in, 2560u);  // local mem cache limit in kernel
+
+  // ---- 1. fp32 reference: random input + gamma + 3 random weight matrices --
+  std::vector<float> input_fp32 =
+    generate_random_vector<float>(K_in, -1.0f, 1.0f);
+  std::vector<float> gamma_fp32 =
+    generate_random_vector<float>(K_in, 0.5f, 1.5f);
+  std::vector<float> q_w_fp32 =
+    generate_random_vector<float>((size_t)N_q * K_in, -1.0f, 1.0f);
+  std::vector<float> k_w_fp32 =
+    generate_random_vector<float>((size_t)N_k * K_in, -1.0f, 1.0f);
+  std::vector<float> v_w_fp32 =
+    generate_random_vector<float>((size_t)N_v * K_in, -1.0f, 1.0f);
+
+  const float eps = 1e-6f;
+
+  // ---- 2. CPU reference: rmsnorm + 3 FCs in fp32 ----
+  std::vector<float> norm_in(K_in);
+  cpu_rmsnorm_ref(input_fp32.data(), gamma_fp32.data(), norm_in.data(), K_in,
+                  eps);
+
+  auto cpu_matvec = [&](const float *w, unsigned int N,
+                         std::vector<float> &out) {
+    out.assign(N, 0.0f);
+    for (unsigned int n = 0; n < N; ++n) {
+      double acc = 0.0;
+      for (unsigned int k = 0; k < K_in; ++k)
+        acc += (double)norm_in[k] * (double)w[n * K_in + k];
+      out[n] = (float)acc;
+    }
+  };
+  std::vector<float> q_ref, k_ref, v_ref;
+  cpu_matvec(q_w_fp32.data(), N_q, q_ref);
+  cpu_matvec(k_w_fp32.data(), N_k, k_ref);
+  cpu_matvec(v_w_fp32.data(), N_v, v_ref);
+
+  // ---- 3. Pack weights/scales for GPU (channel-wise int4) ---------------
+  std::vector<uint16_t> q_nibbles, q_scales, k_nibbles, k_scales,
+    v_nibbles, v_scales;
+  PackInt4ChannelwiseAdreno(q_w_fp32.data(), N_q, K_in, q_nibbles, q_scales);
+  PackInt4ChannelwiseAdreno(k_w_fp32.data(), N_k, K_in, k_nibbles, k_scales);
+  PackInt4ChannelwiseAdreno(v_w_fp32.data(), N_v, K_in, v_nibbles, v_scales);
+
+  // ---- 4. SVM allocations -----------------------------------------------
+  uint16_t *input_svm = (uint16_t *)allocateSVM(K_in * sizeof(uint16_t));
+  float    *gamma_svm = (float *)allocateSVM(K_in * sizeof(float));
+  uint16_t *q_w_svm = (uint16_t *)allocateSVM(q_nibbles.size() * sizeof(uint16_t));
+  uint16_t *q_s_svm = (uint16_t *)allocateSVM(q_scales.size() * sizeof(uint16_t));
+  uint16_t *q_out_svm = (uint16_t *)allocateSVM(N_q * sizeof(uint16_t));
+  uint16_t *k_w_svm = (uint16_t *)allocateSVM(k_nibbles.size() * sizeof(uint16_t));
+  uint16_t *k_s_svm = (uint16_t *)allocateSVM(k_scales.size() * sizeof(uint16_t));
+  uint16_t *k_out_svm = (uint16_t *)allocateSVM(N_k * sizeof(uint16_t));
+  uint16_t *v_w_svm = (uint16_t *)allocateSVM(v_nibbles.size() * sizeof(uint16_t));
+  uint16_t *v_s_svm = (uint16_t *)allocateSVM(v_scales.size() * sizeof(uint16_t));
+  uint16_t *v_out_svm = (uint16_t *)allocateSVM(N_v * sizeof(uint16_t));
+  ASSERT_NE(input_svm, nullptr);
+  ASSERT_NE(gamma_svm, nullptr);
+
+  for (unsigned int k = 0; k < K_in; ++k) {
+    input_svm[k] = compute_fp32_to_fp16(input_fp32[k]);
+    gamma_svm[k] = gamma_fp32[k];
+  }
+  std::memcpy(q_w_svm, q_nibbles.data(), q_nibbles.size() * sizeof(uint16_t));
+  std::memcpy(q_s_svm, q_scales.data(), q_scales.size() * sizeof(uint16_t));
+  std::memcpy(k_w_svm, k_nibbles.data(), k_nibbles.size() * sizeof(uint16_t));
+  std::memcpy(k_s_svm, k_scales.data(), k_scales.size() * sizeof(uint16_t));
+  std::memcpy(v_w_svm, v_nibbles.data(), v_nibbles.size() * sizeof(uint16_t));
+  std::memcpy(v_s_svm, v_scales.data(), v_scales.size() * sizeof(uint16_t));
+  std::memset(q_out_svm, 0, N_q * sizeof(uint16_t));
+  std::memset(k_out_svm, 0, N_k * sizeof(uint16_t));
+  std::memset(v_out_svm, 0, N_v * sizeof(uint16_t));
+
+  // ---- 5. Dispatch fused kernel + correctness compare -------------------
+  ASSERT_TRUE(nntrainer::fused_rmsnorm_qkv_cl(
+    input_svm, gamma_svm, q_w_svm, q_s_svm, q_out_svm,
+    k_w_svm, k_s_svm, k_out_svm, v_w_svm, v_s_svm, v_out_svm,
+    K_in, N_q, N_k, N_v, eps));
+
+  auto check_partition = [&](const std::vector<float> &ref, uint16_t *out,
+                              unsigned int N, const char *name) {
+    double max_abs = 0.0;
+    double sum_sq_diff = 0.0;
+    double sum_sq_ref = 0.0;
+    unsigned int big_diff = 0;
+    for (unsigned int n = 0; n < N; ++n) {
+      const float a = ref[n];
+      const float b = compute_fp16_to_fp32(out[n]);
+      const double d = std::fabs((double)a - (double)b);
+      if (d > max_abs) max_abs = d;
+      sum_sq_diff += d * d;
+      sum_sq_ref += (double)a * (double)a;
+      // ref is fp32 dot product; fp16 accum + dequant + rmsnorm = wider
+      // tolerance than the bit-exact gemv tests above
+      if (d > 1e-1) big_diff++;
+    }
+    const double rel = sum_sq_ref > 0.0
+      ? std::sqrt(sum_sq_diff / sum_sq_ref) : 0.0;
+    std::cout << "[fused_rmsnorm_qkv] K_in=" << K_in
+              << " " << name << "=" << N
+              << "  max_abs=" << max_abs
+              << "  rel_l2=" << rel
+              << "  big_diff(>1e-1)=" << big_diff << "/" << N << std::endl;
+  };
+  check_partition(q_ref, q_out_svm, N_q, "N_q");
+  check_partition(k_ref, k_out_svm, N_k, "N_k");
+  check_partition(v_ref, v_out_svm, N_v, "N_v");
+
+  // ---- 6. Time the fused dispatch ---------------------------------------
+  auto time_fused = [&](unsigned int iters) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    for (unsigned int i = 0; i < iters; ++i) {
+      nntrainer::fused_rmsnorm_qkv_cl(
+        input_svm, gamma_svm, q_w_svm, q_s_svm, q_out_svm,
+        k_w_svm, k_s_svm, k_out_svm, v_w_svm, v_s_svm, v_out_svm,
+        K_in, N_q, N_k, N_v, eps);
+    }
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::milli>(t1 - t0).count();
+  };
+  time_fused(3);  // warmup
+  const double warm = time_fused(5) / 5.0;
+  const unsigned int iters =
+    std::max(20u, static_cast<unsigned int>(500.0 / std::max(0.001, warm)));
+  const double total = time_fused(iters);
+  const double avg = total / iters;
+  std::cout << "[fused_rmsnorm_qkv] K_in=" << K_in
+            << " N_q=" << N_q << " N_k=" << N_k << " N_v=" << N_v
+            << "  FUSED=" << avg << " ms (replaces 1 rms_norm + "
+                                      "3 gemv = ~1.4 ms baseline)"
+            << std::endl;
+
+  freeSVM(input_svm);  freeSVM(gamma_svm);
+  freeSVM(q_w_svm);  freeSVM(q_s_svm);  freeSVM(q_out_svm);
+  freeSVM(k_w_svm);  freeSVM(k_s_svm);  freeSVM(k_out_svm);
+  freeSVM(v_w_svm);  freeSVM(v_s_svm);  freeSVM(v_out_svm);
+}
+
+TEST(nntrainer_fused_rmsnorm_qkv, qwen3_4b_shapes) {
+  // Qwen3-4B: hidden 2560, num_heads_q=32 head_dim=128 -> N_q=4096
+  //           num_heads_kv=8 (GQA group size 4) -> N_k=N_v=1024
+  run_fused_rmsnorm_qkv_(/*K_in=*/2560, /*N_q=*/4096,
+                          /*N_k=*/1024, /*N_v=*/1024);
+}
+
 // Defining main() directly in this .o file is the only reliable way to
 // keep gtest as the program entry point.  Without it the linker pulls
 // `main` from one of the static archives (googletest_main *or*

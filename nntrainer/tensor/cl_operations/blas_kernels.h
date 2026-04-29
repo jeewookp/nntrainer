@@ -445,6 +445,50 @@ bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
                          unsigned int M, unsigned int K);
 
 /**
+ * @brief Phase 1A step 1: fused RMSNorm + Q/K/V projection.
+ *
+ * One GPU dispatch replaces the canonical 4 (rms_norm + 3x
+ * fully_connected).  Saves 3 SVMMap drains + 3 dispatch overheads
+ * + the SVM round-trip for the normalised hidden vector.  All
+ * weights and scales are channel-wise int4 quantised, same layout
+ * as gemv_int4_adreno_cl.
+ *
+ * @param input_svm  fp16 hidden vector, length K_in (SVM)
+ * @param gamma_svm  fp32 rmsnorm gamma, length K_in (SVM)
+ * @param q_weights  ushort[(K_in/4) * N_q]
+ * @param q_scales   half[N_q]
+ * @param q_out      half[N_q] (SVM) -- written
+ * @param k_weights  ushort[(K_in/4) * N_k]
+ * @param k_scales   half[N_k]
+ * @param k_out      half[N_k] (SVM) -- written
+ * @param v_weights  ushort[(K_in/4) * N_v]
+ * @param v_scales   half[N_v]
+ * @param v_out      half[N_v] (SVM) -- written
+ * @param K_in       hidden dimension (Qwen3-4B: 2560)
+ * @param N_q        Q output dim (num_heads_q * head_dim)
+ * @param N_k        K output dim (num_heads_kv * head_dim)
+ * @param N_v        V output dim (= N_k for GQA)
+ * @param epsilon    rmsnorm epsilon
+ *
+ * @returns false on shape constraint violation (K_in > 2560 or
+ *   N_{q,k,v} not divisible by 64); caller must fall back to the
+ *   separate rmsnorm + 3 FCs path.
+ */
+bool fused_rmsnorm_qkv_cl(uint16_t *input_svm,
+                          const float *gamma_svm,
+                          uint16_t *q_weights, uint16_t *q_scales,
+                          uint16_t *q_out,
+                          uint16_t *k_weights, uint16_t *k_scales,
+                          uint16_t *k_out,
+                          uint16_t *v_weights, uint16_t *v_scales,
+                          uint16_t *v_out,
+                          unsigned int K_in,
+                          unsigned int N_q,
+                          unsigned int N_k,
+                          unsigned int N_v,
+                          float epsilon);
+
+/**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
  * unittest cross-check what a producer kernel wrote to image2d
