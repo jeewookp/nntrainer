@@ -133,6 +133,27 @@ double TimeGpuGemvImage2d(uint16_t *input_svm, uint16_t *weight_svm,
   return std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
+// Run gemm_delegate_fp16_cl with M=1 -- exercises the same delegate
+// path prefill uses, but for a single decode token.  Reads from
+// fp16-dequantized weights cl_buffer cache (g_delegate_weight_cache)
+// that prefill populated; image cache friendly access pattern.
+// First call dequant+caches; subsequent calls hit the cache.  This
+// is the LiteRT-style 'image2d weights' approach without paying
+// extra memory (cache shared with prefill).
+double TimeGpuGemmDelegateM1(uint16_t *input_svm, uint16_t *weight_svm,
+                             uint16_t *scale_svm, uint16_t *output_svm,
+                             uint16_t *transpose_svm,
+                             unsigned int K, unsigned int N,
+                             unsigned int iters) {
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  for (unsigned int i = 0; i < iters; ++i) {
+    nntrainer::gemm_delegate_fp16_cl(input_svm, transpose_svm, weight_svm,
+                                      scale_svm, output_svm, /*M=*/1u, N, K);
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
 } // namespace
 
 static void run_gemv_compare_(unsigned int K, unsigned int N) {
@@ -289,7 +310,64 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
             << "  ratio(IMG2D/GPU)=" << img_vs_gpu
             << std::endl;
 
+  // ---- 7c. gemm_delegate_fp16_cl with M=1 (LiteRT-style image2d
+  // weights via shared delegate cache) ------------------------------------
+  // Caller-provided transpose buffer (page-aligned scratch).
+  // Allocate page-aligned via SVM (gemm_delegate may wrap with
+  // CL_MEM_USE_HOST_PTR which requires alignment).
+  uint16_t *delegate_out =
+    (uint16_t *)allocateSVM((size_t)N * sizeof(uint16_t));
+  uint16_t *delegate_transpose =
+    (uint16_t *)allocateSVM((size_t)K * sizeof(uint16_t));  // M=1, just K
+  ASSERT_NE(delegate_out, nullptr);
+  ASSERT_NE(delegate_transpose, nullptr);
+  std::memset(delegate_out, 0, N * sizeof(uint16_t));
+
+  // Correctness: same gemv result expected.
+  TimeGpuGemmDelegateM1(input_svm, weight_svm, scale_svm, delegate_out,
+                        delegate_transpose, K, N, /*iters=*/1);
+  if (blas_cc) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      delegate_out, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  // baseline ran above; output_svm has baseline result.  Compare.
+  {
+    double max_abs = 0.0;
+    unsigned int big_diff = 0;
+    for (unsigned int n = 0; n < N; ++n) {
+      const float a = compute_fp16_to_fp32(output_svm[n]);
+      const float b = compute_fp16_to_fp32(delegate_out[n]);
+      const double d = std::fabs((double)a - (double)b);
+      if (d > max_abs) max_abs = d;
+      if (d > 1e-2) big_diff++;
+    }
+    std::cout << "[gemv_compare] K=" << K << " N=" << N
+              << "  DELEGATE_M1 vs baseline:  max_abs=" << max_abs
+              << "  big_diff(>1e-2)=" << big_diff << "/" << N
+              << std::endl;
+  }
+  // Warmup
+  TimeGpuGemmDelegateM1(input_svm, weight_svm, scale_svm, delegate_out,
+                        delegate_transpose, K, N, /*iters=*/3);
+  const double dlg_warm =
+    TimeGpuGemmDelegateM1(input_svm, weight_svm, scale_svm, delegate_out,
+                           delegate_transpose, K, N, 5) / 5.0;
+  const unsigned int dlg_iters =
+    std::max(20u,
+              static_cast<unsigned int>(500.0 / std::max(0.001, dlg_warm)));
+  const double dlg_total =
+    TimeGpuGemmDelegateM1(input_svm, weight_svm, scale_svm, delegate_out,
+                           delegate_transpose, K, N, dlg_iters);
+  const double dlg_avg = dlg_total / dlg_iters;
+  std::cout << "[gemv_compare] K=" << K << " N=" << N
+            << "  DELEGATE_M1=" << dlg_avg << " ms"
+            << "  ratio(DLG/GPU)="
+            << (gpu_avg > 0.0 ? dlg_avg / gpu_avg : 0.0)
+            << std::endl;
+
   freeSVM(image2d_out_svm);
+  freeSVM(delegate_out);
+  freeSVM(delegate_transpose);
   freeSVM(input_svm);
   freeSVM(weight_svm);
   freeSVM(scale_svm);
