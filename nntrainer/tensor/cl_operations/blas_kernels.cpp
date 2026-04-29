@@ -2811,6 +2811,77 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
   return true;
 }
 
+// Multi-output int4 GEMV for M=1 decode.  Fuses 2 or 3 projection
+// partitions (QKV or Gate/Up) into a single dispatch.  Pass N_v=0
+// to disable the V partition (gate_up case): the helper still needs
+// non-null v_weights/v_scales/v_out pointers since clSetKernelArg
+// rejects null SVM, so the caller passes q_weights/q_scales/q_out
+// for those slots; the kernel never dereferences them when N_v=0.
+bool fused_gemv_int4_cl(uint16_t *input_svm,
+                        uint16_t *q_weights, uint16_t *q_scales,
+                        uint16_t *q_out,
+                        uint16_t *k_weights, uint16_t *k_scales,
+                        uint16_t *k_out,
+                        uint16_t *v_weights, uint16_t *v_scales,
+                        uint16_t *v_out,
+                        unsigned int K,
+                        unsigned int N_q,
+                        unsigned int N_k,
+                        unsigned int N_v) {
+  if (!input_svm) return false;
+  if ((K & 3u) || (N_q & 3u) || (N_k & 3u) || (N_v & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    fused_gemv_int4_kernel, "gpu_fused_gemv_int4");
+  if (!kp) return false;
+
+  int a = 0;
+  kp->SetKernelSVMArguments(a++, input_svm);
+  kp->SetKernelSVMArguments(a++, q_weights);
+  kp->SetKernelSVMArguments(a++, q_scales);
+  kp->SetKernelSVMArguments(a++, q_out);
+  kp->SetKernelSVMArguments(a++, k_weights);
+  kp->SetKernelSVMArguments(a++, k_scales);
+  kp->SetKernelSVMArguments(a++, k_out);
+  kp->SetKernelSVMArguments(a++, v_weights);
+  kp->SetKernelSVMArguments(a++, v_scales);
+  kp->SetKernelSVMArguments(a++, v_out);
+  int sk = (int)K, snq = (int)N_q, snk = (int)N_k, snv = (int)N_v;
+  kp->SetKernelArguments(a++, &sk,  sizeof(int));
+  kp->SetKernelArguments(a++, &snq, sizeof(int));
+  kp->SetKernelArguments(a++, &snk, sizeof(int));
+  kp->SetKernelArguments(a++, &snv, sizeof(int));
+
+  // Each WI handles 4 output channels; WG=64.
+  const unsigned int total_n = N_q + N_k + N_v;
+  const int total_wi = (int)(total_n / 4u);
+  const int aligned = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  // Single end-of-block SVMMap drain.  We invalidate cache for each
+  // output buffer; the LAST one drains the queue.  Outputs with N=0
+  // are skipped.
+  if (N_q > 0) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      q_out, (size_t)N_q * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (N_k > 0) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      k_out, (size_t)N_k * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (N_v > 0) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
+  }
+  return true;
+}
+
 // Diagnostic helper: read an image2d from GpuImagePool back into a
 // fresh SVM buffer using the existing image_reformat::image2d_to_svm
 // kernel.  Lets the unittest cross-check the kernel's image2d write

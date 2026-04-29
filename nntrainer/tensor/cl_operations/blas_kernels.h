@@ -526,6 +526,31 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
                               float epsilon);
 
 /**
+ * @brief Multi-output int4 GEMV for M=1 decode -- fuses 2 or 3
+ *   projection partitions that share the same activation into a
+ *   single dispatch.  Use cases: QKV (3 partitions) and Gate/Up MLP
+ *   (2 partitions; pass v_weights = q_weights, v_scales = q_scales,
+ *   v_out = q_out, N_v = 0 so the V branch is never taken).
+ *
+ *   Saves (input.size() - 1) SVMMap drains per attention/MLP block
+ *   relative to looping baseline gemv_int4_adreno_cl per weight.
+ *
+ * @returns false on shape constraint violation (K not div by 4 or
+ *   any N not div by 4).
+ */
+bool fused_gemv_int4_cl(uint16_t *input_svm,
+                        uint16_t *q_weights, uint16_t *q_scales,
+                        uint16_t *q_out,
+                        uint16_t *k_weights, uint16_t *k_scales,
+                        uint16_t *k_out,
+                        uint16_t *v_weights, uint16_t *v_scales,
+                        uint16_t *v_out,
+                        unsigned int K,
+                        unsigned int N_q,
+                        unsigned int N_k,
+                        unsigned int N_v);
+
+/**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
  * unittest cross-check what a producer kernel wrote to image2d

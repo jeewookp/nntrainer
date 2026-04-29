@@ -1289,8 +1289,80 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   }
 
   if (M == 1) {
-    // M=1 (decode): dispatch gpu_int4_gemv_adreno per weight; the
-    // shared activation has already been staged into svm_in above.
+    // M=1 (decode): when the caller batched 2 or 3 projections that
+    // share the same activation (QKV or Gate/Up), fuse them into a
+    // single dispatch with one end-of-block SVMMap drain instead of
+    // input.size() drains.  That's worth ~250 us per saved drain on
+    // Adreno 830 coarse-grained SVM, ~500-750 us per attention/MLP
+    // block.
+    //
+    // Fall back to the per-weight gpu_int4_gemv_adreno loop for any
+    // shape we can't fuse (single weight, or any Ni not divisible by 4).
+    const bool fusable =
+      (input.size() == 2 || input.size() == 3) && (K % 4) == 0;
+    bool all_div4 = fusable;
+    if (fusable) {
+      for (unsigned int i = 0; i < input.size(); ++i) {
+        if ((output[i]->getDim().width() % 4) != 0) {
+          all_div4 = false;
+          break;
+        }
+      }
+    }
+    if (fusable && all_div4) {
+      auto *w_q = reinterpret_cast<uint16_t *>(input[0]->getData<char>());
+      auto *s_q = input[0]->getScale<uint16_t>();
+      const unsigned int N_q = output[0]->getDim().width();
+      uint16_t *svm_out_q =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(0));
+      auto *w_k = reinterpret_cast<uint16_t *>(input[1]->getData<char>());
+      auto *s_k = input[1]->getScale<uint16_t>();
+      const unsigned int N_k = output[1]->getDim().width();
+      uint16_t *svm_out_k =
+        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(1));
+
+      uint16_t *w_v;
+      uint16_t *s_v;
+      uint16_t *svm_out_v;
+      unsigned int N_v;
+      if (input.size() == 3) {
+        w_v = reinterpret_cast<uint16_t *>(input[2]->getData<char>());
+        s_v = input[2]->getScale<uint16_t>();
+        N_v = output[2]->getDim().width();
+        svm_out_v = reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(2));
+      } else {
+        // 2-partition (Gate/Up): pass Q-side ptrs as v slot dummies;
+        // the kernel never dereferences them when N_v == 0.
+        w_v = w_q;
+        s_v = s_q;
+        svm_out_v = svm_out_q;
+        N_v = 0u;
+      }
+
+      const bool ok = fused_gemv_int4_cl(svm_in,
+                                          w_q, s_q, svm_out_q,
+                                          w_k, s_k, svm_out_k,
+                                          w_v, s_v, svm_out_v,
+                                          K, N_q, N_k, N_v);
+      if (ok) {
+        // Stage outputs back to caller tensors.
+        for (unsigned int i = 0; i < input.size(); ++i) {
+          auto *out_u16 =
+            reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+          uint16_t *svm_out_i =
+            reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
+          const unsigned int Ni = output[i]->getDim().width();
+          for (unsigned int n = 0; n < Ni; ++n) {
+            out_u16[n] = svm_out_i[n];
+          }
+        }
+        return;
+      }
+      // Helper rejected (rare); fall through to per-weight loop.
+    }
+
+    // Fallback: dispatch gpu_int4_gemv_adreno per weight; the shared
+    // activation has already been staged into svm_in above.
     for (unsigned int i = 0; i < input.size(); ++i) {
       auto *weight_u16 =
         reinterpret_cast<uint16_t *>(input[i]->getData<char>());
