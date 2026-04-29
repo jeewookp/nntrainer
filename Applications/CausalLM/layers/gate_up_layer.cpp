@@ -31,7 +31,8 @@ enum GateUpWeightIdx { Gamma, UpWeight, GateWeight };
 enum GateUpParams { Up, Gate };
 
 GateUpLayer::GateUpLayer() :
-  LayerImpl(), gate_up_props(props::UpUnit(), props::GateUnit()) {
+  LayerImpl(),
+  gate_up_props(props::UpUnit(), props::GateUnit(), props::GateUpEpsilon()) {
   weight_idx.fill(std::numeric_limits<unsigned>::max());
 }
 
@@ -233,8 +234,8 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     const std::size_t H_rows = (std::size_t)input_step_dim.batch() *
                                 input_step_dim.channel() *
                                 input_step_dim.height();
-    nntrainer::rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, K_in,
-                                   epsilon);
+    rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, K_in,
+                       epsilon);
   }
   std::vector<nntrainer::Tensor *> Weights({&Uweight, &Gweight});
   std::vector<nntrainer::Tensor *> Outputs({&Uhidden_step, &Ghidden_step});
