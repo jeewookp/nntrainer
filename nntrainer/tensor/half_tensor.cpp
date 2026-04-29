@@ -1380,89 +1380,22 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
       }
     }
   } else {
-    // M>1 (prefill): one shared activation feeds every weight. Try the
-    // batched delegate path first — it reformats the activation to
-    // image2d ONCE (shared across all weights) and replaces N blocking
-    // SVMMaps with a single end-of-batch drain. Falls back to the
-    // per-weight int4 dispatch when any Ni isn't aligned for delegate.
-    static const bool s_disable_delegate =
-      std::getenv("NNTRAINER_DISABLE_DELEGATE_GEMM") != nullptr;
-    bool all_delegate_ok = !s_disable_delegate && (K % 8) == 0;
-    if (all_delegate_ok) {
-      for (unsigned int i = 0; i < input.size(); ++i) {
-        if ((output[i]->getDim().width() % 32) != 0) {
-          all_delegate_ok = false;
-          break;
-        }
-      }
-    }
-
-    if (all_delegate_ok) {
-      std::vector<uint16_t *> weights_vec, scales_vec, outputs_vec;
-      std::vector<unsigned int> Ns_vec;
-      weights_vec.reserve(input.size());
-      scales_vec.reserve(input.size());
-      outputs_vec.reserve(input.size());
-      Ns_vec.reserve(input.size());
-      for (unsigned int i = 0; i < input.size(); ++i) {
-        weights_vec.push_back(
-          reinterpret_cast<uint16_t *>(input[i]->getData<char>()));
-        scales_vec.push_back(input[i]->getScale<uint16_t>());
-        outputs_vec.push_back(
-          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i)));
-        Ns_vec.push_back(output[i]->getDim().width());
-      }
-
-      const uint64_t t_gpu_start = now_ns();
-      gemm_delegate_fp16_cl_batched(svm_in, weights_vec, scales_vec,
-                                    outputs_vec, Ns_vec, M, K);
-      const uint64_t t_gpu_end = now_ns();
-
-      for (unsigned int i = 0; i < input.size(); ++i) {
-        auto *out_u16 =
-          reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-        const unsigned int Ni = Ns_vec[i];
-        const size_t out_total = (size_t)M * Ni;
-        for (size_t j = 0; j < out_total; ++j) {
-          out_u16[j] = outputs_vec[i][j];
-        }
-      }
-      const uint64_t t_out_end = now_ns();
-
-      g_half_dotq_profile.ns_gpu_call += t_gpu_end - t_gpu_start;
-      g_half_dotq_profile.ns_out_stage += t_out_end - t_gpu_end;
-      g_half_dotq_profile.calls += input.size();
-    } else {
-      // Fallback: per-weight int4 dispatch. GPU transpose reruns for
-      // every weight because svm_in_T is overwritten.
-      uint16_t *svm_in_T =
-        reinterpret_cast<uint16_t *>(clbuffInstance.getSVMQuant(0));
-      for (unsigned int i = 0; i < input.size(); ++i) {
-        auto *weight_u16 =
-          reinterpret_cast<uint16_t *>(input[i]->getData<char>());
-        auto *scale_u16 = input[i]->getScale<uint16_t>();
-        const unsigned int Ni = output[i]->getDim().width();
-        uint16_t *svm_out_i =
-          reinterpret_cast<uint16_t *>(clbuffInstance.getSVMOutput(i));
-
-        const uint64_t t_gpu_start = now_ns();
-        gemm_int4_adreno_cl(svm_in, svm_in_T, weight_u16, scale_u16,
-                            svm_out_i, M, Ni, K);
-        const uint64_t t_gpu_end = now_ns();
-
-        auto *out_u16 =
-          reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
-        const size_t out_total =
-          static_cast<size_t>(M) * static_cast<size_t>(Ni);
-        for (size_t j = 0; j < out_total; ++j) {
-          out_u16[j] = svm_out_i[j];
-        }
-        const uint64_t t_out_end = now_ns();
-
-        g_half_dotq_profile.ns_gpu_call += t_gpu_end - t_gpu_start;
-        g_half_dotq_profile.ns_out_stage += t_out_end - t_gpu_end;
-        g_half_dotq_profile.calls++;
-      }
+    // M>1 (prefill): the batched delegate path (gemm_delegate_fp16_cl_batched)
+    // does NOT consult GpuImagePool, so it pays a scalar in_u16 -> svm_in
+    // copy AND an image2d reformat per dispatch.  The single-FC path
+    // (HalfTensor::dotQInteger via this->dot(in, out, ...)) DOES check
+    // the pool and short-circuits to the cached image when an upstream
+    // image2d-aware layer (e.g. rmsnorm_image2d) already published the
+    // input tensor.  For Qwen3-4B prefill that's a ~600ms regression
+    // when GateUpLayer routes through batched delegate vs the legacy
+    // sequential per-FC dispatch.
+    //
+    // Until gemm_delegate_fp16_cl_batched is taught to honour the pool,
+    // route prefill through the per-weight single dot which preserves
+    // the legacy fast path.  Decode (M==1) above keeps the fused
+    // gpu_fused_gemv_int4 single dispatch.
+    for (unsigned int i = 0; i < input.size(); ++i) {
+      dot(*input[i], *output[i], trans, trans_in, beta);
     }
   }
 #else
