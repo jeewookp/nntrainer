@@ -104,7 +104,7 @@ echo "[gemv_compare.sh] Running on device ..."
 adb shell "cd $DEVICE_DIR; \
   export LD_LIBRARY_PATH=.; \
   taskset f0 ./$TEST_BIN \
-    --gtest_filter='nntrainer_gemv_compare.*:nntrainer_fused_rmsnorm_qkv.*' \
+    --gtest_filter='nntrainer_gemv_compare.*:nntrainer_fused_rmsnorm_qkv.*:nntrainer_fused_rmsnorm_gate_up.*' \
     --gtest_color=no" \
   2>&1 | tee gemv_compare_run.log
 

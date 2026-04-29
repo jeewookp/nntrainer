@@ -488,6 +488,162 @@ TEST(nntrainer_fused_rmsnorm_qkv, qwen3_4b_shapes) {
                           /*N_k=*/1024, /*N_v=*/1024);
 }
 
+// =====================================================================
+// Phase 1B: fused post-attention RMSNorm + Gate/Up projection.
+// Mirrors the QKV fusion above but with two partitions (gate, up).
+// Saves 2 SVMMap drains per layer (3 dispatches -> 1).
+// =====================================================================
+static void run_fused_rmsnorm_gate_up_(unsigned int K_in,
+                                        unsigned int N_gate,
+                                        unsigned int N_up) {
+  auto *blas_cc = static_cast<ClContext *>(
+    Engine::Global().getRegisteredContext("gpu"));
+  ASSERT_NE(blas_cc, nullptr);
+  ASSERT_LE(K_in, 2560u);
+
+  std::vector<float> input_fp32 =
+    generate_random_vector<float>(K_in, -1.0f, 1.0f);
+  std::vector<float> gamma_fp32 =
+    generate_random_vector<float>(K_in, 0.5f, 1.5f);
+  std::vector<float> gate_w_fp32 =
+    generate_random_vector<float>((size_t)N_gate * K_in, -1.0f, 1.0f);
+  std::vector<float> up_w_fp32 =
+    generate_random_vector<float>((size_t)N_up * K_in, -1.0f, 1.0f);
+
+  const float eps = 1e-6f;
+
+  // Reference: host fp32 rmsnorm -> fp16 SVM -> 2x baseline gemv on
+  // the SAME int4 weights/scales the fused kernel will use.  Should
+  // be bit-exact (same int4 dequant + MAC math; fp32 vs fp16 rmsnorm
+  // is the only diff).
+  std::vector<float> norm_in(K_in);
+  cpu_rmsnorm_ref(input_fp32.data(), gamma_fp32.data(), norm_in.data(), K_in,
+                  eps);
+  uint16_t *norm_in_svm = (uint16_t *)allocateSVM(K_in * sizeof(uint16_t));
+  ASSERT_NE(norm_in_svm, nullptr);
+  for (unsigned int k = 0; k < K_in; ++k)
+    norm_in_svm[k] = compute_fp32_to_fp16(norm_in[k]);
+
+  std::vector<uint16_t> gate_nibbles, gate_scales, up_nibbles, up_scales;
+  PackInt4ChannelwiseAdreno(gate_w_fp32.data(), N_gate, K_in, gate_nibbles,
+                            gate_scales);
+  PackInt4ChannelwiseAdreno(up_w_fp32.data(), N_up, K_in, up_nibbles,
+                            up_scales);
+
+  uint16_t *input_svm = (uint16_t *)allocateSVM(K_in * sizeof(uint16_t));
+  float    *gamma_svm = (float *)allocateSVM(K_in * sizeof(float));
+  uint16_t *gate_w_svm = (uint16_t *)allocateSVM(gate_nibbles.size() *
+                                                  sizeof(uint16_t));
+  uint16_t *gate_s_svm = (uint16_t *)allocateSVM(gate_scales.size() *
+                                                  sizeof(uint16_t));
+  uint16_t *gate_out_svm = (uint16_t *)allocateSVM(N_gate * sizeof(uint16_t));
+  uint16_t *up_w_svm = (uint16_t *)allocateSVM(up_nibbles.size() *
+                                                sizeof(uint16_t));
+  uint16_t *up_s_svm = (uint16_t *)allocateSVM(up_scales.size() *
+                                                sizeof(uint16_t));
+  uint16_t *up_out_svm = (uint16_t *)allocateSVM(N_up * sizeof(uint16_t));
+  ASSERT_NE(input_svm, nullptr);
+  ASSERT_NE(gamma_svm, nullptr);
+
+  for (unsigned int k = 0; k < K_in; ++k) {
+    input_svm[k] = compute_fp32_to_fp16(input_fp32[k]);
+    gamma_svm[k] = gamma_fp32[k];
+  }
+  std::memcpy(gate_w_svm, gate_nibbles.data(),
+              gate_nibbles.size() * sizeof(uint16_t));
+  std::memcpy(gate_s_svm, gate_scales.data(),
+              gate_scales.size() * sizeof(uint16_t));
+  std::memcpy(up_w_svm, up_nibbles.data(),
+              up_nibbles.size() * sizeof(uint16_t));
+  std::memcpy(up_s_svm, up_scales.data(),
+              up_scales.size() * sizeof(uint16_t));
+  std::memset(gate_out_svm, 0, N_gate * sizeof(uint16_t));
+  std::memset(up_out_svm, 0, N_up * sizeof(uint16_t));
+
+  uint16_t *gate_ref_svm = (uint16_t *)allocateSVM(N_gate * sizeof(uint16_t));
+  uint16_t *up_ref_svm = (uint16_t *)allocateSVM(N_up * sizeof(uint16_t));
+  ASSERT_NE(gate_ref_svm, nullptr);
+  std::memset(gate_ref_svm, 0, N_gate * sizeof(uint16_t));
+  std::memset(up_ref_svm, 0, N_up * sizeof(uint16_t));
+  nntrainer::gemv_int4_adreno_cl(norm_in_svm, gate_w_svm, gate_s_svm,
+                                  gate_ref_svm, K_in, N_gate);
+  nntrainer::gemv_int4_adreno_cl(norm_in_svm, up_w_svm, up_s_svm, up_ref_svm,
+                                  K_in, N_up);
+
+  ASSERT_TRUE(nntrainer::fused_rmsnorm_gate_up_cl(
+    input_svm, gamma_svm, gate_w_svm, gate_s_svm, gate_out_svm,
+    up_w_svm, up_s_svm, up_out_svm, K_in, N_gate, N_up, eps));
+
+  auto check_partition = [&](uint16_t *ref, uint16_t *out, unsigned int N,
+                              const char *name) {
+    double max_abs = 0.0;
+    double sum_sq_diff = 0.0;
+    double sum_sq_ref = 0.0;
+    unsigned int big_diff = 0;
+    unsigned int first_mismatch = N;
+    for (unsigned int n = 0; n < N; ++n) {
+      const float a = compute_fp16_to_fp32(ref[n]);
+      const float b = compute_fp16_to_fp32(out[n]);
+      const double d = std::fabs((double)a - (double)b);
+      if (d > max_abs) max_abs = d;
+      sum_sq_diff += d * d;
+      sum_sq_ref += (double)a * (double)a;
+      if (d > 1e-2) {
+        if (first_mismatch == N) first_mismatch = n;
+        big_diff++;
+      }
+    }
+    const double rel = sum_sq_ref > 0.0
+      ? std::sqrt(sum_sq_diff / sum_sq_ref) : 0.0;
+    std::cout << "[fused_rmsnorm_gate_up] K_in=" << K_in
+              << " " << name << "=" << N
+              << "  max_abs=" << max_abs
+              << "  rel_l2=" << rel
+              << "  big_diff(>1e-2)=" << big_diff << "/" << N;
+    if (first_mismatch < N) {
+      std::cout << "  first@n=" << first_mismatch
+                << "  ref=" << compute_fp16_to_fp32(ref[first_mismatch])
+                << "  fused=" << compute_fp16_to_fp32(out[first_mismatch]);
+    }
+    std::cout << std::endl;
+  };
+  check_partition(gate_ref_svm, gate_out_svm, N_gate, "N_gate");
+  check_partition(up_ref_svm, up_out_svm, N_up, "N_up");
+
+  auto time_fused = [&](unsigned int iters) {
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    for (unsigned int i = 0; i < iters; ++i) {
+      nntrainer::fused_rmsnorm_gate_up_cl(
+        input_svm, gamma_svm, gate_w_svm, gate_s_svm, gate_out_svm,
+        up_w_svm, up_s_svm, up_out_svm, K_in, N_gate, N_up, eps);
+    }
+    const auto t1 = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::milli>(t1 - t0).count();
+  };
+  time_fused(3);  // warmup
+  const double warm = time_fused(5) / 5.0;
+  const unsigned int iters =
+    std::max(20u, static_cast<unsigned int>(500.0 / std::max(0.001, warm)));
+  const double total = time_fused(iters);
+  const double avg = total / iters;
+  std::cout << "[fused_rmsnorm_gate_up] K_in=" << K_in
+            << " N_gate=" << N_gate << " N_up=" << N_up
+            << "  FUSED=" << avg << " ms (replaces 1 rms_norm + "
+                                      "2 gemv = ~1.0 ms baseline)"
+            << std::endl;
+
+  freeSVM(input_svm);  freeSVM(gamma_svm);  freeSVM(norm_in_svm);
+  freeSVM(gate_w_svm); freeSVM(gate_s_svm); freeSVM(gate_out_svm);
+  freeSVM(gate_ref_svm);
+  freeSVM(up_w_svm);   freeSVM(up_s_svm);   freeSVM(up_out_svm);
+  freeSVM(up_ref_svm);
+}
+
+TEST(nntrainer_fused_rmsnorm_gate_up, qwen3_4b_shapes) {
+  // Qwen3-4B: hidden 2560, intermediate 9728.
+  run_fused_rmsnorm_gate_up_(/*K_in=*/2560, /*N_gate=*/9728, /*N_up=*/9728);
+}
+
 // Defining main() directly in this .o file is the only reliable way to
 // keep gtest as the program entry point.  Without it the linker pulls
 // `main` from one of the static archives (googletest_main *or*

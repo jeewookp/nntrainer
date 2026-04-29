@@ -500,6 +500,32 @@ bool fused_rmsnorm_qkv_cl(uint16_t *input_svm,
                           float epsilon);
 
 /**
+ * @brief Fused post-attention RMSNorm + Gate/Up projection for M=1
+ *   decode.  Replaces 3 dispatches (rmsnorm + gate_proj gemv + up_proj
+ *   gemv) with a single dispatch: cooperative sum_sq, __local
+ *   normalised input cache, then per-WI MAC over Gate/Up partitions.
+ *   Saves 2 SVMMap drains per layer (the two intermediate FC outputs
+ *   no longer cross host/device boundary in between).
+ *
+ *   For Qwen3-4B: K_in = 2560, N_gate = N_up = 9728.
+ *
+ * @returns false on shape constraint violation (K_in > 2560 or
+ *   N_{gate,up} not divisible by 64).
+ */
+bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
+                              const float *gamma_svm,
+                              uint16_t *gate_weights,
+                              uint16_t *gate_scales,
+                              uint16_t *gate_out,
+                              uint16_t *up_weights,
+                              uint16_t *up_scales,
+                              uint16_t *up_out,
+                              unsigned int K_in,
+                              unsigned int N_gate,
+                              unsigned int N_up,
+                              float epsilon);
+
+/**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
  * unittest cross-check what a producer kernel wrote to image2d

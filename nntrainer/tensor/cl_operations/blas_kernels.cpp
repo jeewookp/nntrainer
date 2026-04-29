@@ -2752,6 +2752,65 @@ bool fused_rmsnorm_qkv_cl(uint16_t *input_svm,
   return true;
 }
 
+// Fused post-attention RMSNorm + Gate/Up projection for M=1 decode.
+// Same single-dispatch pattern as fused_rmsnorm_qkv_cl but two
+// partitions (gate, up) instead of three.  Saves 2 SVMMap drains per
+// layer relative to the rmsnorm + gate_proj + up_proj sequence.
+bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
+                              const float *gamma_svm,
+                              uint16_t *gate_weights,
+                              uint16_t *gate_scales,
+                              uint16_t *gate_out,
+                              uint16_t *up_weights,
+                              uint16_t *up_scales,
+                              uint16_t *up_out,
+                              unsigned int K_in,
+                              unsigned int N_gate,
+                              unsigned int N_up,
+                              float epsilon) {
+  if (!input_svm || !gamma_svm) return false;
+  if ((K_in & 3u) || (N_gate & 63u) || (N_up & 63u)) return false;
+  if (K_in > 2560) return false;  // local mem cache assumes K_in <= 2560
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    fused_rmsnorm_gate_up_kernel, "gpu_fused_rmsnorm_gate_up");
+  if (!kp) return false;
+
+  int a = 0;
+  kp->SetKernelSVMArguments(a++, input_svm);
+  kp->SetKernelSVMArguments(a++, gamma_svm);
+  kp->SetKernelSVMArguments(a++, gate_weights);
+  kp->SetKernelSVMArguments(a++, gate_scales);
+  kp->SetKernelSVMArguments(a++, gate_out);
+  kp->SetKernelSVMArguments(a++, up_weights);
+  kp->SetKernelSVMArguments(a++, up_scales);
+  kp->SetKernelSVMArguments(a++, up_out);
+  int sk = (int)K_in, sng = (int)N_gate, snu = (int)N_up;
+  kp->SetKernelArguments(a++, &sk,  sizeof(int));
+  kp->SetKernelArguments(a++, &sng, sizeof(int));
+  kp->SetKernelArguments(a++, &snu, sizeof(int));
+  kp->SetKernelArguments(a++, &epsilon, sizeof(float));
+
+  // Each WI handles 4 output channels; 64 WIs/WG.
+  const int total_wi = (int)((N_gate + N_up) / 4u);
+  const int aligned = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  // Output fence -- last blocking SVMMap drains the queue, prior
+  // ones invalidate cache.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    gate_out, (size_t)N_gate * sizeof(uint16_t), /*read_only=*/true);
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    up_out, (size_t)N_up * sizeof(uint16_t), /*read_only=*/true);
+  return true;
+}
+
 // Diagnostic helper: read an image2d from GpuImagePool back into a
 // fresh SVM buffer using the existing image_reformat::image2d_to_svm
 // kernel.  Lets the unittest cross-check the kernel's image2d write
