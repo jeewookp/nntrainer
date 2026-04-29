@@ -2507,21 +2507,17 @@ bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
   //    pool-hits and reads via image cache.
   GpuImagePool::Global().set(output_svm, out_img, /*M=*/1, slices_n);
 
-  // 5. NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1 forces a blocking
-  //    enqueueSVMMap on the SVM output here, same fence the original
-  //    SVM gemv path would have done.  Diagnostic: if turning this on
-  //    fixes the garbage tokens, we know the kernel's SVM write is
-  //    correct but the consumer's own SVMMap fence isn't covering
-  //    coherence on Adreno.  In that case we can keep the fence here
-  //    (still cheaper than the legacy path because we run only one
-  //    drain at the end of all in-flight FCs, and image-aware
-  //    consumers like rmsnorm_image2d_cl can be skipped via the pool).
-  static const bool s_image2d_debug_sync =
-    std::getenv("NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC") != nullptr;
-  if (s_image2d_debug_sync) {
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
-  }
+  // 5. Output SVMMap fence -- baseline gemv_int4_adreno_cl does this at
+  //    end of dispatch when sync_output=true.  Necessary for Adreno
+  //    coarse-grained SVM: vstore4 alone doesn't make the result
+  //    host-visible / consistent for the next kernel that reads SVM
+  //    (the next layer's RMSNorm CPU path, addition fallback, mha
+  //    entry fence's view of the prior layer's output, etc.).
+  //    Without this, production runs garbage; baseline gemv's
+  //    SVMMap is what the VERIFY-mode baseline-then-image2d run
+  //    used to see correct output.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
   return true;
 }
 
