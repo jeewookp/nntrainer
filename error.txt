@@ -1,505 +1,82 @@
-./include/nntrainer/cl_kernels/int4_gemv_image_v5.h
-./include/nntrainer/cl_kernels/copy.h
-./include/nntrainer/cl_kernels/swiglu_fp16.h
-./include/nntrainer/cl_kernels/concat_axis_3_fp16.h
-./include/nntrainer/cl_kernels/hgemv.h
-./include/nntrainer/cl_kernels/add2_fp16_svm.h
-./include/nntrainer/cl_kernels/sgemm_no_trans.h
-./include/nntrainer/cl_kernels/attention_fused_fp16.h
-./include/nntrainer/cl_kernels/transpose_32bit_16bit.h
-./include/nntrainer/cl_kernels/rotary_emb_fp16.h
-./include/nntrainer/cl_kernels/int4_gemm_adreno_v3.h
-./include/nntrainer/cl_kernels/transpose_axis_2.h
-./include/nntrainer/cl_kernels/q6_k_sgemv.h
-./include/nntrainer/cl_kernels/rmsnorm_image2d.h
-./include/nntrainer/cl_kernels/addition.h
-./include/nntrainer/cl_kernels/dot_fp16.h
-./include/nntrainer/cl_kernels/copy_fp16.h
-./include/nntrainer/cl_kernels/hgemm_no_trans.h
-./include/nntrainer/cl_kernels/transpose_axis_0_fp16.h
-./include/nntrainer/cl_kernels/sgemm_trans_b.h
-./include/nntrainer/cl_kernels/fused_rmsnorm_gate_up.h
-./include/nntrainer/cl_kernels/sgemv_no_trans.h
-./include/nntrainer/cl_kernels/int4_gemm.h
-./include/nntrainer/cl_kernels/fused_gemv_int4.h
-./include/nntrainer/cl_kernels/q4_0_ab_bi_8x4.h
-./include/nntrainer/cl_kernels/sgemv.h
-./include/nntrainer/cl_kernels/rmsnorm_image2d_v2.h
-./include/nntrainer/cl_kernels/int4_gemv_adreno.h
-./include/nntrainer/cl_kernels/int4_gemv_image_v3.h
-./include/nntrainer/cl_kernels/swiglu_image2d.h
-./include/nntrainer/cl_kernels/int4_gemv.h
-./include/nntrainer/cl_kernels/input_transpose.h
-./include/nntrainer/cl_kernels/hgemv_no_trans.h
-./include/nntrainer/cl_kernels/embedding_fp16.h
-./include/nntrainer/cl_kernels/sgemm_trans_ab.h
-./include/nntrainer/cl_kernels/hgemm_trans_b.h
-./include/nntrainer/cl_kernels/embedding.h
-./include/nntrainer/cl_kernels/concat_axis_2_fp16.h
-./include/nntrainer/cl_kernels/rmsnorm.h
-./include/nntrainer/graph_node.h
-./include/nntrainer/swap_device.h
-./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32_neon.h
-./include/nntrainer/nntrainer-api-common.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h
-./include/nntrainer/cl_platform.h
-./include/nntrainer/profiler.h
-./include/nntrainer/tensor_wrap_specs.h
-./include/nntrainer/tizen_error.h
-./include/nntrainer/nntr_ggml_impl_utils.h
-./include/nntrainer/fallback_kleidiai.h
-./include/nntrainer/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h
-./include/nntrainer/opencl_context_manager.h
-./include/nntrainer/nntr_threads.h
-./include/nntrainer/util_simd.h
-./include/nntrainer/layer_node.h
-./include/nntrainer/optimizer_context.h
-./include/nntrainer/weight_layer.h
-./include/nntrainer/hgemm_common.h
-./include/nntrainer/task_executor.h
-./include/nntrainer/nntrainer_logger.h
-./include/nntrainer/cpu_backend.h
-./include/nntrainer/matrix_transpose_neon.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
-./include/nntrainer/fp16.h
-./include/nntrainer/quantizer.h
-./include/nntrainer/util_func.h
-./include/nntrainer/var_grad.h
-./include/nntrainer/memory_pool.h
-./include/nntrainer/nntrainer_log.h
-./include/nntrainer/connection.h
-./include/nntrainer/common.h
-./include/nntrainer/nntrainer_error.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
-./include/nntrainer/node_exporter.h
-./include/nntrainer/optimizer_wrapped.h
-./include/nntrainer/mman_windows.h
-./include/nntrainer/CL/
-./include/nntrainer/CL/opencl.h
-./include/nntrainer/CL/cl_version.h
-./include/nntrainer/CL/cl.h
-./include/nntrainer/CL/cl_platform.h
-./include/nntrainer/task.h
-./include/nntrainer/hgemm_pack.h
-./include/nntrainer/bs_thread_pool_manager.hpp
-./include/nntrainer/hgemm_kernel.h
-./include/nntrainer/hgemm_padding_b.h
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
-./include/nntrainer/network_graph.h
-./include/nntrainer/layer_context.h
-./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
-./Android.mk
-./examples/
-./conf/
-./conf/nntrainer.ini
-~/projects/nntrainer ~/projects/nntrainer
-~/projects/nntrainer
-build_android.sh: 79: Bad substitution
--e 
-========================================
--e  Build CausalLM Android Application 
--e ========================================
--e [INFO] NNTRAINER_ROOT: /home/jwhero94/projects/nntrainer
--e [INFO] ANDROID_NDK: /home/jwhero94/neo/android-ndk-r26d/
--e [INFO] Working directory: /home/jwhero94/projects/nntrainer/Applications/CausalLM
--e 
-[Step 1/4] Build nntrainer for Android
--e ----------------------------------------
--e [INFO] nntrainer for Android already built (skipping)
--e [SUCCESS] nntrainer ready
--e 
-[Step 2/4] Build Tokenizer Library
--e ----------------------------------------
--e [INFO] Tokenizer library already built (skipping)
--e [SUCCESS] Tokenizer library ready
--e 
-[Step 3/4] Prepare json.hpp
--e ----------------------------------------
--e [INFO] json.hpp already exists (skipping)
--e [SUCCESS] json.hpp ready
--e 
-[Step 4/4] Build CausalLM Core (library + executable)
--e ----------------------------------------
--e [INFO] Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize)...
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gate_up_layer.cpp
-In file included from ./../layers/gate_up_layer.cpp:10:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./../layers/gate_up_layer.cpp:34:16: error: no matching constructor for initialization of 'std::tuple<props::UpUnit, props::GateUnit, props::GateUpEpsilon>'
-  LayerImpl(), gate_up_props(props::UpUnit(), props::GateUnit()) {
-               ^             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:612:5: note: candidate constructor template not viable: no known conversion from 'props::UpUnit' to 'allocator_arg_t' for 1st argument
-    tuple(allocator_arg_t, _Alloc const& __a)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:627:14: note: candidate template ignored: requirement 'integral_constant<bool, false>::value' was not satisfied [with _Alloc = props::GateUnit, _IsImpDefault = std::__is_implicitly_default_constructible, _IsDefault = std::is_default_constructible]
-    explicit tuple(allocator_arg_t, _Alloc const& __a)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:753:5: note: candidate template ignored: substitution failure [with _Alloc = props::GateUnit, _Up = <>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 0) from outer parameter packs
-    tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:769:14: note: candidate template ignored: substitution failure [with _Alloc = props::GateUnit, _Up = <>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 0) from outer parameter packs
-    explicit tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:721:5: note: candidate template ignored: substitution failure [with _Up = <props::UpUnit, props::GateUnit>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 2) from outer parameter packs
-    tuple(_Up&&... __u)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:737:14: note: candidate template ignored: substitution failure [with _Up = <props::UpUnit, props::GateUnit>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 2) from outer parameter packs
-    explicit tuple(_Up&&... __u)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:778:5: note: candidate constructor not viable: requires 1 argument, but 2 were provided
-    tuple(const tuple&) = default;
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:779:5: note: candidate constructor not viable: requires 1 argument, but 2 were provided
-    tuple(tuple&&) = default;
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:829:5: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    tuple(const tuple<_Up...>& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:841:14: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    explicit tuple(const tuple<_Up...>& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:893:5: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    tuple(tuple<_Up...>&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:905:14: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    explicit tuple(tuple<_Up...>&& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:982:5: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    tuple(const pair<_Up1, _Up2>& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:994:14: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    explicit tuple(const pair<_Up1, _Up2>& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1046:5: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    tuple(pair<_Up1, _Up2>&& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1058:14: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    explicit tuple(pair<_Up1, _Up2>&& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:642:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(const _Tp& ... __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:659:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(const _Tp& ... __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:785:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __alloc, const tuple& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:793:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __alloc, tuple&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:853:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const tuple<_Up...>& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:864:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const tuple<_Up...>& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:917:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, tuple<_Up...>&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:928:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, tuple<_Up...>&& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1006:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const pair<_Up1, _Up2>& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1017:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const pair<_Up1, _Up2>& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1070:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, pair<_Up1, _Up2>&& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1081:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, pair<_Up1, _Up2>&& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:590:5: note: candidate constructor template not viable: requires 0 arguments, but 2 were provided
-    tuple()
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:602:14: note: candidate constructor template not viable: requires 0 arguments, but 2 were provided
-    explicit tuple()
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:676:5: note: candidate constructor template not viable: requires 5 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:693:14: note: candidate constructor template not viable: requires 5 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
-             ^
-./../layers/gate_up_layer.cpp:236:5: error: no member named 'rmsnorm_fused_fp16' in namespace 'nntrainer'; did you mean simply 'rmsnorm_fused_fp16'?
-    nntrainer::rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, K_in,
-    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    rmsnorm_fused_fp16
-./../layers/rmsnorm_fused_fp16.h:34:20: note: 'rmsnorm_fused_fp16' declared here
-static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
-                   ^
-1 warning and 2 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_quantize/__/layers/gate_up_layer.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : causallm_core <= gate_up_layer.cpp
-In file included from ./../layers/gate_up_layer.cpp:10:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./../layers/gate_up_layer.cpp:34:16: error: no matching constructor for initialization of 'std::tuple<props::UpUnit, props::GateUnit, props::GateUpEpsilon>'
-  LayerImpl(), gate_up_props(props::UpUnit(), props::GateUnit()) {
-               ^             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:612:5: note: candidate constructor template not viable: no known conversion from 'props::UpUnit' to 'allocator_arg_t' for 1st argument
-    tuple(allocator_arg_t, _Alloc const& __a)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:627:14: note: candidate template ignored: requirement 'integral_constant<bool, false>::value' was not satisfied [with _Alloc = props::GateUnit, _IsImpDefault = std::__is_implicitly_default_constructible, _IsDefault = std::is_default_constructible]
-    explicit tuple(allocator_arg_t, _Alloc const& __a)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:753:5: note: candidate template ignored: substitution failure [with _Alloc = props::GateUnit, _Up = <>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 0) from outer parameter packs
-    tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:769:14: note: candidate template ignored: substitution failure [with _Alloc = props::GateUnit, _Up = <>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 0) from outer parameter packs
-    explicit tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:721:5: note: candidate template ignored: substitution failure [with _Up = <props::UpUnit, props::GateUnit>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 2) from outer parameter packs
-    tuple(_Up&&... __u)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:737:14: note: candidate template ignored: substitution failure [with _Up = <props::UpUnit, props::GateUnit>]: pack expansion contains parameter pack '_Up' that has a different length (3 vs. 2) from outer parameter packs
-    explicit tuple(_Up&&... __u)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:778:5: note: candidate constructor not viable: requires 1 argument, but 2 were provided
-    tuple(const tuple&) = default;
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:779:5: note: candidate constructor not viable: requires 1 argument, but 2 were provided
-    tuple(tuple&&) = default;
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:829:5: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    tuple(const tuple<_Up...>& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:841:14: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    explicit tuple(const tuple<_Up...>& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:893:5: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    tuple(tuple<_Up...>&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:905:14: note: candidate constructor template not viable: requires single argument '__t', but 2 arguments were provided
-    explicit tuple(tuple<_Up...>&& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:982:5: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    tuple(const pair<_Up1, _Up2>& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:994:14: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    explicit tuple(const pair<_Up1, _Up2>& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1046:5: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    tuple(pair<_Up1, _Up2>&& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1058:14: note: candidate constructor template not viable: requires single argument '__p', but 2 arguments were provided
-    explicit tuple(pair<_Up1, _Up2>&& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:642:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(const _Tp& ... __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:659:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(const _Tp& ... __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:785:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __alloc, const tuple& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:793:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __alloc, tuple&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:853:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const tuple<_Up...>& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:864:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const tuple<_Up...>& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:917:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, tuple<_Up...>&& __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:928:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, tuple<_Up...>&& __t)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1006:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const pair<_Up1, _Up2>& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1017:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const pair<_Up1, _Up2>& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1070:5: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, pair<_Up1, _Up2>&& __p)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1081:14: note: candidate constructor template not viable: requires 3 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, pair<_Up1, _Up2>&& __p)
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:590:5: note: candidate constructor template not viable: requires 0 arguments, but 2 were provided
-    tuple()
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:602:14: note: candidate constructor template not viable: requires 0 arguments, but 2 were provided
-    explicit tuple()
-             ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:676:5: note: candidate constructor template not viable: requires 5 arguments, but 2 were provided
-    tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
-    ^
-/home/jwhero94/neo/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:693:14: note: candidate constructor template not viable: requires 5 arguments, but 2 were provided
-    explicit tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
-             ^
-./../layers/gate_up_layer.cpp:236:5: error: no member named 'rmsnorm_fused_fp16' in namespace 'nntrainer'; did you mean simply 'rmsnorm_fused_fp16'?
-    nntrainer::rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, K_in,
-    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    rmsnorm_fused_fp16
-./../layers/rmsnorm_fused_fp16.h:34:20: note: 'rmsnorm_fused_fp16' declared here
-static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
-                   ^
-1 warning and 2 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/layers/gate_up_layer.o] Error 1
-[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
-[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
-In file included from ./../models/qwen2/qwen2_causallm.cpp:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
-In file included from ./../models/qwen3/qwen3_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
-In file included from ./../models/qwen3_moe/qwen3_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_slim_moe/qwen3_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_cached_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_cached_slim_moe/qwen3_cached_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
-In file included from ./../models/causal_lm.cpp:26:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
-In file included from ./../models/sentence_transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
--e [ERROR] Build failed
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+
+[!] FATAL ERROR: HalfTensor::dotQInteger requires activation, output, and weight tensors to all live in SVM. Check that tensor_pool's createSVMRegion succeeded (see memory_pool.cpp diagnostics) and that init_seq_len/max_seq_len fit under the Adreno per-alloc limit.
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+
+-- Decode-path profiles (M==1, fired per generation token) --
+   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
+    unset it in temp.sh to restore the prefill breakdown.)
+(no graph wall-clock decode block)
+
+(no decode profile lines)
+
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+
+[!] FATAL ERROR: HalfTensor::dotQInteger requires activation, output, and weight tensors to all live in SVM. Check that tensor_pool's createSVMRegion succeeded (see memory_pool.cpp di
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
