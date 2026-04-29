@@ -36,6 +36,13 @@ adb shell "rm -f /data/local/tmp/nntrainer/test/libOpenCL.so" || true
 # (jwhero94's host model cache).
 adb push /home/jwhero94/models/nntr_qwen3_1_7b/* /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/
 
+# Push the canonical 437-token Thyme abstract sample prompt so we can
+# benchmark prefill + decode on a meaningful workload.  Without
+# passing argv[2] explicitly, main.cpp falls back to the model's
+# nntr_config.json sample_input which is short (1-token in the
+# Qwen3-1.7B bundle).  We feed it via cmd-line at run time below.
+adb push ../../tools/sample_prompt_thyme.txt /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/sample_prompt.txt
+
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 
 # ----------------------------------------------------------------------------
@@ -119,7 +126,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   export NNTRAINER_GEMV_IMAGE_STEP=5; \
-  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b" \
+  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b \"\$(cat /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/sample_prompt.txt)\"" \
   2>&1 | tee ${RUN_LOG}
 
 # ----------------------------------------------------------------------------
@@ -143,7 +150,7 @@ if [ -n "$NNTR_CONV_LOCAL_SWEEP" ]; then
       export ${DELEGATE_ENV}; \
       export NNTRAINER_PROFILE_LAYER_SYNC=1; \
       export NNTR_DELEGATE_CONV_LOCAL=${L}; \
-      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b" 2>&1 \
+      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b \"\$(cat /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/sample_prompt.txt)\"" 2>&1 \
       | grep -E "prefill:|conv\(gpu\)" | tee -a $SWEEP_LOG
   done
   echo ""
