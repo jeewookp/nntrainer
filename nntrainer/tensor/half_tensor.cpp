@@ -1039,10 +1039,73 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       // svm_in is staging (we just copied from in_u16 above), but
       // gemv_int4_image2d_cl looks up image2d by IN_U16 ptr (the
       // upstream RMSNorm published key).  Pass in_u16 directly.
-      image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
-        in_u16, weight_u16, scale_u16, svm_out, K, N);
-      if (!image2d_dispatched) {
+      //
+      // NNTRAINER_GEMV_IMAGE2D_VERIFY=1 also runs the SVM baseline
+      // gemv on the same input and compares both outputs in fp16.
+      // First N divergent calls go to stderr so we can identify the
+      // exact FC where image2d output starts disagreeing with the
+      // baseline that produces canonical sampling.
+      static const bool s_verify =
+        std::getenv("NNTRAINER_GEMV_IMAGE2D_VERIFY") != nullptr;
+      if (s_verify) {
+        // Run baseline first (its SVMMap drains the queue, so the
+        // svm_out we capture is host-coherent).  Save snapshot.
         gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+        std::vector<uint16_t> base_snap(svm_out, svm_out + N);
+
+        image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
+          in_u16, weight_u16, scale_u16, svm_out, K, N);
+        if (!image2d_dispatched) {
+          gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+        } else {
+          // svm_out now has image2d kernel's vstore4 result.  Drain
+          // the queue so the host CPU compare reads coherent data.
+          auto *cl_ctx = static_cast<ClContext *>(
+            Engine::Global().getRegisteredContext("gpu"));
+          if (cl_ctx) {
+            cl_ctx->command_queue_inst_.enqueueSVMMap(
+              svm_out, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+          }
+          // Compare base_snap (baseline) vs svm_out (image2d).
+          double max_abs = 0.0;
+          unsigned int big_diff = 0;
+          unsigned int first_mismatch = N;
+          for (unsigned int n = 0; n < N; ++n) {
+            const float a = compute_fp16_to_fp32(base_snap[n]);
+            const float b = compute_fp16_to_fp32(svm_out[n]);
+            const double d = std::fabs((double)a - (double)b);
+            if (d > max_abs) max_abs = d;
+            if (d > 1e-3) {
+              if (first_mismatch == N) first_mismatch = n;
+              big_diff++;
+            }
+          }
+          static std::atomic<uint64_t> s_verify_call{0};
+          static std::atomic<uint64_t> s_verify_dump{0};
+          const uint64_t call_idx = s_verify_call.fetch_add(
+            1, std::memory_order_relaxed);
+          if (max_abs > 1e-3 && s_verify_dump.load() < 32) {
+            s_verify_dump.fetch_add(1, std::memory_order_relaxed);
+            std::fprintf(
+              stderr,
+              "[VERIFY image2d call=%llu K=%u N=%u in_u16=%p]  "
+              "max_abs=%.4g  big_diff(>1e-3)=%u/%u  first@n=%u  "
+              "base=%.5f  img=%.5f\n",
+              (unsigned long long)call_idx, K, N, (void *)in_u16,
+              max_abs, big_diff, N,
+              first_mismatch < N ? first_mismatch : 0,
+              first_mismatch < N
+                ? compute_fp16_to_fp32(base_snap[first_mismatch]) : 0.0f,
+              first_mismatch < N
+                ? compute_fp16_to_fp32(svm_out[first_mismatch]) : 0.0f);
+          }
+        }
+      } else {
+        image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
+          in_u16, weight_u16, scale_u16, svm_out, K, N);
+        if (!image2d_dispatched) {
+          gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+        }
       }
     } else {
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
