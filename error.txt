@@ -1,136 +1,3 @@
-Installing /home/jwhero94/projects/nntrainer/builddir/api/capi/capi-ml-training.pc to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/pkgconfig
-Installing /home/jwhero94/projects/nntrainer/jni/Android-prebuilt.mk to /home/jwhero94/projects/nntrainer/builddir/android_build_result
-Running custom install script '/usr/bin/sh -c cp -r /home/jwhero94/projects/nntrainer/builddir/res ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/examples'
-Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/ml-api-common.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
-Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/tizen_error.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
-./
-./lib/
-./lib/arm64-v8a/
-./lib/arm64-v8a/libnnstreamer-native.so
-./lib/arm64-v8a/libnntrainer.so
-./lib/arm64-v8a/libc++_shared.so
-./lib/arm64-v8a/libccapi-nntrainer.so
-./lib/arm64-v8a/libcapi-nntrainer.so
-./lib/arm64-v8a/libOpenCL.so
-./lib/pkgconfig/
-./lib/pkgconfig/nntrainer.pc
-./lib/pkgconfig/ccapi-ml-training.pc
-./lib/pkgconfig/capi-ml-training.pc
-./include/
-./include/nntrainer/
-./include/nntrainer/dataset.h
-./include/nntrainer/char_tensor.h
-./include/nntrainer/memory_planner.h
-./include/nntrainer/context.h
-./include/nntrainer/uint_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/model_common_properties.h
-./include/nntrainer/databuffer_factory.h
-./include/nntrainer/neon_setting.h
-./include/nntrainer/manager.h
-./include/nntrainer/opencl_buffer.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h
-./include/nntrainer/attention_kernel_interface.h
-./include/nntrainer/tensor_pool.h
-./include/nntrainer/cblas_interface.h
-./include/nntrainer/clblast_interface.h
-./include/nntrainer/layer_devel.h
-./include/nntrainer/databuffer.h
-./include/nntrainer/gpu_image_pool.h
-./include/nntrainer/fallback_internal.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p_qsi4c32p_interface.h
-./include/nntrainer/hgemm_util.h
-./include/nntrainer/mem_allocator.h
-./include/nntrainer/opencl_loader.h
-./include/nntrainer/hgemm.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.h
-./include/nntrainer/dynamic_training_optimization.h
-./include/nntrainer/hgemm_padding_a.h
-./include/nntrainer/tensor_base.h
-./include/nntrainer/nntr_ggml_impl_common.h
-./include/nntrainer/short_tensor.h
-./include/nntrainer/acti_func.h
-./include/nntrainer/opencl_kernel.h
-./include/nntrainer/opencl_command_queue_manager.h
-./include/nntrainer/ml-api-common.h
-./include/nntrainer/common_properties.h
-./include/nntrainer/singleton.h
-./include/nntrainer/engine.h
-./include/nntrainer/matrix_transpose_kernels_neon.h
-./include/nntrainer/noncopyable.h
-./include/nntrainer/profile_gate.h
-./include/nntrainer/int4_tensor.h
-./include/nntrainer/nonmovable.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h
-./include/nntrainer/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h
-./include/nntrainer/tensor.h
-./include/nntrainer/app_context.h
-./include/nntrainer/int4_utils.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h
-./include/nntrainer/cache_loader.h
-./include/nntrainer/q4_k_tensor.h
-./include/nntrainer/nntrainer.h
-./include/nntrainer/model.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.h
-./include/nntrainer/half_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h
-./include/nntrainer/lr_scheduler.h
-./include/nntrainer/cache_elem.h
-./include/nntrainer/layer.h
-./include/nntrainer/neon_mathfun.hxx
-./include/nntrainer/neuralnet.h
-./include/nntrainer/tensor_api.h
-./include/nntrainer/cache_pool.h
-./include/nntrainer/graph_core.h
-./include/nntrainer/q4_0_utils.h
-./include/nntrainer/mask_neon.h
-./include/nntrainer/opencl_program.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.h
-./include/nntrainer/hgemm_padding.h
-./include/nntrainer/operation_layer.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h
-./include/nntrainer/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h
-./include/nntrainer/tensor_dim.h
-./include/nntrainer/base_properties.h
-./include/nntrainer/dynamic_library_loader.h
-./include/nntrainer/basic_planner.h
-./include/nntrainer/blas_kernels.h
-./include/nntrainer/arm_compute_backend.h
-./include/nntrainer/loss_layer.h
-./include/nntrainer/bs_thread_pool.h
-./include/nntrainer/q4_0_tensor.h
-./include/nntrainer/optimizer_devel.h
-./include/nntrainer/neon_mathfun.h
-./include/nntrainer/opencl_buffer_manager.h
-./include/nntrainer/compiler_fwd.h
-./include/nntrainer/layer_impl.h
-./include/nntrainer/ggml_interface.h
-./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32.h
-./include/nntrainer/memory_data.h
-./include/nntrainer/blas_kernel_interface.h
-./include/nntrainer/q6_k_tensor.h
-./include/nntrainer/opencl_device_info.h
-./include/nntrainer/weight.h
-./include/nntrainer/kleidiai_interface.h
-./include/nntrainer/neon_impl.h
-./include/nntrainer/cl_context.h
-./include/nntrainer/nntr_ggml_impl.h
-./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.h
-./include/nntrainer/optimizer.h
-./include/nntrainer/tensor_layer.h
-./include/nntrainer/cl_kernels/
-./include/nntrainer/cl_kernels/concat_axis_1_fp16.h
-./include/nntrainer/cl_kernels/transpose_axis_0.h
-./include/nntrainer/cl_kernels/concat_axis_3.h
-./include/nntrainer/cl_kernels/delegate_conv_wave.h
-./include/nntrainer/cl_kernels/rotary_emb.h
-./include/nntrainer/cl_kernels/transpose_axis_1.h
-./include/nntrainer/cl_kernels/rmsnorm_fp16.h
-./include/nntrainer/cl_kernels/int4_gemv_image_v4.h
-./include/nntrainer/cl_kernels/int4_gemv_image_v2.h
-./include/nntrainer/cl_kernels/int4_gemv_image_v1.h
-./include/nntrainer/cl_kernels/restore_block_q4_0.h
-./include/nntrainer/cl_kernels/int4_gemm_adreno_v2.h
 ./include/nntrainer/cl_kernels/sgemm_trans_a.h
 ./include/nntrainer/cl_kernels/swiglu.h
 ./include/nntrainer/cl_kernels/addition_fp16.h
@@ -250,6 +117,234 @@ Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrain
 ~/projects/nntrainer ~/projects/nntrainer
 ~/projects/nntrainer
 [gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
-run_gemv_compare.sh: 43: pushd: not found
+Android NDK: WARNING:Android.mk:test_util: LOCAL_LDLIBS is always ignored for static libraries    
+[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= ../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libOpenCL.so <= ../../builddir/jni/arm64-v8a/
+[arm64-v8a] Prebuilt       : libnntrainer.so <= ../../builddir/jni/arm64-v8a/
+[arm64-v8a] Compile++      : unittest_opencl_kernels_gemv_compare <= unittest_opencl_kernels_gemv_compare.cpp
+In file included from ./../unittest/unittest_opencl_kernels_gemv_compare.cpp:26:
+In file included from ../include/nntrainer_test_util.h:37:
+In file included from ./../../nntrainer/models/neuralnet.h:39:
+In file included from ./../../nntrainer/engine.h:34:
+In file included from ./../../nntrainer/cl_context.h:34:
+In file included from ./../../nntrainer/opencl/opencl_buffer_manager.h:19:
+In file included from ./../../nntrainer/opencl/opencl_buffer.h:17:
+In file included from ./../../nntrainer/opencl/CL/cl.h:20:
+In file included from ./../../nntrainer/opencl/CL/cl_platform.h:20:
+./../../nntrainer/opencl/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:124:17: error: use of undeclared identifier 'Q4_0'
+  ASSERT_EQ(K % Q4_0, 0u);
+                ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:127:34: error: use of undeclared identifier 'Q4_0'
+    static_cast<size_t>(K) * N / Q4_0 * sizeof(block_q4_0);
+                                 ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:205:1: error: redefinition of 'nntrainer_gemv_compare_K_2560_N_1024_Test'
+DECLARE_gemv_compare_K_N(2560, 1024);  // V proj (same as K)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1532:9: note: expanded from macro 'GTEST_TEST_'
+  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                    \
+        ^
+googletest/include/gtest/internal/gtest-internal.h:1524:3: note: expanded from macro 'GTEST_TEST_CLASS_NAME_'
+  test_suite_name##_##test_name##_Test
+  ^
+<scratch space>:62:1: note: expanded from here
+nntrainer_gemv_compare_K_2560_N_1024_Test
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:204:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 1024);  // K proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1532:9: note: expanded from macro 'GTEST_TEST_'
+  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                    \
+        ^
+googletest/include/gtest/internal/gtest-internal.h:1524:3: note: expanded from macro 'GTEST_TEST_CLASS_NAME_'
+  test_suite_name##_##test_name##_Test
+  ^
+<scratch space>:25:1: note: expanded from here
+nntrainer_gemv_compare_K_2560_N_1024_Test
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:205:1: error: redefinition of 'test_info_'
+DECLARE_gemv_compare_K_N(2560, 1024);  // V proj (same as K)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1548:65: note: expanded from macro 'GTEST_TEST_'
+                                                    test_name)::test_info_ =  \
+                                                                ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:204:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 1024);  // K proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1548:65: note: expanded from macro 'GTEST_TEST_'
+                                                    test_name)::test_info_ =  \
+                                                                ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:205:1: error: redefinition of 'TestBody'
+DECLARE_gemv_compare_K_N(2560, 1024);  // V proj (same as K)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1558:60: note: expanded from macro 'GTEST_TEST_'
+  void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
+                                                           ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:204:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 1024);  // K proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1558:60: note: expanded from macro 'GTEST_TEST_'
+  void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
+                                                           ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:208:1: error: redefinition of 'nntrainer_gemv_compare_K_2560_N_9728_Test'
+DECLARE_gemv_compare_K_N(2560, 9728);  // up proj (same as gate)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1532:9: note: expanded from macro 'GTEST_TEST_'
+  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                    \
+        ^
+googletest/include/gtest/internal/gtest-internal.h:1524:3: note: expanded from macro 'GTEST_TEST_CLASS_NAME_'
+  test_suite_name##_##test_name##_Test
+  ^
+<scratch space>:42:1: note: expanded from here
+nntrainer_gemv_compare_K_2560_N_9728_Test
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:207:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 9728);  // gate proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1532:9: note: expanded from macro 'GTEST_TEST_'
+  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                    \
+        ^
+googletest/include/gtest/internal/gtest-internal.h:1524:3: note: expanded from macro 'GTEST_TEST_CLASS_NAME_'
+  test_suite_name##_##test_name##_Test
+  ^
+<scratch space>:5:1: note: expanded from here
+nntrainer_gemv_compare_K_2560_N_9728_Test
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:208:1: error: redefinition of 'test_info_'
+DECLARE_gemv_compare_K_N(2560, 9728);  // up proj (same as gate)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1548:65: note: expanded from macro 'GTEST_TEST_'
+                                                    test_name)::test_info_ =  \
+                                                                ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:207:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 9728);  // gate proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1548:65: note: expanded from macro 'GTEST_TEST_'
+                                                    test_name)::test_info_ =  \
+                                                                ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:208:1: error: redefinition of 'TestBody'
+DECLARE_gemv_compare_K_N(2560, 9728);  // up proj (same as gate)
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1558:60: note: expanded from macro 'GTEST_TEST_'
+  void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
+                                                           ^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:207:1: note: previous definition is here
+DECLARE_gemv_compare_K_N(2560, 9728);  // gate proj
+^
+./../unittest/unittest_opencl_kernels_gemv_compare.cpp:196:3: note: expanded from macro 'DECLARE_gemv_compare_K_N'
+  TEST(nntrainer_gemv_compare, K_##K##_N_##N) { run_gemv_compare_(K, N); }
+  ^
+googletest/include/gtest/gtest.h:2353:42: note: expanded from macro 'TEST'
+#define TEST(test_suite_name, test_name) GTEST_TEST(test_suite_name, test_name)
+                                         ^
+googletest/include/gtest/gtest.h:2347:3: note: expanded from macro 'GTEST_TEST'
+  GTEST_TEST_(test_suite_name, test_name, ::testing::Test, \
+  ^
+googletest/include/gtest/internal/gtest-internal.h:1558:60: note: expanded from macro 'GTEST_TEST_'
+  void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
+                                                           ^
+1 warning and 8 errors generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/unittest_opencl_kernels_gemv_compare/__/unittest/unittest_opencl_kernels_gemv_compare.o] Error 1
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
