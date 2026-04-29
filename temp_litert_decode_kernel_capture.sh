@@ -30,6 +30,26 @@
 if [ -z "${BASH_VERSION:-}" ]; then
   exec bash "$0" "$@"
 fi
+
+# bazel's --config=android_arm64 (TF/LiteRT) refuses to register the
+# Android cc_toolchain unless ANDROID_NDK_HOME is exported BEFORE the
+# build invocation.  Mirror temp_litert_cl_intercept.sh so the user
+# doesn't have to set it manually.
+export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
+NDK_FALLBACK_R28B="${HOME}/neo/android-ndk-r28b"
+case "${ANDROID_NDK_HOME}" in
+  *android-ndk-r2[0-7]*)
+    if [ -f "${NDK_FALLBACK_R28B}/source.properties" ]; then
+      echo "[decode_intercept.sh] WARNING: auto-upgrading NDK to ${NDK_FALLBACK_R28B}"
+      export ANDROID_NDK_HOME="${NDK_FALLBACK_R28B}"
+    fi ;;
+esac
+if [ ! -f "${ANDROID_NDK_HOME}/source.properties" ]; then
+  echo "[decode_intercept.sh] ERROR: ANDROID_NDK_HOME=${ANDROID_NDK_HOME} not a valid NDK"
+  echo "[decode_intercept.sh] Set ANDROID_NDK_HOME to your r28b+ install before running."
+  exit 1
+fi
+
 set -e
 set -o pipefail
 
