@@ -1003,11 +1003,20 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     //   4 = + scale + proper output (correctness restored)
     static const char *s_step_env = std::getenv("NNTRAINER_GEMV_IMAGE_STEP");
     static const int s_step = s_step_env ? std::atoi(s_step_env) : 0;
+    // NNTRAINER_GEMV_IMAGE2D=1 takes the bit-exact-faster image2d gemv
+    // path (gemv_int4_image2d_cl).  Pre-req for that path: input
+    // tensor must be in GpuImagePool already.  RMSNorm GPU path
+    // publishes its output to the pool; if the upstream tensor isn't
+    // published, we fall back to the SVM kernel (still produces
+    // correct output, just doesn't take the speedup).
+    static const bool s_image2d =
+      std::getenv("NNTRAINER_GEMV_IMAGE2D") != nullptr;
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
     }
     const uint64_t t_d1 = now_ns();
+    bool image2d_dispatched = false;
     if (s_step == 1) {
       nntrainer::gemv_int4_image_v1_cl(svm_in, weight_u16, scale_u16, svm_out,
                                        K, N);
@@ -1023,6 +1032,18 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     } else if (s_step == 5) {
       nntrainer::gemv_int4_image_v5_cl(svm_in, weight_u16, scale_u16, svm_out,
                                        K, N);
+    } else if (s_image2d) {
+      // Output goes to svm_out (staging); the kernel writes both
+      // image2d AND vstore4 to svm_out so the next stage of the
+      // existing SVM-based decode path keeps working unchanged.
+      // svm_in is staging (we just copied from in_u16 above), but
+      // gemv_int4_image2d_cl looks up image2d by IN_U16 ptr (the
+      // upstream RMSNorm published key).  Pass in_u16 directly.
+      image2d_dispatched = nntrainer::gemv_int4_image2d_cl(
+        in_u16, weight_u16, scale_u16, svm_out, K, N);
+      if (!image2d_dispatched) {
+        gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+      }
     } else {
       gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
     }
