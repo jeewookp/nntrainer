@@ -83,11 +83,26 @@ ${BAZEL} build \
   //runtime/engine:litert_lm_main \
   2>&1 | tail -20
 
-INTERCEPT_SO=bazel-bin/runtime/cl_bench/libcl_intercept.so
+# Locate built artifacts.  Hardcoded bazel-bin/<pkg>/<file> paths are
+# unreliable: libLiteRt.so lives under @litert//litert/c, and bazel
+# may shard libcl_intercept.so under a *_files dir depending on rule
+# version.  Mirror temp_litert_cl_intercept.sh and use `find -L`.
+INTERCEPT_SO=$(find -L bazel-bin/runtime/cl_bench -name "libcl_intercept.so" 2>/dev/null | head -1)
 LITERT_BIN=bazel-bin/runtime/engine/litert_lm_main
-LIBLITERT_SO=bazel-bin/runtime/engine/libLiteRt.so
-[ -f "${INTERCEPT_SO}" ] || { echo "[decode_intercept.sh] cl_intercept .so not found"; exit 1; }
-[ -f "${LITERT_BIN}" ]   || { echo "[decode_intercept.sh] litert_lm_main not found"; exit 1; }
+LIBLITERT_SO=$(find -L bazel-bin -maxdepth 8 -type f -name "libLiteRt.so" \
+                 ! -path "*runfiles*" 2>/dev/null | head -1)
+if [ -z "${LIBLITERT_SO}" ]; then
+  LIBLITERT_SO=$(find -L bazel-bin -type f -name "libLiteRt.so" 2>/dev/null | head -1)
+fi
+[ -n "${INTERCEPT_SO}" ] && [ -f "${INTERCEPT_SO}" ] || \
+  { echo "[decode_intercept.sh] ERROR: libcl_intercept.so not found under bazel-bin/runtime/cl_bench"; exit 1; }
+[ -f "${LITERT_BIN}" ] || \
+  { echo "[decode_intercept.sh] ERROR: litert_lm_main not found at ${LITERT_BIN}"; exit 1; }
+[ -n "${LIBLITERT_SO}" ] && [ -f "${LIBLITERT_SO}" ] || \
+  { echo "[decode_intercept.sh] ERROR: libLiteRt.so not found under bazel-bin/"; exit 1; }
+echo "[decode_intercept.sh]   INTERCEPT_SO=${INTERCEPT_SO}"
+echo "[decode_intercept.sh]   LITERT_BIN=${LITERT_BIN}"
+echo "[decode_intercept.sh]   LIBLITERT_SO=${LIBLITERT_SO}"
 
 # -----------------------------------------------------------------------------
 # Step 2: Push interceptor + binary + model to device.
