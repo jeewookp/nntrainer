@@ -2425,6 +2425,20 @@ bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return false;
+
+  // Pre-dispatch fence on the input SVM tensor.  Empirical finding
+  // (production decode VERIFY mode): image2d kernel reads stale
+  // input image cache contents unless the upstream RMSNorm
+  // image2d_v2 dispatch has been synchronised against the host.
+  // The cheapest way to force that is a blocking SVMMap on the
+  // input SVM ptr -- queue drain + cache invalidate, same fence
+  // baseline gemv_int4_adreno_cl does at the END of its dispatch.
+  // Without this, production runs garbage (e.g. 'Term-tone间隙AZY...')
+  // even though the unittest single-call path stays bit-exact.
+  // Cost: one extra SVMMap per FC call.  Re-evaluate once we have
+  // a publish-ordering fix that doesn't require host sync.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    input_svm, (size_t)K * sizeof(uint16_t), /*read_only=*/true);
   cl_context clctx = blas_cc->context_inst_.GetContext();
 
   // 1. Input image2d from GpuImagePool (published by upstream RMSNorm).
