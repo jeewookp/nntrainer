@@ -53,7 +53,14 @@ DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
 DEVICE_CL_DIR="${DEVICE_CL_DIR:-${DEVICE_FOLDER}/cl_intercept}"
 HOST_OUT_DIR="${HOST_OUT_DIR:-runtime/cl_bench/intercepted_decode}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
-INTERCEPT_DTYPE="${INTERCEPT_DTYPE:-int8_per_tensor}"
+# Default to fp16: int8_per_tensor's M=1 codegen is buggy in this
+# LiteRT build (BC-src "use of undeclared identifier 'q0'"), and
+# matmul_micro_benchmark.cc's own comment explicitly notes the
+# wrapped int8 path "tried and failed at for unrelated reasons --
+# the delegate collapses the wrap back to fp16."  fp16 compiles
+# fine at M=1 even though the .cc warns its CPU reference disagrees
+# -- we only need the dispatch pattern, not numeric correctness.
+INTERCEPT_DTYPE="${INTERCEPT_DTYPE:-fp16}"
 INTERCEPT_ITERS="${INTERCEPT_ITERS:-2}"
 INTERCEPT_WARMUP="${INTERCEPT_WARMUP:-1}"
 
