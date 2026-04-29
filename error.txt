@@ -3,18 +3,16 @@ remote: Enumerating objects: 5, done.
 remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 503 bytes | 83.00 KiB/s, done.
+Unpacking objects: 100% (3/3), 2.44 KiB | 416.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   4f3600aa..228e2d4f  litert_lm  -> origin/litert_lm
-Updating 4f3600aa..228e2d4f
+   cb05b638..7233a516  litert_lm  -> origin/litert_lm
+Updating cb05b638..7233a516
 Fast-forward
- temp_litert_decode_kernel_capture.sh | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ temp_litert_decode_kernel_capture.sh | 163 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-------------------------------------------------------------------------------------------
+ 1 file changed, 72 insertions(+), 91 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ bash temp_litert_decode_kernel_capture.sh 
-[decode_intercept.sh] Building cl_intercept + litert_lm_main with bazel ...
-INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
-  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+[decode_intercept.sh] Building cl_intercept + matmul_micro_benchmark with /usr/local/bin/bazel ...
 INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
   'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
 INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
@@ -28,63 +26,61 @@ Loading: 0 packages loaded
 Analyzing: 2 targets (0 packages loaded, 0 targets configured)
 Analyzing: 2 targets (0 packages loaded, 0 targets configured)
 
-INFO: Analyzed 2 targets (3 packages loaded, 8103 targets configured).
+INFO: Analyzed 2 targets (33 packages loaded, 318 targets configured).
+[2,014 / 2,017] Compiling runtime/util/single_op_tflite_builder.cc; 1s local ... (2 actions running)
+[2,016 / 2,017] Linking runtime/engine/matmul_micro_benchmark; 0s local
 INFO: Found 2 targets...
-INFO: Elapsed time: 1.186s, Critical Path: 0.04s
-INFO: 1 process: 1 internal.
-INFO: Build completed successfully, 1 total action
+INFO: Elapsed time: 3.183s, Critical Path: 2.91s
+INFO: 8 processes: 5 internal, 3 local.
+INFO: Build completed successfully, 8 total actions
 [decode_intercept.sh]   INTERCEPT_SO=bazel-bin/runtime/cl_bench/libcl_intercept.so.runfiles/litert_lm/runtime/cl_bench/libcl_intercept.so
-[decode_intercept.sh]   LITERT_BIN=bazel-bin/runtime/engine/litert_lm_main
+[decode_intercept.sh]   MATMUL_BIN=bazel-bin/runtime/engine/matmul_micro_benchmark
 [decode_intercept.sh]   LIBLITERT_SO=bazel-bin/_solib_arm64-v8a/_Uexternal_Slitert_Slitert_Sc/libLiteRt.so
 [decode_intercept.sh] Pushing to device ...
 [decode_intercept.sh] Clearing CL caches ...
 
-[decode_intercept.sh] Running litert_lm_main: prefill=1 decode=256
+[decode_intercept.sh] Running matmul_micro_benchmark with shapes: 1x2560x4096,1x2560x1024,1x4096x2560,1x2560x9728,1x9728x2560
 [decode_intercept.sh] Captured kernels go to /data/local/tmp/litert_lm/cl_intercept/
 
-VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
-input_prompt: What is the tallest building in the world?
-INFO: Loaded OpenCL library with dlopen.
-INFO: [environment.cc:30] Creating LiteRT environment with options
-WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
-INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000780db18ce0, name=LiteRT GPU
-INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
-INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb40000780db19060, name=CpuAccelerator
-INFO: [cpu_registry.cc:40] CPU accelerator registered.
-LaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptop (Laptop)LaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptop
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:750
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=4096 k=2560: CompiledModel::Create m=1 n=4096 k=2560: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+INFO: [compiled_model.cc:719] Flatbuffer model initialized directly from incoming litert model.
+I0000 00:00:1736842627.192029   20298 delegate_opencl.cc:551] options->hint_waiting_for_completion: false
+I0000 00:00:1736842627.192042   20298 delegate_opencl.cc:553] options->kernel_batch_size: -1
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (LITERT_CL) node, yielding 1 partitions for subgraph 0.
+I0000 00:00:1736842627.237288   20298 delegate_kernel.cc:746] Initializing OpenCL-based API from graph.
+E0000 00:00:1736842627.247288   20298 delegate_opencl.cc:330] Failed to create litert::ml_drift::DelegateKernelLiteRt: UNKNOWN: Failed to build program executable - Build program failureBC-src-code:25:32: error: use of undeclared identifier 'q0'
+  half4 weight_scale = (half4)(q0);
+                               ^
+BC-src-code:26:31: error: use of undeclared identifier 'q1'
+  half4 weight_bias = (half4)(q1);
+                              ^
+2 diagnostic(s) generated.
 
-BenchmarkInfo:
-  Init Phases (7):
-    - Init Conversation: 0.03 ms
-    - Init Executor: 2432.21 ms
-    - Init LLM metadata: 0.04 ms
-    - Init Model assets: 10.29 ms
-    - Init Tokenizer: 76.57 ms
-    - Init Total: 2443.80 ms
---------------------------------------------------
-  Time to first token: 0.02 s
---------------------------------------------------
-  Prefill Turns (Total 1 turns):
-    Prefill Turn 1: Processed 1 tokens in 1.519843ms duration.
-      Prefill Speed: 657.96 tokens/sec.
---------------------------------------------------
-  Decode Turns (Total 1 turns):
-    Decode Turn 1: Processed 256 tokens in 5.154107081s duration.
-      Decode Speed: 49.67 tokens/sec.
---------------------------------------------------
-  TextToTokenIds Turns (Total 1 turns):
-    Turn 1: 40.469us, 1 tokens
---------------------------------------------------
---------------------------------------------------
-
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000780db19060, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000780db18ce0, name=LiteRT GPU
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000780dad4720, name=CpuAccelerator
-INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb40000780daa9990, name=LiteRT GPU
-
-[decode_intercept.sh] Restoring vendor libOpenCL.so ...
-[decode_intercept.sh] Pulling captured CL sources ...
-/data/local/tmp/litert_lm/cl_intercept/: 0 files pulled.
+=== Source Location Trace: ===
+third_party/ml_drift/cl/cl_program.cc:79
+third_party/ml_drift/cl/cl_program.cc:221
+third_party/ml_drift/cl/cl_program.cc:231
+third_party/ml_drift/cl/program_cache.cc:104
+third_party/ml_drift/cl/inference_context.cc:416
+third_party/ml_drift/cl/inference_context.cc:230
+third_party/odml/litert/ml_drift/delegate/gpu_backend_opencl_litert.cc:334
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:725
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:750
+third_party/odml/litert/ml_drift/delegate/delegate_kernel.cc:287
+third_party/odml/litert/ml_drift/delegate/delegate_kernel_litert.cc:158
+ERROR: Failed to initialize kernel.
+ERROR: Restored original execution plan after delegate application failure.
+[MATMUL MICRO] SKIP m=1 n=9728 k=2560: CompiledModel::Create m=1 n=9728 k=2560: ERROR: [external/litert/litert/cc/litert_compiled_model.h:1140]
+[MATMUL MICRO] done. 5 / 5 shapes failed.
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007871dc2ef0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007871dc2400, name=LiteRT GPU
+[MATMUL MICRO] FATAL: All shapes failed to benchmark.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
 
