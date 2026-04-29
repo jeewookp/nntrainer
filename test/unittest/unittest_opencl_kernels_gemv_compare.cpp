@@ -217,6 +217,50 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
   ASSERT_NE(image2d_out_svm, nullptr);
   std::memset(image2d_out_svm, 0, N * sizeof(uint16_t));
   nntrainer::svm_to_image2d_publish(input_svm, /*M=*/1u, K);
+
+  // Correctness check first: run baseline gemv once to populate
+  // output_svm, run image2d gemv once into image2d_out_svm, drain
+  // both, then compare element-wise.  If max_abs > 1e-3 the kernels
+  // disagree and the timing comparison below is meaningless.
+  {
+    auto *blas_cc = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    nntrainer::gemv_int4_adreno_cl(input_svm, weight_svm, scale_svm,
+                                    output_svm, K, N);
+    if (blas_cc) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+    }
+    nntrainer::gemv_int4_image2d_cl(input_svm, weight_svm, scale_svm,
+                                    image2d_out_svm, K, N);
+    if (blas_cc) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        image2d_out_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+    }
+    double max_abs = 0.0;
+    unsigned int big_diff = 0;
+    unsigned int first_mismatch = N;
+    for (unsigned int n = 0; n < N; ++n) {
+      const float a = compute_fp16_to_fp32(output_svm[n]);
+      const float b = compute_fp16_to_fp32(image2d_out_svm[n]);
+      const double d = std::fabs((double)a - (double)b);
+      if (d > max_abs) max_abs = d;
+      if (d > 1e-3) {
+        if (first_mismatch == N) first_mismatch = n;
+        big_diff++;
+      }
+    }
+    std::cout << "[gemv_compare] K=" << K << " N=" << N
+              << "  CORRECTNESS  max_abs=" << max_abs
+              << "  big_diff(>1e-3)=" << big_diff << "/" << N;
+    if (first_mismatch < N) {
+      std::cout << "  first@n=" << first_mismatch
+                << "  baseline=" << compute_fp16_to_fp32(output_svm[first_mismatch])
+                << "  img2d=" << compute_fp16_to_fp32(image2d_out_svm[first_mismatch]);
+    }
+    std::cout << std::endl;
+  }
+
   // Warmup
   TimeGpuGemvImage2d(input_svm, weight_svm, scale_svm, image2d_out_svm,
                      K, N, /*iters=*/3);
