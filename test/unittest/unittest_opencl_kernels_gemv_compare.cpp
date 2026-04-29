@@ -30,6 +30,14 @@
 #include <cpu_backend.h>
 #include <fp16.h>
 
+// Q4_0 block size constant.  Defined in ggml_impl_common.h (one of
+// the cpu_backend internals) but that header isn't on the test
+// include path.  unittest_nntrainer_cpu_backend solves this by
+// re-defining it locally; do the same here.
+#ifndef Q4_0
+#define Q4_0 32
+#endif
+
 using namespace nntrainer;
 
 namespace {
@@ -200,10 +208,12 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
 // layers).  The 20 TPS CPU baseline = ~50 ms/token / 252 calls
 // = ~0.2 ms per FC call on average.  GPU 4 TPS = ~250 ms/token /
 // 252 = ~1 ms per call.  Ratio per call ~5x, matches end-to-end.
+// K & V projections share the shape (K=2560 N=1024) and so do gate &
+// up (K=2560 N=9728).  Declare each unique shape once; gtest's TEST()
+// macro generates a class name per (suite, test) pair so duplicate
+// declarations would collide.
 DECLARE_gemv_compare_K_N(2560, 4096);  // Q proj
-DECLARE_gemv_compare_K_N(2560, 1024);  // K proj
-DECLARE_gemv_compare_K_N(2560, 1024);  // V proj (same as K)
+DECLARE_gemv_compare_K_N(2560, 1024);  // K / V proj
 DECLARE_gemv_compare_K_N(4096, 2560);  // O proj
-DECLARE_gemv_compare_K_N(2560, 9728);  // gate proj
-DECLARE_gemv_compare_K_N(2560, 9728);  // up proj (same as gate)
+DECLARE_gemv_compare_K_N(2560, 9728);  // gate / up proj
 DECLARE_gemv_compare_K_N(9728, 2560);  // down proj
