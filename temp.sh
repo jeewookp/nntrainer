@@ -35,12 +35,15 @@ adb shell "rm -f /data/local/tmp/nntrainer/test/libOpenCL.so" || true
 # Uncomment if the host bundle changed and needs to be re-pushed.
 # adb push /home/jwhero94/nntr_qwen3-4b-q6_K-qint4-idx3-fp32-arm/* /data/local/tmp/nntrainer/causallm/models/qwen3-4b/
 
-# Push the canonical 437-token Thyme abstract sample prompt so we can
-# benchmark prefill + decode on a meaningful workload.  Without
-# passing argv[2] explicitly, main.cpp falls back to the model's
-# nntr_config.json sample_input which is short (1-token in the
-# Qwen3-1.7B bundle).  We feed it via cmd-line at run time below.
-adb push ../../tools/sample_prompt_thyme.txt /data/local/tmp/nntrainer/causallm/models/qwen3-4b/sample_prompt.txt
+# Optional: push the canonical Thyme abstract sample prompt for use
+# with bundles that lack a long sample_input in their nntr_config.json
+# (e.g. the Qwen3-1.7B bundle).  The 4B bundle already has the same
+# 437-token Thyme abstract baked into its sample_input, so we leave
+# argv[2] off below and let main.cpp's fallback path use that --
+# our copy here would tokenize to 428 tokens (smart-quote / hyphen
+# differences) and produce a different sample, breaking apples-to-
+# apples comparison with prior 4B baselines.
+# adb push ../../tools/sample_prompt_thyme.txt /data/local/tmp/nntrainer/causallm/models/qwen3-4b/sample_prompt.txt
 
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 
@@ -125,7 +128,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   export NNTRAINER_GEMV_IMAGE_STEP=5; \
-  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b \"\$(cat /data/local/tmp/nntrainer/causallm/models/qwen3-4b/sample_prompt.txt)\"" \
+  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
 # ----------------------------------------------------------------------------
@@ -149,7 +152,7 @@ if [ -n "$NNTR_CONV_LOCAL_SWEEP" ]; then
       export ${DELEGATE_ENV}; \
       export NNTRAINER_PROFILE_LAYER_SYNC=1; \
       export NNTR_DELEGATE_CONV_LOCAL=${L}; \
-      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b \"\$(cat /data/local/tmp/nntrainer/causallm/models/qwen3-4b/sample_prompt.txt)\"" 2>&1 \
+      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
       | grep -E "prefill:|conv\(gpu\)" | tee -a $SWEEP_LOG
   done
   echo ""
