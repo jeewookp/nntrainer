@@ -2021,11 +2021,17 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
   // is at least a multiple of 8. For Qwen3-4B FC widths the values are
   // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
-  const int align_N = static_cast<int>(align(N, 32));
+  //
+  // WG=64 to fully fill the Adreno 830 wavefront.  WG=16 was 25% of the
+  // wavefront -- 75% idle for kernels with no extra parallelism per
+  // work-item.  Round N up to 256 so global_x = align_N/4 stays
+  // divisible by WG=64 even for shapes where N isn't a power of 2
+  // multiple of 256.
+  const int align_N = static_cast<int>(align(N, 256));
   const int dim_n = align_N / 4;
 
   const int work_groups_count[3] = {dim_n, 1, 1};
-  const int work_group_size[3] = {16, 1, 1};
+  const int work_group_size[3] = {64, 1, 1};
 
   const uint64_t t_dispatch_start = now_ns_phase6();
   cl_event kernel_ev = nullptr;
