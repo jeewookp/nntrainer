@@ -21,7 +21,9 @@
 #include <transformer.h>
 
 #include <embedding_layer.h>
+#include <gate_up_layer.h>
 #include <mha_core.h>
+#include <qkv_layer.h>
 #include <rms_norm.h>
 #include <swiglu.h>
 #include <tie_word_embedding.h>
@@ -397,25 +399,27 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
 
   std::vector<LayerHandle> layers;
 
+  // Single GateUpLayer replaces ffn_up + ffn_gate FCs.  Weight order
+  // (up first, then gate) matches the legacy registration order so the
+  // bundle's byte layout is preserved -- no repackaging needed.
+  // Output index convention from gate_up_layer.cpp:
+  //   gate_up(0) = up projection
+  //   gate_up(1) = gate projection
+  // swiglu's first input is gate, second is up, hence the (1),(0) order.
+  auto gate_up_name = "layer" + std::to_string(layer_id) + "_ffn_gate_up";
   layers.push_back(createLayer(
-    "fully_connected",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_up"),
-     withKey("unit", hidden_dim), withKey("disable_bias", "true"),
-     withKey("input_layers", input_name),
-     withKey("weight_initializer", "ones")}));
-  layers.push_back(createLayer(
-    "fully_connected",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_gate"),
-     withKey("unit", hidden_dim), withKey("disable_bias", "true"),
+    "gate_up_layer",
+    {withKey("name", gate_up_name),
+     withKey("up_unit", hidden_dim),
+     withKey("gate_unit", hidden_dim),
+     withKey("disable_bias", "true"),
      withKey("input_layers", input_name),
      withKey("weight_initializer", "ones")}));
 
   layers.push_back(createLayer(
     "swiglu",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
-     withKey("input_layers", "layer" + std::to_string(layer_id) + "_ffn_gate," +
-                               "layer" + std::to_string(layer_id) +
-                               "_ffn_up")}));
+     withKey("input_layers", gate_up_name + "(1)," + gate_up_name + "(0)")}));
 
   layers.push_back(createLayer(
     "fully_connected",
@@ -444,6 +448,9 @@ void Transformer::registerCustomLayers() {
       nntrainer::createLayer<causallm::TieWordEmbedding>);
     app_context->registerFactory(
       nntrainer::createLayer<causallm::EmbeddingLayer>);
+    app_context->registerFactory(nntrainer::createLayer<causallm::QKVLayer>);
+    app_context->registerFactory(
+      nntrainer::createLayer<causallm::GateUpLayer>);
 
   } catch (std::invalid_argument &e) {
     std::cerr << "failed to register factory, reason: " << e.what()
