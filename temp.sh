@@ -11,7 +11,7 @@ cd Applications/CausalLM
 sh build_android.sh
 
 adb shell "mkdir -p /data/local/tmp/nntrainer/test"
-adb shell "mkdir -p /data/local/tmp/nntrainer/causallm/models/qwen3-4b"
+adb shell "mkdir -p /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b"
 adb push jni/libs/arm64-v8a/* /data/local/tmp/nntrainer/test
 
 # Push freshly-built nntrainer shared libs that build_android.sh leaves in
@@ -31,7 +31,10 @@ done
 # still shadow the vendor one via prior-run residue.
 adb shell "rm -f /data/local/tmp/nntrainer/test/libOpenCL.so" || true
 
-# adb push /home/jwhero94/nntr_qwen3-4b-q6_K-qint4-idx3-fp32-arm/* /data/local/tmp/nntrainer/causallm/models/qwen3-4b
+# Push the Qwen3-1.7B model bundle (weights + nntr_config.json +
+# tokenizer assets) to the device.  Path comes from error.txt
+# (jwhero94's host model cache).
+adb push /home/jwhero94/models/nntr_qwen3_1_7b/* /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/
 
 adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 
@@ -51,7 +54,7 @@ adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 # num_to_generate=128, model_tensor_type="QINT4-FP32" which is the
 # production-latency-unconstrained config.
 # ----------------------------------------------------------------------------
-CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
+CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-1.7b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
 NUM_TO_GENERATE_NEW=32
@@ -116,7 +119,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
   export NNTRAINER_GEMV_IMAGE_STEP=5; \
-  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
+  taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b" \
   2>&1 | tee ${RUN_LOG}
 
 # ----------------------------------------------------------------------------
@@ -140,7 +143,7 @@ if [ -n "$NNTR_CONV_LOCAL_SWEEP" ]; then
       export ${DELEGATE_ENV}; \
       export NNTRAINER_PROFILE_LAYER_SYNC=1; \
       export NNTR_DELEGATE_CONV_LOCAL=${L}; \
-      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" 2>&1 \
+      taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-1.7b" 2>&1 \
       | grep -E "prefill:|conv\(gpu\)" | tee -a $SWEEP_LOG
   done
   echo ""
