@@ -356,25 +356,27 @@ static void run_fused_rmsnorm_qkv_(unsigned int K_in, unsigned int N_q,
 
   const float eps = 1e-6f;
 
-  // ---- 2. CPU reference: rmsnorm + 3 FCs in fp32 ----
+  // ---- 2. Reference using SAME int4 weights via gemv_int4_adreno_cl --
+  // The fused kernel uses int4 quantized weights, so the canonical
+  // reference can't be a fp32 unquantized matvec (that would diff
+  // by quantization error, max_abs ~8 for K=2560 ±1 inputs).
+  // Compute reference by:
+  //   a) host fp32 rmsnorm
+  //   b) fp32 -> fp16 SVM input
+  //   c) run baseline gemv_int4_adreno_cl 3 times on the same int4
+  //      weights/scales the fused kernel will use
+  // Then compare element-wise.  Should be bit-exact (max_abs == 0)
+  // because the per-channel int4 dequant + MAC math is identical
+  // between baseline kernel and fused kernel.
   std::vector<float> norm_in(K_in);
   cpu_rmsnorm_ref(input_fp32.data(), gamma_fp32.data(), norm_in.data(), K_in,
                   eps);
-
-  auto cpu_matvec = [&](const float *w, unsigned int N,
-                         std::vector<float> &out) {
-    out.assign(N, 0.0f);
-    for (unsigned int n = 0; n < N; ++n) {
-      double acc = 0.0;
-      for (unsigned int k = 0; k < K_in; ++k)
-        acc += (double)norm_in[k] * (double)w[n * K_in + k];
-      out[n] = (float)acc;
-    }
-  };
-  std::vector<float> q_ref, k_ref, v_ref;
-  cpu_matvec(q_w_fp32.data(), N_q, q_ref);
-  cpu_matvec(k_w_fp32.data(), N_k, k_ref);
-  cpu_matvec(v_w_fp32.data(), N_v, v_ref);
+  // Pack the rmsnorm-applied input as fp16 SVM for baseline gemv.
+  uint16_t *norm_in_svm =
+    (uint16_t *)allocateSVM(K_in * sizeof(uint16_t));
+  ASSERT_NE(norm_in_svm, nullptr);
+  for (unsigned int k = 0; k < K_in; ++k)
+    norm_in_svm[k] = compute_fp32_to_fp16(norm_in[k]);
 
   // ---- 3. Pack weights/scales for GPU (channel-wise int4) ---------------
   std::vector<uint16_t> q_nibbles, q_scales, k_nibbles, k_scales,
@@ -412,28 +414,49 @@ static void run_fused_rmsnorm_qkv_(unsigned int K_in, unsigned int N_q,
   std::memset(k_out_svm, 0, N_k * sizeof(uint16_t));
   std::memset(v_out_svm, 0, N_v * sizeof(uint16_t));
 
-  // ---- 5. Dispatch fused kernel + correctness compare -------------------
+  // ---- 5. Reference: baseline gemv_int4_adreno_cl on rmsnorm-input ----
+  uint16_t *q_ref_svm = (uint16_t *)allocateSVM(N_q * sizeof(uint16_t));
+  uint16_t *k_ref_svm = (uint16_t *)allocateSVM(N_k * sizeof(uint16_t));
+  uint16_t *v_ref_svm = (uint16_t *)allocateSVM(N_v * sizeof(uint16_t));
+  ASSERT_NE(q_ref_svm, nullptr);
+  std::memset(q_ref_svm, 0, N_q * sizeof(uint16_t));
+  std::memset(k_ref_svm, 0, N_k * sizeof(uint16_t));
+  std::memset(v_ref_svm, 0, N_v * sizeof(uint16_t));
+  nntrainer::gemv_int4_adreno_cl(norm_in_svm, q_w_svm, q_s_svm, q_ref_svm,
+                                  K_in, N_q);
+  nntrainer::gemv_int4_adreno_cl(norm_in_svm, k_w_svm, k_s_svm, k_ref_svm,
+                                  K_in, N_k);
+  nntrainer::gemv_int4_adreno_cl(norm_in_svm, v_w_svm, v_s_svm, v_ref_svm,
+                                  K_in, N_v);
+
+  // ---- 6. Dispatch fused kernel + correctness compare ----
   ASSERT_TRUE(nntrainer::fused_rmsnorm_qkv_cl(
     input_svm, gamma_svm, q_w_svm, q_s_svm, q_out_svm,
     k_w_svm, k_s_svm, k_out_svm, v_w_svm, v_s_svm, v_out_svm,
     K_in, N_q, N_k, N_v, eps));
 
-  auto check_partition = [&](const std::vector<float> &ref, uint16_t *out,
-                              unsigned int N, const char *name) {
+  auto check_partition = [&](uint16_t *ref, uint16_t *out, unsigned int N,
+                              const char *name) {
     double max_abs = 0.0;
     double sum_sq_diff = 0.0;
     double sum_sq_ref = 0.0;
     unsigned int big_diff = 0;
+    unsigned int first_mismatch = N;
     for (unsigned int n = 0; n < N; ++n) {
-      const float a = ref[n];
+      const float a = compute_fp16_to_fp32(ref[n]);
       const float b = compute_fp16_to_fp32(out[n]);
       const double d = std::fabs((double)a - (double)b);
       if (d > max_abs) max_abs = d;
       sum_sq_diff += d * d;
       sum_sq_ref += (double)a * (double)a;
-      // ref is fp32 dot product; fp16 accum + dequant + rmsnorm = wider
-      // tolerance than the bit-exact gemv tests above
-      if (d > 1e-1) big_diff++;
+      // Both paths apply identical int4 dequant + MAC; the only
+      // difference is fp32 vs fp16 rmsnorm precision.  Tolerance
+      // 1e-2 catches real disagreement while allowing the small
+      // rmsnorm precision drift.
+      if (d > 1e-2) {
+        if (first_mismatch == N) first_mismatch = n;
+        big_diff++;
+      }
     }
     const double rel = sum_sq_ref > 0.0
       ? std::sqrt(sum_sq_diff / sum_sq_ref) : 0.0;
@@ -441,11 +464,17 @@ static void run_fused_rmsnorm_qkv_(unsigned int K_in, unsigned int N_q,
               << " " << name << "=" << N
               << "  max_abs=" << max_abs
               << "  rel_l2=" << rel
-              << "  big_diff(>1e-1)=" << big_diff << "/" << N << std::endl;
+              << "  big_diff(>1e-2)=" << big_diff << "/" << N;
+    if (first_mismatch < N) {
+      std::cout << "  first@n=" << first_mismatch
+                << "  ref=" << compute_fp16_to_fp32(ref[first_mismatch])
+                << "  fused=" << compute_fp16_to_fp32(out[first_mismatch]);
+    }
+    std::cout << std::endl;
   };
-  check_partition(q_ref, q_out_svm, N_q, "N_q");
-  check_partition(k_ref, k_out_svm, N_k, "N_k");
-  check_partition(v_ref, v_out_svm, N_v, "N_v");
+  check_partition(q_ref_svm, q_out_svm, N_q, "N_q");
+  check_partition(k_ref_svm, k_out_svm, N_k, "N_k");
+  check_partition(v_ref_svm, v_out_svm, N_v, "N_v");
 
   // ---- 6. Time the fused dispatch ---------------------------------------
   auto time_fused = [&](unsigned int iters) {
@@ -471,10 +500,10 @@ static void run_fused_rmsnorm_qkv_(unsigned int K_in, unsigned int N_q,
                                       "3 gemv = ~1.4 ms baseline)"
             << std::endl;
 
-  freeSVM(input_svm);  freeSVM(gamma_svm);
-  freeSVM(q_w_svm);  freeSVM(q_s_svm);  freeSVM(q_out_svm);
-  freeSVM(k_w_svm);  freeSVM(k_s_svm);  freeSVM(k_out_svm);
-  freeSVM(v_w_svm);  freeSVM(v_s_svm);  freeSVM(v_out_svm);
+  freeSVM(input_svm);  freeSVM(gamma_svm);  freeSVM(norm_in_svm);
+  freeSVM(q_w_svm);  freeSVM(q_s_svm);  freeSVM(q_out_svm);  freeSVM(q_ref_svm);
+  freeSVM(k_w_svm);  freeSVM(k_s_svm);  freeSVM(k_out_svm);  freeSVM(k_ref_svm);
+  freeSVM(v_w_svm);  freeSVM(v_s_svm);  freeSVM(v_out_svm);  freeSVM(v_ref_svm);
 }
 
 TEST(nntrainer_fused_rmsnorm_qkv, qwen3_4b_shapes) {
