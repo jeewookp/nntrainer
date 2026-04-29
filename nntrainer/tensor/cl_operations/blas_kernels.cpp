@@ -2021,12 +2021,12 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
   // dim_n divisibility: align_N is N rounded up to 32, so dim_n = align_N/4
   // is at least a multiple of 8. For Qwen3-4B FC widths the values are
   // dim_n in {256, 640, 1024, 2432}, all multiples of 16.
-  //
-  // WG=64 to fully fill the Adreno 830 wavefront.  WG=16 was 25% of the
-  // wavefront -- 75% idle for kernels with no extra parallelism per
-  // work-item.  Round N up to 256 so global_x = align_N/4 stays
-  // divisible by WG=64 even for shapes where N isn't a power of 2
-  // multiple of 256.
+  // Adreno 830 wavefront width is 64; align global to 256 / WG to 64
+  // so each work-group fully fills a wavefront.  Earlier WG=16 left
+  // 75% of every wavefront idle and was the easy 2.4x win the
+  // gemv_compare unittest exposed.  Kernel itself has no
+  // reqd_work_group_size attribute so the change is purely on the
+  // dispatch side.
   const int align_N = static_cast<int>(align(N, 256));
   const int dim_n = align_N / 4;
 
@@ -2405,6 +2405,305 @@ void gemv_int4_image_v5_cl(uint16_t *input, uint16_t *weights,
     }
     clReleaseEvent(kernel_ev);
   }
+}
+
+// Phase 2 image2d gemv: reads input via image2d (from GpuImagePool,
+// published by upstream RMSNorm) and writes output to image2d
+// (registered in pool for downstream consumer).  Bypasses Adreno 830
+// coarse-grained SVM cross-kernel staleness entirely -- the
+// FC -> consumer chain stays on image-cache.
+//
+// Returns true on dispatch success, false on pool miss / fall-through
+// (caller is expected to fall back to gemv_int4_adreno_cl with
+// sync_output=true so correctness is preserved).
+bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
+                          uint16_t *scales, uint16_t *output_svm,
+                          unsigned int K, unsigned int N) {
+  if (!input_svm || !output_svm || !weights || !scales) return false;
+  if ((K & 3u) != 0u || (N & 3u) != 0u) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // 1. Input image2d from GpuImagePool (published by upstream RMSNorm).
+  //    Pool layout for an M=1 K-wide tensor: width=1, height=K/4.
+  int pool_M = 0, pool_slices = 0;
+  cl_mem in_img = GpuImagePool::Global().get(input_svm, &pool_M, &pool_slices);
+  const int slices_k = (int)K / 4;
+  if (!in_img || pool_M != 1 || pool_slices != slices_k) {
+    return false;  // miss -- caller falls back to SVM gemv
+  }
+
+  // 2. Output image2d -- allocate/cache per output_svm pointer
+  //    (mirrors the cached-by-ptr pattern in svm_to_image2d_publish).
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  const int slices_n = (int)N / 4;
+  cl_mem out_img = nullptr;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(output_svm);
+  cl_int err = 0;
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == 1 &&
+        it->second.slices == slices_n) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = 1; d.image_height = slices_n;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, 1, slices_n};
+    }
+  }
+
+  // 3. Dispatch the new image2d gemv kernel.
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_image2d_kernel, "gpu_int4_gemv_image2d");
+  if (!kernel_ptr) return false;
+
+  int arg = 0;
+  kernel_ptr->SetKernelArguments(arg++, &in_img, sizeof(cl_mem));
+  kernel_ptr->SetKernelSVMArguments(arg++, scales);
+  kernel_ptr->SetKernelArguments(arg++, &out_img, sizeof(cl_mem));
+  kernel_ptr->SetKernelSVMArguments(arg++, weights);
+  kernel_ptr->SetKernelSVMArguments(arg++, output_svm);
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  // 4 output channels per WI; WG=64 to fully fill the Adreno 830
+  // wavefront (the previous local=16 left 75% of every wavefront idle
+  // for kernels with no extra parallelism per call).  Round N up to a
+  // multiple of 256 so global_x = align_N/4 is divisible by WG=64
+  // even for shapes where N itself isn't.
+  const int align_N = static_cast<int>(align(N, 256));
+  const int g[3] = {align_N / 4, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l)) {
+    return false;
+  }
+
+  // 4. Publish the output image2d under output_svm so the next consumer
+  //    pool-hits and reads via image cache.
+  GpuImagePool::Global().set(output_svm, out_img, /*M=*/1, slices_n);
+
+  // 5. NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC=1 forces a blocking
+  //    enqueueSVMMap on the SVM output here, same fence the original
+  //    SVM gemv path would have done.  Diagnostic: if turning this on
+  //    fixes the garbage tokens, we know the kernel's SVM write is
+  //    correct but the consumer's own SVMMap fence isn't covering
+  //    coherence on Adreno.  In that case we can keep the fence here
+  //    (still cheaper than the legacy path because we run only one
+  //    drain at the end of all in-flight FCs, and image-aware
+  //    consumers like rmsnorm_image2d_cl can be skipped via the pool).
+  static const bool s_image2d_debug_sync =
+    std::getenv("NNTRAINER_GEMV_IMAGE2D_DEBUG_SYNC") != nullptr;
+  if (s_image2d_debug_sync) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  return true;
+}
+
+// Phase 2 image-only consumer helpers: swiglu_image2d_cl + addition_image2d_cl.
+// Used to extend the FC -> consumer image-cache chain past mha_core
+// so that DEBUG_SYNC (per-FC blocking SVMMap) can eventually be
+// dropped: when every consumer reads/writes via image cache, no
+// downstream layer ever reads the SVM output of an image2d FC, and
+// Adreno's coarse-grained SVM coherence becomes irrelevant.
+
+// SwiGLU on image2d: gate_svm and up_svm must be in GpuImagePool
+// (typically the gate_proj/up_proj FC outputs registered via
+// gemv_int4_image2d_cl).  Output image2d is registered in the pool
+// keyed by out_svm, AND the SVM pointer is also written via vstore4
+// in the kernel for any SVM-reading consumer (e.g. fall-through
+// addition CPU path).  Returns false on miss so the caller can fall
+// back to the SVM swiglu path.
+bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
+                       unsigned int M, unsigned int K) {
+  if (!gate_svm || !up_svm || !out_svm || M == 0 || K == 0) return false;
+  if ((K & 3u) != 0u) return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int slices = (int)K / 4;
+  int gM = 0, gS = 0, uM = 0, uS = 0;
+  cl_mem g_img = GpuImagePool::Global().get(gate_svm, &gM, &gS);
+  cl_mem u_img = GpuImagePool::Global().get(up_svm,   &uM, &uS);
+  if (!g_img || !u_img || gM != (int)M || gS != slices ||
+      uM != (int)M || uS != slices) {
+    return false;
+  }
+
+  // Output image2d: cache per out_svm.
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  cl_mem out_img = nullptr;
+  cl_int err = 0;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(out_svm);
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, (int)M, slices};
+    }
+  }
+
+  // Use _v2 name so the kernel cache (keyed on name + compile_options,
+  // NOT source) doesn't hand us back a stale binary built from the
+  // pre-svm_output 5-arg signature.
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    swiglu_image2d_kernel, "swiglu_image2d_v2");
+  if (!kp) return false;
+  int a = 0;
+  kp->SetKernelArguments(a++, &g_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &u_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &out_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, out_svm);
+  int sm = (int)M, ss = slices, sk = (int)K;
+  kp->SetKernelArguments(a++, &sm, sizeof(int));
+  kp->SetKernelArguments(a++, &ss, sizeof(int));
+  kp->SetKernelArguments(a++, &sk, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16, (slices + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  // NNTRAINER_SWIGLU_NO_PUBLISH=1: skip the GpuImagePool::set for the
+  // swiglu output so the immediate consumer (down_proj) misses the
+  // pool and falls back to the SVM gemv path (with sync_output=true)
+  // -- which reads from the SVM companion the kernel just vstore4'd
+  // to.  Diagnostic: if turning this on restores correct output,
+  // we know the swiglu image2d INPUT path is fine and the issue is
+  // either (a) consumer reading swiglu's image2d output incorrectly
+  // or (b) the image2d we publish doesn't match what consumers
+  // expect.  If output stays garbage with this on, the swiglu
+  // image2d INPUT (gate/up image2d data) is the broken link.
+  static const bool s_no_publish =
+    std::getenv("NNTRAINER_SWIGLU_NO_PUBLISH") != nullptr;
+  if (!s_no_publish) {
+    GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  }
+  // Always blocking SVMMap on out_svm for now -- mirrors the
+  // gemv DEBUG_SYNC fence so SVM-reading consumers (down_proj
+  // fallback when no_publish, or any future SVM reader) see
+  // coherent data.
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    out_svm, (size_t)M * K * sizeof(uint16_t), /*read_only=*/true);
+  return true;
+}
+
+// Diagnostic helper: read an image2d from GpuImagePool back into a
+// fresh SVM buffer using the existing image_reformat::image2d_to_svm
+// kernel.  Lets the unittest cross-check the kernel's image2d write
+// against its SVM write (both should be derived from the same out_v
+// half4).  Returns false on pool miss / shape mismatch.
+bool image2d_to_svm_for_test(void *src_svm_key, void *dst_svm,
+                              unsigned int M, unsigned int N) {
+  if (!src_svm_key || !dst_svm || M == 0 || N == 0 || (N & 3u) != 0u)
+    return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  int pool_M = 0, pool_slices = 0;
+  cl_mem src_img = GpuImagePool::Global().get(src_svm_key, &pool_M,
+                                                &pool_slices);
+  if (!src_img || pool_M != (int)M || pool_slices != (int)N / 4)
+    return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    image_reformat_kernel, "image2d_to_svm");
+  if (!kp) return false;
+  int a = 0;
+  kp->SetKernelArguments(a++, &src_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, dst_svm);
+  int sm = (int)M, sn = (int)N;
+  kp->SetKernelArguments(a++, &sm, sizeof(int));
+  kp->SetKernelArguments(a++, &sn, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16,
+                    ((int)N / 4 + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(kp, g, l);
+}
+
+// Element-wise addition on image2d.  a_svm and b_svm must be in
+// GpuImagePool with matching shape; output is published like
+// swiglu_image2d_cl above.
+bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
+                         unsigned int M, unsigned int K) {
+  if (!a_svm || !b_svm || !out_svm || M == 0 || K == 0) return false;
+  if ((K & 3u) != 0u) return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  const int slices = (int)K / 4;
+  int aM = 0, aS = 0, bM = 0, bS = 0;
+  cl_mem a_img = GpuImagePool::Global().get(a_svm, &aM, &aS);
+  cl_mem b_img = GpuImagePool::Global().get(b_svm, &bM, &bS);
+  if (!a_img || !b_img || aM != (int)M || aS != slices ||
+      bM != (int)M || bS != slices) {
+    return false;
+  }
+
+  struct CachedOut { cl_mem img; int M, slices; };
+  static std::unordered_map<uintptr_t, CachedOut> s_out_cache;
+  cl_mem out_img = nullptr;
+  cl_int err = 0;
+  const uintptr_t ok = reinterpret_cast<uintptr_t>(out_svm);
+  {
+    auto it = s_out_cache.find(ok);
+    if (it != s_out_cache.end() && it->second.M == (int)M &&
+        it->second.slices == slices) {
+      out_img = it->second.img;
+    } else {
+      if (it != s_out_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = M; d.image_height = slices;
+      out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &d, 0, &err);
+      if (err != CL_SUCCESS || !out_img) return false;
+      s_out_cache[ok] = {out_img, (int)M, slices};
+    }
+  }
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    addition_image2d_kernel, "addition_image2d");
+  if (!kp) return false;
+  int ia = 0;
+  kp->SetKernelArguments(ia++, &a_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(ia++, &b_img,  sizeof(cl_mem));
+  kp->SetKernelArguments(ia++, &out_img, sizeof(cl_mem));
+  int sm = (int)M, ss = slices;
+  kp->SetKernelArguments(ia++, &sm, sizeof(int));
+  kp->SetKernelArguments(ia++, &ss, sizeof(int));
+  const int g[3] = {((int)M + 15) / 16 * 16, (slices + 15) / 16 * 16, 1};
+  const int l[3] = {16, 16, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  GpuImagePool::Global().set(out_svm, out_img, (int)M, slices);
+  return true;
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,

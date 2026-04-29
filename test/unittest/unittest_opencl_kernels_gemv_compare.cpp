@@ -108,6 +108,31 @@ double TimeCpuQ4_0Gemv(const float *input, const void *q4_weight, float *output,
   return std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
+// Run gemv_int4_image2d_cl `iters` times.  Pre-condition: caller has
+// already published input_svm to GpuImagePool; otherwise every call
+// pool-misses and the helper short-circuits (returns false) without
+// dispatching, leaving a misleading timing.  We drain the queue at
+// the end of the timing window with a blocking SVMMap on the SVM-out
+// companion so the per-call wall reflects host-visible completion
+// (matches what the production decode path's consumer fence does).
+double TimeGpuGemvImage2d(uint16_t *input_svm, uint16_t *weight_svm,
+                          uint16_t *scale_svm, uint16_t *output_svm,
+                          unsigned int K, unsigned int N, unsigned int iters) {
+  auto *blas_cc = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  for (unsigned int i = 0; i < iters; ++i) {
+    nntrainer::gemv_int4_image2d_cl(input_svm, weight_svm, scale_svm,
+                                    output_svm, K, N);
+  }
+  if (blas_cc) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
 } // namespace
 
 static void run_gemv_compare_(unsigned int K, unsigned int N) {
@@ -183,17 +208,44 @@ static void run_gemv_compare_(unsigned int K, unsigned int N) {
     TimeCpuQ4_0Gemv(input_fp32.data(), q4_weight_repack.data(),
                     cpu_output.data(), K, N, cpu_iters);
 
+  // ---- 7b. Image2d gemv timing ------------------------------------------
+  // Publish input_svm so the helper finds it in GpuImagePool.  Use a
+  // separate SVM out buffer; the kernel writes both image2d and SVM
+  // (vstore4 inside the kernel) so we can drain via SVMMap.
+  uint16_t *image2d_out_svm =
+    (uint16_t *)allocateSVM(N * sizeof(uint16_t));
+  ASSERT_NE(image2d_out_svm, nullptr);
+  std::memset(image2d_out_svm, 0, N * sizeof(uint16_t));
+  nntrainer::svm_to_image2d_publish(input_svm, /*M=*/1u, K);
+  // Warmup
+  TimeGpuGemvImage2d(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                     K, N, /*iters=*/3);
+  const double img_warm =
+    TimeGpuGemvImage2d(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                       K, N, 5) / 5.0;
+  const unsigned int img_iters =
+    std::max(20u,
+              static_cast<unsigned int>(500.0 / std::max(0.001, img_warm)));
+  const double img_total =
+    TimeGpuGemvImage2d(input_svm, weight_svm, scale_svm, image2d_out_svm,
+                       K, N, img_iters);
+
   const double gpu_avg = gpu_total / gpu_iters;
   const double cpu_avg = cpu_total / cpu_iters;
+  const double img_avg = img_total / img_iters;
   const double ratio   = cpu_avg > 0.0 ? gpu_avg / cpu_avg : 0.0;
+  const double img_vs_gpu =
+    gpu_avg > 0.0 ? img_avg / gpu_avg : 0.0;
 
   std::cout << "[gemv_compare] K=" << K << " N=" << N
             << "  GPU=" << gpu_avg << " ms"
+            << "  IMG2D=" << img_avg << " ms"
             << "  CPU=" << cpu_avg << " ms"
             << "  ratio(GPU/CPU)=" << ratio
-            << "  (gpu_iters=" << gpu_iters
-            << ", cpu_iters=" << cpu_iters << ")" << std::endl;
+            << "  ratio(IMG2D/GPU)=" << img_vs_gpu
+            << std::endl;
 
+  freeSVM(image2d_out_svm);
   freeSVM(input_svm);
   freeSVM(weight_svm);
   freeSVM(scale_svm);

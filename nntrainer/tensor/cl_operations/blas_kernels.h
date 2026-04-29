@@ -401,6 +401,59 @@ void gemv_int4_image_v5_cl(uint16_t *input, uint16_t *weights,
                            unsigned int K, unsigned int N);
 
 /**
+ * @brief Phase 2 image2d gemv: image2d input + image2d output.
+ *
+ * Reads input via image2d (must already be registered in GpuImagePool
+ * keyed by @p input_svm with shape M=1, height=K/4 -- typically
+ * published by upstream RMSNorm via svm_to_image2d_publish).  Writes
+ * output to a cached image2d (allocated/looked-up keyed by
+ * @p output_svm) and registers it in GpuImagePool for the next
+ * image2d-aware consumer.
+ *
+ * Avoids Adreno 830 coarse-grained SVM cross-kernel staleness entirely:
+ * the FC -> consumer chain is image-cache only, no SVM read between
+ * GPU kernels.
+ *
+ * @returns true if dispatched successfully, false on pool miss / shape
+ *   mismatch / unsupported K,N.  Caller is expected to fall back to
+ *   gemv_int4_adreno_cl (with sync_output=true) on miss so correctness
+ *   is preserved during decode.
+ */
+bool gemv_int4_image2d_cl(uint16_t *input_svm, uint16_t *weights,
+                          uint16_t *scales, uint16_t *output_svm,
+                          unsigned int K, unsigned int N);
+
+/**
+ * @brief Phase 2 image-only consumer helpers.
+ *
+ * SwiGLU and elementwise addition that take BOTH inputs from
+ * GpuImagePool (typically the previous FC's image2d output published
+ * by gemv_int4_image2d_cl) and write a fresh image2d output keyed by
+ * @p out_svm.  Letting the FC -> consumer chain stay entirely on
+ * image cache means downstream layers never have to read the SVM
+ * companion of an image2d FC, so Adreno's coarse-grained SVM
+ * coherence never bites and the per-FC blocking SVMMap (DEBUG_SYNC)
+ * can eventually be dropped.
+ *
+ * Both helpers return false on pool miss / shape mismatch so the
+ * caller can fall back to its existing SVM path.  Output image2d
+ * shape is (M, K/4); K must be a multiple of 4.
+ */
+bool swiglu_image2d_cl(void *gate_svm, void *up_svm, void *out_svm,
+                       unsigned int M, unsigned int K);
+bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
+                         unsigned int M, unsigned int K);
+
+/**
+ * @brief Diagnostic-only helper: read a published image2d from
+ * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
+ * unittest cross-check what a producer kernel wrote to image2d
+ * vs the SVM companion it wrote in parallel.
+ */
+bool image2d_to_svm_for_test(void *src_svm_key, void *dst_svm,
+                              unsigned int M, unsigned int N);
+
+/**
  * @brief INT8 activation x INT4 weight GEMM for Adreno GPUs
  *        (gpu_int8_int4_gemm_adreno kernel).
  *
