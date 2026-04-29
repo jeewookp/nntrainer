@@ -1,69 +1,3 @@
-In file included from ./../layers/mha_core.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Executable     : nntr_quantize
--e [SUCCESS] Build completed successfully
--e [INFO] Build artifacts:
--e   [WARN] libcausallm_core.so found in obj but not in libs. Copying...
--e   [OK] libcausallm_core.so (44M) (Copied from obj)
--e   [WARN] nntrainer_causallm found in obj but not in libs. Copying...
--e   [OK] nntrainer_causallm (3.8M) (Copied from obj)
--e   [WARN] nntr_quantize found in obj but not in libs. Copying...
--e   [OK] nntr_quantize (44M) (Copied from obj)
--e 
-========================================
--e  Build Summary 
--e ========================================
--e [SUCCESS] Build completed successfully!
--e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
--e [INFO] Executables:
--e [INFO]   - nntrainer_causallm (main application), nntr_quantize
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.8 MB/s (46126240 bytes in 1.343s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.4 MB/s (3960072 bytes in 0.116s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 32.9 MB/s (45670320 bytes in 1.326s)
-3 files pushed. 32.8 MB/s (95756632 bytes in 2.787s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.0 MB/s (11221544 bytes in 0.335s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 23.6 MB/s (129304 bytes in 0.005s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 32.0 MB/s (1822720 bytes in 0.054s)
-[temp.sh] patched on-device nntr_config.json:
-    "model_tensor_type": "QINT4-FP16",
-    "num_to_generate": 32,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
-ANDROID_ART_ROOT
-ANDROID_ASSETS
-ANDROID_BOOTLOGO
-ANDROID_DATA
-ANDROID_I18N_ROOT
-ANDROID_ROOT
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
-BOOTCLASSPATH
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
 KNOX_STORAGE
 LD_LIBRARY_PATH
 LOGNAME
@@ -76,35 +10,137 @@ SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
-ANDROID_ART_ROOT
-ANDROID_ASSETS
-ANDROID_BOOTLOGO
-ANDROID_DATA
-ANDROID_I18N_ROOT
-ANDROID_ROOT
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
-BOOTCLASSPATH
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
-KNOX_STORAGE
-LD_LIBRARY_PATH
-LOGNAME
-MEMTAG_OPTIONS
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-temp.sh: line 195: syntax error near unexpected token `('
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+\/
+</think>
+
+</think>
+
+The paper introduces Thyme (Think Beyond Images), a new paradigm that extends the "think with images" approach by enabling multimodal large
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 2656 ms, 164.533 TPS
+generation: 32 tokens, 7725 ms, 4.14239 TPS
+total: 10389 ms
+peak memory: 2632428 KB
+==========================================================
+[e2e time]: 13260 ms 
+Max Resident Set Size: 2632428 KB
+
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=7663.8 ms across all forwarding_op() calls
+  fully_connected               3662.6 ms  calls=5760  avg=0.636 ms
+  mha_core                      1657.0 ms  calls=1152  avg=1.438 ms
+  gate_up_layer                  873.9 ms  calls=1152  avg=0.759 ms
+  rms_norm                       855.7 ms  calls=2336  avg=0.366 ms
+  tie_word_embeddings            452.7 ms  calls=64  avg=7.073 ms
+  reshaped_rms_norm              107.6 ms  calls=2304  avg=0.047 ms
+  addition                        29.2 ms  calls=2304  avg=0.013 ms
+  swiglu                          23.0 ms  calls=1152  avg=0.020 ms
+  multiout                         2.1 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=383.36 ms calls=32 avg=11.980 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=69.20 ms calls=32 avg=2.163 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1656.25 ms calls=1152 avg=1.438 ms
+  rope_q   :     1.01 ms (  0.1%)
+  rope_k   :     1.41 ms (  0.1%)
+  v_copy   :     1.00 ms (  0.1%)
+  qk       :  1468.33 ms ( 88.7%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=3650.80 ms calls=5760
+  in_copy   :     1.87 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  3647.16 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     1.77 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE gemv_int4_image_v1 decode] calls=5760 avg_wall=0.628 ms avg_gpu=0.448 ms
+  dispatch   :   30.77 ms   [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 3584.31 ms   [blocking enqueueSVMMap(output)]
+  gpu_kernel : 2581.54 ms   [cl_event device time, 5760 events]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+prefill: 437 tokens, 2656 ms, 164.533 TPS
+generation: 32 tokens, 7725 ms, 4.14239 TPS
+total: 10389 ms
+peak memory: 2632428 KB
+[e2e time]: 13260 ms 
+
+-- Decode-path profiles (M==1, fired per generation token) --
+   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
+    unset it in temp.sh to restore the prefill breakdown.)
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=7663.8 ms across all forwarding_op() calls
+  fully_connected               3662.6 ms  calls=5760  avg=0.636 ms
+  mha_core                      1657.0 ms  calls=1152  avg=1.438 ms
+  gate_up_layer                  873.9 ms  calls=1152  avg=0.759 ms
+  rms_norm                       855.7 ms  calls=2336  avg=0.366 ms
+  tie_word_embeddings            452.7 ms  calls=64  avg=7.073 ms
+  reshaped_rms_norm              107.6 ms  calls=2304  avg=0.047 ms
+  addition                        29.2 ms  calls=2304  avg=0.013 ms
+  swiglu                          23.0 ms  calls=1152  avg=0.020 ms
+  multiout                         2.1 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=383.36 ms calls=32 avg=11.980 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=69.20 ms calls=32 avg=2.163 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1656.25 ms calls=1152 avg=1.438 ms
+  rope_q   :     1.01 ms (  0.1%)
+
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=383.36 ms calls=32 avg=11.980 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=69.20 ms calls=32 avg=2.163 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1656.25 ms calls=1152 avg=1.438 ms
+  rope_q   :     1.01 ms (  0.1%)
+  rope_k   :     1.41 ms (  0.1%)
+  v_copy   :     1.00 ms (  0.1%)
+  qk       :  1468.33 ms ( 88.7%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=3650.80 ms calls=5760
+  in_copy   :     1.87 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :  3647.16 ms ( 99.9%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     1.77 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE gemv_int4_image_v1 decode] calls=5760 avg_wall=0.628 ms avg_gpu=0.448 ms
+  dispatch   :   30.77 ms   [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 3584.31 ms   [blocking enqueueSVMMap(output)]
+  gpu_kernel : 2581.54 ms   [cl_event device time, 5760 events]
+
+-- Generation snippet (first 300 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+\/
+</think>
+
+</think>
+
+The paper introduces Thyme (Think Beyond Images), a new paradigm that extends the "think with images" approach by enabling multimodal large
+
+=================[ L
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
