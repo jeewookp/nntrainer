@@ -3,36 +3,87 @@ remote: Enumerating objects: 5, done.
 remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 775 bytes | 129.00 KiB/s, done.
+Unpacking objects: 100% (3/3), 847 bytes | 141.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   2984dda3..aee52df7  litert_lm  -> origin/litert_lm
-Updating 2984dda3..aee52df7
+   e6d78ae7..a8d85316  litert_lm  -> origin/litert_lm
+Updating e6d78ae7..a8d85316
 Fast-forward
- temp_litert_decode_kernel_capture.sh | 20 ++++++++++++++++++++
- 1 file changed, 20 insertions(+)
+ temp_litert_decode_kernel_capture.sh | 23 +++++++++++++++++++----
+ 1 file changed, 19 insertions(+), 4 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ bash temp_litert_decode_kernel_capture.sh 
 [decode_intercept.sh] Building cl_intercept + litert_lm_main with bazel ...
-[3,668 / 3,765] Compiling src/google/protobuf/descriptor.cc; 12s local ... (25 actions, 24 running)
-[3,673 / 3,765] Compiling src/google/protobuf/descriptor.cc; 13s local ... (25 actions, 24 running)
-[3,683 / 3,765] Compiling src/google/protobuf/descriptor.cc; 14s local ... (25 actions, 24 running)
-[3,688 / 3,765] Compiling litert/runtime/compiled_model.cc; 5s local ... (25 actions, 24 running)
-[3,696 / 3,765] Compiling litert/runtime/compiled_model.cc; 6s local ... (24 actions, 23 running)
-[3,704 / 3,765] Compiling litert/runtime/compiled_model.cc; 7s local ... (24 actions, 23 running)
-[3,709 / 3,765] Compiling litert/runtime/compiled_model.cc; 8s local ... (24 actions, 23 running)
-[3,720 / 3,765] Compiling runtime/util/log_tensor_buffer.cc; 3s local ... (24 actions, 23 running)
-[3,724 / 3,765] Compiling litert/cc/litert_compiled_model.cc; 4s local ... (24 actions, 23 running)
-[3,730 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 4s local ... (24 actions, 23 running)
-[3,734 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 6s local ... (24 actions, 23 running)
-[3,739 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 7s local ... (24 actions, 23 running)
-[3,743 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 8s local ... (21 actions running)
-[3,750 / 3,765] Compiling runtime/executor/llm_litert_npu_compiled_model_executor.cc; 6s local ... (14 actions running)
-[3,761 / 3,765] Compiling runtime/executor/llm_litert_npu_compiled_model_executor.cc; 8s local ... (3 actions running)
-[3,764 / 3,765] [Prepa] Linking runtime/engine/litert_lm_main
-INFO: Found 2 targets...
-INFO: Elapsed time: 83.518s, Critical Path: 15.81s
-INFO: 1942 processes: 5 internal, 1937 local.
-INFO: Build completed successfully, 1942 total actions
-[decode_intercept.sh] Pushing to device ...
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/ --experimental_repo_remote_exec --noenable_bzlmod
+INFO: Reading rc options for 'build' from /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc:
+  'build' options: --define=resolve_symbols_in_exec=true --repo_env=USE_PYWRAP_RULES=True --copt=-DGRPC_BAZEL_BUILD --host_copt=-DGRPC_BAZEL_BUILD --action_env=GRPC_BAZEL_RUNTIME=1 --repo_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --action_env=PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=upb --@rules_python//python/config_settings:precompile=force_disabled --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --features=-force_no_whole_archive --host_features=-force_no_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --@rules_ml_toolchain//common:enable_hermetic_cc=False --repo_env USE_HERMETIC_CC_TOOLCHAIN=0 --repo_env=HERMETIC_PYTHON_VERSION=3.13 --config=v2 --config=litert_prefixes --features=-layering_check --host_features=-layering_check --features=-header_modules --host_features=-header_modules
+INFO: Found applicable config definition build:short_logs in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:litert_prefixes in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --define=litert_prefixes=external/org_tensorflow/
+INFO: Found applicable config definition build:android_arm64 in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --config=android --cpu=arm64-v8a --fat_apk_cpu=arm64-v8a --platforms=@org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a
+INFO: Found applicable config definition build:android in file /home/jwhero94/projects/nntrainer_litert_lm/.bazelrc: --crosstool_top=//external:android/crosstool --host_crosstool_top=@bazel_tools//tools/cpp:toolchain --dynamic_mode=off --define=xnn_enable_avxvnniint8=false --noenable_platform_specific_config --copt=-w --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 --define=with_xla_support=false --copt=-DABSL_FLAGS_STRIP_NAMES=0
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: 2 targets (0 packages loaded, 0 targets configured)
+Analyzing: 2 targets (0 packages loaded, 0 targets configured)
 
+INFO: Analyzed 2 targets (122 packages loaded, 3660 targets configured).
+INFO: Found 2 targets...
+INFO: Elapsed time: 1.706s, Critical Path: 0.05s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+[decode_intercept.sh]   INTERCEPT_SO=bazel-bin/runtime/cl_bench/libcl_intercept.so.runfiles/litert_lm/runtime/cl_bench/libcl_intercept.so
+[decode_intercept.sh]   LITERT_BIN=bazel-bin/runtime/engine/litert_lm_main
+[decode_intercept.sh]   LIBLITERT_SO=bazel-bin/_solib_arm64-v8a/_Uexternal_Slitert_Slitert_Sc/libLiteRt.so
+[decode_intercept.sh] Pushing to device ...
+[decode_intercept.sh] Clearing CL caches ...
+
+[decode_intercept.sh] Running litert_lm_main: prefill=1 decode=256
+[decode_intercept.sh] Captured kernels go to /data/local/tmp/litert_lm/intercepted_cl/
+
+input_prompt: What is the tallest building in the world?
+VERBOSE: Replacing 1 out of 42 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
+INFO: Loaded OpenCL library with dlopen.
+INFO: [environment.cc:30] Creating LiteRT environment with options
+WARNING: [auto_registration.cc:78] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:162] Loading GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cbceadbb0, name=LiteRT GPU
+INFO: [gpu_registry.cc:170] Dynamically loaded GPU accelerator(libLiteRtGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0xb400007cbceabed0, name=CpuAccelerator
+INFO: [cpu_registry.cc:40] CPU accelerator registered.
+LaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptop (Laptop)LaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptopLaptop
+
+BenchmarkInfo:
+  Init Phases (7):
+    - Init Conversation: 0.04 ms
+    - Init Executor: 7219.50 ms
+    - Init LLM metadata: 0.14 ms
+    - Init Model assets: 64.48 ms
+    - Init Tokenizer: 79.24 ms
+    - Init Total: 7285.42 ms
+--------------------------------------------------
+  Time to first token: 0.02 s
+--------------------------------------------------
+  Prefill Turns (Total 1 turns):
+    Prefill Turn 1: Processed 1 tokens in 1.567032ms duration.
+      Prefill Speed: 638.15 tokens/sec.
+--------------------------------------------------
+  Decode Turns (Total 1 turns):
+    Decode Turn 1: Processed 256 tokens in 4.901261873s duration.
+      Decode Speed: 52.23 tokens/sec.
+--------------------------------------------------
+  TextToTokenIds Turns (Total 1 turns):
+    Turn 1: 51.51us, 1 tokens
+--------------------------------------------------
+--------------------------------------------------
+
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007cbceabed0, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007cbceadbb0, name=LiteRT GPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007cbce6d560, name=CpuAccelerator
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0xb400007cbce41b20, name=LiteRT GPU
+
+[decode_intercept.sh] Restoring vendor libOpenCL.so ...
+[decode_intercept.sh] Pulling captured CL sources ...
+/data/local/tmp/litert_lm/intercepted_cl/: 0 files pulled.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
