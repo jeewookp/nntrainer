@@ -1,133 +1,255 @@
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2770 ms, 157.762 TPS
-generation: 32 tokens, 8398 ms, 3.81043 TPS
-total: 11173 ms
-peak memory: 2730528 KB
-==========================================================
-[e2e time]: 14164 ms 
-Max Resident Set Size: 2730528 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=8336.7 ms across all forwarding_op() calls
-  fully_connected               4860.7 ms  calls=8064  avg=0.603 ms
-  mha_core                      1845.9 ms  calls=1152  avg=1.602 ms
-  rms_norm                       595.0 ms  calls=2336  avg=0.255 ms
-  tie_word_embeddings            478.1 ms  calls=64  avg=7.470 ms
-  addition                       411.2 ms  calls=2304  avg=0.178 ms
-  reshaped_rms_norm              110.4 ms  calls=2304  avg=0.048 ms
-  swiglu                          29.2 ms  calls=1152  avg=0.025 ms
-  multiout                         6.0 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=401.21 ms calls=32 avg=12.538 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=76.71 ms calls=32 avg=2.397 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1666.39 ms calls=1152 avg=1.447 ms
-  rope_q   :     1.19 ms (  0.1%)
-  rope_k   :     1.61 ms (  0.1%)
-  v_copy   :     1.23 ms (  0.1%)
-  qk       :  1476.24 ms ( 88.6%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4836.12 ms calls=8064
-  in_copy   :     2.99 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4828.73 ms ( 99.8%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     4.41 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE gemv_int4_image_v1 decode] calls=8064 avg_wall=0.594 ms avg_gpu=0.411 ms
-  dispatch   :   64.85 ms   [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 4725.69 ms   [blocking enqueueSVMMap(output)]
-  gpu_kernel : 3312.90 ms   [cl_event device time, 8064 events]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
--- Gate resolution --
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-
--- Perf --
-prefill: 437 tokens, 2770 ms, 157.762 TPS
-generation: 32 tokens, 8398 ms, 3.81043 TPS
-total: 11173 ms
-peak memory: 2730528 KB
-[e2e time]: 14164 ms 
-
--- Decode-path profiles (M==1, fired per generation token) --
-   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
-    unset it in temp.sh to restore the prefill breakdown.)
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=8336.7 ms across all forwarding_op() calls
-  fully_connected               4860.7 ms  calls=8064  avg=0.603 ms
-  mha_core                      1845.9 ms  calls=1152  avg=1.602 ms
-  rms_norm                       595.0 ms  calls=2336  avg=0.255 ms
-  tie_word_embeddings            478.1 ms  calls=64  avg=7.470 ms
-  addition                       411.2 ms  calls=2304  avg=0.178 ms
-  reshaped_rms_norm              110.4 ms  calls=2304  avg=0.048 ms
-  swiglu                          29.2 ms  calls=1152  avg=0.025 ms
-  multiout                         6.0 ms  calls=4608  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=401.21 ms calls=32 avg=12.538 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=76.71 ms calls=32 avg=2.397 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1666.39 ms calls=1152 avg=1.447 ms
-  rope_q   :     1.19 ms (  0.1%)
-  rope_k   :     1.61 ms (  0.1%)
-
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=401.21 ms calls=32 avg=12.538 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=76.71 ms calls=32 avg=2.397 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1666.39 ms calls=1152 avg=1.447 ms
-  rope_q   :     1.19 ms (  0.1%)
-  rope_k   :     1.61 ms (  0.1%)
-  v_copy   :     1.23 ms (  0.1%)
-  qk       :  1476.24 ms ( 88.6%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=4836.12 ms calls=8064
-  in_copy   :     2.99 ms (  0.1%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :  4828.73 ms ( 99.8%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     4.41 ms (  0.1%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE gemv_int4_image_v1 decode] calls=8064 avg_wall=0.594 ms avg_gpu=0.411 ms
-  dispatch   :   64.85 ms   [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 4725.69 ms   [blocking enqueueSVMMap(output)]
-  gpu_kernel : 3312.90 ms   [cl_event device time, 8064 events]
-
--- Generation snippet (first 300 chars after <|im_start|>assistant) --
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-
-
-=================[ LLM with
-
-Full log: temp_run.log
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+Installing /home/jwhero94/projects/nntrainer/builddir/api/capi/capi-ml-training.pc to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/pkgconfig
+Installing /home/jwhero94/projects/nntrainer/jni/Android-prebuilt.mk to /home/jwhero94/projects/nntrainer/builddir/android_build_result
+Running custom install script '/usr/bin/sh -c cp -r /home/jwhero94/projects/nntrainer/builddir/res ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/examples'
+Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/ml-api-common.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
+Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/tizen_error.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
+./
+./lib/
+./lib/arm64-v8a/
+./lib/arm64-v8a/libnnstreamer-native.so
+./lib/arm64-v8a/libnntrainer.so
+./lib/arm64-v8a/libc++_shared.so
+./lib/arm64-v8a/libccapi-nntrainer.so
+./lib/arm64-v8a/libcapi-nntrainer.so
+./lib/arm64-v8a/libOpenCL.so
+./lib/pkgconfig/
+./lib/pkgconfig/nntrainer.pc
+./lib/pkgconfig/ccapi-ml-training.pc
+./lib/pkgconfig/capi-ml-training.pc
+./include/
+./include/nntrainer/
+./include/nntrainer/dataset.h
+./include/nntrainer/char_tensor.h
+./include/nntrainer/memory_planner.h
+./include/nntrainer/context.h
+./include/nntrainer/uint_tensor.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h
+./include/nntrainer/model_common_properties.h
+./include/nntrainer/databuffer_factory.h
+./include/nntrainer/neon_setting.h
+./include/nntrainer/manager.h
+./include/nntrainer/opencl_buffer.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h
+./include/nntrainer/attention_kernel_interface.h
+./include/nntrainer/tensor_pool.h
+./include/nntrainer/cblas_interface.h
+./include/nntrainer/clblast_interface.h
+./include/nntrainer/layer_devel.h
+./include/nntrainer/databuffer.h
+./include/nntrainer/gpu_image_pool.h
+./include/nntrainer/fallback_internal.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p_qsi4c32p_interface.h
+./include/nntrainer/hgemm_util.h
+./include/nntrainer/mem_allocator.h
+./include/nntrainer/opencl_loader.h
+./include/nntrainer/hgemm.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.h
+./include/nntrainer/dynamic_training_optimization.h
+./include/nntrainer/hgemm_padding_a.h
+./include/nntrainer/tensor_base.h
+./include/nntrainer/nntr_ggml_impl_common.h
+./include/nntrainer/short_tensor.h
+./include/nntrainer/acti_func.h
+./include/nntrainer/opencl_kernel.h
+./include/nntrainer/opencl_command_queue_manager.h
+./include/nntrainer/ml-api-common.h
+./include/nntrainer/common_properties.h
+./include/nntrainer/singleton.h
+./include/nntrainer/engine.h
+./include/nntrainer/matrix_transpose_kernels_neon.h
+./include/nntrainer/noncopyable.h
+./include/nntrainer/profile_gate.h
+./include/nntrainer/int4_tensor.h
+./include/nntrainer/nonmovable.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h
+./include/nntrainer/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h
+./include/nntrainer/tensor.h
+./include/nntrainer/app_context.h
+./include/nntrainer/int4_utils.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h
+./include/nntrainer/cache_loader.h
+./include/nntrainer/q4_k_tensor.h
+./include/nntrainer/nntrainer.h
+./include/nntrainer/model.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.h
+./include/nntrainer/half_tensor.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h
+./include/nntrainer/lr_scheduler.h
+./include/nntrainer/cache_elem.h
+./include/nntrainer/layer.h
+./include/nntrainer/neon_mathfun.hxx
+./include/nntrainer/neuralnet.h
+./include/nntrainer/tensor_api.h
+./include/nntrainer/cache_pool.h
+./include/nntrainer/graph_core.h
+./include/nntrainer/q4_0_utils.h
+./include/nntrainer/mask_neon.h
+./include/nntrainer/opencl_program.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.h
+./include/nntrainer/hgemm_padding.h
+./include/nntrainer/operation_layer.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h
+./include/nntrainer/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h
+./include/nntrainer/tensor_dim.h
+./include/nntrainer/base_properties.h
+./include/nntrainer/dynamic_library_loader.h
+./include/nntrainer/basic_planner.h
+./include/nntrainer/blas_kernels.h
+./include/nntrainer/arm_compute_backend.h
+./include/nntrainer/loss_layer.h
+./include/nntrainer/bs_thread_pool.h
+./include/nntrainer/q4_0_tensor.h
+./include/nntrainer/optimizer_devel.h
+./include/nntrainer/neon_mathfun.h
+./include/nntrainer/opencl_buffer_manager.h
+./include/nntrainer/compiler_fwd.h
+./include/nntrainer/layer_impl.h
+./include/nntrainer/ggml_interface.h
+./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32.h
+./include/nntrainer/memory_data.h
+./include/nntrainer/blas_kernel_interface.h
+./include/nntrainer/q6_k_tensor.h
+./include/nntrainer/opencl_device_info.h
+./include/nntrainer/weight.h
+./include/nntrainer/kleidiai_interface.h
+./include/nntrainer/neon_impl.h
+./include/nntrainer/cl_context.h
+./include/nntrainer/nntr_ggml_impl.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.h
+./include/nntrainer/optimizer.h
+./include/nntrainer/tensor_layer.h
+./include/nntrainer/cl_kernels/
+./include/nntrainer/cl_kernels/concat_axis_1_fp16.h
+./include/nntrainer/cl_kernels/transpose_axis_0.h
+./include/nntrainer/cl_kernels/concat_axis_3.h
+./include/nntrainer/cl_kernels/delegate_conv_wave.h
+./include/nntrainer/cl_kernels/rotary_emb.h
+./include/nntrainer/cl_kernels/transpose_axis_1.h
+./include/nntrainer/cl_kernels/rmsnorm_fp16.h
+./include/nntrainer/cl_kernels/int4_gemv_image_v4.h
+./include/nntrainer/cl_kernels/int4_gemv_image_v2.h
+./include/nntrainer/cl_kernels/int4_gemv_image_v1.h
+./include/nntrainer/cl_kernels/restore_block_q4_0.h
+./include/nntrainer/cl_kernels/int4_gemm_adreno_v2.h
+./include/nntrainer/cl_kernels/sgemm_trans_a.h
+./include/nntrainer/cl_kernels/swiglu.h
+./include/nntrainer/cl_kernels/addition_fp16.h
+./include/nntrainer/cl_kernels/hscal.h
+./include/nntrainer/cl_kernels/int8_int4_gemm_adreno.h
+./include/nntrainer/cl_kernels/dequant_int4_to_fp16.h
+./include/nntrainer/cl_kernels/image_reformat.h
+./include/nntrainer/cl_kernels/transpose_axis_2_fp16.h
+./include/nntrainer/cl_kernels/sscal.h
+./include/nntrainer/cl_kernels/transpose_axis_1_fp16.h
+./include/nntrainer/cl_kernels/concat_axis_1.h
+./include/nntrainer/cl_kernels/hgemm_trans_a.h
+./include/nntrainer/cl_kernels/transpose_16bit.h
+./include/nntrainer/cl_kernels/convert_block_q4_0.h
+./include/nntrainer/cl_kernels/int4_gemm_adreno.h
+./include/nntrainer/cl_kernels/cl_kernels.h
+./include/nntrainer/cl_kernels/concat_axis_2.h
+./include/nntrainer/cl_kernels/addition_image2d.h
+./include/nntrainer/cl_kernels/dot.h
+./include/nntrainer/cl_kernels/int4_quantize_input.h
+./include/nntrainer/cl_kernels/hgemm_trans_ab.h
+./include/nntrainer/cl_kernels/int4_gemv_image_v5.h
+./include/nntrainer/cl_kernels/copy.h
+./include/nntrainer/cl_kernels/swiglu_fp16.h
+./include/nntrainer/cl_kernels/concat_axis_3_fp16.h
+./include/nntrainer/cl_kernels/hgemv.h
+./include/nntrainer/cl_kernels/add2_fp16_svm.h
+./include/nntrainer/cl_kernels/sgemm_no_trans.h
+./include/nntrainer/cl_kernels/attention_fused_fp16.h
+./include/nntrainer/cl_kernels/transpose_32bit_16bit.h
+./include/nntrainer/cl_kernels/rotary_emb_fp16.h
+./include/nntrainer/cl_kernels/int4_gemm_adreno_v3.h
+./include/nntrainer/cl_kernels/transpose_axis_2.h
+./include/nntrainer/cl_kernels/q6_k_sgemv.h
+./include/nntrainer/cl_kernels/rmsnorm_image2d.h
+./include/nntrainer/cl_kernels/addition.h
+./include/nntrainer/cl_kernels/dot_fp16.h
+./include/nntrainer/cl_kernels/copy_fp16.h
+./include/nntrainer/cl_kernels/hgemm_no_trans.h
+./include/nntrainer/cl_kernels/transpose_axis_0_fp16.h
+./include/nntrainer/cl_kernels/sgemm_trans_b.h
+./include/nntrainer/cl_kernels/sgemv_no_trans.h
+./include/nntrainer/cl_kernels/int4_gemm.h
+./include/nntrainer/cl_kernels/q4_0_ab_bi_8x4.h
+./include/nntrainer/cl_kernels/sgemv.h
+./include/nntrainer/cl_kernels/rmsnorm_image2d_v2.h
+./include/nntrainer/cl_kernels/int4_gemv_adreno.h
+./include/nntrainer/cl_kernels/int4_gemv_image_v3.h
+./include/nntrainer/cl_kernels/swiglu_image2d.h
+./include/nntrainer/cl_kernels/int4_gemv.h
+./include/nntrainer/cl_kernels/input_transpose.h
+./include/nntrainer/cl_kernels/hgemv_no_trans.h
+./include/nntrainer/cl_kernels/embedding_fp16.h
+./include/nntrainer/cl_kernels/sgemm_trans_ab.h
+./include/nntrainer/cl_kernels/hgemm_trans_b.h
+./include/nntrainer/cl_kernels/embedding.h
+./include/nntrainer/cl_kernels/concat_axis_2_fp16.h
+./include/nntrainer/cl_kernels/rmsnorm.h
+./include/nntrainer/graph_node.h
+./include/nntrainer/swap_device.h
+./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32_neon.h
+./include/nntrainer/nntrainer-api-common.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h
+./include/nntrainer/cl_platform.h
+./include/nntrainer/profiler.h
+./include/nntrainer/tensor_wrap_specs.h
+./include/nntrainer/tizen_error.h
+./include/nntrainer/nntr_ggml_impl_utils.h
+./include/nntrainer/fallback_kleidiai.h
+./include/nntrainer/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h
+./include/nntrainer/opencl_context_manager.h
+./include/nntrainer/nntr_threads.h
+./include/nntrainer/util_simd.h
+./include/nntrainer/layer_node.h
+./include/nntrainer/optimizer_context.h
+./include/nntrainer/weight_layer.h
+./include/nntrainer/hgemm_common.h
+./include/nntrainer/task_executor.h
+./include/nntrainer/nntrainer_logger.h
+./include/nntrainer/cpu_backend.h
+./include/nntrainer/matrix_transpose_neon.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
+./include/nntrainer/fp16.h
+./include/nntrainer/quantizer.h
+./include/nntrainer/util_func.h
+./include/nntrainer/var_grad.h
+./include/nntrainer/memory_pool.h
+./include/nntrainer/nntrainer_log.h
+./include/nntrainer/connection.h
+./include/nntrainer/common.h
+./include/nntrainer/nntrainer_error.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
+./include/nntrainer/node_exporter.h
+./include/nntrainer/optimizer_wrapped.h
+./include/nntrainer/mman_windows.h
+./include/nntrainer/CL/
+./include/nntrainer/CL/opencl.h
+./include/nntrainer/CL/cl_version.h
+./include/nntrainer/CL/cl.h
+./include/nntrainer/CL/cl_platform.h
+./include/nntrainer/task.h
+./include/nntrainer/hgemm_pack.h
+./include/nntrainer/bs_thread_pool_manager.hpp
+./include/nntrainer/hgemm_kernel.h
+./include/nntrainer/hgemm_padding_b.h
+./include/nntrainer/kai_common.h
+./include/nntrainer/float_tensor.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
+./include/nntrainer/uint4_tensor.h
+./include/nntrainer/network_graph.h
+./include/nntrainer/layer_context.h
+./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
+./Android.mk
+./examples/
+./conf/
+./conf/nntrainer.ini
+~/projects/nntrainer ~/projects/nntrainer
+~/projects/nntrainer
+[gemv_compare.sh] Building unittest_opencl_kernels_gemv_compare ...
+run_gemv_compare.sh: 43: pushd: not found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
