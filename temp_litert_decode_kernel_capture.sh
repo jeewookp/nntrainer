@@ -45,8 +45,18 @@ ASYNC="${ASYNC:-false}"
 # -----------------------------------------------------------------------------
 # Step 1: Build cl_intercept + litert_lm_main.
 # -----------------------------------------------------------------------------
-echo "[decode_intercept.sh] Building cl_intercept + litert_lm_main ..."
-bazelisk build \
+# Prefer bazelisk (auto-pins bazel version via .bazelversion); fall back
+# to plain bazel if bazelisk isn't installed.
+if command -v bazelisk >/dev/null 2>&1; then
+  BAZEL=bazelisk
+elif command -v bazel >/dev/null 2>&1; then
+  BAZEL=bazel
+else
+  echo "[decode_intercept.sh] ERROR: neither bazelisk nor bazel found in PATH"
+  exit 1
+fi
+echo "[decode_intercept.sh] Building cl_intercept + litert_lm_main with ${BAZEL} ..."
+${BAZEL} build \
   --config=android_arm64 \
   --copt=-O3 \
   //runtime/cl_bench:cl_intercept \
