@@ -1012,20 +1012,6 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // correct output, just doesn't take the speedup).
     static const bool s_image2d =
       std::getenv("NNTRAINER_GEMV_IMAGE2D") != nullptr;
-    // Entry fence: when run without NNTRAINER_PROFILE_LAYER_SYNC=1 the
-    // upstream GPU layer (rmsnorm_image2d, addition GPU path, ...) has
-    // not drained, so the scalar in_u16 read below would see stale
-    // host memory.  Drain the queue first (mirrors the M>1 prefill path
-    // at line 1167).  Cheap when the queue is already idle.
-    {
-      auto *cl_ctx_in =
-        static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-      if (cl_ctx_in) {
-        cl_ctx_in->command_queue_inst_.enqueueSVMMap(
-          in_u16, static_cast<size_t>(K) * sizeof(uint16_t),
-          /*read_only=*/true);
-      }
-    }
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
@@ -1293,17 +1279,6 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   // Shared activation stage-in. Only profiled on the M>1 prefill path to
   // stay consistent with the single-weight dotQInteger profiler.
   const size_t in_total = static_cast<size_t>(M) * static_cast<size_t>(K);
-  // Entry fence: same reason as the M=1 single-FC path -- without
-  // NNTRAINER_PROFILE_LAYER_SYNC the upstream GPU layer hasn't drained
-  // and the scalar read below would see stale host memory.
-  if (M == 1) {
-    auto *cl_ctx_in =
-      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-    if (cl_ctx_in) {
-      cl_ctx_in->command_queue_inst_.enqueueSVMMap(
-        in_u16, in_total * sizeof(uint16_t), /*read_only=*/true);
-    }
-  }
   const uint64_t t_in_start = (M > 1) ? now_ns() : 0;
   for (size_t i = 0; i < in_total; ++i) {
     svm_in[i] = in_u16[i];
