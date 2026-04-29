@@ -127,8 +127,15 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_PROFILE_LAYER_SYNC=1; \
-  export NNTRAINER_GEMV_IMAGE_STEP=0; \
-  export NNTRAINER_GEMV_IMAGE2D=1; \
+  export NNTRAINER_GEMV_IMAGE_STEP=5; \
+  # NNTRAINER_GEMV_IMAGE2D path is left in tree (env-gated off by
+  # default).  Per the production-validation run: with output
+  # SVMMap fence the path produces canonical output but TPS is
+  # ~unchanged vs baseline (image2d kernel raw speedup of -55%
+  # in unittest is offset by GpuImagePool lookup + cl_image
+  # allocation overhead accumulating across 8064 FC calls/run).
+  # Set NNTRAINER_GEMV_IMAGE2D=1 to opt in once the helper
+  # overhead is brought down.
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
