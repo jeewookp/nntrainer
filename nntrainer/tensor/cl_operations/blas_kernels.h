@@ -378,6 +378,17 @@ void gemv_int4_adreno_cl(uint16_t *input, uint16_t *weights, uint16_t *scales,
                          uint16_t *output, unsigned int K, unsigned int N,
                          bool sync_output = true);
 
+// Same contract as gemv_int4_adreno_cl, but binds `input` through
+// __constant memory.  Tests whether routing the activation vector
+// through Adreno's per-CU constant cache (separate from L1) measurably
+// reduces per-call wall vs baseline.  Modeled after LiteRT's
+// program_002.cl (matmul_micro_benchmark int8 capture) which uses
+// __constant for its xmem buffer.
+void gemv_int4_adreno_v2_cl(uint16_t *input, uint16_t *weights,
+                            uint16_t *scales, uint16_t *output,
+                            unsigned int K, unsigned int N,
+                            bool sync_output = true);
+
 // Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
 // loads more of the gemv work (step 1 = weight only, step 2 = +
 // input, ...) but all write deterministic zero until correctness

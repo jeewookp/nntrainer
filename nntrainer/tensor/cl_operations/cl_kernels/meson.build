@@ -11,6 +11,7 @@ cl_op_kernels = [
   'embedding.cl',
   'int4_gemv.cl',
   'int4_gemv_adreno.cl',
+  'int4_gemv_adreno_v2.cl',
   'int4_gemv_image_v1.cl',
   'int4_gemv_image_v2.cl',
   'int4_gemv_image_v3.cl',
