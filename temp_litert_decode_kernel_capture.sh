@@ -1,30 +1,28 @@
 #!/usr/bin/env bash
 # temp_litert_decode_kernel_capture.sh
 #
-# Capture the OpenCL kernel sources LiteRT-LM compiles when running
-# DECODE-heavy (M=1) workloads.  Existing temp_litert_cl_intercept.sh
-# captures kernels from a synthetic matmul_micro_benchmark; the
-# kernels we care about for the nntrainer Stage 1 catchup
-# (gemm_delegate_fp16_cl-equivalent for M=1) only show up under the
-# real LiteRT engine running an actual model.
+# Captures the OpenCL kernel sources LiteRT's GPU delegate compiles
+# when dispatching DECODE-style M=1 GEMV.  This is the kernel family
+# we need to match in nntrainer's int4 GEMV path on Adreno 830 to
+# close the ~5x decode TPS gap vs LiteRT-LM (~26 TPS Qwen3-4B
+# normalized vs nntrainer 4.8 TPS).
 #
-# This script combines the two:
-#   - cl_intercept LD_PRELOAD setup from temp_litert_cl_intercept.sh
-#   - litert_lm_main run from temp_litert.sh with prefill_tokens=1
-#     (effectively skip prefill) and decode_tokens=256 (force lots
-#     of M=1 dispatches to populate every decode kernel variant)
+# Strategy.  litert_lm_main routes OpenCL through the closed-source
+# libLiteRtGpuAccelerator.so which bypasses LD_PRELOAD (likely via
+# absolute-path dlopen or a private linker namespace), so a direct
+# litert_lm_main intercept yields zero captured kernels (verified:
+# decode at 49 TPS but [cl_intercept] never logged a single call).
 #
-# Required env (matches the parent scripts):
-#   ANDROID_NDK_HOME   path to NDK r28b+
-#   adb                in PATH
-#   model              ~/.cache/litert_lm_models/gemma-4-E2B-it.litertlm
-#                      (set MODEL_PATH to override)
+# Instead we reuse matmul_micro_benchmark which IS interceptable
+# (proven by temp_litert_cl_intercept.sh capturing 5 .cl files for
+# M=1024xKxN), but feed it M=1 shapes so the LiteRT GPU delegate
+# picks its decode-time GEMV variant.  The delegate's kernel choice
+# is keyed on (dtype, shape) -- it'll lower 1xKxN through whatever
+# gemv kernel it would have picked for an actual decode dispatch.
 #
-# Output:
-#   runtime/cl_bench/intercepted_decode/program_*.cl
-#     -- the actual kernel sources that ran during decode.
-#   runtime/cl_bench/intercepted_decode/dispatch.log
-#     -- timing per kernel name (if cl_intercept logs dispatches).
+# Output: runtime/cl_bench/intercepted_decode/program_*.cl
+# (kept separate from the existing matmul_micro_benchmark M=1024
+# capture in runtime/cl_bench/intercepted/).
 #
 # Re-exec under bash if invoked via sh/dash.
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -33,8 +31,7 @@ fi
 
 # bazel's --config=android_arm64 (TF/LiteRT) refuses to register the
 # Android cc_toolchain unless ANDROID_NDK_HOME is exported BEFORE the
-# build invocation.  Mirror temp_litert_cl_intercept.sh so the user
-# doesn't have to set it manually.
+# build invocation.  Mirror temp_litert_cl_intercept.sh.
 export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$HOME/neo/android-ndk-r28b}"
 NDK_FALLBACK_R28B="${HOME}/neo/android-ndk-r28b"
 case "${ANDROID_NDK_HOME}" in
@@ -50,81 +47,69 @@ if [ ! -f "${ANDROID_NDK_HOME}/source.properties" ]; then
   exit 1
 fi
 
-set -e
-set -o pipefail
+set -euo pipefail
 
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
-# Must match cl_intercept.cc DUMP_DIR.  The interceptor hardcodes
-# /data/local/tmp/litert_lm/cl_intercept; pulling from anywhere else
-# returns 0 files even when the kernels were captured successfully.
 DEVICE_CL_DIR="${DEVICE_CL_DIR:-${DEVICE_FOLDER}/cl_intercept}"
 HOST_OUT_DIR="${HOST_OUT_DIR:-runtime/cl_bench/intercepted_decode}"
-MODEL_PATH="${MODEL_PATH:-$HOME/.cache/litert_lm_models/gemma-4-E2B-it.litertlm}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
-PREFILL_TOKENS="${PREFILL_TOKENS:-1}"     # effectively skip prefill
-DECODE_TOKENS="${DECODE_TOKENS:-256}"     # plenty of M=1 dispatches
-ASYNC="${ASYNC:-false}"
+INTERCEPT_DTYPE="${INTERCEPT_DTYPE:-int8_per_tensor}"
+INTERCEPT_ITERS="${INTERCEPT_ITERS:-2}"
+INTERCEPT_WARMUP="${INTERCEPT_WARMUP:-1}"
+
+# Qwen3-4B M=1 decode FC shapes (M x K x N):
+#   q_proj    1 x 2560 x 4096
+#   k/v_proj  1 x 2560 x 1024
+#   o_proj    1 x 4096 x 2560
+#   gate/up   1 x 2560 x 9728
+#   down_proj 1 x 9728 x 2560
+INTERCEPT_SHAPES="${INTERCEPT_SHAPES:-1x2560x4096,1x2560x1024,1x4096x2560,1x2560x9728,1x9728x2560}"
+
+BAZEL=$(command -v bazelisk || command -v bazel || true)
+[ -n "${BAZEL}" ] || { echo "[decode_intercept.sh] bazel not found"; exit 1; }
 
 # -----------------------------------------------------------------------------
-# Step 1: Build cl_intercept + litert_lm_main.
+# Step 1: Build cl_intercept + matmul_micro_benchmark.
 # -----------------------------------------------------------------------------
-# Prefer bazelisk (auto-pins bazel version via .bazelversion); fall back
-# to plain bazel if bazelisk isn't installed.
-if command -v bazelisk >/dev/null 2>&1; then
-  BAZEL=bazelisk
-elif command -v bazel >/dev/null 2>&1; then
-  BAZEL=bazel
-else
-  echo "[decode_intercept.sh] ERROR: neither bazelisk nor bazel found in PATH"
-  exit 1
-fi
-echo "[decode_intercept.sh] Building cl_intercept + litert_lm_main with ${BAZEL} ..."
+echo "[decode_intercept.sh] Building cl_intercept + matmul_micro_benchmark with ${BAZEL} ..."
 ${BAZEL} build \
   --config=android_arm64 \
   --copt=-O3 \
   //runtime/cl_bench:cl_intercept \
-  //runtime/engine:litert_lm_main \
+  //runtime/engine:matmul_micro_benchmark \
   2>&1 | tail -20
 
-# Locate built artifacts.  Hardcoded bazel-bin/<pkg>/<file> paths are
-# unreliable: libLiteRt.so lives under @litert//litert/c, and bazel
-# may shard libcl_intercept.so under a *_files dir depending on rule
-# version.  Mirror temp_litert_cl_intercept.sh and use `find -L`.
 INTERCEPT_SO=$(find -L bazel-bin/runtime/cl_bench -name "libcl_intercept.so" 2>/dev/null | head -1)
-LITERT_BIN=bazel-bin/runtime/engine/litert_lm_main
+MATMUL_BIN=bazel-bin/runtime/engine/matmul_micro_benchmark
 LIBLITERT_SO=$(find -L bazel-bin -maxdepth 8 -type f -name "libLiteRt.so" \
                  ! -path "*runfiles*" 2>/dev/null | head -1)
 if [ -z "${LIBLITERT_SO}" ]; then
   LIBLITERT_SO=$(find -L bazel-bin -type f -name "libLiteRt.so" 2>/dev/null | head -1)
 fi
 [ -n "${INTERCEPT_SO}" ] && [ -f "${INTERCEPT_SO}" ] || \
-  { echo "[decode_intercept.sh] ERROR: libcl_intercept.so not found under bazel-bin/runtime/cl_bench"; exit 1; }
-[ -f "${LITERT_BIN}" ] || \
-  { echo "[decode_intercept.sh] ERROR: litert_lm_main not found at ${LITERT_BIN}"; exit 1; }
+  { echo "[decode_intercept.sh] ERROR: libcl_intercept.so not found"; exit 1; }
+[ -f "${MATMUL_BIN}" ] || \
+  { echo "[decode_intercept.sh] ERROR: matmul_micro_benchmark not found"; exit 1; }
 [ -n "${LIBLITERT_SO}" ] && [ -f "${LIBLITERT_SO}" ] || \
-  { echo "[decode_intercept.sh] ERROR: libLiteRt.so not found under bazel-bin/"; exit 1; }
+  { echo "[decode_intercept.sh] ERROR: libLiteRt.so not found"; exit 1; }
 echo "[decode_intercept.sh]   INTERCEPT_SO=${INTERCEPT_SO}"
-echo "[decode_intercept.sh]   LITERT_BIN=${LITERT_BIN}"
+echo "[decode_intercept.sh]   MATMUL_BIN=${MATMUL_BIN}"
 echo "[decode_intercept.sh]   LIBLITERT_SO=${LIBLITERT_SO}"
 
 # -----------------------------------------------------------------------------
-# Step 2: Push interceptor + binary + model to device.
+# Step 2: Push interceptor + binary to device.
 # -----------------------------------------------------------------------------
-MODEL_BASENAME=$(basename "${MODEL_PATH}")
 echo "[decode_intercept.sh] Pushing to device ..."
 adb shell "mkdir -p ${DEVICE_FOLDER} ${DEVICE_CL_DIR}"
-adb shell "rm -f ${DEVICE_CL_DIR}/*.cl"
+adb shell "rm -f ${DEVICE_CL_DIR}/*.cl ${DEVICE_CL_DIR}/*.spv 2>/dev/null" || true
 # Save vendor libOpenCL.so if present
 adb shell "if [ -f ${DEVICE_FOLDER}/libOpenCL.so ]; then mv ${DEVICE_FOLDER}/libOpenCL.so ${DEVICE_FOLDER}/libOpenCL.so.bak; fi"
 # Push interceptor masquerading as libOpenCL.so AND under its real name
-# for LD_PRELOAD.  Both names have to resolve so that whether the
-# delegate dlopen()s libOpenCL.so or relies on LD_PRELOAD, our
-# clCreateProgramWithSource shim runs.
 adb push "${INTERCEPT_SO}" "${DEVICE_FOLDER}/libOpenCL.so" >/dev/null
 adb push "${INTERCEPT_SO}" "${DEVICE_FOLDER}/libcl_intercept.so" >/dev/null
-adb push "${LITERT_BIN}"   "${DEVICE_FOLDER}/litert_lm_main" >/dev/null
+adb push "${MATMUL_BIN}"   "${DEVICE_FOLDER}/matmul_micro_benchmark" >/dev/null
 adb push "${LIBLITERT_SO}" "${DEVICE_FOLDER}/libLiteRt.so" >/dev/null
-adb shell "chmod +x ${DEVICE_FOLDER}/litert_lm_main"
+adb shell "chmod +x ${DEVICE_FOLDER}/matmul_micro_benchmark"
 # GPU accelerator shlibs
 PREBUILT_DIR=prebuilt/android_arm64
 for f in libLiteRtGpuAccelerator.so libLiteRtOpenClAccelerator.so; do
@@ -134,11 +119,6 @@ for f in libLiteRtGpuAccelerator.so libLiteRtOpenClAccelerator.so; do
     fi
   fi
 done
-# Push model if not already there
-if ! adb shell "test -f ${DEVICE_FOLDER}/${MODEL_BASENAME}"; then
-  echo "[decode_intercept.sh] Pushing model ${MODEL_BASENAME} (~couple GB, slow) ..."
-  adb push "${MODEL_PATH}" "${DEVICE_FOLDER}/${MODEL_BASENAME}" >/dev/null
-fi
 
 # -----------------------------------------------------------------------------
 # Step 3: Clear CL caches so delegate is forced to compile from source.
@@ -149,24 +129,24 @@ adb shell "rm -rf ${DEVICE_FOLDER}/cache/* 2>/dev/null; \
            rm -rf /data/data/*/cache/cl_cache/* 2>/dev/null" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
-# Step 4: Run litert_lm_main with decode-heavy params + LD_PRELOAD interceptor.
+# Step 4: Run matmul_micro_benchmark with M=1 shapes + LD_PRELOAD.
 # -----------------------------------------------------------------------------
 echo ""
-echo "[decode_intercept.sh] Running litert_lm_main: prefill=${PREFILL_TOKENS} decode=${DECODE_TOKENS}"
+echo "[decode_intercept.sh] Running matmul_micro_benchmark with shapes: ${INTERCEPT_SHAPES}"
 echo "[decode_intercept.sh] Captured kernels go to ${DEVICE_CL_DIR}/"
 echo ""
 
 adb shell "cd ${DEVICE_FOLDER}; \
   LD_PRELOAD=./libcl_intercept.so \
   LD_LIBRARY_PATH=. \
-  taskset ${TASKSET_MASK} ./litert_lm_main \
+  taskset ${TASKSET_MASK} ./matmul_micro_benchmark \
     --backend=gpu \
-    --model_path=${DEVICE_FOLDER}/${MODEL_BASENAME} \
-    --benchmark=true \
-    --benchmark_prefill_tokens=${PREFILL_TOKENS} \
-    --benchmark_decode_tokens=${DECODE_TOKENS} \
-    --async=${ASYNC} \
-    --enable_op_profiling=false" 2>&1 | tail -40
+    --dtype=${INTERCEPT_DTYPE} \
+    --shapes=${INTERCEPT_SHAPES} \
+    --warmup=${INTERCEPT_WARMUP} \
+    --iters=${INTERCEPT_ITERS} \
+    --profile=false \
+    --max_tensor_mb=512" 2>&1 | tail -40
 
 # -----------------------------------------------------------------------------
 # Step 5: Restore vendor libOpenCL.so + pull captured kernels.
@@ -178,25 +158,26 @@ adb shell "if [ -f ${DEVICE_FOLDER}/libOpenCL.so.bak ]; then mv ${DEVICE_FOLDER}
 
 echo "[decode_intercept.sh] Pulling captured CL sources ..."
 mkdir -p "${HOST_OUT_DIR}"
-rm -f "${HOST_OUT_DIR}"/*.cl 2>/dev/null || true
-adb pull "${DEVICE_CL_DIR}/" "${HOST_OUT_DIR}/" 2>&1 | tail -5 || true
-# adb pull may put files in HOST_OUT_DIR/intercepted_cl -- flatten if so.
-if [ -d "${HOST_OUT_DIR}/intercepted_cl" ]; then
-  mv "${HOST_OUT_DIR}/intercepted_cl"/*.cl "${HOST_OUT_DIR}/" 2>/dev/null || true
-  rmdir "${HOST_OUT_DIR}/intercepted_cl" 2>/dev/null || true
+rm -f "${HOST_OUT_DIR}"/*.cl "${HOST_OUT_DIR}"/*.spv 2>/dev/null || true
+CL_COUNT=$(adb shell "ls ${DEVICE_CL_DIR}/*.cl ${DEVICE_CL_DIR}/*.spv 2>/dev/null | wc -l" | tr -d '\r ')
+if [ "${CL_COUNT}" -gt 0 ]; then
+  adb shell "ls ${DEVICE_CL_DIR}/*.cl ${DEVICE_CL_DIR}/*.spv 2>/dev/null" | while read -r f; do
+    f=$(echo "$f" | tr -d '\r')
+    base=$(basename "$f")
+    adb pull "$f" "${HOST_OUT_DIR}/${base}" 2>/dev/null
+    size=$(wc -c < "${HOST_OUT_DIR}/${base}" 2>/dev/null || echo "?")
+    echo "  ${HOST_OUT_DIR}/${base} (${size} bytes)"
+  done
 fi
 
-CL_COUNT=$(ls "${HOST_OUT_DIR}"/*.cl 2>/dev/null | wc -l)
 echo ""
 echo "===================================================================="
-echo " Captured ${CL_COUNT} CL kernel source(s) during decode-heavy run"
+echo " Captured ${CL_COUNT} CL kernel source(s) for M=1 decode dispatches"
 echo "===================================================================="
 echo " Host:   ${HOST_OUT_DIR}/"
 echo ""
-echo " Compare against runtime/cl_bench/intercepted/ (prefill+decode mix"
-echo " from the matmul_micro_benchmark intercept).  Programs that appear"
-echo " ONLY here are decode-specialised.  Programs in both places are"
-echo " shared between prefill and decode (likely 1x1 convs at different"
-echo " global dispatch sizes)."
+echo " Compare against runtime/cl_bench/intercepted/ (the M=1024 prefill"
+echo " capture).  Programs that appear ONLY here are decode-specialised"
+echo " (M=1 GEMV variants); programs in both directories are shared."
 echo ""
-ls -la "${HOST_OUT_DIR}"/*.cl 2>/dev/null | head
+ls -la "${HOST_OUT_DIR}"/*.cl "${HOST_OUT_DIR}"/*.spv 2>/dev/null | head
