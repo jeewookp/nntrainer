@@ -1,9 +1,3 @@
-./include/nntrainer/hgemm_kernel.h
-./include/nntrainer/hgemm_padding_b.h
-./include/nntrainer/kai_common.h
-./include/nntrainer/float_tensor.h
-./include/nntrainer/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h
-./include/nntrainer/uint4_tensor.h
 ./include/nntrainer/network_graph.h
 ./include/nntrainer/layer_context.h
 ./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f32.h
@@ -42,56 +36,95 @@ Note: Google Test filter = nntrainer_gemv_compare.*:nntrainer_fused_rmsnorm_qkv.
 [----------] 5 tests from nntrainer_gemv_compare
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_4096
 [gemv_compare] K=2560 N=4096  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/4096
-[gemv_compare] K=2560 N=4096  GPU=0.43477 ms  IMG2D=0.423591 ms  CPU=0.119501 ms  ratio(GPU/CPU)=3.63821  ratio(IMG2D/GPU)=0.974287
-[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (1907 ms)
+[gemv_compare] K=2560 N=4096  GPU=0.433975 ms  IMG2D=0.422558 ms  CPU=0.113584 ms  ratio(GPU/CPU)=3.82075  ratio(IMG2D/GPU)=0.973692
+[gemv_compare] K=2560 N=4096  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=3693/4096
+[gemv_compare] K=2560 N=4096  DELEGATE_M1=0.959459 ms  ratio(DLG/GPU)=2.21086
+[       OK ] nntrainer_gemv_compare.K_2560_N_4096 (39313 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_1024
 [gemv_compare] K=2560 N=1024  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/1024
-[gemv_compare] K=2560 N=1024  GPU=0.466766 ms  IMG2D=0.426048 ms  CPU=0.171128 ms  ratio(GPU/CPU)=2.72758  ratio(IMG2D/GPU)=0.912764
-[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (2282 ms)
+[gemv_compare] K=2560 N=1024  GPU=0.473054 ms  IMG2D=0.419827 ms  CPU=0.214669 ms  ratio(GPU/CPU)=2.20364  ratio(IMG2D/GPU)=0.887482
+[gemv_compare] K=2560 N=1024  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=925/1024
+[gemv_compare] K=2560 N=1024  DELEGATE_M1=0.301822 ms  ratio(DLG/GPU)=0.638028
+[       OK ] nntrainer_gemv_compare.K_2560_N_1024 (4213 ms)
 [ RUN      ] nntrainer_gemv_compare.K_4096_N_2560
 [gemv_compare] K=4096 N=2560  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/2560
-[gemv_compare] K=4096 N=2560  GPU=0.861557 ms  IMG2D=0.573491 ms  CPU=0.315836 ms  ratio(GPU/CPU)=2.72786  ratio(IMG2D/GPU)=0.665644
-[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (2025 ms)
+[gemv_compare] K=4096 N=2560  GPU=0.767404 ms  IMG2D=0.588307 ms  CPU=0.193621 ms  ratio(GPU/CPU)=3.96344  ratio(IMG2D/GPU)=0.76662
+[gemv_compare] K=4096 N=2560  DELEGATE_M1 vs baseline:  max_abs=79  big_diff(>1e-2)=2403/2560
+[gemv_compare] K=4096 N=2560  DELEGATE_M1=1.0235 ms  ratio(DLG/GPU)=1.33371
+[       OK ] nntrainer_gemv_compare.K_4096_N_2560 (10788 ms)
 [ RUN      ] nntrainer_gemv_compare.K_2560_N_9728
 [gemv_compare] K=2560 N=9728  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/9728
-[gemv_compare] K=2560 N=9728  GPU=0.533651 ms  IMG2D=0.565392 ms  CPU=0.405941 ms  ratio(GPU/CPU)=1.3146  ratio(IMG2D/GPU)=1.05948
-[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (1912 ms)
+[gemv_compare] K=2560 N=9728  GPU=0.543744 ms  IMG2D=0.570473 ms  CPU=0.352766 ms  ratio(GPU/CPU)=1.54138  ratio(IMG2D/GPU)=1.04916
+[gemv_compare] K=2560 N=9728  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=8763/9728
+[gemv_compare] K=2560 N=9728  DELEGATE_M1=2.12258 ms  ratio(DLG/GPU)=3.90364
+[       OK ] nntrainer_gemv_compare.K_2560_N_9728 (18954 ms)
 [ RUN      ] nntrainer_gemv_compare.K_9728_N_2560
 [gemv_compare] K=9728 N=2560  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/2560
-[gemv_compare] K=9728 N=2560  GPU=1.72708 ms  IMG2D=1.76299 ms  CPU=0.382818 ms  ratio(GPU/CPU)=4.51149  ratio(IMG2D/GPU)=1.0208
-[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (2024 ms)
-[----------] 5 tests from nntrainer_gemv_compare (10152 ms total)
+[gemv_compare] K=9728 N=2560  GPU=1.67175 ms  IMG2D=1.84129 ms  CPU=0.385197 ms  ratio(GPU/CPU)=4.33999  ratio(IMG2D/GPU)=1.10142
+[gemv_compare] K=9728 N=2560  DELEGATE_M1 vs baseline:  max_abs=1200  big_diff(>1e-2)=2476/2560
+[gemv_compare] K=9728 N=2560  DELEGATE_M1=2.49059 ms  ratio(DLG/GPU)=1.48981
+[       OK ] nntrainer_gemv_compare.K_9728_N_2560 (21890 ms)
+[----------] 5 tests from nntrainer_gemv_compare (95160 ms total)
 
 [----------] 1 test from nntrainer_fused_rmsnorm_qkv
 [ RUN      ] nntrainer_fused_rmsnorm_qkv.qwen3_4b_shapes
 [fused_rmsnorm_qkv] K_in=2560 N_q=4096  max_abs=0.0625  rel_l2=0.000350845  big_diff(>1e-2)=1433/4096  first@n=1  ref=5.25  fused=5.22656
 [fused_rmsnorm_qkv] K_in=2560 N_k=1024  max_abs=0.0625  rel_l2=0.000231973  big_diff(>1e-2)=340/1024  first@n=1  ref=5.25  fused=5.22656
 [fused_rmsnorm_qkv] K_in=2560 N_v=1024  max_abs=0.0625  rel_l2=0.000231973  big_diff(>1e-2)=340/1024  first@n=1  ref=5.25  fused=5.22656
-[fused_rmsnorm_qkv] K_in=2560 N_q=4096 N_k=1024 N_v=1024  FUSED=1.04485 ms (replaces 1 rms_norm + 3 gemv = ~1.4 ms baseline)
-[       OK ] nntrainer_fused_rmsnorm_qkv.qwen3_4b_shapes (1357 ms)
-[----------] 1 test from nntrainer_fused_rmsnorm_qkv (1357 ms total)
+[fused_rmsnorm_qkv] K_in=2560 N_q=4096 N_k=1024 N_v=1024  FUSED=1.08537 ms (replaces 1 rms_norm + 3 gemv = ~1.4 ms baseline)
+[       OK ] nntrainer_fused_rmsnorm_qkv.qwen3_4b_shapes (1503 ms)
+[----------] 1 test from nntrainer_fused_rmsnorm_qkv (1503 ms total)
 
 [----------] Global test environment tear-down
-[==========] 6 tests from 2 test suites ran. (11513 ms total)
+[==========] 6 tests from 2 test suites ran. (96679 ms total)
 [  PASSED  ] 6 tests.
 
-[PROFILE gemv_int4_adreno_cl decode] calls=4354 total=2945.71 ms avg=0.677 ms
-  args_setup :    5.68 ms (  0.2%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   89.25 ms (  3.0%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     : 2850.78 ms ( 96.8%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
-  gpu_kernel : 1614.64 ms             [cl_event PROFILING_START..END, true GPU compute, 4354 events]
+[PROFILE gemm_delegate_fp16_cl] calls=69392 gflops=1770
+  resource_setup:   207.4 ms
+  dequant(host):  31511.5 ms (37.4%)  cache-miss=69392/69392
+    .alloc:          13.6 ms  (clCreateBuffer + cache insert)
+    .svmarg:         67.3 ms  (2x clSetKernelArgSVMPointer)
+    .arg:            68.2 ms  (3x clSetKernelArg)
+    .dispatch:    31316.0 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+  dequant(gpu):       0.0 ms
+  reformat_in(host): 34.7 ms ( 0.0%)  pool-hits=69392/69392
+  reformat_in(gpu):   0.0 ms
+  conv(wall):     26540.5 ms (31.5%)
+  conv(gpu):          0.0 ms            inf TFLOPS
+  readback(host): 26220.7 ms (31.1%)
+  readback(gpu):      0.0 ms
+  svmmap(gpu):        0.0 ms
+  sum(steps host):84307.4 ms            0.021 TFLOPS
+  sum(gpu events):    0.0 ms
+  fn_total(wall): 85009.4 ms            (unaccounted = 494.6 ms = host overhead + non-event sync gaps)
+
+[PROFILE gemv_int4_adreno_cl decode] calls=4263 total=2934.40 ms avg=0.688 ms
+  args_setup :    5.33 ms (  0.2%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   79.48 ms (  2.7%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     : 2849.58 ms ( 97.1%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+  gpu_kernel : 1533.22 ms             [cl_event PROFILING_START..END, true GPU compute, 4263 events]
 
 [gemv_compare.sh] Full log: /home/jwhero94/projects/nntrainer/gemv_compare_run.log
 [gemv_compare.sh] Summary lines:
 [gemv_compare] K=2560 N=4096  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/4096
-[gemv_compare] K=2560 N=4096  GPU=0.43477 ms  IMG2D=0.423591 ms  CPU=0.119501 ms  ratio(GPU/CPU)=3.63821  ratio(IMG2D/GPU)=0.974287
+[gemv_compare] K=2560 N=4096  GPU=0.433975 ms  IMG2D=0.422558 ms  CPU=0.113584 ms  ratio(GPU/CPU)=3.82075  ratio(IMG2D/GPU)=0.973692
+[gemv_compare] K=2560 N=4096  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=3693/4096
+[gemv_compare] K=2560 N=4096  DELEGATE_M1=0.959459 ms  ratio(DLG/GPU)=2.21086
 [gemv_compare] K=2560 N=1024  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/1024
-[gemv_compare] K=2560 N=1024  GPU=0.466766 ms  IMG2D=0.426048 ms  CPU=0.171128 ms  ratio(GPU/CPU)=2.72758  ratio(IMG2D/GPU)=0.912764
+[gemv_compare] K=2560 N=1024  GPU=0.473054 ms  IMG2D=0.419827 ms  CPU=0.214669 ms  ratio(GPU/CPU)=2.20364  ratio(IMG2D/GPU)=0.887482
+[gemv_compare] K=2560 N=1024  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=925/1024
+[gemv_compare] K=2560 N=1024  DELEGATE_M1=0.301822 ms  ratio(DLG/GPU)=0.638028
 [gemv_compare] K=4096 N=2560  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/2560
-[gemv_compare] K=4096 N=2560  GPU=0.861557 ms  IMG2D=0.573491 ms  CPU=0.315836 ms  ratio(GPU/CPU)=2.72786  ratio(IMG2D/GPU)=0.665644
+[gemv_compare] K=4096 N=2560  GPU=0.767404 ms  IMG2D=0.588307 ms  CPU=0.193621 ms  ratio(GPU/CPU)=3.96344  ratio(IMG2D/GPU)=0.76662
+[gemv_compare] K=4096 N=2560  DELEGATE_M1 vs baseline:  max_abs=79  big_diff(>1e-2)=2403/2560
+[gemv_compare] K=4096 N=2560  DELEGATE_M1=1.0235 ms  ratio(DLG/GPU)=1.33371
 [gemv_compare] K=2560 N=9728  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/9728
-[gemv_compare] K=2560 N=9728  GPU=0.533651 ms  IMG2D=0.565392 ms  CPU=0.405941 ms  ratio(GPU/CPU)=1.3146  ratio(IMG2D/GPU)=1.05948
+[gemv_compare] K=2560 N=9728  GPU=0.543744 ms  IMG2D=0.570473 ms  CPU=0.352766 ms  ratio(GPU/CPU)=1.54138  ratio(IMG2D/GPU)=1.04916
+[gemv_compare] K=2560 N=9728  DELEGATE_M1 vs baseline:  max_abs=29  big_diff(>1e-2)=8763/9728
+[gemv_compare] K=2560 N=9728  DELEGATE_M1=2.12258 ms  ratio(DLG/GPU)=3.90364
 [gemv_compare] K=9728 N=2560  CORRECTNESS  max_abs=0  big_diff(>1e-3)=0/2560
-[gemv_compare] K=9728 N=2560  GPU=1.72708 ms  IMG2D=1.76299 ms  CPU=0.382818 ms  ratio(GPU/CPU)=4.51149  ratio(IMG2D/GPU)=1.0208
+[gemv_compare] K=9728 N=2560  GPU=1.67175 ms  IMG2D=1.84129 ms  CPU=0.385197 ms  ratio(GPU/CPU)=4.33999  ratio(IMG2D/GPU)=1.10142
+[gemv_compare] K=9728 N=2560  DELEGATE_M1 vs baseline:  max_abs=1200  big_diff(>1e-2)=2476/2560
+[gemv_compare] K=9728 N=2560  DELEGATE_M1=2.49059 ms  ratio(DLG/GPU)=1.48981
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
