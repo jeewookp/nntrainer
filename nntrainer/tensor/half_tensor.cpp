@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include <cpu_backend.h>
+#include <fp16.h>
 #include <half_tensor.h>
 #include <profile_gate.h>
 #include <tensor.h>
