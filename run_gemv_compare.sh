@@ -40,7 +40,12 @@ cd "$REPO_ROOT"
 #    ndk-build for the unittest does NOT rebuild libnntrainer.so, so
 #    any kernel source / dispatch-param edit (e.g. switching WG=16
 #    to WG=64) is silently ignored until we re-run package_android.sh.
+#
+# Wipe builddir first -- otherwise package_android.sh's reconfigure
+# attempt fails when builddir is in a half-configured state
+# ("No such build data file as builddir/meson-private/build.dat").
 echo "[gemv_compare.sh] (re)building libnntrainer.so via package_android.sh"
+rm -rf builddir
 ./tools/package_android.sh -Dmmap-read=false -Domp-num-threads=1 \
                            -Dthread-backend=omp -Denable-opencl=true
 
