@@ -3,34 +3,36 @@ remote: Enumerating objects: 5, done.
 remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 544 bytes | 90.00 KiB/s, done.
+Unpacking objects: 100% (3/3), 775 bytes | 129.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              litert_lm  -> FETCH_HEAD
-   2003f03a..4e6cd65a  litert_lm  -> origin/litert_lm
-Updating 2003f03a..4e6cd65a
+   2984dda3..aee52df7  litert_lm  -> origin/litert_lm
+Updating 2984dda3..aee52df7
 Fast-forward
- temp_litert_decode_kernel_capture.sh | 14 ++++++++++++--
- 1 file changed, 12 insertions(+), 2 deletions(-)
+ temp_litert_decode_kernel_capture.sh | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ bash temp_litert_decode_kernel_capture.sh 
 [decode_intercept.sh] Building cl_intercept + litert_lm_main with bazel ...
-Warning: skipping import of repository 'rules_proto' because it already exists.
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/org_tensorflow/third_party/repo.bzl:138:14: 
-Warning: skipping import of repository 'rules_ml_toolchain' because it already exists.
-Computing main repo mapping: 
-Loading: 
-Loading: 2 packages loaded
-Analyzing: 2 targets (4 packages loaded, 0 targets configured)
-Analyzing: 2 targets (4 packages loaded, 0 targets configured)
-
-DEBUG: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/build_bazel_rules_swift/swift/internal/swift_autoconfiguration.bzl:211:14: No 'swiftc' executable found in $PATH. Not auto-generating a Linux Swift toolchain.
-ERROR: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/bazel_tools/tools/cpp/BUILD:58:19: in cc_toolchain_alias rule @@bazel_tools//tools/cpp:current_cc_toolchain: 
-Traceback (most recent call last):
-	File "/virtual_builtins_bzl/common/cc/cc_toolchain_alias.bzl", line 26, column 48, in _impl
-	File "/virtual_builtins_bzl/common/cc/cc_helper.bzl", line 225, column 17, in _find_cpp_toolchain
-Error in fail: Unable to find a CC toolchain using toolchain resolution. Target: @bazel_tools//tools/cpp:current_cc_toolchain, Platform: @org_tensorflow//tensorflow/tools/toolchains/android:arm64-v8a, Exec platform: @bazel_tools//tools:host_platform
-ERROR: /home/jwhero94/.cache/bazel/_bazel_jwhero94/d14ebf14c5d24984d450d61ee4753e6c/external/bazel_tools/tools/cpp/BUILD:58:19: Analysis of target '@@bazel_tools//tools/cpp:current_cc_toolchain' failed
-ERROR: Analysis of target '//runtime/cl_bench:cl_intercept' failed; build aborted: Analysis failed
-INFO: Elapsed time: 2.529s, Critical Path: 0.02s
-INFO: 1 process: 1 internal.
-ERROR: Build did NOT complete successfully
+[3,668 / 3,765] Compiling src/google/protobuf/descriptor.cc; 12s local ... (25 actions, 24 running)
+[3,673 / 3,765] Compiling src/google/protobuf/descriptor.cc; 13s local ... (25 actions, 24 running)
+[3,683 / 3,765] Compiling src/google/protobuf/descriptor.cc; 14s local ... (25 actions, 24 running)
+[3,688 / 3,765] Compiling litert/runtime/compiled_model.cc; 5s local ... (25 actions, 24 running)
+[3,696 / 3,765] Compiling litert/runtime/compiled_model.cc; 6s local ... (24 actions, 23 running)
+[3,704 / 3,765] Compiling litert/runtime/compiled_model.cc; 7s local ... (24 actions, 23 running)
+[3,709 / 3,765] Compiling litert/runtime/compiled_model.cc; 8s local ... (24 actions, 23 running)
+[3,720 / 3,765] Compiling runtime/util/log_tensor_buffer.cc; 3s local ... (24 actions, 23 running)
+[3,724 / 3,765] Compiling litert/cc/litert_compiled_model.cc; 4s local ... (24 actions, 23 running)
+[3,730 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 4s local ... (24 actions, 23 running)
+[3,734 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 6s local ... (24 actions, 23 running)
+[3,739 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 7s local ... (24 actions, 23 running)
+[3,743 / 3,765] Compiling runtime/components/preprocessor/stb_image_preprocessor.cc; 8s local ... (21 actions running)
+[3,750 / 3,765] Compiling runtime/executor/llm_litert_npu_compiled_model_executor.cc; 6s local ... (14 actions running)
+[3,761 / 3,765] Compiling runtime/executor/llm_litert_npu_compiled_model_executor.cc; 8s local ... (3 actions running)
+[3,764 / 3,765] [Prepa] Linking runtime/engine/litert_lm_main
+INFO: Found 2 targets...
+INFO: Elapsed time: 83.518s, Critical Path: 15.81s
+INFO: 1942 processes: 5 internal, 1937 local.
+INFO: Build completed successfully, 1942 total actions
+[decode_intercept.sh] Pushing to device ...
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_litert_lm$ 
+
