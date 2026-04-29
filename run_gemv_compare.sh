@@ -54,11 +54,25 @@ ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk \
           $TEST_BIN -j$(nproc)
 popd > /dev/null
 
-TEST_EXE=test/libs/arm64-v8a/$TEST_BIN
-[ -x "$TEST_EXE" ] || [ -f "$TEST_EXE" ] || {
-  echo "[gemv_compare.sh] ERROR: $TEST_EXE not produced by ndk-build"
+# ndk-build with NDK_PROJECT_PATH=. from test/jni produces the
+# executable under test/jni/obj/local/<abi>/.  Search candidate
+# locations to be tolerant of either layout.
+TEST_EXE=""
+for cand in \
+    test/jni/obj/local/arm64-v8a/$TEST_BIN \
+    test/jni/libs/arm64-v8a/$TEST_BIN \
+    test/libs/arm64-v8a/$TEST_BIN; do
+  if [ -f "$cand" ]; then
+    TEST_EXE="$cand"
+    break
+  fi
+done
+if [ -z "$TEST_EXE" ]; then
+  echo "[gemv_compare.sh] ERROR: $TEST_BIN not found under any candidate path"
+  find test -name "$TEST_BIN" -type f 2>/dev/null | head
   exit 1
-}
+fi
+echo "[gemv_compare.sh] Test exe: $TEST_EXE"
 
 # 3. Push the executable + the nntrainer / ccapi / c++ shared libs
 #    that it depends on.  The existing causallm runs already drop
