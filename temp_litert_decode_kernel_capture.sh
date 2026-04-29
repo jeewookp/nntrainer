@@ -54,7 +54,10 @@ set -e
 set -o pipefail
 
 DEVICE_FOLDER="${DEVICE_FOLDER:-/data/local/tmp/litert_lm}"
-DEVICE_CL_DIR="${DEVICE_CL_DIR:-${DEVICE_FOLDER}/intercepted_cl}"
+# Must match cl_intercept.cc DUMP_DIR.  The interceptor hardcodes
+# /data/local/tmp/litert_lm/cl_intercept; pulling from anywhere else
+# returns 0 files even when the kernels were captured successfully.
+DEVICE_CL_DIR="${DEVICE_CL_DIR:-${DEVICE_FOLDER}/cl_intercept}"
 HOST_OUT_DIR="${HOST_OUT_DIR:-runtime/cl_bench/intercepted_decode}"
 MODEL_PATH="${MODEL_PATH:-$HOME/.cache/litert_lm_models/gemma-4-E2B-it.litertlm}"
 TASKSET_MASK="${TASKSET_MASK:-f0}"
