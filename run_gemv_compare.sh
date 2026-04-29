@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Re-exec under bash when invoked via `sh` (dash): this script uses
+# pushd/popd, set -e, and other bash-isms that dash chokes on.
+# Without the guard `sh run_gemv_compare.sh` dies on the first
+# pushd with "pushd: not found".
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
 # run_gemv_compare.sh
 #
 # Build, push, and run the GPU-vs-CPU M=1 gemv unittest on the
