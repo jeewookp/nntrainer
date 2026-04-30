@@ -18,7 +18,6 @@
 #include <cstdio>
 #include <cpu_backend.h>
 #include <profile_gate.h>
-#include <blas_kernels.h>
 #include <reshaped_rms_norm.h>
 #include "rmsnorm_fused_fp16.h"
 
@@ -112,21 +111,13 @@ void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Entry SVMMap fence exists because the CPU NEON path below reads
-  // `in` host-side, and upstream Q/K FC enqueues only a non-blocking
-  // SVMMap on its output, so without this drain the host-side read
-  // is not coherent.  When NNTRAINER_RMSNORM_GPU=1 we dispatch the
-  // norm on the GPU instead -- the GPU kernel reads via
-  // SetKernelSVMArguments and same-queue ordering covers the
-  // upstream FC -> q_norm/k_norm boundary (verified canonical at
-  // K=10 in the layer-window bisection).  Skip the entry drain in
-  // that path; that's the bulk of this layer's per-call cost
-  // (~150 us out of ~150 us total).
-  static const bool s_rmsnorm_gpu_skip_entry_drain =
-    std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
+  // This layer runs purely on the CPU (NEON rms_norm_wrt_width_*_intrinsic).
+  // When input lives in the tensor_pool's SVM region, the upstream GPU
+  // gemm may still have its image2d_to_svm write in flight with only a
+  // non-blocking SVMMap enqueued. Drain the OpenCL queue here with a
+  // blocking SVMMap so the CPU reads that follow see coherent data.
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
-  if (!s_rmsnorm_gpu_skip_entry_drain &&
-      in.getMemoryData() && in.getMemoryData()->isSVM()) {
+  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
     if (cl_ctx) {
@@ -200,35 +191,8 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       const std::size_t H_rows =
         (std::size_t)sd.batch() * sd.channel() * sd.height();
       const std::size_t W = sd.width();
-#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-      // Stage 3.1: NNTRAINER_RMSNORM_GPU=1 dispatches the per-head
-      // RMSNorm on the GPU (rmsnorm_image2d_cl) instead of the NEON
-      // path.  Eliminates the entry SVMMap drain on input (this
-      // function used to enter via blocking SVMMap because the CPU
-      // NEON loop reads in_ptr) -- the GPU kernel reads via
-      // SetKernelSVMArguments and same-queue ordering covers the
-      // upstream Q/K FC -> q_norm/k_norm boundary (verified by
-      // the K=10 canonical bisection point earlier).  Saves
-      // 72 entry drains/token (~150 us each) plus a faster norm.
-      // Requires K (head_dim) % 4 == 0 -- Qwen3-4B head_dim=128.
-      static const bool s_rmsnorm_gpu =
-        std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
-      if (s_rmsnorm_gpu &&
-          in_step.getMemoryData() && in_step.getMemoryData()->isSVM() &&
-          out_step.getMemoryData() && out_step.getMemoryData()->isSVM() &&
-          (W % 4) == 0) {
-        nntrainer::rmsnorm_image2d_cl(
-          (void *)in_ptr, (void *)out_ptr, gamma_ptr,
-          (unsigned int)H_rows, (unsigned int)W,
-          static_cast<float>(epsilon));
-      } else {
-        rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
-                           static_cast<float>(epsilon));
-      }
-#else
       rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
                          static_cast<float>(epsilon));
-#endif
       if (profile_this_call)
         g_reshaped_rms_norm_profile.ns_fused += now_ns() - t_fused;
     } else {
