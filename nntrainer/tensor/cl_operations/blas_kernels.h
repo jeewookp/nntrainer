@@ -552,6 +552,23 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
                         bool sync_output = true);
 
 /**
+ * @brief Fused SwiGLU + int4 GEMV for the down projection on M=1.
+ *   Single dispatch reads (gate, up) SVM, computes silu(gate)*up
+ *   in-register, and reduces against the int4 weight matrix.  Saves
+ *   the swiglu output SVM round-trip and one dispatch per layer.
+ *   Bit-equivalent to swiglu + gemv_int4_adreno_cl chain modulo
+ *   fp16 rounding order.
+ *
+ *   Default sync_output=true: helper drains queue at exit so the
+ *   downstream addition layer (CPU NEON or GPU) sees coherent data.
+ */
+bool swiglu_down_int4_cl(uint16_t *gate, uint16_t *up,
+                          uint16_t *weights, uint16_t *scales,
+                          uint16_t *output,
+                          unsigned int K, unsigned int N,
+                          bool sync_output = true);
+
+/**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
  * unittest cross-check what a producer kernel wrote to image2d
