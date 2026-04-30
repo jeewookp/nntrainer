@@ -48,13 +48,6 @@ public:
   using prop_tag = nntrainer::uint_prop_tag;
 };
 
-class GateUpEpsilon : public nntrainer::Property<float> {
-public:
-  static constexpr const char *key = "epsilon";
-  using prop_tag = nntrainer::float_prop_tag;
-  GateUpEpsilon(float val = 1e-6f) : Property(val) {}
-};
-
 } // namespace props
 
 WIN_EXPORT class GateUpLayer : public nntrainer::LayerImpl {
@@ -88,12 +81,8 @@ public:
   inline static const std::string type = "gate_up_layer";
 
 private:
-  std::tuple<props::UpUnit, props::GateUnit, props::GateUpEpsilon> gate_up_props;
-  // weight_idx[0] = gamma (fp32, registered FIRST to preserve legacy
-  // bundle byte layout: ffn_norm.gamma | ffn_up.weight | ffn_gate.weight).
-  // [1] = up weight (channel-wise int4).
-  // [2] = gate weight (channel-wise int4).
-  std::array<unsigned int, 3> weight_idx;
+  std::tuple<props::UpUnit, props::GateUnit> gate_up_props;
+  std::array<unsigned int, 2> weight_idx;
 };
 
 } // namespace causallm
