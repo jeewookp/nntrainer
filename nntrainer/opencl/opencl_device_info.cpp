@@ -287,6 +287,13 @@ void DeviceInfo::print() const {
       "cl_khr_command_buffer=%d mutable_dispatch=%d multi_device=%d\n",
       device_name_.c_str(), driver_version_.c_str(), has_cb ? 1 : 0,
       has_cb_mut ? 1 : 0, has_cb_multi ? 1 : 0);
+    // Dump the full extension string too -- the first probe came back
+    // negative for cl_khr_command_buffer, so we need the full list to
+    // see if there's a vendor-specific alternative
+    // (cl_qcom_recordable_queues, cl_qcom_command_buffer, etc.) we
+    // could route Stage E through instead.
+    std::fprintf(stderr, "[CMDBUF_PROBE] CL_DEVICE_EXTENSIONS=%s\n",
+                 device_extensions_.c_str());
     std::fflush(stderr);
   }
 }
