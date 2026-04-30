@@ -211,6 +211,19 @@ void LoadOpenCLFunctions(void *libopencl) {
   LoadFunction(clReleaseEvent);
   LoadFunction(clRetainEvent);
   LoadFunction(clGetExtensionFunctionAddressForPlatform);
+
+  // OpenCL 2.0 properties-based queue ctor, needed for the QCOM
+  // recordable-queue property bit.
+  LoadFunction(clCreateCommandQueueWithProperties);
+
+  // cl_qcom_recordable_queues. These are vendor-extension symbols;
+  // dlsym typically resolves them on Adreno's libOpenCL.so. If the
+  // device lacks the extension they will simply be NULL and we gate
+  // at the call site.
+  LoadFunction(clNewRecordingQCOM);
+  LoadFunction(clEndRecordingQCOM);
+  LoadFunction(clEnqueueRecordingQCOM);
+  LoadFunction(clReleaseRecordingQCOM);
 }
 
 PFN_clGetPlatformIDs clGetPlatformIDs;
@@ -255,4 +268,9 @@ PFN_clReleaseEvent clReleaseEvent;
 PFN_clRetainEvent clRetainEvent;
 PFN_clGetExtensionFunctionAddressForPlatform
   clGetExtensionFunctionAddressForPlatform;
+PFN_clCreateCommandQueueWithProperties clCreateCommandQueueWithProperties;
+PFN_clNewRecordingQCOM clNewRecordingQCOM;
+PFN_clEndRecordingQCOM clEndRecordingQCOM;
+PFN_clEnqueueRecordingQCOM clEnqueueRecordingQCOM;
+PFN_clReleaseRecordingQCOM clReleaseRecordingQCOM;
 } // namespace nntrainer::opencl

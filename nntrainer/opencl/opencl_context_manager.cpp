@@ -274,6 +274,98 @@ bool ContextManager::CreateDefaultGPUDevice() {
     std::fflush(stderr);
   }
 
+  // Stage E phase 2: cl_qcom_recordable_queues smoke probe.
+  // The Adreno 830 driver advertises this vendor extension in lieu of
+  // cl_khr_command_buffer. Verify (a) dlsym actually resolved the four
+  // recordable-QCOM entrypoints, and (b) we can create a recordable
+  // command queue + open/close an empty recording on it. Litert's
+  // delegate_kernel_bench tries 3 different property layouts; we do
+  // the same here and report which (if any) the driver accepted.
+  std::fprintf(
+    stderr,
+    "[QCOM_REC_PROBE] entrypoints: NewRecordingQCOM=%p EndRecordingQCOM=%p "
+    "EnqueueRecordingQCOM=%p ReleaseRecordingQCOM=%p "
+    "CreateCommandQueueWithProperties=%p\n",
+    (void *)clNewRecordingQCOM, (void *)clEndRecordingQCOM,
+    (void *)clEnqueueRecordingQCOM, (void *)clReleaseRecordingQCOM,
+    (void *)clCreateCommandQueueWithProperties);
+
+  if (clNewRecordingQCOM && clEndRecordingQCOM && clEnqueueRecordingQCOM &&
+      clReleaseRecordingQCOM && clCreateCommandQueueWithProperties) {
+    // We need a context to test queue creation. Build a minimal one
+    // bound to platform_id_ + device_id_; release at end of probe.
+    cl_context_properties ctx_props[] = {
+      CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id_, 0};
+    cl_int probe_err = 0;
+    cl_context probe_ctx = clCreateContext(ctx_props, 1, &device_id_, nullptr,
+                                           nullptr, &probe_err);
+    if (!probe_ctx) {
+      std::fprintf(stderr,
+                   "[QCOM_REC_PROBE] minimal context creation failed err=%d\n",
+                   probe_err);
+    } else {
+      struct Variant {
+        const char *name;
+        cl_queue_properties props[6];
+      };
+      const Variant variants[] = {
+        // Litert "Attempt 1": just the QCOM property, no other flags.
+        {"v1: { RECORDABLE_QCOM=1 }",
+         {CL_QUEUE_RECORDABLE_QCOM, 1, 0, 0, 0, 0}},
+        // "Attempt 2": as a CL_QUEUE_PROPERTIES bitmask (likely wrong --
+        // 0x40E6 doesn't fit in cl_command_queue_properties bits).
+        {"v2: CL_QUEUE_PROPERTIES=RECORDABLE_QCOM",
+         {CL_QUEUE_PROPERTIES, CL_QUEUE_RECORDABLE_QCOM, 0, 0, 0, 0}},
+        // Likely-correct: PROFILING + RECORDABLE as separate property
+        // pairs. Profiling is enabled because our normal queue uses it
+        // and we want the recordable replays to be timeable too.
+        {"v3: PROFILING + RECORDABLE_QCOM=1",
+         {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE,
+          CL_QUEUE_RECORDABLE_QCOM, 1, 0, 0}},
+      };
+      cl_command_queue rec_queue = nullptr;
+      const char *winning_variant = nullptr;
+      for (const auto &v : variants) {
+        cl_int err = 0;
+        cl_command_queue q = clCreateCommandQueueWithProperties(
+          probe_ctx, device_id_, v.props, &err);
+        std::fprintf(stderr, "[QCOM_REC_PROBE] %s -> queue=%p err=%d\n",
+                     v.name, (void *)q, err);
+        if (q && err == CL_SUCCESS && !rec_queue) {
+          rec_queue = q;
+          winning_variant = v.name;
+        } else if (q) {
+          // Only the first successful variant is kept; release the rest.
+          clReleaseCommandQueue(q);
+        }
+      }
+      if (rec_queue) {
+        cl_int rec_err = 0;
+        void *recording = clNewRecordingQCOM(rec_queue, &rec_err);
+        std::fprintf(stderr,
+                     "[QCOM_REC_PROBE] winning=\"%s\" "
+                     "clNewRecordingQCOM=%p err=%d\n",
+                     winning_variant, recording, rec_err);
+        if (recording && rec_err == CL_SUCCESS) {
+          // No NDRange enqueued -- empty recording. End it to verify
+          // the full open/close path works without a captured kernel.
+          cl_int end_err = clEndRecordingQCOM(recording);
+          std::fprintf(stderr,
+                       "[QCOM_REC_PROBE] clEndRecordingQCOM (empty) err=%d\n",
+                       end_err);
+          clReleaseRecordingQCOM(recording);
+        }
+        clReleaseCommandQueue(rec_queue);
+      } else {
+        std::fprintf(stderr,
+                     "[QCOM_REC_PROBE] no property variant produced a "
+                     "recordable queue -- Stage E blocked on this driver\n");
+      }
+      clReleaseContext(probe_ctx);
+    }
+    std::fflush(stderr);
+  }
+
   return true;
 }
 

@@ -57,6 +57,13 @@ typedef cl_command_queue(CL_API_CALL *PFN_clCreateCommandQueue)(
   cl_context /**< context */, cl_device_id /**< device */,
   cl_command_queue_properties /**< properties */, cl_int * /**< errcode_ret */);
 
+// OpenCL 2.0 properties-based queue ctor. Needed for
+// CL_QUEUE_RECORDABLE_QCOM (cl_qcom_recordable_queues, Stage E).
+typedef cl_command_queue(CL_API_CALL *PFN_clCreateCommandQueueWithProperties)(
+  cl_context /**< context */, cl_device_id /**< device */,
+  const cl_queue_properties * /**< properties */,
+  cl_int * /**< errcode_ret */);
+
 typedef cl_mem(CL_API_CALL *PFN_clCreateBuffer)(cl_context /**< context */,
                                                 cl_mem_flags /**< flags */,
                                                 size_t /**< size */,
@@ -228,11 +235,44 @@ typedef cl_int(CL_API_CALL *PFN_clRetainEvent)(cl_event /**< event */);
 typedef void *(CL_API_CALL *PFN_clGetExtensionFunctionAddressForPlatform)(
   cl_platform_id /**< platform */, const char * /**< func_name */);
 
+// cl_qcom_recordable_queues -- Adreno-specific record/replay extension
+// Stage E uses this in lieu of the (absent) cl_khr_command_buffer.
+//
+// Token recording flow:
+//   1. Create command_queue with CL_QUEUE_RECORDABLE_QCOM=0x40E6 in
+//      properties.
+//   2. void* recording = clNewRecordingQCOM(queue, &err);
+//   3. ... clEnqueueNDRangeKernel(queue, ...) sequence on the
+//      recordable queue (these are CAPTURED, not dispatched).
+//   4. clEndRecordingQCOM(recording);
+//   5. Per-token: clEnqueueRecordingQCOM(replay_queue, recording, ...)
+//      replays the captured sequence on a regular queue.
+//   6. clReleaseRecordingQCOM(recording) when done.
+typedef void *(CL_API_CALL *PFN_clNewRecordingQCOM)(
+  cl_command_queue /**< queue */, cl_int * /**< errcode_ret */);
+
+typedef cl_int(CL_API_CALL *PFN_clEndRecordingQCOM)(
+  void * /**< recording */);
+
+typedef cl_int(CL_API_CALL *PFN_clEnqueueRecordingQCOM)(
+  cl_command_queue /**< queue */, void * /**< recording */,
+  cl_uint /**< num_args_to_update */, const void * /**< arg_updates */,
+  cl_uint /**< num_events_in_wait_list */,
+  const cl_event * /**< event_wait_list */, cl_event * /**< event */);
+
+typedef cl_int(CL_API_CALL *PFN_clReleaseRecordingQCOM)(
+  void * /**< recording */);
+
+#ifndef CL_QUEUE_RECORDABLE_QCOM
+#define CL_QUEUE_RECORDABLE_QCOM 0x40E6
+#endif
+
 extern PFN_clGetPlatformIDs clGetPlatformIDs;
 extern PFN_clGetDeviceIDs clGetDeviceIDs;
 extern PFN_clGetDeviceInfo clGetDeviceInfo;
 extern PFN_clCreateContext clCreateContext;
 extern PFN_clCreateCommandQueue clCreateCommandQueue;
+extern PFN_clCreateCommandQueueWithProperties clCreateCommandQueueWithProperties;
 extern PFN_clCreateBuffer clCreateBuffer;
 extern PFN_clCreateSubBuffer clCreateSubBuffer;
 extern PFN_clCreateImage clCreateImage;
@@ -270,6 +310,13 @@ extern PFN_clReleaseEvent clReleaseEvent;
 extern PFN_clRetainEvent clRetainEvent;
 extern PFN_clGetExtensionFunctionAddressForPlatform
   clGetExtensionFunctionAddressForPlatform;
+
+// cl_qcom_recordable_queues entrypoints (NULL on devices without the
+// extension; gate on (clNewRecordingQCOM != nullptr) before calling).
+extern PFN_clNewRecordingQCOM clNewRecordingQCOM;
+extern PFN_clEndRecordingQCOM clEndRecordingQCOM;
+extern PFN_clEnqueueRecordingQCOM clEnqueueRecordingQCOM;
+extern PFN_clReleaseRecordingQCOM clReleaseRecordingQCOM;
 } // namespace nntrainer::opencl
 
 #endif // __OPENCL_LOADER_H__
