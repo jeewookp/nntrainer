@@ -2815,6 +2815,50 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
 // partitions (QKV or Gate/Up) into a single dispatch.  Pass N_v=0
 // to disable the V partition (gate_up case): the helper still needs
 // non-null v_weights/v_scales/v_out pointers since clSetKernelArg
+// Fused SwiGLU + int4 GEMV v2 (down projection) for M=1 decode.
+// Cooperative __local tiling avoids the per-lane redundant silu
+// computation that hurt v1.
+bool swiglu_down_int4_v2_cl(uint16_t *gate, uint16_t *up,
+                             uint16_t *weights, uint16_t *scales,
+                             uint16_t *output,
+                             unsigned int K, unsigned int N,
+                             bool sync_output) {
+  if (!gate || !up || !weights || !scales || !output) return false;
+  if ((K & 63u) || (N & 3u)) return false;  // K must be multiple of TILE_SIZE=64
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    swiglu_down_int4_v2_kernel, "gpu_swiglu_down_int4_v2");
+  if (!kp) return false;
+
+  int a = 0;
+  if (!kp->SetKernelSVMArguments(a++, gate)) return false;
+  if (!kp->SetKernelSVMArguments(a++, up)) return false;
+  if (!kp->SetKernelSVMArguments(a++, scales)) return false;
+  if (!kp->SetKernelSVMArguments(a++, output)) return false;
+  if (!kp->SetKernelSVMArguments(a++, weights)) return false;
+  int sk = (int)K, sn = (int)N;
+  if (!kp->SetKernelArguments(a++, &sk, sizeof(int))) return false;
+  if (!kp->SetKernelArguments(a++, &sn, sizeof(int))) return false;
+
+  // Same dispatch geometry as int4_gemv_adreno_cl: each WI handles 4
+  // N output channels, 64 WIs per WG.
+  const int align_N = static_cast<int>(align(N, 256));
+  const int dim_n = align_N / 4;
+  const int g[3] = {dim_n, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  return true;
+}
+
 // rejects null SVM, so the caller passes q_weights/q_scales/q_out
 // for those slots; the kernel never dereferences them when N_v=0.
 bool fused_gemv_int4_cl(uint16_t *input_svm,

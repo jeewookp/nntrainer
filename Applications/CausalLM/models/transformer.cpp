@@ -22,6 +22,7 @@
 
 #include <embedding_layer.h>
 #include <gate_up_layer.h>
+#include <swiglu_down_layer.h>
 #include <mha_core.h>
 #include <qkv_layer.h>
 #include <rms_norm.h>
@@ -416,17 +417,18 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
      withKey("input_layers", input_name),
      withKey("weight_initializer", "ones")}));
 
+  // Fused SwiGLU + down FC.  SwigluDownLayer takes (gate, up) inputs
+  // -- match swiglu's (gate, up) order: gate is gate_up(1), up is
+  // gate_up(0).  Bundle byte order preserved: SwigluDownLayer's
+  // single down weight occupies the same slot the standalone
+  // ffn_down FC used to.
   layers.push_back(createLayer(
-    "swiglu",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
-     withKey("input_layers", gate_up_name + "(1)," + gate_up_name + "(0)")}));
-
-  layers.push_back(createLayer(
-    "fully_connected",
+    "swiglu_down_layer",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_down"),
-     withKey("unit", dim), withKey("disable_bias", "true"),
+     withKey("down_unit", dim),
+     withKey("disable_bias", "true"),
      withKey("input_layers",
-             "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
+             gate_up_name + "(1)," + gate_up_name + "(0)"),
      withKey("weight_initializer", "ones")}));
 
   return layers;
@@ -451,6 +453,8 @@ void Transformer::registerCustomLayers() {
     app_context->registerFactory(nntrainer::createLayer<causallm::QKVLayer>);
     app_context->registerFactory(
       nntrainer::createLayer<causallm::GateUpLayer>);
+    app_context->registerFactory(
+      nntrainer::createLayer<causallm::SwigluDownLayer>);
 
   } catch (std::invalid_argument &e) {
     std::cerr << "failed to register factory, reason: " << e.what()

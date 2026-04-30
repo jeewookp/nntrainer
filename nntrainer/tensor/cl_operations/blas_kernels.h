@@ -552,6 +552,20 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
                         bool sync_output = true);
 
 /**
+ * @brief Fused SwiGLU + int4 GEMV (down projection) for M=1 decode --
+ *   v2 with __local memory tiling.  Each WG cooperatively computes
+ *   silu(gate)*up for a TILE_SIZE chunk of K into __local, then all
+ *   64 lanes consume the tile to MAC against their N partition.
+ *   Avoids the per-lane redundant silu computation that made v1
+ *   slower than separate swiglu+gemv.
+ */
+bool swiglu_down_int4_v2_cl(uint16_t *gate, uint16_t *up,
+                             uint16_t *weights, uint16_t *scales,
+                             uint16_t *output,
+                             unsigned int K, unsigned int N,
+                             bool sync_output = true);
+
+/**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a
  * unittest cross-check what a producer kernel wrote to image2d

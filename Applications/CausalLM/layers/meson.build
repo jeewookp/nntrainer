@@ -10,6 +10,7 @@ causallm_embedding_src_abs = [meson.current_source_dir() / 'embedding_layer.cpp'
 causallm_reshaped_rms_norm_src_abs = [meson.current_source_dir() / 'reshaped_rms_norm.cpp']
 causallm_qkv_layer_src_abs = [meson.current_source_dir() / 'qkv_layer.cpp']
 causallm_gate_up_layer_src_abs = [meson.current_source_dir() / 'gate_up_layer.cpp']
+causallm_swiglu_down_layer_src_abs = [meson.current_source_dir() / 'swiglu_down_layer.cpp']
 causallm_embedding_pooling_src_abs = [meson.current_source_dir() / 'embedding_pooling_layer.cpp']
 causallm_embedding_normalize_src_abs = [meson.current_source_dir() / 'embedding_normalize_layer.cpp']
 
@@ -157,5 +158,19 @@ causallm_gate_up_layer = shared_library(
 
 causallm_gate_up_layer_dep = declare_dependency(
     link_with: causallm_gate_up_layer,
+    include_directories: causallm_layer_inc
+)
+
+causallm_swiglu_down_layer = shared_library(
+    'swiglu_down_layer',
+    causallm_swiglu_down_layer_src_abs,
+    include_directories: causallm_layer_inc,
+    dependencies: [nntrainer_dep, nntrainer_ccapi_dep],
+    install: true,
+    install_dir: application_install_dir
+)
+
+causallm_swiglu_down_layer_dep = declare_dependency(
+    link_with: causallm_swiglu_down_layer,
     include_directories: causallm_layer_inc
 )
