@@ -9,6 +9,35 @@ SYSTEMSERVERCLASSPATH
 TERM
 TMPDIR
 USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b
 /data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
 <|im_start|>user
@@ -21,49 +50,665 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/ trial guiding瓴或多udem而非sonian中新网やすい这两 parallel 고 apro heter higherasteb heter岛 hetereon heter!");
+\/[force_sync_diag] layer_idx=0 type=input name=input0
+[force_sync_diag] layer_idx=1 type=tie_word_embeddings name=embedding0
+[force_sync_diag] layer_idx=2 type=multiout name=embedding0/generated_out_0
+[force_sync_diag] layer_idx=3 type=rms_norm name=layer0_attention_norm
+[force_sync_diag] layer_idx=4 type=multiout name=layer0_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=5 type=fully_connected name=layer0_wq
+[force_sync_diag] layer_idx=6 type=reshaped_rms_norm name=layer0_q_norm
+[force_sync_diag] layer_idx=7 type=fully_connected name=layer0_wk
+[force_sync_diag] layer_idx=8 type=reshaped_rms_norm name=layer0_k_norm
+[force_sync_diag] layer_idx=9 type=fully_connected name=layer0_wv
+[force_sync_diag] layer_idx=10 type=mha_core name=layer0_attention
+[force_sync_diag] layer_idx=11 type=fully_connected name=layer0_attention_out
+[force_sync_diag] layer_idx=12 type=addition name=layer0_decoder_add
+[force_sync_diag] layer_idx=13 type=multiout name=layer0_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=14 type=rms_norm name=layer0_ffn_norm
+[force_sync_diag] layer_idx=15 type=gate_up_layer name=layer0_ffn_gate_up
+[force_sync_diag] layer_idx=16 type=swiglu name=layer0_ffn_swiglu
+[force_sync_diag] layer_idx=17 type=fully_connected name=layer0_ffn_down
+[force_sync_diag] layer_idx=18 type=addition name=layer0_decoder_output
+[force_sync_diag] layer_idx=19 type=multiout name=layer0_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=20 type=rms_norm name=layer1_attention_norm
+[force_sync_diag] layer_idx=21 type=multiout name=layer1_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=22 type=fully_connected name=layer1_wq
+[force_sync_diag] layer_idx=23 type=reshaped_rms_norm name=layer1_q_norm
+[force_sync_diag] layer_idx=24 type=fully_connected name=layer1_wk
+[force_sync_diag] layer_idx=25 type=reshaped_rms_norm name=layer1_k_norm
+[force_sync_diag] layer_idx=26 type=fully_connected name=layer1_wv
+[force_sync_diag] layer_idx=27 type=mha_core name=layer1_attention
+[force_sync_diag] layer_idx=28 type=fully_connected name=layer1_attention_out
+[force_sync_diag] layer_idx=29 type=addition name=layer1_decoder_add
+[force_sync_diag] layer_idx=30 type=multiout name=layer1_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=31 type=rms_norm name=layer1_ffn_norm
+[force_sync_diag] layer_idx=32 type=gate_up_layer name=layer1_ffn_gate_up
+[force_sync_diag] layer_idx=33 type=swiglu name=layer1_ffn_swiglu
+[force_sync_diag] layer_idx=34 type=fully_connected name=layer1_ffn_down
+[force_sync_diag] layer_idx=35 type=addition name=layer1_decoder_output
+[force_sync_diag] layer_idx=36 type=multiout name=layer1_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=37 type=rms_norm name=layer2_attention_norm
+[force_sync_diag] layer_idx=38 type=multiout name=layer2_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=39 type=fully_connected name=layer2_wq
+[force_sync_diag] layer_idx=40 type=reshaped_rms_norm name=layer2_q_norm
+[force_sync_diag] layer_idx=41 type=fully_connected name=layer2_wk
+[force_sync_diag] layer_idx=42 type=reshaped_rms_norm name=layer2_k_norm
+[force_sync_diag] layer_idx=43 type=fully_connected name=layer2_wv
+[force_sync_diag] layer_idx=44 type=mha_core name=layer2_attention
+[force_sync_diag] layer_idx=45 type=fully_connected name=layer2_attention_out
+[force_sync_diag] layer_idx=46 type=addition name=layer2_decoder_add
+[force_sync_diag] layer_idx=47 type=multiout name=layer2_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=48 type=rms_norm name=layer2_ffn_norm
+[force_sync_diag] layer_idx=49 type=gate_up_layer name=layer2_ffn_gate_up
+[force_sync_diag] layer_idx=50 type=swiglu name=layer2_ffn_swiglu
+[force_sync_diag] layer_idx=51 type=fully_connected name=layer2_ffn_down
+[force_sync_diag] layer_idx=52 type=addition name=layer2_decoder_output
+[force_sync_diag] layer_idx=53 type=multiout name=layer2_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=54 type=rms_norm name=layer3_attention_norm
+[force_sync_diag] layer_idx=55 type=multiout name=layer3_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=56 type=fully_connected name=layer3_wq
+[force_sync_diag] layer_idx=57 type=reshaped_rms_norm name=layer3_q_norm
+[force_sync_diag] layer_idx=58 type=fully_connected name=layer3_wk
+[force_sync_diag] layer_idx=59 type=reshaped_rms_norm name=layer3_k_norm
+[force_sync_diag] layer_idx=60 type=fully_connected name=layer3_wv
+[force_sync_diag] layer_idx=61 type=mha_core name=layer3_attention
+[force_sync_diag] layer_idx=62 type=fully_connected name=layer3_attention_out
+[force_sync_diag] layer_idx=63 type=addition name=layer3_decoder_add
+[force_sync_diag] layer_idx=64 type=multiout name=layer3_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=65 type=rms_norm name=layer3_ffn_norm
+[force_sync_diag] layer_idx=66 type=gate_up_layer name=layer3_ffn_gate_up
+[force_sync_diag] layer_idx=67 type=swiglu name=layer3_ffn_swiglu
+[force_sync_diag] layer_idx=68 type=fully_connected name=layer3_ffn_down
+[force_sync_diag] layer_idx=69 type=addition name=layer3_decoder_output
+[force_sync_diag] layer_idx=70 type=multiout name=layer3_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=71 type=rms_norm name=layer4_attention_norm
+[force_sync_diag] layer_idx=72 type=multiout name=layer4_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=73 type=fully_connected name=layer4_wq
+[force_sync_diag] layer_idx=74 type=reshaped_rms_norm name=layer4_q_norm
+[force_sync_diag] layer_idx=75 type=fully_connected name=layer4_wk
+[force_sync_diag] layer_idx=76 type=reshaped_rms_norm name=layer4_k_norm
+[force_sync_diag] layer_idx=77 type=fully_connected name=layer4_wv
+[force_sync_diag] layer_idx=78 type=mha_core name=layer4_attention
+[force_sync_diag] layer_idx=79 type=fully_connected name=layer4_attention_out
+[force_sync_diag] layer_idx=80 type=addition name=layer4_decoder_add
+[force_sync_diag] layer_idx=81 type=multiout name=layer4_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=82 type=rms_norm name=layer4_ffn_norm
+[force_sync_diag] layer_idx=83 type=gate_up_layer name=layer4_ffn_gate_up
+[force_sync_diag] layer_idx=84 type=swiglu name=layer4_ffn_swiglu
+[force_sync_diag] layer_idx=85 type=fully_connected name=layer4_ffn_down
+[force_sync_diag] layer_idx=86 type=addition name=layer4_decoder_output
+[force_sync_diag] layer_idx=87 type=multiout name=layer4_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=88 type=rms_norm name=layer5_attention_norm
+[force_sync_diag] layer_idx=89 type=multiout name=layer5_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=90 type=fully_connected name=layer5_wq
+[force_sync_diag] layer_idx=91 type=reshaped_rms_norm name=layer5_q_norm
+[force_sync_diag] layer_idx=92 type=fully_connected name=layer5_wk
+[force_sync_diag] layer_idx=93 type=reshaped_rms_norm name=layer5_k_norm
+[force_sync_diag] layer_idx=94 type=fully_connected name=layer5_wv
+[force_sync_diag] layer_idx=95 type=mha_core name=layer5_attention
+[force_sync_diag] layer_idx=96 type=fully_connected name=layer5_attention_out
+[force_sync_diag] layer_idx=97 type=addition name=layer5_decoder_add
+[force_sync_diag] layer_idx=98 type=multiout name=layer5_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=99 type=rms_norm name=layer5_ffn_norm
+[force_sync_diag] layer_idx=100 type=gate_up_layer name=layer5_ffn_gate_up
+[force_sync_diag] layer_idx=101 type=swiglu name=layer5_ffn_swiglu
+[force_sync_diag] layer_idx=102 type=fully_connected name=layer5_ffn_down
+[force_sync_diag] layer_idx=103 type=addition name=layer5_decoder_output
+[force_sync_diag] layer_idx=104 type=multiout name=layer5_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=105 type=rms_norm name=layer6_attention_norm
+[force_sync_diag] layer_idx=106 type=multiout name=layer6_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=107 type=fully_connected name=layer6_wq
+[force_sync_diag] layer_idx=108 type=reshaped_rms_norm name=layer6_q_norm
+[force_sync_diag] layer_idx=109 type=fully_connected name=layer6_wk
+[force_sync_diag] layer_idx=110 type=reshaped_rms_norm name=layer6_k_norm
+[force_sync_diag] layer_idx=111 type=fully_connected name=layer6_wv
+[force_sync_diag] layer_idx=112 type=mha_core name=layer6_attention
+[force_sync_diag] layer_idx=113 type=fully_connected name=layer6_attention_out
+[force_sync_diag] layer_idx=114 type=addition name=layer6_decoder_add
+[force_sync_diag] layer_idx=115 type=multiout name=layer6_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=116 type=rms_norm name=layer6_ffn_norm
+[force_sync_diag] layer_idx=117 type=gate_up_layer name=layer6_ffn_gate_up
+[force_sync_diag] layer_idx=118 type=swiglu name=layer6_ffn_swiglu
+[force_sync_diag] layer_idx=119 type=fully_connected name=layer6_ffn_down
+[force_sync_diag] layer_idx=120 type=addition name=layer6_decoder_output
+[force_sync_diag] layer_idx=121 type=multiout name=layer6_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=122 type=rms_norm name=layer7_attention_norm
+[force_sync_diag] layer_idx=123 type=multiout name=layer7_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=124 type=fully_connected name=layer7_wq
+[force_sync_diag] layer_idx=125 type=reshaped_rms_norm name=layer7_q_norm
+[force_sync_diag] layer_idx=126 type=fully_connected name=layer7_wk
+[force_sync_diag] layer_idx=127 type=reshaped_rms_norm name=layer7_k_norm
+[force_sync_diag] layer_idx=128 type=fully_connected name=layer7_wv
+[force_sync_diag] layer_idx=129 type=mha_core name=layer7_attention
+[force_sync_diag] layer_idx=130 type=fully_connected name=layer7_attention_out
+[force_sync_diag] layer_idx=131 type=addition name=layer7_decoder_add
+[force_sync_diag] layer_idx=132 type=multiout name=layer7_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=133 type=rms_norm name=layer7_ffn_norm
+[force_sync_diag] layer_idx=134 type=gate_up_layer name=layer7_ffn_gate_up
+[force_sync_diag] layer_idx=135 type=swiglu name=layer7_ffn_swiglu
+[force_sync_diag] layer_idx=136 type=fully_connected name=layer7_ffn_down
+[force_sync_diag] layer_idx=137 type=addition name=layer7_decoder_output
+[force_sync_diag] layer_idx=138 type=multiout name=layer7_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=139 type=rms_norm name=layer8_attention_norm
+[force_sync_diag] layer_idx=140 type=multiout name=layer8_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=141 type=fully_connected name=layer8_wq
+[force_sync_diag] layer_idx=142 type=reshaped_rms_norm name=layer8_q_norm
+[force_sync_diag] layer_idx=143 type=fully_connected name=layer8_wk
+[force_sync_diag] layer_idx=144 type=reshaped_rms_norm name=layer8_k_norm
+[force_sync_diag] layer_idx=145 type=fully_connected name=layer8_wv
+[force_sync_diag] layer_idx=146 type=mha_core name=layer8_attention
+[force_sync_diag] layer_idx=147 type=fully_connected name=layer8_attention_out
+[force_sync_diag] layer_idx=148 type=addition name=layer8_decoder_add
+[force_sync_diag] layer_idx=149 type=multiout name=layer8_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=150 type=rms_norm name=layer8_ffn_norm
+[force_sync_diag] layer_idx=151 type=gate_up_layer name=layer8_ffn_gate_up
+[force_sync_diag] layer_idx=152 type=swiglu name=layer8_ffn_swiglu
+[force_sync_diag] layer_idx=153 type=fully_connected name=layer8_ffn_down
+[force_sync_diag] layer_idx=154 type=addition name=layer8_decoder_output
+[force_sync_diag] layer_idx=155 type=multiout name=layer8_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=156 type=rms_norm name=layer9_attention_norm
+[force_sync_diag] layer_idx=157 type=multiout name=layer9_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=158 type=fully_connected name=layer9_wq
+[force_sync_diag] layer_idx=159 type=reshaped_rms_norm name=layer9_q_norm
+[force_sync_diag] layer_idx=160 type=fully_connected name=layer9_wk
+[force_sync_diag] layer_idx=161 type=reshaped_rms_norm name=layer9_k_norm
+[force_sync_diag] layer_idx=162 type=fully_connected name=layer9_wv
+[force_sync_diag] layer_idx=163 type=mha_core name=layer9_attention
+[force_sync_diag] layer_idx=164 type=fully_connected name=layer9_attention_out
+[force_sync_diag] layer_idx=165 type=addition name=layer9_decoder_add
+[force_sync_diag] layer_idx=166 type=multiout name=layer9_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=167 type=rms_norm name=layer9_ffn_norm
+[force_sync_diag] layer_idx=168 type=gate_up_layer name=layer9_ffn_gate_up
+[force_sync_diag] layer_idx=169 type=swiglu name=layer9_ffn_swiglu
+[force_sync_diag] layer_idx=170 type=fully_connected name=layer9_ffn_down
+[force_sync_diag] layer_idx=171 type=addition name=layer9_decoder_output
+[force_sync_diag] layer_idx=172 type=multiout name=layer9_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=173 type=rms_norm name=layer10_attention_norm
+[force_sync_diag] layer_idx=174 type=multiout name=layer10_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=175 type=fully_connected name=layer10_wq
+[force_sync_diag] layer_idx=176 type=reshaped_rms_norm name=layer10_q_norm
+[force_sync_diag] layer_idx=177 type=fully_connected name=layer10_wk
+[force_sync_diag] layer_idx=178 type=reshaped_rms_norm name=layer10_k_norm
+[force_sync_diag] layer_idx=179 type=fully_connected name=layer10_wv
+[force_sync_diag] layer_idx=180 type=mha_core name=layer10_attention
+[force_sync_diag] layer_idx=181 type=fully_connected name=layer10_attention_out
+[force_sync_diag] layer_idx=182 type=addition name=layer10_decoder_add
+[force_sync_diag] layer_idx=183 type=multiout name=layer10_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=184 type=rms_norm name=layer10_ffn_norm
+[force_sync_diag] layer_idx=185 type=gate_up_layer name=layer10_ffn_gate_up
+[force_sync_diag] layer_idx=186 type=swiglu name=layer10_ffn_swiglu
+[force_sync_diag] layer_idx=187 type=fully_connected name=layer10_ffn_down
+[force_sync_diag] layer_idx=188 type=addition name=layer10_decoder_output
+[force_sync_diag] layer_idx=189 type=multiout name=layer10_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=190 type=rms_norm name=layer11_attention_norm
+[force_sync_diag] layer_idx=191 type=multiout name=layer11_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=192 type=fully_connected name=layer11_wq
+[force_sync_diag] layer_idx=193 type=reshaped_rms_norm name=layer11_q_norm
+[force_sync_diag] layer_idx=194 type=fully_connected name=layer11_wk
+[force_sync_diag] layer_idx=195 type=reshaped_rms_norm name=layer11_k_norm
+[force_sync_diag] layer_idx=196 type=fully_connected name=layer11_wv
+[force_sync_diag] layer_idx=197 type=mha_core name=layer11_attention
+[force_sync_diag] layer_idx=198 type=fully_connected name=layer11_attention_out
+[force_sync_diag] layer_idx=199 type=addition name=layer11_decoder_add
+[force_sync_diag] layer_idx=200 type=multiout name=layer11_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=201 type=rms_norm name=layer11_ffn_norm
+[force_sync_diag] layer_idx=202 type=gate_up_layer name=layer11_ffn_gate_up
+[force_sync_diag] layer_idx=203 type=swiglu name=layer11_ffn_swiglu
+[force_sync_diag] layer_idx=204 type=fully_connected name=layer11_ffn_down
+[force_sync_diag] layer_idx=205 type=addition name=layer11_decoder_output
+[force_sync_diag] layer_idx=206 type=multiout name=layer11_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=207 type=rms_norm name=layer12_attention_norm
+[force_sync_diag] layer_idx=208 type=multiout name=layer12_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=209 type=fully_connected name=layer12_wq
+[force_sync_diag] layer_idx=210 type=reshaped_rms_norm name=layer12_q_norm
+[force_sync_diag] layer_idx=211 type=fully_connected name=layer12_wk
+[force_sync_diag] layer_idx=212 type=reshaped_rms_norm name=layer12_k_norm
+[force_sync_diag] layer_idx=213 type=fully_connected name=layer12_wv
+[force_sync_diag] layer_idx=214 type=mha_core name=layer12_attention
+[force_sync_diag] layer_idx=215 type=fully_connected name=layer12_attention_out
+[force_sync_diag] layer_idx=216 type=addition name=layer12_decoder_add
+[force_sync_diag] layer_idx=217 type=multiout name=layer12_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=218 type=rms_norm name=layer12_ffn_norm
+[force_sync_diag] layer_idx=219 type=gate_up_layer name=layer12_ffn_gate_up
+[force_sync_diag] layer_idx=220 type=swiglu name=layer12_ffn_swiglu
+[force_sync_diag] layer_idx=221 type=fully_connected name=layer12_ffn_down
+[force_sync_diag] layer_idx=222 type=addition name=layer12_decoder_output
+[force_sync_diag] layer_idx=223 type=multiout name=layer12_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=224 type=rms_norm name=layer13_attention_norm
+[force_sync_diag] layer_idx=225 type=multiout name=layer13_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=226 type=fully_connected name=layer13_wq
+[force_sync_diag] layer_idx=227 type=reshaped_rms_norm name=layer13_q_norm
+[force_sync_diag] layer_idx=228 type=fully_connected name=layer13_wk
+[force_sync_diag] layer_idx=229 type=reshaped_rms_norm name=layer13_k_norm
+[force_sync_diag] layer_idx=230 type=fully_connected name=layer13_wv
+[force_sync_diag] layer_idx=231 type=mha_core name=layer13_attention
+[force_sync_diag] layer_idx=232 type=fully_connected name=layer13_attention_out
+[force_sync_diag] layer_idx=233 type=addition name=layer13_decoder_add
+[force_sync_diag] layer_idx=234 type=multiout name=layer13_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=235 type=rms_norm name=layer13_ffn_norm
+[force_sync_diag] layer_idx=236 type=gate_up_layer name=layer13_ffn_gate_up
+[force_sync_diag] layer_idx=237 type=swiglu name=layer13_ffn_swiglu
+[force_sync_diag] layer_idx=238 type=fully_connected name=layer13_ffn_down
+[force_sync_diag] layer_idx=239 type=addition name=layer13_decoder_output
+[force_sync_diag] layer_idx=240 type=multiout name=layer13_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=241 type=rms_norm name=layer14_attention_norm
+[force_sync_diag] layer_idx=242 type=multiout name=layer14_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=243 type=fully_connected name=layer14_wq
+[force_sync_diag] layer_idx=244 type=reshaped_rms_norm name=layer14_q_norm
+[force_sync_diag] layer_idx=245 type=fully_connected name=layer14_wk
+[force_sync_diag] layer_idx=246 type=reshaped_rms_norm name=layer14_k_norm
+[force_sync_diag] layer_idx=247 type=fully_connected name=layer14_wv
+[force_sync_diag] layer_idx=248 type=mha_core name=layer14_attention
+[force_sync_diag] layer_idx=249 type=fully_connected name=layer14_attention_out
+[force_sync_diag] layer_idx=250 type=addition name=layer14_decoder_add
+[force_sync_diag] layer_idx=251 type=multiout name=layer14_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=252 type=rms_norm name=layer14_ffn_norm
+[force_sync_diag] layer_idx=253 type=gate_up_layer name=layer14_ffn_gate_up
+[force_sync_diag] layer_idx=254 type=swiglu name=layer14_ffn_swiglu
+[force_sync_diag] layer_idx=255 type=fully_connected name=layer14_ffn_down
+[force_sync_diag] layer_idx=256 type=addition name=layer14_decoder_output
+[force_sync_diag] layer_idx=257 type=multiout name=layer14_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=258 type=rms_norm name=layer15_attention_norm
+[force_sync_diag] layer_idx=259 type=multiout name=layer15_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=260 type=fully_connected name=layer15_wq
+[force_sync_diag] layer_idx=261 type=reshaped_rms_norm name=layer15_q_norm
+[force_sync_diag] layer_idx=262 type=fully_connected name=layer15_wk
+[force_sync_diag] layer_idx=263 type=reshaped_rms_norm name=layer15_k_norm
+[force_sync_diag] layer_idx=264 type=fully_connected name=layer15_wv
+[force_sync_diag] layer_idx=265 type=mha_core name=layer15_attention
+[force_sync_diag] layer_idx=266 type=fully_connected name=layer15_attention_out
+[force_sync_diag] layer_idx=267 type=addition name=layer15_decoder_add
+[force_sync_diag] layer_idx=268 type=multiout name=layer15_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=269 type=rms_norm name=layer15_ffn_norm
+[force_sync_diag] layer_idx=270 type=gate_up_layer name=layer15_ffn_gate_up
+[force_sync_diag] layer_idx=271 type=swiglu name=layer15_ffn_swiglu
+[force_sync_diag] layer_idx=272 type=fully_connected name=layer15_ffn_down
+[force_sync_diag] layer_idx=273 type=addition name=layer15_decoder_output
+[force_sync_diag] layer_idx=274 type=multiout name=layer15_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=275 type=rms_norm name=layer16_attention_norm
+[force_sync_diag] layer_idx=276 type=multiout name=layer16_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=277 type=fully_connected name=layer16_wq
+[force_sync_diag] layer_idx=278 type=reshaped_rms_norm name=layer16_q_norm
+[force_sync_diag] layer_idx=279 type=fully_connected name=layer16_wk
+[force_sync_diag] layer_idx=280 type=reshaped_rms_norm name=layer16_k_norm
+[force_sync_diag] layer_idx=281 type=fully_connected name=layer16_wv
+[force_sync_diag] layer_idx=282 type=mha_core name=layer16_attention
+[force_sync_diag] layer_idx=283 type=fully_connected name=layer16_attention_out
+[force_sync_diag] layer_idx=284 type=addition name=layer16_decoder_add
+[force_sync_diag] layer_idx=285 type=multiout name=layer16_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=286 type=rms_norm name=layer16_ffn_norm
+[force_sync_diag] layer_idx=287 type=gate_up_layer name=layer16_ffn_gate_up
+[force_sync_diag] layer_idx=288 type=swiglu name=layer16_ffn_swiglu
+[force_sync_diag] layer_idx=289 type=fully_connected name=layer16_ffn_down
+[force_sync_diag] layer_idx=290 type=addition name=layer16_decoder_output
+[force_sync_diag] layer_idx=291 type=multiout name=layer16_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=292 type=rms_norm name=layer17_attention_norm
+[force_sync_diag] layer_idx=293 type=multiout name=layer17_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=294 type=fully_connected name=layer17_wq
+[force_sync_diag] layer_idx=295 type=reshaped_rms_norm name=layer17_q_norm
+[force_sync_diag] layer_idx=296 type=fully_connected name=layer17_wk
+[force_sync_diag] layer_idx=297 type=reshaped_rms_norm name=layer17_k_norm
+[force_sync_diag] layer_idx=298 type=fully_connected name=layer17_wv
+[force_sync_diag] layer_idx=299 type=mha_core name=layer17_attention
+[force_sync_diag] layer_idx=300 type=fully_connected name=layer17_attention_out
+[force_sync_diag] layer_idx=301 type=addition name=layer17_decoder_add
+[force_sync_diag] layer_idx=302 type=multiout name=layer17_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=303 type=rms_norm name=layer17_ffn_norm
+[force_sync_diag] layer_idx=304 type=gate_up_layer name=layer17_ffn_gate_up
+[force_sync_diag] layer_idx=305 type=swiglu name=layer17_ffn_swiglu
+[force_sync_diag] layer_idx=306 type=fully_connected name=layer17_ffn_down
+[force_sync_diag] layer_idx=307 type=addition name=layer17_decoder_output
+[force_sync_diag] layer_idx=308 type=multiout name=layer17_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=309 type=rms_norm name=layer18_attention_norm
+[force_sync_diag] layer_idx=310 type=multiout name=layer18_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=311 type=fully_connected name=layer18_wq
+[force_sync_diag] layer_idx=312 type=reshaped_rms_norm name=layer18_q_norm
+[force_sync_diag] layer_idx=313 type=fully_connected name=layer18_wk
+[force_sync_diag] layer_idx=314 type=reshaped_rms_norm name=layer18_k_norm
+[force_sync_diag] layer_idx=315 type=fully_connected name=layer18_wv
+[force_sync_diag] layer_idx=316 type=mha_core name=layer18_attention
+[force_sync_diag] layer_idx=317 type=fully_connected name=layer18_attention_out
+[force_sync_diag] layer_idx=318 type=addition name=layer18_decoder_add
+[force_sync_diag] layer_idx=319 type=multiout name=layer18_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=320 type=rms_norm name=layer18_ffn_norm
+[force_sync_diag] layer_idx=321 type=gate_up_layer name=layer18_ffn_gate_up
+[force_sync_diag] layer_idx=322 type=swiglu name=layer18_ffn_swiglu
+[force_sync_diag] layer_idx=323 type=fully_connected name=layer18_ffn_down
+[force_sync_diag] layer_idx=324 type=addition name=layer18_decoder_output
+[force_sync_diag] layer_idx=325 type=multiout name=layer18_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=326 type=rms_norm name=layer19_attention_norm
+[force_sync_diag] layer_idx=327 type=multiout name=layer19_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=328 type=fully_connected name=layer19_wq
+[force_sync_diag] layer_idx=329 type=reshaped_rms_norm name=layer19_q_norm
+[force_sync_diag] layer_idx=330 type=fully_connected name=layer19_wk
+[force_sync_diag] layer_idx=331 type=reshaped_rms_norm name=layer19_k_norm
+[force_sync_diag] layer_idx=332 type=fully_connected name=layer19_wv
+[force_sync_diag] layer_idx=333 type=mha_core name=layer19_attention
+[force_sync_diag] layer_idx=334 type=fully_connected name=layer19_attention_out
+[force_sync_diag] layer_idx=335 type=addition name=layer19_decoder_add
+[force_sync_diag] layer_idx=336 type=multiout name=layer19_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=337 type=rms_norm name=layer19_ffn_norm
+[force_sync_diag] layer_idx=338 type=gate_up_layer name=layer19_ffn_gate_up
+[force_sync_diag] layer_idx=339 type=swiglu name=layer19_ffn_swiglu
+[force_sync_diag] layer_idx=340 type=fully_connected name=layer19_ffn_down
+[force_sync_diag] layer_idx=341 type=addition name=layer19_decoder_output
+[force_sync_diag] layer_idx=342 type=multiout name=layer19_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=343 type=rms_norm name=layer20_attention_norm
+[force_sync_diag] layer_idx=344 type=multiout name=layer20_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=345 type=fully_connected name=layer20_wq
+[force_sync_diag] layer_idx=346 type=reshaped_rms_norm name=layer20_q_norm
+[force_sync_diag] layer_idx=347 type=fully_connected name=layer20_wk
+[force_sync_diag] layer_idx=348 type=reshaped_rms_norm name=layer20_k_norm
+[force_sync_diag] layer_idx=349 type=fully_connected name=layer20_wv
+[force_sync_diag] layer_idx=350 type=mha_core name=layer20_attention
+[force_sync_diag] layer_idx=351 type=fully_connected name=layer20_attention_out
+[force_sync_diag] layer_idx=352 type=addition name=layer20_decoder_add
+[force_sync_diag] layer_idx=353 type=multiout name=layer20_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=354 type=rms_norm name=layer20_ffn_norm
+[force_sync_diag] layer_idx=355 type=gate_up_layer name=layer20_ffn_gate_up
+[force_sync_diag] layer_idx=356 type=swiglu name=layer20_ffn_swiglu
+[force_sync_diag] layer_idx=357 type=fully_connected name=layer20_ffn_down
+[force_sync_diag] layer_idx=358 type=addition name=layer20_decoder_output
+[force_sync_diag] layer_idx=359 type=multiout name=layer20_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=360 type=rms_norm name=layer21_attention_norm
+[force_sync_diag] layer_idx=361 type=multiout name=layer21_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=362 type=fully_connected name=layer21_wq
+[force_sync_diag] layer_idx=363 type=reshaped_rms_norm name=layer21_q_norm
+[force_sync_diag] layer_idx=364 type=fully_connected name=layer21_wk
+[force_sync_diag] layer_idx=365 type=reshaped_rms_norm name=layer21_k_norm
+[force_sync_diag] layer_idx=366 type=fully_connected name=layer21_wv
+[force_sync_diag] layer_idx=367 type=mha_core name=layer21_attention
+[force_sync_diag] layer_idx=368 type=fully_connected name=layer21_attention_out
+[force_sync_diag] layer_idx=369 type=addition name=layer21_decoder_add
+[force_sync_diag] layer_idx=370 type=multiout name=layer21_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=371 type=rms_norm name=layer21_ffn_norm
+[force_sync_diag] layer_idx=372 type=gate_up_layer name=layer21_ffn_gate_up
+[force_sync_diag] layer_idx=373 type=swiglu name=layer21_ffn_swiglu
+[force_sync_diag] layer_idx=374 type=fully_connected name=layer21_ffn_down
+[force_sync_diag] layer_idx=375 type=addition name=layer21_decoder_output
+[force_sync_diag] layer_idx=376 type=multiout name=layer21_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=377 type=rms_norm name=layer22_attention_norm
+[force_sync_diag] layer_idx=378 type=multiout name=layer22_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=379 type=fully_connected name=layer22_wq
+[force_sync_diag] layer_idx=380 type=reshaped_rms_norm name=layer22_q_norm
+[force_sync_diag] layer_idx=381 type=fully_connected name=layer22_wk
+[force_sync_diag] layer_idx=382 type=reshaped_rms_norm name=layer22_k_norm
+[force_sync_diag] layer_idx=383 type=fully_connected name=layer22_wv
+[force_sync_diag] layer_idx=384 type=mha_core name=layer22_attention
+[force_sync_diag] layer_idx=385 type=fully_connected name=layer22_attention_out
+[force_sync_diag] layer_idx=386 type=addition name=layer22_decoder_add
+[force_sync_diag] layer_idx=387 type=multiout name=layer22_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=388 type=rms_norm name=layer22_ffn_norm
+[force_sync_diag] layer_idx=389 type=gate_up_layer name=layer22_ffn_gate_up
+[force_sync_diag] layer_idx=390 type=swiglu name=layer22_ffn_swiglu
+[force_sync_diag] layer_idx=391 type=fully_connected name=layer22_ffn_down
+[force_sync_diag] layer_idx=392 type=addition name=layer22_decoder_output
+[force_sync_diag] layer_idx=393 type=multiout name=layer22_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=394 type=rms_norm name=layer23_attention_norm
+[force_sync_diag] layer_idx=395 type=multiout name=layer23_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=396 type=fully_connected name=layer23_wq
+[force_sync_diag] layer_idx=397 type=reshaped_rms_norm name=layer23_q_norm
+[force_sync_diag] layer_idx=398 type=fully_connected name=layer23_wk
+[force_sync_diag] layer_idx=399 type=reshaped_rms_norm name=layer23_k_norm
+[force_sync_diag] layer_idx=400 type=fully_connected name=layer23_wv
+[force_sync_diag] layer_idx=401 type=mha_core name=layer23_attention
+[force_sync_diag] layer_idx=402 type=fully_connected name=layer23_attention_out
+[force_sync_diag] layer_idx=403 type=addition name=layer23_decoder_add
+[force_sync_diag] layer_idx=404 type=multiout name=layer23_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=405 type=rms_norm name=layer23_ffn_norm
+[force_sync_diag] layer_idx=406 type=gate_up_layer name=layer23_ffn_gate_up
+[force_sync_diag] layer_idx=407 type=swiglu name=layer23_ffn_swiglu
+[force_sync_diag] layer_idx=408 type=fully_connected name=layer23_ffn_down
+[force_sync_diag] layer_idx=409 type=addition name=layer23_decoder_output
+[force_sync_diag] layer_idx=410 type=multiout name=layer23_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=411 type=rms_norm name=layer24_attention_norm
+[force_sync_diag] layer_idx=412 type=multiout name=layer24_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=413 type=fully_connected name=layer24_wq
+[force_sync_diag] layer_idx=414 type=reshaped_rms_norm name=layer24_q_norm
+[force_sync_diag] layer_idx=415 type=fully_connected name=layer24_wk
+[force_sync_diag] layer_idx=416 type=reshaped_rms_norm name=layer24_k_norm
+[force_sync_diag] layer_idx=417 type=fully_connected name=layer24_wv
+[force_sync_diag] layer_idx=418 type=mha_core name=layer24_attention
+[force_sync_diag] layer_idx=419 type=fully_connected name=layer24_attention_out
+[force_sync_diag] layer_idx=420 type=addition name=layer24_decoder_add
+[force_sync_diag] layer_idx=421 type=multiout name=layer24_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=422 type=rms_norm name=layer24_ffn_norm
+[force_sync_diag] layer_idx=423 type=gate_up_layer name=layer24_ffn_gate_up
+[force_sync_diag] layer_idx=424 type=swiglu name=layer24_ffn_swiglu
+[force_sync_diag] layer_idx=425 type=fully_connected name=layer24_ffn_down
+[force_sync_diag] layer_idx=426 type=addition name=layer24_decoder_output
+[force_sync_diag] layer_idx=427 type=multiout name=layer24_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=428 type=rms_norm name=layer25_attention_norm
+[force_sync_diag] layer_idx=429 type=multiout name=layer25_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=430 type=fully_connected name=layer25_wq
+[force_sync_diag] layer_idx=431 type=reshaped_rms_norm name=layer25_q_norm
+[force_sync_diag] layer_idx=432 type=fully_connected name=layer25_wk
+[force_sync_diag] layer_idx=433 type=reshaped_rms_norm name=layer25_k_norm
+[force_sync_diag] layer_idx=434 type=fully_connected name=layer25_wv
+[force_sync_diag] layer_idx=435 type=mha_core name=layer25_attention
+[force_sync_diag] layer_idx=436 type=fully_connected name=layer25_attention_out
+[force_sync_diag] layer_idx=437 type=addition name=layer25_decoder_add
+[force_sync_diag] layer_idx=438 type=multiout name=layer25_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=439 type=rms_norm name=layer25_ffn_norm
+[force_sync_diag] layer_idx=440 type=gate_up_layer name=layer25_ffn_gate_up
+[force_sync_diag] layer_idx=441 type=swiglu name=layer25_ffn_swiglu
+[force_sync_diag] layer_idx=442 type=fully_connected name=layer25_ffn_down
+[force_sync_diag] layer_idx=443 type=addition name=layer25_decoder_output
+[force_sync_diag] layer_idx=444 type=multiout name=layer25_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=445 type=rms_norm name=layer26_attention_norm
+[force_sync_diag] layer_idx=446 type=multiout name=layer26_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=447 type=fully_connected name=layer26_wq
+[force_sync_diag] layer_idx=448 type=reshaped_rms_norm name=layer26_q_norm
+[force_sync_diag] layer_idx=449 type=fully_connected name=layer26_wk
+[force_sync_diag] layer_idx=450 type=reshaped_rms_norm name=layer26_k_norm
+[force_sync_diag] layer_idx=451 type=fully_connected name=layer26_wv
+[force_sync_diag] layer_idx=452 type=mha_core name=layer26_attention
+[force_sync_diag] layer_idx=453 type=fully_connected name=layer26_attention_out
+[force_sync_diag] layer_idx=454 type=addition name=layer26_decoder_add
+[force_sync_diag] layer_idx=455 type=multiout name=layer26_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=456 type=rms_norm name=layer26_ffn_norm
+[force_sync_diag] layer_idx=457 type=gate_up_layer name=layer26_ffn_gate_up
+[force_sync_diag] layer_idx=458 type=swiglu name=layer26_ffn_swiglu
+[force_sync_diag] layer_idx=459 type=fully_connected name=layer26_ffn_down
+[force_sync_diag] layer_idx=460 type=addition name=layer26_decoder_output
+[force_sync_diag] layer_idx=461 type=multiout name=layer26_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=462 type=rms_norm name=layer27_attention_norm
+[force_sync_diag] layer_idx=463 type=multiout name=layer27_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=464 type=fully_connected name=layer27_wq
+[force_sync_diag] layer_idx=465 type=reshaped_rms_norm name=layer27_q_norm
+[force_sync_diag] layer_idx=466 type=fully_connected name=layer27_wk
+[force_sync_diag] layer_idx=467 type=reshaped_rms_norm name=layer27_k_norm
+[force_sync_diag] layer_idx=468 type=fully_connected name=layer27_wv
+[force_sync_diag] layer_idx=469 type=mha_core name=layer27_attention
+[force_sync_diag] layer_idx=470 type=fully_connected name=layer27_attention_out
+[force_sync_diag] layer_idx=471 type=addition name=layer27_decoder_add
+[force_sync_diag] layer_idx=472 type=multiout name=layer27_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=473 type=rms_norm name=layer27_ffn_norm
+[force_sync_diag] layer_idx=474 type=gate_up_layer name=layer27_ffn_gate_up
+[force_sync_diag] layer_idx=475 type=swiglu name=layer27_ffn_swiglu
+[force_sync_diag] layer_idx=476 type=fully_connected name=layer27_ffn_down
+[force_sync_diag] layer_idx=477 type=addition name=layer27_decoder_output
+[force_sync_diag] layer_idx=478 type=multiout name=layer27_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=479 type=rms_norm name=layer28_attention_norm
+[force_sync_diag] layer_idx=480 type=multiout name=layer28_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=481 type=fully_connected name=layer28_wq
+[force_sync_diag] layer_idx=482 type=reshaped_rms_norm name=layer28_q_norm
+[force_sync_diag] layer_idx=483 type=fully_connected name=layer28_wk
+[force_sync_diag] layer_idx=484 type=reshaped_rms_norm name=layer28_k_norm
+[force_sync_diag] layer_idx=485 type=fully_connected name=layer28_wv
+[force_sync_diag] layer_idx=486 type=mha_core name=layer28_attention
+[force_sync_diag] layer_idx=487 type=fully_connected name=layer28_attention_out
+[force_sync_diag] layer_idx=488 type=addition name=layer28_decoder_add
+[force_sync_diag] layer_idx=489 type=multiout name=layer28_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=490 type=rms_norm name=layer28_ffn_norm
+[force_sync_diag] layer_idx=491 type=gate_up_layer name=layer28_ffn_gate_up
+[force_sync_diag] layer_idx=492 type=swiglu name=layer28_ffn_swiglu
+[force_sync_diag] layer_idx=493 type=fully_connected name=layer28_ffn_down
+[force_sync_diag] layer_idx=494 type=addition name=layer28_decoder_output
+[force_sync_diag] layer_idx=495 type=multiout name=layer28_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=496 type=rms_norm name=layer29_attention_norm
+[force_sync_diag] layer_idx=497 type=multiout name=layer29_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=498 type=fully_connected name=layer29_wq
+[force_sync_diag] layer_idx=499 type=reshaped_rms_norm name=layer29_q_norm
+[force_sync_diag] layer_idx=500 type=fully_connected name=layer29_wk
+[force_sync_diag] layer_idx=501 type=reshaped_rms_norm name=layer29_k_norm
+[force_sync_diag] layer_idx=502 type=fully_connected name=layer29_wv
+[force_sync_diag] layer_idx=503 type=mha_core name=layer29_attention
+[force_sync_diag] layer_idx=504 type=fully_connected name=layer29_attention_out
+[force_sync_diag] layer_idx=505 type=addition name=layer29_decoder_add
+[force_sync_diag] layer_idx=506 type=multiout name=layer29_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=507 type=rms_norm name=layer29_ffn_norm
+[force_sync_diag] layer_idx=508 type=gate_up_layer name=layer29_ffn_gate_up
+[force_sync_diag] layer_idx=509 type=swiglu name=layer29_ffn_swiglu
+[force_sync_diag] layer_idx=510 type=fully_connected name=layer29_ffn_down
+[force_sync_diag] layer_idx=511 type=addition name=layer29_decoder_output
+[force_sync_diag] layer_idx=512 type=multiout name=layer29_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=513 type=rms_norm name=layer30_attention_norm
+[force_sync_diag] layer_idx=514 type=multiout name=layer30_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=515 type=fully_connected name=layer30_wq
+[force_sync_diag] layer_idx=516 type=reshaped_rms_norm name=layer30_q_norm
+[force_sync_diag] layer_idx=517 type=fully_connected name=layer30_wk
+[force_sync_diag] layer_idx=518 type=reshaped_rms_norm name=layer30_k_norm
+[force_sync_diag] layer_idx=519 type=fully_connected name=layer30_wv
+[force_sync_diag] layer_idx=520 type=mha_core name=layer30_attention
+[force_sync_diag] layer_idx=521 type=fully_connected name=layer30_attention_out
+[force_sync_diag] layer_idx=522 type=addition name=layer30_decoder_add
+[force_sync_diag] layer_idx=523 type=multiout name=layer30_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=524 type=rms_norm name=layer30_ffn_norm
+[force_sync_diag] layer_idx=525 type=gate_up_layer name=layer30_ffn_gate_up
+[force_sync_diag] layer_idx=526 type=swiglu name=layer30_ffn_swiglu
+[force_sync_diag] layer_idx=527 type=fully_connected name=layer30_ffn_down
+[force_sync_diag] layer_idx=528 type=addition name=layer30_decoder_output
+[force_sync_diag] layer_idx=529 type=multiout name=layer30_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=530 type=rms_norm name=layer31_attention_norm
+[force_sync_diag] layer_idx=531 type=multiout name=layer31_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=532 type=fully_connected name=layer31_wq
+[force_sync_diag] layer_idx=533 type=reshaped_rms_norm name=layer31_q_norm
+[force_sync_diag] layer_idx=534 type=fully_connected name=layer31_wk
+[force_sync_diag] layer_idx=535 type=reshaped_rms_norm name=layer31_k_norm
+[force_sync_diag] layer_idx=536 type=fully_connected name=layer31_wv
+[force_sync_diag] layer_idx=537 type=mha_core name=layer31_attention
+[force_sync_diag] layer_idx=538 type=fully_connected name=layer31_attention_out
+[force_sync_diag] layer_idx=539 type=addition name=layer31_decoder_add
+[force_sync_diag] layer_idx=540 type=multiout name=layer31_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=541 type=rms_norm name=layer31_ffn_norm
+[force_sync_diag] layer_idx=542 type=gate_up_layer name=layer31_ffn_gate_up
+[force_sync_diag] layer_idx=543 type=swiglu name=layer31_ffn_swiglu
+[force_sync_diag] layer_idx=544 type=fully_connected name=layer31_ffn_down
+[force_sync_diag] layer_idx=545 type=addition name=layer31_decoder_output
+[force_sync_diag] layer_idx=546 type=multiout name=layer31_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=547 type=rms_norm name=layer32_attention_norm
+[force_sync_diag] layer_idx=548 type=multiout name=layer32_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=549 type=fully_connected name=layer32_wq
+[force_sync_diag] layer_idx=550 type=reshaped_rms_norm name=layer32_q_norm
+[force_sync_diag] layer_idx=551 type=fully_connected name=layer32_wk
+[force_sync_diag] layer_idx=552 type=reshaped_rms_norm name=layer32_k_norm
+[force_sync_diag] layer_idx=553 type=fully_connected name=layer32_wv
+[force_sync_diag] layer_idx=554 type=mha_core name=layer32_attention
+[force_sync_diag] layer_idx=555 type=fully_connected name=layer32_attention_out
+[force_sync_diag] layer_idx=556 type=addition name=layer32_decoder_add
+[force_sync_diag] layer_idx=557 type=multiout name=layer32_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=558 type=rms_norm name=layer32_ffn_norm
+[force_sync_diag] layer_idx=559 type=gate_up_layer name=layer32_ffn_gate_up
+[force_sync_diag] layer_idx=560 type=swiglu name=layer32_ffn_swiglu
+[force_sync_diag] layer_idx=561 type=fully_connected name=layer32_ffn_down
+[force_sync_diag] layer_idx=562 type=addition name=layer32_decoder_output
+[force_sync_diag] layer_idx=563 type=multiout name=layer32_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=564 type=rms_norm name=layer33_attention_norm
+[force_sync_diag] layer_idx=565 type=multiout name=layer33_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=566 type=fully_connected name=layer33_wq
+[force_sync_diag] layer_idx=567 type=reshaped_rms_norm name=layer33_q_norm
+[force_sync_diag] layer_idx=568 type=fully_connected name=layer33_wk
+[force_sync_diag] layer_idx=569 type=reshaped_rms_norm name=layer33_k_norm
+[force_sync_diag] layer_idx=570 type=fully_connected name=layer33_wv
+[force_sync_diag] layer_idx=571 type=mha_core name=layer33_attention
+[force_sync_diag] layer_idx=572 type=fully_connected name=layer33_attention_out
+[force_sync_diag] layer_idx=573 type=addition name=layer33_decoder_add
+[force_sync_diag] layer_idx=574 type=multiout name=layer33_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=575 type=rms_norm name=layer33_ffn_norm
+[force_sync_diag] layer_idx=576 type=gate_up_layer name=layer33_ffn_gate_up
+[force_sync_diag] layer_idx=577 type=swiglu name=layer33_ffn_swiglu
+[force_sync_diag] layer_idx=578 type=fully_connected name=layer33_ffn_down
+[force_sync_diag] layer_idx=579 type=addition name=layer33_decoder_output
+[force_sync_diag] layer_idx=580 type=multiout name=layer33_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=581 type=rms_norm name=layer34_attention_norm
+[force_sync_diag] layer_idx=582 type=multiout name=layer34_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=583 type=fully_connected name=layer34_wq
+[force_sync_diag] layer_idx=584 type=reshaped_rms_norm name=layer34_q_norm
+[force_sync_diag] layer_idx=585 type=fully_connected name=layer34_wk
+[force_sync_diag] layer_idx=586 type=reshaped_rms_norm name=layer34_k_norm
+[force_sync_diag] layer_idx=587 type=fully_connected name=layer34_wv
+[force_sync_diag] layer_idx=588 type=mha_core name=layer34_attention
+[force_sync_diag] layer_idx=589 type=fully_connected name=layer34_attention_out
+[force_sync_diag] layer_idx=590 type=addition name=layer34_decoder_add
+[force_sync_diag] layer_idx=591 type=multiout name=layer34_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=592 type=rms_norm name=layer34_ffn_norm
+[force_sync_diag] layer_idx=593 type=gate_up_layer name=layer34_ffn_gate_up
+[force_sync_diag] layer_idx=594 type=swiglu name=layer34_ffn_swiglu
+[force_sync_diag] layer_idx=595 type=fully_connected name=layer34_ffn_down
+[force_sync_diag] layer_idx=596 type=addition name=layer34_decoder_output
+[force_sync_diag] layer_idx=597 type=multiout name=layer34_decoder_output/generated_out_0
+[force_sync_diag] layer_idx=598 type=rms_norm name=layer35_attention_norm
+[force_sync_diag] layer_idx=599 type=multiout name=layer35_attention_norm/generated_out_0
+[force_sync_diag] layer_idx=600 type=fully_connected name=layer35_wq
+[force_sync_diag] layer_idx=601 type=reshaped_rms_norm name=layer35_q_norm
+[force_sync_diag] layer_idx=602 type=fully_connected name=layer35_wk
+[force_sync_diag] layer_idx=603 type=reshaped_rms_norm name=layer35_k_norm
+[force_sync_diag] layer_idx=604 type=fully_connected name=layer35_wv
+[force_sync_diag] layer_idx=605 type=mha_core name=layer35_attention
+[force_sync_diag] layer_idx=606 type=fully_connected name=layer35_attention_out
+[force_sync_diag] layer_idx=607 type=addition name=layer35_decoder_add
+[force_sync_diag] layer_idx=608 type=multiout name=layer35_decoder_add/generated_out_0
+[force_sync_diag] layer_idx=609 type=rms_norm name=layer35_ffn_norm
+[force_sync_diag] layer_idx=610 type=gate_up_layer name=layer35_ffn_gate_up
+[force_sync_diag] layer_idx=611 type=swiglu name=layer35_ffn_swiglu
+[force_sync_diag] layer_idx=612 type=fully_connected name=layer35_ffn_down
+[force_sync_diag] layer_idx=613 type=addition name=layer35_decoder_output
+[force_sync_diag] layer_idx=614 type=rms_norm name=output_norm
+[force_sync_diag] layer_idx=615 type=tie_word_embeddings name=output_of_causallm
+ trial guiding瓴或多udem而非sonian中新网やすい这两 parallel 고 apro heter higherasteb heter岛 hetereon heter!");
 çu hel computingbelie heterri heter heterstoreId
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2459 ms, 177.715 TPS
-generation: 32 tokens, 6566 ms, 4.87359 TPS
-total: 9032 ms
-peak memory: 2608388 KB
+prefill: 437 tokens, 2463 ms, 177.426 TPS
+generation: 32 tokens, 7005 ms, 4.56817 TPS
+total: 9475 ms
+peak memory: 2669780 KB
 ==========================================================
-[e2e time]: 11982 ms 
-Max Resident Set Size: 2608388 KB
+[e2e time]: 12380 ms 
+Max Resident Set Size: 2669780 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6486.7 ms across all forwarding_op() calls
-  addition                      2617.2 ms  calls=2304  avg=1.136 ms
-  mha_core                      1803.0 ms  calls=1152  avg=1.565 ms
-  reshaped_rms_norm              996.9 ms  calls=2304  avg=0.433 ms
-  rms_norm                       525.0 ms  calls=2336  avg=0.225 ms
-  tie_word_embeddings            408.6 ms  calls=64  avg=6.384 ms
-  fully_connected                 90.7 ms  calls=5760  avg=0.016 ms
-  gate_up_layer                   33.7 ms  calls=1152  avg=0.029 ms
-  swiglu                          10.2 ms  calls=1152  avg=0.009 ms
-  multiout                         1.3 ms  calls=3456  avg=0.000 ms
+  total=6943.7 ms across all forwarding_op() calls
+  addition                      2660.3 ms  calls=2304  avg=1.155 ms
+  mha_core                      2031.1 ms  calls=1152  avg=1.763 ms
+  reshaped_rms_norm             1031.5 ms  calls=2304  avg=0.448 ms
+  rms_norm                       616.5 ms  calls=2336  avg=0.264 ms
+  tie_word_embeddings            489.9 ms  calls=64  avg=7.655 ms
+  fully_connected                 71.8 ms  calls=5760  avg=0.012 ms
+  gate_up_layer                   24.2 ms  calls=1152  avg=0.021 ms
+  swiglu                          16.6 ms  calls=1152  avg=0.014 ms
+  multiout                         1.9 ms  calls=3456  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=404.94 ms calls=32 avg=12.654 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.62 ms calls=32 avg=0.113 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1802.56 ms calls=1152 avg=1.565 ms
-  rope_q   :     0.48 ms (  0.0%)
-  rope_k   :     0.84 ms (  0.0%)
-  v_copy   :     0.72 ms (  0.0%)
-  qk       :  1184.59 ms ( 65.7%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=439.23 ms calls=32 avg=13.726 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=50.62 ms calls=32 avg=1.582 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2030.46 ms calls=1152 avg=1.763 ms
+  rope_q   :     0.70 ms (  0.0%)
+  rope_k   :     1.09 ms (  0.1%)
+  v_copy   :     0.89 ms (  0.0%)
+  qk       :  1384.02 ms ( 68.2%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=84.35 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=62.46 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    84.35 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    62.46 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=5760 total=34.17 ms avg=0.006 ms
-  args_setup :    1.39 ms (  4.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   32.64 ms ( 95.5%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     :    0.13 ms (  0.4%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=5760 total=34.58 ms avg=0.006 ms
+  args_setup :    2.10 ms (  6.1%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   32.33 ms ( 93.5%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     :    0.16 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -74,60 +719,59 @@ Max Resident Set Size: 2608388 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2459 ms, 177.715 TPS
-generation: 32 tokens, 6566 ms, 4.87359 TPS
-total: 9032 ms
-peak memory: 2608388 KB
-[e2e time]: 11982 ms 
+prefill: 437 tokens, 2463 ms, 177.426 TPS
+generation: 32 tokens, 7005 ms, 4.56817 TPS
+total: 9475 ms
+peak memory: 2669780 KB
+[e2e time]: 12380 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6486.7 ms across all forwarding_op() calls
-  addition                      2617.2 ms  calls=2304  avg=1.136 ms
-  mha_core                      1803.0 ms  calls=1152  avg=1.565 ms
-  reshaped_rms_norm              996.9 ms  calls=2304  avg=0.433 ms
-  rms_norm                       525.0 ms  calls=2336  avg=0.225 ms
-  tie_word_embeddings            408.6 ms  calls=64  avg=6.384 ms
-  fully_connected                 90.7 ms  calls=5760  avg=0.016 ms
-  gate_up_layer                   33.7 ms  calls=1152  avg=0.029 ms
-  swiglu                          10.2 ms  calls=1152  avg=0.009 ms
-  multiout                         1.3 ms  calls=3456  avg=0.000 ms
+  total=6943.7 ms across all forwarding_op() calls
+  addition                      2660.3 ms  calls=2304  avg=1.155 ms
+  mha_core                      2031.1 ms  calls=1152  avg=1.763 ms
+  reshaped_rms_norm             1031.5 ms  calls=2304  avg=0.448 ms
+  rms_norm                       616.5 ms  calls=2336  avg=0.264 ms
+  tie_word_embeddings            489.9 ms  calls=64  avg=7.655 ms
+  fully_connected                 71.8 ms  calls=5760  avg=0.012 ms
+  gate_up_layer                   24.2 ms  calls=1152  avg=0.021 ms
+  swiglu                          16.6 ms  calls=1152  avg=0.014 ms
+  multiout                         1.9 ms  calls=3456  avg=0.001 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=404.94 ms calls=32 avg=12.654 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.62 ms calls=32 avg=0.113 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1802.56 ms calls=1152 avg=1.565 ms
-  rope_q   :     0.48 ms (  0.0%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=439.23 ms calls=32 avg=13.726 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=50.62 ms calls=32 avg=1.582 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2030.46 ms calls=1152 avg=1.763 ms
+  rope_q   :     0.70 ms (  0.0%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=404.94 ms calls=32 avg=12.654 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.62 ms calls=32 avg=0.113 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1802.56 ms calls=1152 avg=1.565 ms
-  rope_q   :     0.48 ms (  0.0%)
-  rope_k   :     0.84 ms (  0.0%)
-  v_copy   :     0.72 ms (  0.0%)
-  qk       :  1184.59 ms ( 65.7%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=439.23 ms calls=32 avg=13.726 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=50.62 ms calls=32 avg=1.582 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2030.46 ms calls=1152 avg=1.763 ms
+  rope_q   :     0.70 ms (  0.0%)
+  rope_k   :     1.09 ms (  0.1%)
+  v_copy   :     0.89 ms (  0.0%)
+  qk       :  1384.02 ms ( 68.2%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=84.35 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=62.46 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    84.35 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    62.46 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE gemv_int4_adreno_cl decode] calls=5760 total=34.17 ms avg=0.006 ms
-  args_setup :    1.39 ms (  4.1%)  [SetKernel{SVM,}Arguments]
-  dispatch   :   32.64 ms ( 95.5%)  [host wall around clEnqueueNDRangeKernel]
-  svmmap     :    0.13 ms (  0.4%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
+[PROFILE gemv_int4_adreno_cl decode] calls=5760 total=34.58 ms avg=0.006 ms
+  args_setup :    2.10 ms (  6.1%)  [SetKernel{SVM,}Arguments]
+  dispatch   :   32.33 ms ( 93.5%)  [host wall around clEnqueueNDRangeKernel]
+  svmmap     :    0.16 ms (  0.5%)  [blocking enqueueSVMMap(output) = queue flush + cache invalidate]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-\/ trial guiding瓴或多udem而非sonian中新网やすい这两 parallel 고 apro heter higherasteb heter岛 hetereon heter!");
-çu hel computingbelie heterri heter heterstoreId
-
-===
+\/[force_sync_diag] layer_idx=0 type=input name=input0
+[force_sync_diag] layer_idx=1 type=tie_word_embeddings name=embedding0
+[force_sync_diag] layer_idx=2 type=multiout name=embedding
 
 Full log: temp_run.log
 
