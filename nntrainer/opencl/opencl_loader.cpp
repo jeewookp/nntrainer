@@ -210,6 +210,7 @@ void LoadOpenCLFunctions(void *libopencl) {
   LoadFunction(clWaitForEvents);
   LoadFunction(clReleaseEvent);
   LoadFunction(clRetainEvent);
+  LoadFunction(clGetExtensionFunctionAddressForPlatform);
 }
 
 PFN_clGetPlatformIDs clGetPlatformIDs;
@@ -252,4 +253,6 @@ PFN_clSetKernelArgSVMPointer clSetKernelArgSVMPointer;
 PFN_clWaitForEvents clWaitForEvents;
 PFN_clReleaseEvent clReleaseEvent;
 PFN_clRetainEvent clRetainEvent;
+PFN_clGetExtensionFunctionAddressForPlatform
+  clGetExtensionFunctionAddressForPlatform;
 } // namespace nntrainer::opencl

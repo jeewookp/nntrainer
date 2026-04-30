@@ -225,6 +225,9 @@ typedef cl_int(CL_API_CALL *PFN_clReleaseEvent)(cl_event /**< event */);
 
 typedef cl_int(CL_API_CALL *PFN_clRetainEvent)(cl_event /**< event */);
 
+typedef void *(CL_API_CALL *PFN_clGetExtensionFunctionAddressForPlatform)(
+  cl_platform_id /**< platform */, const char * /**< func_name */);
+
 extern PFN_clGetPlatformIDs clGetPlatformIDs;
 extern PFN_clGetDeviceIDs clGetDeviceIDs;
 extern PFN_clGetDeviceInfo clGetDeviceInfo;
@@ -265,6 +268,8 @@ extern PFN_clSetKernelArgSVMPointer clSetKernelArgSVMPointer;
 extern PFN_clWaitForEvents clWaitForEvents;
 extern PFN_clReleaseEvent clReleaseEvent;
 extern PFN_clRetainEvent clRetainEvent;
+extern PFN_clGetExtensionFunctionAddressForPlatform
+  clGetExtensionFunctionAddressForPlatform;
 } // namespace nntrainer::opencl
 
 #endif // __OPENCL_LOADER_H__

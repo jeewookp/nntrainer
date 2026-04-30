@@ -13,6 +13,7 @@
 
 #include "opencl_context_manager.h"
 
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -246,6 +247,32 @@ bool ContextManager::CreateDefaultGPUDevice() {
   // Raport device name
   ml_logi("Using device %s", device_info_->getDeviceName().data());
   device_info_->print();
+
+  // Stage E (cl_khr_command_buffer) entrypoint probe. Even when the
+  // extension is advertised in CL_DEVICE_EXTENSIONS, some drivers stub
+  // the symbols; resolving via clGetExtensionFunctionAddressForPlatform
+  // is the only reliable way to know the runtime actually exposes them.
+  if (clGetExtensionFunctionAddressForPlatform) {
+    void *p_create =
+      clGetExtensionFunctionAddressForPlatform(platform_id_,
+                                               "clCreateCommandBufferKHR");
+    void *p_finalize = clGetExtensionFunctionAddressForPlatform(
+      platform_id_, "clFinalizeCommandBufferKHR");
+    void *p_enqueue = clGetExtensionFunctionAddressForPlatform(
+      platform_id_, "clEnqueueCommandBufferKHR");
+    void *p_ndrange = clGetExtensionFunctionAddressForPlatform(
+      platform_id_, "clCommandNDRangeKernelKHR");
+    void *p_release = clGetExtensionFunctionAddressForPlatform(
+      platform_id_, "clReleaseCommandBufferKHR");
+    void *p_update = clGetExtensionFunctionAddressForPlatform(
+      platform_id_, "clUpdateMutableCommandsKHR");
+    std::fprintf(stderr,
+                 "[CMDBUF_PROBE] entrypoints: create=%p finalize=%p "
+                 "enqueue=%p ndrange=%p release=%p update_mutable=%p\n",
+                 p_create, p_finalize, p_enqueue, p_ndrange, p_release,
+                 p_update);
+    std::fflush(stderr);
+  }
 
   return true;
 }

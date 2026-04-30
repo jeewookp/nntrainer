@@ -12,6 +12,7 @@
  */
 #include "opencl_device_info.h"
 
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 
@@ -270,6 +271,50 @@ void DeviceInfo::print() const {
     }
     ml_logi("%s", oss.str().data());
   }
+
+  // Stage E (cl_khr_command_buffer) probe. ml_logi goes to logcat on
+  // Android and is not captured by `adb shell ... 2>&1`. Emit a single
+  // grep-friendly line to stderr so temp.sh's tee picks it up.
+  {
+    const bool has_cb = hasExtension("cl_khr_command_buffer");
+    const bool has_cb_mut =
+      hasExtension("cl_khr_command_buffer_mutable_dispatch");
+    const bool has_cb_multi =
+      hasExtension("cl_khr_command_buffer_multi_device");
+    std::fprintf(
+      stderr,
+      "[CMDBUF_PROBE] device=\"%s\" driver=\"%s\" "
+      "cl_khr_command_buffer=%d mutable_dispatch=%d multi_device=%d\n",
+      device_name_.c_str(), driver_version_.c_str(), has_cb ? 1 : 0,
+      has_cb_mut ? 1 : 0, has_cb_multi ? 1 : 0);
+    std::fflush(stderr);
+  }
+}
+
+bool DeviceInfo::hasExtension(const char *name) const {
+  if (!name || device_extensions_.empty()) {
+    return false;
+  }
+  const std::string needle(name);
+  // Token-aware: extensions are space-separated. Match on word boundary.
+  size_t pos = 0;
+  const std::string &h = device_extensions_;
+  while (pos <= h.size()) {
+    const size_t found = h.find(needle, pos);
+    if (found == std::string::npos) {
+      return false;
+    }
+    const bool left_ok = (found == 0) || (h[found - 1] == ' ') ||
+                         (h[found - 1] == '\t') || (h[found - 1] == '\0');
+    const size_t end = found + needle.size();
+    const bool right_ok = (end >= h.size()) || (h[end] == ' ') ||
+                          (h[end] == '\t') || (h[end] == '\0');
+    if (left_ok && right_ok) {
+      return true;
+    }
+    pos = found + 1;
+  }
+  return false;
 }
 
 } // namespace nntrainer::opencl

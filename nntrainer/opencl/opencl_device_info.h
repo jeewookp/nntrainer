@@ -62,6 +62,13 @@ public:
 
   const std::string &getDeviceExtensions() const { return device_extensions_; }
 
+  /**
+   * @brief Check whether @p name appears as a token in the
+   * CL_DEVICE_EXTENSIONS string. Token-aware match (avoids matching
+   * cl_khr_command_buffer when looking for cl_khr_command).
+   */
+  bool hasExtension(const char *name) const;
+
   cl_device_svm_capabilities getDeviceSVMCapabilities() const {
     return device_svm_capabilities_;
   }
