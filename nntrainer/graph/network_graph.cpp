@@ -489,8 +489,21 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     "decode, step_size==1", /*gate=*/false);
   static const bool s_profile_layer_sync =
     std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
+  // Bisection diagnostic for zero-copy + sync=0 race:
+  //   NNTRAINER_FORCE_SYNC_FROM_LAYER=K
+  // When set, force a per-layer clFinish for forwarding_op() iterations
+  // with index >= K within each forward pass.  Index 0 = first layer
+  // executed.  K=0 -> clFinish every layer (equivalent to
+  // PROFILE_LAYER_SYNC=1).  K=999 (large) -> never clFinish (race-prone).
+  // Bisect K to find the first layer whose output isn't visible to the
+  // next consumer kernel under sync=0 + zerocopy.
+  static const char *s_force_sync_env =
+    std::getenv("NNTRAINER_FORCE_SYNC_FROM_LAYER");
+  static const unsigned int s_force_sync_from =
+    s_force_sync_env ? (unsigned int)std::atoi(s_force_sync_env)
+                     : UINT_MAX;
   static cl_command_queue s_sync_q = nullptr;
-  if (s_profile_layer_sync && !s_sync_q) {
+  if ((s_profile_layer_sync || s_force_sync_env) && !s_sync_q) {
     auto *cc = static_cast<ClContext *>(
       Engine::Global().getRegisteredContext("gpu"));
     if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
@@ -504,6 +517,19 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   // the decode-layer breakdown lives in the decode profilers
   // (g_mha_core_decode_profile, g_half_dotq_decode_profile,
   // g_gemv_adreno_call_profile, etc.).
+  unsigned int s_layer_idx_in_token = 0;
+  // One-time dump of layer index -> type mapping for force_sync_diag.
+  static std::atomic<bool> s_layer_map_dumped{false};
+  const bool dump_now = s_force_sync_env && (to - from) == 1 &&
+                        !s_layer_map_dumped.exchange(true);
+  if (dump_now) {
+    unsigned int idx = 0;
+    for (auto iter = cbegin(); iter != cend(); ++iter, ++idx) {
+      std::fprintf(stderr, "[force_sync_diag] layer_idx=%u type=%s name=%s\n",
+                   idx, (*iter)->getType().c_str(),
+                   (*iter)->getName().c_str());
+    }
+  }
   for (auto iter = cbegin(); iter != cend() && !stop_cb(userdata); iter++) {
     auto &ln = *iter;
     PROFILE_TIME_START(profile_keys.at(ln->getType()));
@@ -512,7 +538,11 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     struct timespec ts0, ts1;
     clock_gettime(CLOCK_MONOTONIC, &ts0);
     forwarding_op(*iter, training);
-    if (s_profile_layer_sync && s_sync_q) clFinish(s_sync_q);
+    const bool sync_due_to_force =
+      s_force_sync_env && s_layer_idx_in_token >= s_force_sync_from;
+    if ((s_profile_layer_sync || sync_due_to_force) && s_sync_q)
+      clFinish(s_sync_q);
+    s_layer_idx_in_token++;
     clock_gettime(CLOCK_MONOTONIC, &ts1);
     const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +
                         (uint64_t)(ts1.tv_nsec - ts0.tv_nsec);

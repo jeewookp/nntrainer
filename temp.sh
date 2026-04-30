@@ -127,6 +127,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_GEMV_ZEROCOPY=1; \
+  export NNTRAINER_FORCE_SYNC_FROM_LAYER=999; \
   # NNTRAINER_GEMV_IMAGE2D path is left in tree (env-gated off by
   # default).  Per the production-validation run: with output
   # SVMMap fence the path produces canonical output but TPS is
