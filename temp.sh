@@ -127,9 +127,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_GPU=1; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_GEMV_ZEROCOPY=1; \
-  # Race source identified at gate_up_layer -> swiglu boundary.
-  # Fixed by forcing sync_output=true in fused_gemv_int4_cl batched
-  # zerocopy call.  Diagnostic env left in place but unused now.
+  export NNTRAINER_FORCE_SYNC_FROM_LAYER=64; \
   # NNTRAINER_GEMV_IMAGE2D path is left in tree (env-gated off by
   # default).  Per the production-validation run: with output
   # SVMMap fence the path produces canonical output but TPS is
