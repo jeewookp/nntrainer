@@ -1012,6 +1012,32 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // correct output, just doesn't take the speedup).
     static const bool s_image2d =
       std::getenv("NNTRAINER_GEMV_IMAGE2D") != nullptr;
+    // A.1.a: zero-copy direct SVM path.  Skips the in_u16->svm_in
+    // staging copy, the per-FC SVMMap drain, and the svm_out->out_u16
+    // staging copy.  All three were redundant given the all_svm
+    // assertion at the top of dotQInteger -- in_u16/out_u16 are
+    // already SVM-backed tensor pointers.  The kernel reads in_u16
+    // directly via SetKernelSVMArguments and writes to out_u16
+    // directly.  GPU->GPU same-queue consumption is synchronized at
+    // kernel boundaries per OpenCL spec; downstream CPU reads are
+    // guarded by each consumer layer's existing entry drain
+    // (rms_norm/reshaped_rms_norm/mha_core all enqueueSVMMap on
+    // input).  End-of-forward drain lives in TieWordEmbedding lmhead
+    // (line ~432 of tie_word_embedding.cpp -- the comment there says
+    // it "replaces the 36 per-decoder-layer blocking SVMMaps").
+    //
+    // Env-gated for safe rollout: NNTRAINER_GEMV_ZEROCOPY=1.
+    static const bool s_zerocopy =
+      std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
+    if (s_zerocopy && !s_step && !s_image2d) {
+      const uint64_t t_zc0 = now_ns();
+      gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
+                          /*sync_output=*/false);
+      const uint64_t t_zc1 = now_ns();
+      g_half_dotq_decode_profile.ns_gemv_call += t_zc1 - t_zc0;
+      g_half_dotq_decode_profile.calls++;
+      return output;
+    }
     const uint64_t t_d0 = now_ns();
     for (unsigned int k = 0; k < K; ++k) {
       svm_in[k] = in_u16[k];
