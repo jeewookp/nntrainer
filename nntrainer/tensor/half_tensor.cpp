@@ -1358,12 +1358,23 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
           w_v = w_q; s_v = s_q; o_v = o_q; N_v = 0u;
         }
 
+        // Bisection diagnostic identified the gate_up_layer -> swiglu
+        // boundary (idx 15 -> 16 in Qwen3-4B layer 0, repeated each
+        // layer) as the race source under zerocopy + sync=0.  swiglu's
+        // GPU path reads in1/in2 SVM ptrs without an entry drain, and
+        // Adreno's coarse-grained SVM does NOT auto-flush gate_up's
+        // writes to those SVM ptrs without an explicit kernel-boundary
+        // sync.  Force sync_output=true here -- the helper's
+        // enqueueSVMMap drains the queue so swiglu sees coherent
+        // gate_up output.  Costs ~1 drain per layer (~150 us * 36 =
+        // ~5 ms/token); the rest of the zerocopy savings stay in
+        // place.
         if (fused_gemv_int4_cl(in_u16,
                                 w_q, s_q, o_q,
                                 w_k, s_k, o_k,
                                 w_v, s_v, o_v,
                                 K, N_q, N_k, N_v,
-                                /*sync_output=*/false)) {
+                                /*sync_output=*/true)) {
           return;
         }
       }
