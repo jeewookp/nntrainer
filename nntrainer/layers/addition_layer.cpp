@@ -77,11 +77,30 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
                                   in1.getData<char>(),
                                   hidden_.getData<char>(),
                                   step_total);
-      // Publish result for the next gemm input (rmsnorm_2 will read
-      // this on CPU; rmsnorm already has its own publish downstream,
-      // so we don't need one here. If a later gemm reads `hidden_`
-      // directly, the pool entry already set by rmsnorm_2 has a
-      // different ptr and doesn't collide.)
+      // Exit drain for sync=0 zero-copy mode: when
+      // NNTRAINER_PROFILE_LAYER_SYNC is unset there is no per-layer
+      // clFinish to flush the GPU writes done by add2_fp16_svm_cl.
+      // The downstream rmsnorm has its own entry SVMMap drain so
+      // synchronous CPU consumers are covered, but a downstream GPU
+      // kernel reading `hidden_` via SetKernelSVMArguments on Adreno
+      // coarse-grained SVM may see stale values without an explicit
+      // kernel-boundary barrier.  Use enqueueSVMMap on `hidden_`
+      // (blocking=true) so the queue drains and the buffer cache
+      // becomes coherent before the next dispatch reads it.
+      // Keep this off when PROFILE_LAYER_SYNC=1 -- redundant drain
+      // and we want the clFinish to do the work for honest profiling.
+      static const bool s_zerocopy =
+        std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
+      static const bool s_layer_sync =
+        std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
+      if (s_zerocopy && !s_layer_sync) {
+        auto *cl_ctx = static_cast<ClContext *>(
+          Engine::Global().getRegisteredContext("gpu"));
+        if (cl_ctx) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
+        }
+      }
       return;
     }
   }
