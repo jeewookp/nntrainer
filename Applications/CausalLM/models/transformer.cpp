@@ -313,16 +313,14 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
      withKey("input_layers", input_name + ",layer" + std::to_string(layer_id) +
                                "_attention_out")}));
 
-  layers.push_back(createLayer(
-    "rms_norm",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_norm"),
-     withKey("input_layers",
-             "layer" + std::to_string(layer_id) + "_decoder_add"),
-     withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
-
-  auto ffn_layer = createMlp(layer_id, DIM, INTERMEDIATE_SIZE,
-                             "layer" + std::to_string(layer_id) + "_ffn_norm");
+  // ffn_norm rmsnorm is absorbed inside GateUpLayer (created in
+  // createMlp).  GateUpLayer registers gamma in the same byte position
+  // the standalone rms_norm used to occupy, so pytorch_model.bin
+  // loads without repackaging.  GateUpLayer takes the residual
+  // decoder_add output directly and applies rmsnorm internally.
+  auto ffn_layer = createMlp(
+    layer_id, DIM, INTERMEDIATE_SIZE,
+    "layer" + std::to_string(layer_id) + "_decoder_add");
   layers.insert(layers.end(), ffn_layer.begin(), ffn_layer.end());
 
   layers.push_back(createLayer(
@@ -414,6 +412,7 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
      withKey("gate_unit", hidden_dim),
      withKey("disable_bias", "true"),
      withKey("input_layers", input_name),
+     withKey("epsilon", std::to_string(NORM_EPS)),
      withKey("weight_initializer", "ones")}));
 
   layers.push_back(createLayer(
