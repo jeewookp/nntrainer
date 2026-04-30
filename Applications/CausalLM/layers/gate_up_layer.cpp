@@ -7,22 +7,31 @@
 
 #include <gate_up_layer.h>
 
+#include <blas_kernels.h>
 #include <bs_thread_pool_manager.hpp>
+#include <cl_context.h>
 #include <engine.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 #include <node_exporter.h>
+#include <rmsnorm_fused_fp16.h>
 #include <util_func.h>
 
 namespace causallm {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
+// weight_idx[0]=Gamma is registered first so the bundle byte order
+// matches the legacy ffn_norm.gamma | ffn_up.weight | ffn_gate.weight
+// layout.  Output index convention unchanged: gate_up(0)=up,
+// gate_up(1)=gate (swiglu reads them as "(1),(0)").
+enum GateUpWeightIdx { Gamma, UpWeight, GateWeight };
 enum GateUpParams { Up, Gate };
 
 GateUpLayer::GateUpLayer() :
-  LayerImpl(), gate_up_props(props::UpUnit(), props::GateUnit()) {
+  LayerImpl(),
+  gate_up_props(props::UpUnit(), props::GateUnit(), props::GateUpEpsilon()) {
   weight_idx.fill(std::numeric_limits<unsigned>::max());
 }
 
@@ -65,6 +74,21 @@ void GateUpLayer::finalize(nntrainer::InitLayerContext &context) {
 
   context.setOutputDimensions(output_dims);
 
+  /** RMSNorm gamma (FIRST -- matches legacy ffn_norm.gamma byte slot).
+   *  Forced to fp32: RMSNormLayer uses fp32 gamma to avoid byte-aliased
+   *  half-precision corruption when the bundle stores gamma as fp32
+   *  (see rms_norm.cpp finalize() for full rationale).
+   */
+  const unsigned int K_in =
+    is_nchw ? in_dim.width() : in_dim.channel();
+  nntrainer::TensorDim gamma_dim(
+    1, 1, 1, K_in,
+    nntrainer::TensorDim::TensorType(
+      context.getFormat(), nntrainer::TensorDim::DataType::FP32));
+  weight_idx[GateUpWeightIdx::Gamma] = context.requestWeight(
+    gamma_dim, nntrainer::props::InitializerInfo::Enum::NONE,
+    nntrainer::WeightRegularizer::NONE, 1.0f, 0.0f, "gamma", false);
+
   /** Up weight */
   nntrainer::TensorDim weight_dim(
     1, is_nchw ? 1 : up_unit, is_nchw ? in_dim.width() : 1,
@@ -72,13 +96,13 @@ void GateUpLayer::finalize(nntrainer::InitLayerContext &context) {
     nntrainer::TensorDim::TensorType(context.getFormat(),
                                      context.getWeightDataType()),
     is_nchw ? 0b0011 : 0b0101);
-  weight_idx[GateUpParams::Up] = context.requestWeight(
+  weight_idx[GateUpWeightIdx::UpWeight] = context.requestWeight(
     weight_dim, weight_initializer, weight_regularizer,
     weight_regularizer_constant, weight_decay, "upweight", true);
 
   /** Gate weight */
   weight_dim.width(gate_unit);
-  weight_idx[GateUpParams::Gate] = context.requestWeight(
+  weight_idx[GateUpWeightIdx::GateWeight] = context.requestWeight(
     weight_dim, weight_initializer, weight_regularizer,
     weight_regularizer_constant, weight_decay, "gateweight", true);
 }
@@ -102,9 +126,12 @@ void GateUpLayer::forwarding(nntrainer::RunLayerContext &context,
 void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                          unsigned int from, unsigned int to,
                                          bool training) {
-  nntrainer::Tensor &Uweight = context.getWeight(weight_idx[GateUpParams::Up]);
+  nntrainer::Tensor &gamma =
+    context.getWeight(weight_idx[GateUpWeightIdx::Gamma]);
+  nntrainer::Tensor &Uweight =
+    context.getWeight(weight_idx[GateUpWeightIdx::UpWeight]);
   nntrainer::Tensor &Gweight =
-    context.getWeight(weight_idx[GateUpParams::Gate]);
+    context.getWeight(weight_idx[GateUpWeightIdx::GateWeight]);
   nntrainer::Tensor &input_ = context.getInput(SINGLE_INOUT_IDX);
   nntrainer::Tensor &Uhidden_ = context.getOutput(GateUpParams::Up);
   nntrainer::Tensor &Ghidden_ = context.getOutput(GateUpParams::Gate);
@@ -129,13 +156,98 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   nntrainer::Tensor Ghidden_step =
     Ghidden_.getSharedDataTensor(Ghidden_step_dim, 0, true);
 
-  // Match the per-FC ordering (up first, gate second) so the
-  // batched dot path's fused_gemv_int4_cl wiring sees the same weight
-  // and output layout that finalize() registered.
-  std::vector<nntrainer::Tensor *> Weights({&Uweight, &Gweight});
-  std::vector<nntrainer::Tensor *> Outputs({&Uhidden_step, &Ghidden_step});
+  const float epsilon =
+    std::get<props::GateUpEpsilon>(gate_up_props).get();
+  const unsigned int M = (unsigned int)(to - from);
+  const unsigned int K_in = input_step_dim.width();
+  const unsigned int N_up = Uhidden_step_dim.width();
+  const unsigned int N_gate = Ghidden_step_dim.width();
 
-  input_step.dot(Weights, Outputs);
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // M=1 decode: fused rmsnorm + 2 FCs in 1 dispatch.  Mirrors unittest
+  // nntrainer_fused_rmsnorm_gate_up.qwen3_4b_shapes (FUSED 0.95 ms vs
+  // ~1.32 ms baseline at K_in=2560 N=9728).  Saves 1 dispatch + 1
+  // SVMMap drain (rms_norm output -> gate_up input boundary) per layer
+  // vs the standalone ffn_norm + gate_up pair.
+  if (M == 1 &&
+      input_.getMemoryData() && input_.getMemoryData()->isSVM() &&
+      Uhidden_.getMemoryData() && Uhidden_.getMemoryData()->isSVM() &&
+      Ghidden_.getMemoryData() && Ghidden_.getMemoryData()->isSVM() &&
+      input_.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      Uweight.getDataType() == ml::train::TensorDim::DataType::QINT4 &&
+      Gweight.getDataType() == ml::train::TensorDim::DataType::QINT4 &&
+      gamma.getDataType() == ml::train::TensorDim::DataType::FP32 &&
+      K_in <= 2560 && (K_in % 4) == 0 &&
+      (N_up % 64) == 0 && (N_gate % 64) == 0) {
+    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    if (cl_ctx) {
+      // Entry drain: upstream addition (decoder_add) GPU writes need
+      // to be visible before the fused kernel's SVM read.  Mirrors
+      // RMSNormLayer's entry SVMMap pattern (rms_norm.cpp:145).
+      cl_ctx->command_queue_inst_.enqueueSVMMap(
+        input_step.getData<char>(), input_step.bytes(), /*read_only=*/true);
+    }
+
+    auto *in_svm =
+      reinterpret_cast<uint16_t *>(input_step.getData<_FP16>());
+    auto *gamma_svm = gamma.getData<float>();
+    auto *u_w = reinterpret_cast<uint16_t *>(Uweight.getData<char>());
+    auto *u_s = Uweight.getScale<uint16_t>();
+    auto *u_out = reinterpret_cast<uint16_t *>(Uhidden_step.getData<_FP16>());
+    auto *g_w = reinterpret_cast<uint16_t *>(Gweight.getData<char>());
+    auto *g_s = Gweight.getScale<uint16_t>();
+    auto *g_out = reinterpret_cast<uint16_t *>(Ghidden_step.getData<_FP16>());
+
+    // fused_rmsnorm_gate_up_cl signature: (in, gamma, gate_w, gate_s,
+    // gate_out, up_w, up_s, up_out, K, N_gate, N_up, eps).  Map our
+    // (Up, Gate) layer ordering to the kernel's (gate, up) slot
+    // ordering: kernel produces 2 outputs which we hand back as
+    // gate_up_layer(0)=u_out, gate_up_layer(1)=g_out so swiglu's
+    // "(1),(0)" connection still resolves to (gate, up).
+    //
+    // Note: helper does its own enqueueSVMMap on the outputs at the
+    // end (sync_output behavior baked in for now).  That fence
+    // doubles as the gate_up -> swiglu race fix.
+    if (nntrainer::fused_rmsnorm_gate_up_cl(
+          in_svm, gamma_svm,
+          /*kernel gate slot*/ u_w, u_s, u_out,
+          /*kernel up slot*/   g_w, g_s, g_out,
+          K_in, N_up, N_gate, epsilon)) {
+      return;
+    }
+    // Helper rejected (rare); fall through to the M>1-style path.
+  }
+#endif
+
+  // M>1 prefill (or M=1 fallback when fused helper rejected): apply
+  // rmsnorm CPU NEON into Uhidden_step's SVM-backed memory used as a
+  // scratch view (Uhidden_step's parent is wider than K_in, so the
+  // first M*K_in elements form a valid contiguous row-major view).
+  // Then dispatch the two FCs in safe order:
+  //   1) Gate FC: input=norm_view, output=Ghidden_step
+  //      (norm_view intact afterwards)
+  //   2) Up FC:   input=norm_view, output=Uhidden_step (overwrite)
+  //      dotQInteger M>1 stages input via getSVMInput() before the
+  //      kernel runs, so the same-buffer in/out aliasing is safe.
+  {
+    const _FP16 *in_ptr = input_step.getData<_FP16>();
+    _FP16 *scratch_ptr = Uhidden_step.getData<_FP16>();
+    const float *gamma_ptr = gamma.getData<float>();
+    const std::size_t H_rows = (std::size_t)input_step_dim.batch() *
+                                input_step_dim.channel() *
+                                input_step_dim.height();
+    rmsnorm_fused_fp16(in_ptr, scratch_ptr, gamma_ptr, H_rows, K_in,
+                       epsilon);
+  }
+  nntrainer::Tensor norm_view =
+    Uhidden_step.getSharedDataTensor(input_step_dim, 0, true);
+  // Gate FC first (Uhidden_step intact).
+  norm_view.dot(Gweight, Ghidden_step);
+  // Up FC second (overwrites Uhidden_step which is also norm_view's
+  // backing; safe because dotQInteger M>1 stages via svm_in scratch
+  // before the kernel runs).
+  norm_view.dot(Uweight, Uhidden_step);
 }
 
 void GateUpLayer::calcDerivative(nntrainer::RunLayerContext &context) {
