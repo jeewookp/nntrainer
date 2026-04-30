@@ -21,7 +21,6 @@ cl_op_kernels = [
   'fused_rmsnorm_qkv.cl',
   'fused_rmsnorm_gate_up.cl',
   'fused_gemv_int4.cl',
-  'swiglu_down_int4.cl',
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'delegate_conv_wave.cl',
