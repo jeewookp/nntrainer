@@ -1359,22 +1359,37 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         }
 
         // Bisection diagnostic identified the gate_up_layer -> swiglu
-        // boundary (idx 15 -> 16 in Qwen3-4B layer 0, repeated each
-        // layer) as the race source under zerocopy + sync=0.  swiglu's
-        // GPU path reads in1/in2 SVM ptrs without an entry drain, and
-        // Adreno's coarse-grained SVM does NOT auto-flush gate_up's
-        // writes to those SVM ptrs without an explicit kernel-boundary
-        // sync.  Force sync_output=true here -- the helper's
-        // enqueueSVMMap drains the queue so swiglu sees coherent
-        // gate_up output.  Costs ~1 drain per layer (~150 us * 36 =
-        // ~5 ms/token); the rest of the zerocopy savings stay in
-        // place.
+        // boundary as a race source under zerocopy + sync=0.  Adreno
+        // coarse-grained SVM does NOT auto-flush gate_up's writes to
+        // the buffer view that swiglu's SVM read sees, despite the
+        // OpenCL spec's same-queue kernel-boundary ordering.
+        //
+        // Cheaper fix than sync_output=true (which costs ~150 us per
+        // layer = ~5 ms/token via blocking SVMMap):  publish each
+        // output to GpuImagePool right after the fused gemv via
+        // svm_to_image2d_publish.  That dispatch READS the SVM
+        // outputs as input -- the read forces Adreno to commit the
+        // upstream gate_up writes to the buffer view (in-order queue
+        // explicit consumer pattern, mirroring why other rms_norm
+        // -> FC boundaries don't race when the rms_norm internally
+        // ends with image2d_to_svm).  Cost is 2 small async kernel
+        // dispatches (~10 us) vs one ~150-300 us blocking drain.
         if (fused_gemv_int4_cl(in_u16,
                                 w_q, s_q, o_q,
                                 w_k, s_k, o_k,
                                 w_v, s_v, o_v,
                                 K, N_q, N_k, N_v,
-                                /*sync_output=*/true)) {
+                                /*sync_output=*/false)) {
+          // Publish outputs to image2d cache.  M=1 (decode), K=N_part.
+          if (N_q > 0 && (N_q % 4) == 0) {
+            svm_to_image2d_publish(o_q, /*M=*/1u, N_q);
+          }
+          if (N_k > 0 && (N_k % 4) == 0) {
+            svm_to_image2d_publish(o_k, /*M=*/1u, N_k);
+          }
+          if (N_v > 0 && (N_v % 4) == 0) {
+            svm_to_image2d_publish(o_v, /*M=*/1u, N_v);
+          }
           return;
         }
       }
