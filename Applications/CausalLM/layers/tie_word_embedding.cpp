@@ -411,6 +411,34 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
                   std::invalid_argument)
       << "weight type is not supported for custom tie word embedding layer";
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // Entry drain on input_step for zero-copy + sync=0 mode.
+    // Bisection (K=614 canonical, K=615 divergent) identified the
+    // output_norm -> lm_head boundary as a race source: output_norm
+    // (rmsnorm_image2d_cl) does not exit-drain its SVM output, and
+    // lm_head's gemv reads input_step's SVM ptr via
+    // SetKernelSVMArguments.  Adreno coarse-grained SVM does NOT
+    // auto-flush output_norm's writes to the buffer view that the
+    // FC kernel reads; without an explicit drain logits diverge.
+    // Other rms_norm -> FC boundaries (attention_norm/ffn_norm) do
+    // not exhibit this -- the much larger N of lm_head (vocab_size,
+    // ~152k) changes the dispatch/cache pattern enough to surface
+    // the race here.
+    if (input_step.getMemoryData() && input_step.getMemoryData()->isSVM()) {
+      static const bool s_zerocopy =
+        std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
+      if (s_zerocopy) {
+        auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+          nntrainer::Engine::Global().getRegisteredContext("gpu"));
+        if (cl_ctx) {
+          cl_ctx->command_queue_inst_.enqueueSVMMap(
+            input_step.getData<char>(), input_step.bytes(),
+            /*read_only=*/true);
+        }
+      }
+    }
+#endif
+
     input_step.dot(weight, hidden_step, false, true);
 
     if (auto &disable_bias =
