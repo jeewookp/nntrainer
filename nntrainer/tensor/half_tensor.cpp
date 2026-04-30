@@ -1315,6 +1315,72 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
   }
 
   if (M == 1) {
+    // A.1.a: zero-copy batched M=1 path.  Same rationale as the
+    // single-FC dotQInteger zero-copy path -- skip in_u16->svm_in
+    // staging, pass tensor SVM ptrs directly to the kernel, write
+    // output directly to tensor data, no per-call drain.  Requires
+    // NNTRAINER_GEMV_ZEROCOPY=1 env-gate.  Above the in_total CPU
+    // staging copy already ran for the legacy path; this just early-
+    // returns before that result is used.
+    static const bool s_zerocopy =
+      std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
+    if (s_zerocopy) {
+      const bool fusable_zc =
+        (input.size() == 2 || input.size() == 3) && (K % 4) == 0;
+      bool all_div4_zc = fusable_zc;
+      if (fusable_zc) {
+        for (unsigned int i = 0; i < input.size(); ++i) {
+          if ((output[i]->getDim().width() % 4) != 0) {
+            all_div4_zc = false;
+            break;
+          }
+        }
+      }
+      if (fusable_zc && all_div4_zc) {
+        auto *w_q = reinterpret_cast<uint16_t *>(input[0]->getData<char>());
+        auto *s_q = input[0]->getScale<uint16_t>();
+        const unsigned int N_q = output[0]->getDim().width();
+        auto *o_q = reinterpret_cast<uint16_t *>(output[0]->getData<_FP16>());
+
+        auto *w_k = reinterpret_cast<uint16_t *>(input[1]->getData<char>());
+        auto *s_k = input[1]->getScale<uint16_t>();
+        const unsigned int N_k = output[1]->getDim().width();
+        auto *o_k = reinterpret_cast<uint16_t *>(output[1]->getData<_FP16>());
+
+        uint16_t *w_v, *s_v, *o_v;
+        unsigned int N_v;
+        if (input.size() == 3) {
+          w_v = reinterpret_cast<uint16_t *>(input[2]->getData<char>());
+          s_v = input[2]->getScale<uint16_t>();
+          N_v = output[2]->getDim().width();
+          o_v = reinterpret_cast<uint16_t *>(output[2]->getData<_FP16>());
+        } else {
+          w_v = w_q; s_v = s_q; o_v = o_q; N_v = 0u;
+        }
+
+        if (fused_gemv_int4_cl(in_u16,
+                                w_q, s_q, o_q,
+                                w_k, s_k, o_k,
+                                w_v, s_v, o_v,
+                                K, N_q, N_k, N_v,
+                                /*sync_output=*/false)) {
+          return;
+        }
+      }
+      // Fallback: per-weight zero-copy single dot.
+      for (unsigned int i = 0; i < input.size(); ++i) {
+        auto *weight_u16 =
+          reinterpret_cast<uint16_t *>(input[i]->getData<char>());
+        auto *scale_u16 = input[i]->getScale<uint16_t>();
+        const unsigned int Ni = output[i]->getDim().width();
+        auto *out_u16 =
+          reinterpret_cast<uint16_t *>(output[i]->getData<_FP16>());
+        gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, Ni,
+                            /*sync_output=*/false);
+      }
+      return;
+    }
+    // Legacy staged path below.
     // M=1 (decode): when the caller batched 2 or 3 projections that
     // share the same activation (QKV or Gate/Up), fuse them into a
     // single dispatch with one end-of-block SVMMap drain instead of

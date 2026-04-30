@@ -548,7 +548,8 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
                         unsigned int K,
                         unsigned int N_q,
                         unsigned int N_k,
-                        unsigned int N_v);
+                        unsigned int N_v,
+                        bool sync_output = true);
 
 /**
  * @brief Diagnostic-only helper: read a published image2d from

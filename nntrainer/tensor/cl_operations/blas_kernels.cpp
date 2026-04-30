@@ -2827,7 +2827,8 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
                         unsigned int K,
                         unsigned int N_q,
                         unsigned int N_k,
-                        unsigned int N_v) {
+                        unsigned int N_v,
+                        bool sync_output) {
   if (!input_svm) return false;
   if ((K & 3u) || (N_q & 3u) || (N_k & 3u) || (N_v & 3u)) return false;
 
@@ -2866,18 +2867,22 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
 
   // Single end-of-block SVMMap drain.  We invalidate cache for each
   // output buffer; the LAST one drains the queue.  Outputs with N=0
-  // are skipped.
-  if (N_q > 0) {
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      q_out, (size_t)N_q * sizeof(uint16_t), /*read_only=*/true);
-  }
-  if (N_k > 0) {
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      k_out, (size_t)N_k * sizeof(uint16_t), /*read_only=*/true);
-  }
-  if (N_v > 0) {
-    blas_cc->command_queue_inst_.enqueueSVMMap(
-      v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
+  // are skipped.  When sync_output=false (zero-copy path), the caller
+  // owns coherence -- consumers either drain on entry or read via
+  // a downstream GPU kernel on the same queue.
+  if (sync_output) {
+    if (N_q > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        q_out, (size_t)N_q * sizeof(uint16_t), /*read_only=*/true);
+    }
+    if (N_k > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        k_out, (size_t)N_k * sizeof(uint16_t), /*read_only=*/true);
+    }
+    if (N_v > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
+    }
   }
   return true;
 }
