@@ -112,15 +112,21 @@ void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Entry SVMMap drain on input.  Originally added for the CPU NEON
-  // path (host-side read of `in`); also required when we dispatch
-  // the norm on the GPU because the upstream Q/K FC writes via
-  // gemv with sync_output=false (zerocopy) and Adreno coarse-grained
-  // SVM does NOT auto-flush those writes to the buffer view that
-  // q_norm/k_norm's GPU kernel reads (verified by output divergence
-  // when this drain was skipped under NNTRAINER_RMSNORM_GPU=1).
+  // Entry SVMMap fence exists because the CPU NEON path below reads
+  // `in` host-side, and upstream Q/K FC enqueues only a non-blocking
+  // SVMMap on its output, so without this drain the host-side read
+  // is not coherent.  When NNTRAINER_RMSNORM_GPU=1 we dispatch the
+  // norm on the GPU instead -- the GPU kernel reads via
+  // SetKernelSVMArguments and same-queue ordering covers the
+  // upstream FC -> q_norm/k_norm boundary (verified canonical at
+  // K=10 in the layer-window bisection).  Skip the entry drain in
+  // that path; that's the bulk of this layer's per-call cost
+  // (~150 us out of ~150 us total).
+  static const bool s_rmsnorm_gpu_skip_entry_drain =
+    std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
-  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
+  if (!s_rmsnorm_gpu_skip_entry_drain &&
+      in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
     if (cl_ctx) {
