@@ -133,27 +133,32 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // RMSNorm's CPU NEON path reads `in` host-side. Upstream layers
-  // (AdditionLayer's add2_fp16_svm GPU kernel, or Phase B Q/K/V gemm
-  // writes) enqueue their output with no blocking SVMMap, so drain
-  // the queue here so the host sees coherent data.
+  // The drain skip (NNTRAINER_RMSNORM_NO_DRAIN=1) only applies when we
+  // route to GPU image2d (same-queue serialisation handles ordering).
+  // For the CPU NEON path the drain is required so the NEON code reads
+  // coherent data. Compute the route gate up-front, mirroring the same
+  // logic used inside the per-step loop below for the actual dispatch.
   //
-  // When NNTRAINER_RMSNORM_GPU=1 routes us to rmsnorm_image2d_cl, the
-  // host-side read is replaced by a GPU dispatch on the SAME OpenCL
-  // queue as the upstream writer. OpenCL spec mandates serialised
-  // execution on a single queue, so the explicit blocking drain is
-  // redundant and just bills the upstream layer's GPU latency to
-  // rms_norm. Same pattern as the addition exit drain we removed
-  // (NNTRAINER_ADDITION_NO_DRAIN=1) which moved 2 s of stall off
-  // addition's wall and freed 421 ms of net decode time.
-  // NNTRAINER_RMSNORM_NO_DRAIN=1 skips the entry drain when the GPU
-  // path is active. Stays present for the CPU NEON / FP32 path.
+  // Decode-NEON gate: NNTRAINER_RMSNORM_DECODE_NEON=1 forces the CPU
+  // NEON path even when NNTRAINER_RMSNORM_GPU=1, but only when this is
+  // a single-token (M==1) decode step. The image2d_cl path's per-call
+  // overhead (4 kernel dispatches + blocking fence) wipes the GPU
+  // compute win for H_rows==1; CPU NEON ends up faster
+  // (reshaped_rms_norm at 0.45 ms/call vs image2d_cl at 1.02 ms/call
+  // measured on the same Qwen3-4B decode shape).
   static const bool s_rmsnorm_no_drain =
     std::getenv("NNTRAINER_RMSNORM_NO_DRAIN") != nullptr;
   static const bool s_rmsnorm_gpu_for_drain =
     std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
-  const bool skip_drain = s_rmsnorm_no_drain && s_rmsnorm_gpu_for_drain &&
-                          in.getDataType() == ml::train::TensorDim::DataType::FP16;
+  static const bool s_rmsnorm_decode_neon_for_drain =
+    std::getenv("NNTRAINER_RMSNORM_DECODE_NEON") != nullptr;
+  const bool drain_step_is_decode_h1 = ((to - from) == 1);
+  const bool drain_route_will_be_gpu =
+    s_rmsnorm_gpu_for_drain &&
+    in.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+    in.getMemoryData() && in.getMemoryData()->isSVM() &&
+    !(s_rmsnorm_decode_neon_for_drain && drain_step_is_decode_h1);
+  const bool skip_drain = s_rmsnorm_no_drain && drain_route_will_be_gpu;
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
   if (!skip_drain && in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
@@ -226,9 +231,27 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                    : "NEON fused path");
         s_logged_variant = true;
       }
-      if (s_rmsnorm_gpu && in_step.getMemoryData() &&
-          in_step.getMemoryData()->isSVM() && out_step.getMemoryData() &&
-          out_step.getMemoryData()->isSVM() && (W % 4) == 0) {
+      // For decode (H_rows == 1) the image2d_cl path's per-call cost
+      // is dominated by 4 kernel dispatches (svm_to_image2d input
+      // reformat + rmsnorm_image2d_v2 + image2d_to_svm output readback
+      // + svm_to_image2d_publish to pool) plus a blocking SVMMap fence
+      // at the end. Measured ~1.02 ms/call * 2336 calls = 2380 ms /
+      // 35% of decode wall, vs the same shape via CPU NEON
+      // (rmsnorm_fused_fp16) at ~0.45 ms/call as seen in
+      // reshaped_rms_norm (which is purely NEON). For prefill the
+      // image2d cost amortises over many rows so it stays useful, but
+      // for M==1 decode it's pure overhead. Force NEON for H_rows==1
+      // even when NNTRAINER_RMSNORM_GPU=1 -- gated on
+      // NNTRAINER_RMSNORM_DECODE_NEON=1 so the fix is opt-in until
+      // measured.
+      static const bool s_rmsnorm_decode_neon =
+        std::getenv("NNTRAINER_RMSNORM_DECODE_NEON") != nullptr;
+      const bool route_gpu = s_rmsnorm_gpu && in_step.getMemoryData() &&
+                             in_step.getMemoryData()->isSVM() &&
+                             out_step.getMemoryData() &&
+                             out_step.getMemoryData()->isSVM() && (W % 4) == 0 &&
+                             !(s_rmsnorm_decode_neon && H_rows == 1);
+      if (route_gpu) {
         nntrainer::rmsnorm_image2d_cl(
           (void *)in_ptr, (void *)out_ptr, gamma_ptr,
           (unsigned int)H_rows, (unsigned int)W,
