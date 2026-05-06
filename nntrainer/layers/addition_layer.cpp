@@ -20,6 +20,10 @@
 #include <layer_context.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+
 #include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
@@ -28,6 +32,73 @@
 namespace nntrainer {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+namespace {
+// Decode-path profile for AdditionLayer::incremental_forwarding fast
+// path (the upstream AdditionLayer::incremental_forwarding, NOT
+// AdditionLayerCL -- the SVM fp16 fast path here is what actually
+// fires in production: 2 inputs, fp16, both SVM, batch=1 -> route to
+// add2_fp16_svm_cl GPU kernel + optional exit drain).
+//
+// PROFILE NetworkGraph reported addition takes 28.8% of decode
+// (2090 / 7251 ms, 2304 calls = 2 residual adds * 36 layers * 32
+// tokens, 0.91 ms/call) -- 100x bigger than the actual fp16 add
+// compute. Suspect: the per-call enqueueSVMMap exit drain blocks on
+// upstream layer GPU work, attributing the wait to addition.
+//
+// Splits each call into:
+//   ns_kernel  : add2_fp16_svm_cl (kernel arg setup + DispatchCommand,
+//                async, NO sync inside)
+//   ns_drain   : enqueueSVMMap(hidden_, blocking=true) exit drain
+//                (THIS is the queue-flushing blocker)
+//   ns_misc    : type checks, isSVM checks, function entry/exit
+struct AdditionDecodeProfile {
+  std::atomic<uint64_t> calls_fast{0};
+  std::atomic<uint64_t> calls_fallback{0};
+  std::atomic<uint64_t> ns_kernel{0};
+  std::atomic<uint64_t> ns_drain{0};
+  std::atomic<uint64_t> ns_misc{0};
+
+  ~AdditionDecodeProfile() {
+    const uint64_t cf = calls_fast.load();
+    const uint64_t cb = calls_fallback.load();
+    if (cf == 0 && cb == 0) return;
+    const uint64_t kernel = ns_kernel.load();
+    const uint64_t drain = ns_drain.load();
+    const uint64_t misc = ns_misc.load();
+    const uint64_t total = kernel + drain + misc;
+    auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
+    auto pct = [&](uint64_t v) -> double {
+      return total == 0 ? 0.0 : (double)v / (double)total * 100.0;
+    };
+    std::fprintf(stderr,
+                 "\n[PROFILE AdditionLayer decode] total=%.2f ms "
+                 "fast=%llu fallback=%llu avg_fast=%.3f us\n",
+                 ms(total), (unsigned long long)cf, (unsigned long long)cb,
+                 cf == 0 ? 0.0 : (double)total / (double)cf / 1000.0);
+    std::fprintf(stderr,
+                 "  kernel : %8.2f ms (%5.1f%%)  [add2_fp16_svm_cl async]\n",
+                 ms(kernel), pct(kernel));
+    std::fprintf(stderr,
+                 "  drain  : %8.2f ms (%5.1f%%)  "
+                 "[enqueueSVMMap(hidden_, blocking=true) exit -- queue "
+                 "flush, blames upstream stalls on addition]\n",
+                 ms(drain), pct(drain));
+    std::fprintf(stderr,
+                 "  misc   : %8.2f ms (%5.1f%%)  [type checks + entry/exit]\n",
+                 ms(misc), pct(misc));
+  }
+};
+AdditionDecodeProfile g_addition_decode_profile;
+
+inline uint64_t addition_now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+} // namespace
+#endif
 
 void AdditionLayer::finalize(InitLayerContext &context) {
   context.setOutputDimensions({context.getInputDimensions()[0]});
@@ -73,10 +144,14 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
       const size_t step_total =
         (size_t)hidden_.channel() * (size_t)(to - from) *
         (size_t)hidden_.width();
+      const uint64_t t_kern0 = addition_now_ns();
       nntrainer::add2_fp16_svm_cl(in0.getData<char>(),
                                   in1.getData<char>(),
                                   hidden_.getData<char>(),
                                   step_total);
+      const uint64_t t_kern1 = addition_now_ns();
+      g_addition_decode_profile.ns_kernel.fetch_add(t_kern1 - t_kern0,
+                                                    std::memory_order_relaxed);
       // Exit drain for sync=0 zero-copy mode: when
       // NNTRAINER_PROFILE_LAYER_SYNC is unset there is no per-layer
       // clFinish to flush the GPU writes done by add2_fp16_svm_cl.
@@ -97,13 +172,21 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
         auto *cl_ctx = static_cast<ClContext *>(
           Engine::Global().getRegisteredContext("gpu"));
         if (cl_ctx) {
+          const uint64_t t_drain0 = addition_now_ns();
           cl_ctx->command_queue_inst_.enqueueSVMMap(
             hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
+          const uint64_t t_drain1 = addition_now_ns();
+          g_addition_decode_profile.ns_drain.fetch_add(
+            t_drain1 - t_drain0, std::memory_order_relaxed);
         }
       }
+      g_addition_decode_profile.calls_fast.fetch_add(
+        1, std::memory_order_relaxed);
       return;
     }
   }
+  g_addition_decode_profile.calls_fallback.fetch_add(
+    1, std::memory_order_relaxed);
 
   {
     auto *cl_ctx = static_cast<ClContext *>(

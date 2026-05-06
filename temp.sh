@@ -201,19 +201,14 @@ grep -E "prefill:|generation:|total:|peak memory|e2e time" ${SUMMARY_LOG} | head
   || echo "(no perf lines)"
 
 echo ""
-echo "-- Decode-path profiles (M==1, fired per generation token) --"
-echo "   (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;"
-echo "    unset it in temp.sh to restore the prefill breakdown.)"
-grep -A 15 "PROFILE NetworkGraph per-layer wall clock (decode" ${SUMMARY_LOG} \
-  || echo "(no graph wall-clock decode block)"
+echo "-- Generation snippet (first 200 chars after <|im_start|>assistant) --"
+awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 200
 echo ""
-grep -A 8 "PROFILE MHACoreLayer decode\|PROFILE HalfTensor::dotQInteger decode\|PROFILE TieWordEmbedding (lm_head) decode\|PROFILE TieWordEmbedding (embedding) decode\|PROFILE gemv_int4_adreno_cl decode\|PROFILE gemv_int4_image_v1 decode" ${SUMMARY_LOG} \
-  || echo "(no decode profile lines)"
 
-echo ""
-echo "-- Generation snippet (first 300 chars after <|im_start|>assistant) --"
-awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 300
-echo ""
+# Decode-path PROFILE blocks already appear once in temp_run.log (fprintf
+# from layer destructors). The earlier separate -- Decode-path profiles --
+# section just re-grepped the same text and printed it twice. Removed to
+# reduce noise; the profile blocks remain in temp_run.log itself.
 
 echo ""
 echo "Full log: ${SUMMARY_LOG}"
