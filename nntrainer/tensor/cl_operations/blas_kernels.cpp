@@ -2152,6 +2152,68 @@ void gemv_int4_adreno_v2_cl(uint16_t *input, uint16_t *weights,
   }
 }
 
+// v3: __constant input (like v2) + LiteRT-style QCOM hints
+// (sub_group_uniform attribute on input, qcom_max_concurrent_subgroups
+// on kernel). Algorithm and dispatch geometry identical to v1/v2 so
+// any timing delta vs gemv_int4_adreno_cl is purely the QCOM-specific
+// driver fast paths (subgroup-uniform broadcast load + occupancy
+// hint).
+void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
+                            uint16_t *scales, uint16_t *output,
+                            unsigned int K, unsigned int N,
+                            bool sync_output) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_adreno_v3_kernel, "gpu_int4_gemv_adreno_v3");
+  if (!kernel_ptr) {
+    throw std::runtime_error(
+      "Failed to get kernel_ptr for gpu_int4_gemv_adreno_v3");
+  }
+
+  int arg = 0;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, input))
+    throw std::runtime_error(
+      "Failed to set kernel argument 0 (input) for gpu_int4_gemv_adreno_v3");
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, scales))
+    throw std::runtime_error(
+      "Failed to set kernel argument 1 (scales) for gpu_int4_gemv_adreno_v3");
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, output))
+    throw std::runtime_error(
+      "Failed to set kernel argument 2 (output) for gpu_int4_gemv_adreno_v3");
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, weights))
+    throw std::runtime_error(
+      "Failed to set kernel argument 3 (weights) for gpu_int4_gemv_adreno_v3");
+
+  int size_k = static_cast<int>(K);
+  int size_n = static_cast<int>(N);
+  if (!kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int)))
+    throw std::runtime_error(
+      "Failed to set kernel argument 4 (K) for gpu_int4_gemv_adreno_v3");
+  if (!kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int)))
+    throw std::runtime_error(
+      "Failed to set kernel argument 5 (N) for gpu_int4_gemv_adreno_v3");
+
+  // Same dispatch geometry as v1/v2.
+  const int align_N = static_cast<int>(align(N, 256));
+  const int dim_n = align_N / 4;
+  const int work_groups_count[3] = {dim_n, 1, 1};
+  const int work_group_size[3] = {64, 1, 1};
+
+  if (!blas_cc->command_queue_inst_.DispatchCommand(
+        kernel_ptr, work_groups_count, work_group_size, nullptr)) {
+    throw std::runtime_error(
+      "Failed to dispatch kernel for gpu_int4_gemv_adreno_v3");
+  }
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+}
+
 // Step 1 of the incremental image2d gemv rewrite.  Signature matches
 // gemv_int4_adreno_cl so the caller can env-swap them one at a time.
 // Step 1 only LOADS weights and writes zero; output is garbage, but

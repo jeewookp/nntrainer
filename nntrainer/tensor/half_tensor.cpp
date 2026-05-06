@@ -1029,10 +1029,23 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // Env-gated for safe rollout: NNTRAINER_GEMV_ZEROCOPY=1.
     static const bool s_zerocopy =
       std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
+    // Stage-pivot Phase A: route through gpu_int4_gemv_adreno_v3
+    // (same algorithm + LiteRT-style QCOM hints: __constant input,
+    // sub_group_uniform attribute, qcom_max_concurrent_subgroups).
+    // Layered on top of the zerocopy path -- only takes effect when
+    // both ZEROCOPY=1 and ADRENO_V3=1 are set so that we can A/B
+    // toggle isolated.
+    static const bool s_adreno_v3 =
+      std::getenv("NNTRAINER_GEMV_ADRENO_V3") != nullptr;
     if (s_zerocopy && !s_step && !s_image2d) {
       const uint64_t t_zc0 = now_ns();
-      gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
-                          /*sync_output=*/false);
+      if (s_adreno_v3) {
+        gemv_int4_adreno_v3_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
+                               /*sync_output=*/false);
+      } else {
+        gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
+                            /*sync_output=*/false);
+      }
       const uint64_t t_zc1 = now_ns();
       g_half_dotq_decode_profile.ns_gemv_call += t_zc1 - t_zc0;
       g_half_dotq_decode_profile.calls++;

@@ -389,6 +389,19 @@ void gemv_int4_adreno_v2_cl(uint16_t *input, uint16_t *weights,
                             unsigned int K, unsigned int N,
                             bool sync_output = true);
 
+// v3 = v2 (__constant input) + LiteRT-style QCOM-specific hints.
+// Adds `__attribute__((sub_group_uniform))` on the input pointer
+// (cl_qcom_subgroup_uniform_load) so the driver can broadcast the
+// uniform vload4(input + k) to all subgroup lanes from a single
+// load, and `__attribute__((qcom_max_concurrent_subgroups(12)))` on
+// the kernel for occupancy. Both attributes degrade to no-ops on
+// non-Adreno via #ifdef cl_qcom_subgroup_uniform_load. Algorithm and
+// dispatch geometry are otherwise byte-identical to v1/v2.
+void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
+                            uint16_t *scales, uint16_t *output,
+                            unsigned int K, unsigned int N,
+                            bool sync_output = true);
+
 // Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
 // loads more of the gemv work (step 1 = weight only, step 2 = +
 // input, ...) but all write deterministic zero until correctness
