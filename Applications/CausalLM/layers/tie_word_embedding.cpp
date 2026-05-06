@@ -466,6 +466,45 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
       }
     }
 #endif
+
+    // Phase A0 diagnostic: per-decode-token logits checksum + argmax.
+    // Lets us A/B compare any optimization run against canonical:
+    // identical [LOGITS] sequences => bit-exact output. First
+    // divergent token isolates which optimization broke equivalence
+    // and at which token boundary.  Enabled via NNTRAINER_LOGITS_DEBUG=1
+    // so production runs aren't slowed by host-side iteration over
+    // ~152k vocab logits per token.
+    static const bool s_logits_debug =
+      std::getenv("NNTRAINER_LOGITS_DEBUG") != nullptr;
+    if (s_logits_debug) {
+      static unsigned int s_decode_token_idx = 0;
+      const std::size_t vocab = hidden_step.width();
+      // Hash all logits + find argmax simultaneously. fp16 bits
+      // hashed as raw uint16 via XOR + shift mix; fast enough for
+      // diagnostic use, sensitive enough that any drift flips bits.
+      std::uint64_t hash = 0xcbf29ce484222325ULL; // FNV-1a 64-bit basis
+      float max_logit = -1e30f;
+      unsigned int argmax = 0;
+      const _FP16 *logits_fp16 = hidden_step.getData<_FP16>();
+      for (std::size_t v = 0; v < vocab; ++v) {
+        const std::uint16_t bits = *reinterpret_cast<const std::uint16_t *>(
+          &logits_fp16[v]);
+        hash ^= (std::uint64_t)bits;
+        hash *= 0x100000001b3ULL; // FNV-1a 64-bit prime
+        const float lf = static_cast<float>(logits_fp16[v]);
+        if (lf > max_logit) {
+          max_logit = lf;
+          argmax = (unsigned int)v;
+        }
+      }
+      std::fprintf(stderr,
+                   "[LOGITS] decode_step=%u argmax=%u max_logit=%.4f "
+                   "checksum=0x%016llx vocab=%zu\n",
+                   s_decode_token_idx, argmax, max_logit,
+                   (unsigned long long)hash, vocab);
+      std::fflush(stderr);
+      ++s_decode_token_idx;
+    }
   }
 }
 
