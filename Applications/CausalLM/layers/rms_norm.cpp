@@ -137,8 +137,25 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // (AdditionLayer's add2_fp16_svm GPU kernel, or Phase B Q/K/V gemm
   // writes) enqueue their output with no blocking SVMMap, so drain
   // the queue here so the host sees coherent data.
+  //
+  // When NNTRAINER_RMSNORM_GPU=1 routes us to rmsnorm_image2d_cl, the
+  // host-side read is replaced by a GPU dispatch on the SAME OpenCL
+  // queue as the upstream writer. OpenCL spec mandates serialised
+  // execution on a single queue, so the explicit blocking drain is
+  // redundant and just bills the upstream layer's GPU latency to
+  // rms_norm. Same pattern as the addition exit drain we removed
+  // (NNTRAINER_ADDITION_NO_DRAIN=1) which moved 2 s of stall off
+  // addition's wall and freed 421 ms of net decode time.
+  // NNTRAINER_RMSNORM_NO_DRAIN=1 skips the entry drain when the GPU
+  // path is active. Stays present for the CPU NEON / FP32 path.
+  static const bool s_rmsnorm_no_drain =
+    std::getenv("NNTRAINER_RMSNORM_NO_DRAIN") != nullptr;
+  static const bool s_rmsnorm_gpu_for_drain =
+    std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
+  const bool skip_drain = s_rmsnorm_no_drain && s_rmsnorm_gpu_for_drain &&
+                          in.getDataType() == ml::train::TensorDim::DataType::FP16;
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
-  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
+  if (!skip_drain && in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
     if (cl_ctx) {
