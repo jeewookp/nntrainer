@@ -22,6 +22,7 @@
 #include "rmsnorm_fused_fp16.h"
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
 #endif
@@ -111,13 +112,23 @@ void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::Tensor &gamma = context.getWeight(wt_idx[RMSParams::gamma]);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // This layer runs purely on the CPU (NEON rms_norm_wrt_width_*_intrinsic).
-  // When input lives in the tensor_pool's SVM region, the upstream GPU
-  // gemm may still have its image2d_to_svm write in flight with only a
-  // non-blocking SVMMap enqueued. Drain the OpenCL queue here with a
-  // blocking SVMMap so the CPU reads that follow see coherent data.
+  // Default path runs CPU NEON (rms_norm_wrt_width_*_intrinsic) so we
+  // drain the GPU queue first to make upstream Q/K projection writes
+  // coherent with the host read. NNTRAINER_RESHAPED_RMSNORM_DECODE_SVM=1
+  // routes the M==1 FP16 decode case through rmsnorm_fp16_svm_cl on
+  // the same OpenCL queue (skipping the drain since same-queue
+  // ordering covers it).
+  static const bool s_reshaped_decode_svm =
+    std::getenv("NNTRAINER_RESHAPED_RMSNORM_DECODE_SVM") != nullptr;
+  const bool decode_h1 = ((to - from) == 1);
+  const bool in_is_svm = in.getMemoryData() && in.getMemoryData()->isSVM();
+  const bool out_is_svm =
+    out.getMemoryData() && out.getMemoryData()->isSVM();
+  const bool route_decode_svm =
+    s_reshaped_decode_svm && decode_h1 && in_is_svm && out_is_svm &&
+    in.getDataType() == ml::train::TensorDim::DataType::FP16;
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
-  if (in.getMemoryData() && in.getMemoryData()->isSVM()) {
+  if (!route_decode_svm && in_is_svm) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
       nntrainer::Engine::Global().getRegisteredContext("gpu"));
     if (cl_ctx) {
@@ -191,8 +202,25 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       const std::size_t H_rows =
         (std::size_t)sd.batch() * sd.channel() * sd.height();
       const std::size_t W = sd.width();
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+      if (route_decode_svm) {
+        // SVM-direct decode path: same kernel rmsnorm_fp16_svm
+        // serves both rms_norm (W=2560) and reshaped_rms_norm
+        // (W=head_dim=128, H_rows=num_heads). Single kernel
+        // dispatch on the same OpenCL queue as the upstream Q/K
+        // projection, no host drain, no image2d round-trip.
+        nntrainer::rmsnorm_fp16_svm_cl(
+          (void *)in_ptr, (void *)out_ptr, gamma_ptr,
+          (unsigned int)H_rows, (unsigned int)W,
+          static_cast<float>(epsilon));
+      } else {
+        rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+                           static_cast<float>(epsilon));
+      }
+#else
       rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
                          static_cast<float>(epsilon));
+#endif
       if (profile_this_call)
         g_reshaped_rms_norm_profile.ns_fused += now_ns() - t_fused;
     } else {
