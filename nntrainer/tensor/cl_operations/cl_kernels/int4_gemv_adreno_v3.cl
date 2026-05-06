@@ -2,82 +2,37 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // Channel-wise int4 GEMV kernel for Adreno (M = 1) -- v3.
+// Algorithm and dispatch geometry byte-identical to v1; only the
+// `input` parameter binding differs (`__constant` instead of
+// `__global`) so any timing delta vs v1 isolates the input-side
+// memory path.
 //
-// Layered on top of int4_gemv_adreno_v2 (which puts `input` in
-// __constant memory). v3 adds two LiteRT-style QCOM-specific hints
-// observed in the captured program_002.cl:
+// History:
+//   * Phase A.1 -- __constant alone, no other QCOM hints: 4.43 TPS
+//     vs 4.38 v1 baseline (+1.1%). Activation goes through
+//     Adreno's per-CU constant cache (~64 KB advertised) instead
+//     of L1. Worst-case Qwen3-4B input K=9728 fp16 = 19456 B,
+//     well inside the budget; no max_constant_size hint set so
+//     the compiler enforces the device max.
+//   * Phase A.3/A.4 layered LiteRT-style hints from captured
+//     program_002.cl (__attribute__((sub_group_uniform)) on input
+//     +/- __attribute__((qcom_max_concurrent_subgroups(12))) on
+//     the kernel + 3 cl_qcom_* pragmas). A.3 with both attrs
+//     failed at compile (empty err log). A.4 dropped
+//     qcom_max_concurrent_subgroups, kept sub_group_uniform +
+//     pragmas; built but REGRESSED to 4.28 TPS (-3.4% vs A.1).
+//     Reason: sub_group_uniform attribute alone, without the
+//     matching DDR->xmem stream mechanism that LiteRT pairs it
+//     with (qcom_sub_group_constant_load8), is net overhead --
+//     driver sets up subgroup-broadcast paths that don't match
+//     our 16-thread-WG GEMV access pattern.
 //
-//   1. cl_qcom_subgroup_uniform_load + __attribute__((sub_group_uniform))
-//      on the input pointer. For M=1 GEMV every lane in a subgroup
-//      reads the SAME input[k] (same k, different n) -- textbook
-//      subgroup-uniform pattern. Marking it lets the driver issue one
-//      load that broadcasts to all subgroup lanes instead of one load
-//      per lane.
-//
-//   2. __attribute__((qcom_max_concurrent_subgroups(N))) on the kernel
-//      tells the driver to schedule up to N subgroups concurrently
-//      (LiteRT used 12 in program_002.cl). Helps occupancy for small
-//      decode kernels.
-//
-// Both attributes are gated on the cl_qcom_subgroup_uniform_load
-// extension define -- on non-Adreno devices the macros expand to
-// nothing and the kernel reduces to v2.
-//
-// Algorithm itself is byte-for-byte identical to v1/v2 so any timing
-// delta is purely the QCOM hints + constant-cache effect.
-
-// __constant input alone (Phase A.1 measurement) gave +1.1% TPS
-// vs the __global v1 baseline. Layering the LiteRT-style QCOM hints
-// from the captured program_002.cl on top:
-//
-//   - cl_qcom_subgroup_uniform_load extension + sub_group_uniform
-//     attribute on the input pointer. For M=1 GEMV every lane in a
-//     subgroup reads input[k] from the SAME address (loop k uniform
-//     across lanes, only n differs); marking the pointer lets the
-//     driver issue ONE subgroup-broadcast load instead of N
-//     per-lane loads.
-//   - qcom_max_concurrent_subgroups(12) attribute on the kernel
-//     (LiteRT used this exact value in program_002.cl). Occupancy
-//     hint for small decode dispatches.
-//
-// Both attributes are gated on the cl_qcom_subgroup_uniform_load
-// extension #ifdef so non-Adreno builds reduce to v2-equivalent
-// (__constant input, no hints).
-//
-// If the driver rejects either attribute the build log surfaces
-// via [CL_BUILD_FAIL] / [CL_BUILD_LOG] in stderr and we adjust the
-// syntax based on the actual diagnostic.
-
-// Enable all three QCOM pragmas LiteRT's program_002.cl turned on.
-// Per the captured kernel order: subgroup_uniform_load,
-// subgroup_constant_load, inline_asm. The first is what we need for
-// the sub_group_uniform attribute below; the other two are enabled
-// "just in case" the driver gates attribute parsing on combined
-// extension state. Match LiteRT's exact pragma whitespace too
-// (no space before colon for the first two).
-#ifdef cl_qcom_subgroup_uniform_load
-#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
-#define ADRENO_SG_UNIFORM __attribute__((sub_group_uniform))
-#else
-#define ADRENO_SG_UNIFORM
-#endif
-
-#ifdef cl_qcom_subgroup_constant_load
-#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
-#endif
-
-#ifdef cl_qcom_inline_asm
-#pragma OPENCL EXTENSION cl_qcom_inline_asm : enable
-#endif
-
-// NOTE: __attribute__((qcom_max_concurrent_subgroups(N))) was
-// initially included but the build failed with err=-11 (empty log).
-// Bisecting -- removed for now; re-add in next step if (a) the build
-// passes without it, and (b) the sub_group_uniform path alone gives
-// a measurable win.
+// Reverted to A.1 state (just __constant). Replicating the real
+// LiteRT speedup requires the explicit DDR->xmem stream call --
+// Phase C, separate kernel.
 
 kernel void
-gpu_int4_gemv_adreno_v3(__constant half *input ADRENO_SG_UNIFORM,
+gpu_int4_gemv_adreno_v3(__constant half *input,
                         __global const half *scales,
                         __global half *output,
                         __global const ushort *weights,
