@@ -353,16 +353,49 @@ bool ContextManager::CreateDefaultGPUDevice() {
           clReleaseCommandQueue(q);
         }
       }
-      // If no symbolic-name variant worked, brute-force the QCOM
-      // property hex range. The narrow 0x40D0..0x40EF sweep with
-      // {NAME, 1, 0} layout came back empty on Adreno 830 / Compiler
-      // E031.47.18.13. Widen to 0x4040..0x40FF (the entire QCOM
-      // queue-property block) and try TWO layouts per name:
-      //   layout A: {NAME, 1, 0}
-      //   layout B: {CL_QUEUE_PROPERTIES, 0, NAME, 1, 0}
-      // ~384 attempts total, <50 ms, runs only at startup.
+      // Sanity: confirm clCreateCommandQueueWithProperties accepts an
+      // EMPTY property list. If this fails, the OpenCL 2.0 properties
+      // API itself is broken on this driver and no QCOM extension via
+      // the same API can ever work.
+      {
+        cl_queue_properties empty[1] = {0};
+        cl_int err = 0;
+        cl_command_queue q = clCreateCommandQueueWithProperties(
+          probe_ctx, device_id_, empty, &err);
+        std::fprintf(
+          stderr,
+          "[QCOM_REC_PROBE] sanity empty properties -> queue=%p err=%d\n",
+          (void *)q, err);
+        if (q) {
+          clReleaseCommandQueue(q);
+        }
+      }
+      // Also confirm clCreateCommandQueueWithProperties accepts the
+      // standard CL_QUEUE_PROPERTIES layout we use elsewhere.
+      {
+        cl_queue_properties std_props[3] = {
+          CL_QUEUE_PROPERTIES,
+          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
+          0};
+        cl_int err = 0;
+        cl_command_queue q = clCreateCommandQueueWithProperties(
+          probe_ctx, device_id_, std_props, &err);
+        std::fprintf(
+          stderr,
+          "[QCOM_REC_PROBE] sanity OoO+PROFILING properties -> queue=%p "
+          "err=%d\n",
+          (void *)q, err);
+        if (q) {
+          clReleaseCommandQueue(q);
+        }
+      }
+      // If no symbolic-name variant worked, brute-force a wide hex
+      // range (0x4000..0x4FFF -- 4096 names) with two layouts per
+      // name. Earlier 0x4040..0x40FF sweep returned silent (all -30);
+      // either the property name is outside that block or the layout
+      // is still wrong. ~8192 calls, <500 ms total, one-time startup.
       if (!rec_queue) {
-        for (cl_queue_properties name = 0x4040; name <= 0x40FF; ++name) {
+        for (cl_queue_properties name = 0x4000; name <= 0x4FFF; ++name) {
           for (int layout = 0; layout < 2; ++layout) {
             cl_queue_properties propsA[3] = {name, 1, 0};
             cl_queue_properties propsB[5] = {CL_QUEUE_PROPERTIES, 0, name, 1,
@@ -400,6 +433,86 @@ bool ContextManager::CreateDefaultGPUDevice() {
             }
           }
         }
+      }
+      // Also brute-force the legacy bitmask via deprecated
+      // clCreateCommandQueue: the recordable feature might be a hidden
+      // bit in cl_command_queue_properties (bits 3..63 are
+      // vendor-extendable; OpenCL 1.x defined only bits 0-2).
+      if (!rec_queue) {
+        const cl_command_queue_properties base =
+          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE;
+        // Try setting bits 3..15 individually (common QCOM extension
+        // bit positions from analogous extensions are in this range).
+        for (int bit = 3; bit <= 15; ++bit) {
+          cl_int err = 0;
+          cl_command_queue_properties bitmask =
+            base | ((cl_command_queue_properties)1 << bit);
+          cl_command_queue q = clCreateCommandQueue(probe_ctx, device_id_,
+                                                    bitmask, &err);
+          if (q && err == CL_SUCCESS) {
+            // Did the bit actually get accepted, or did the driver
+            // silently ignore it? Test by trying NewRecordingQCOM.
+            cl_int rec_err = 0;
+            void *recording = clNewRecordingQCOM(q, &rec_err);
+            std::fprintf(
+              stderr,
+              "[QCOM_REC_PROBE] LEGACY_BIT bit=%d bitmask=0x%llx -> "
+              "queue=%p NewRecording=%p rec_err=%d\n",
+              bit, (unsigned long long)bitmask, (void *)q, recording,
+              rec_err);
+            if (recording && rec_err == CL_SUCCESS) {
+              cl_int end_err = clEndRecordingQCOM(recording);
+              std::fprintf(stderr,
+                           "[QCOM_REC_PROBE] LEGACY_BIT bit=%d End empty "
+                           "err=%d (CANDIDATE)\n",
+                           bit, end_err);
+              clReleaseRecordingQCOM(recording);
+              if (!rec_queue) {
+                rec_queue = q;
+                static char buf[80];
+                std::snprintf(buf, sizeof(buf), "legacy_bit: bit=%d", bit);
+                winning_variant = buf;
+              } else {
+                clReleaseCommandQueue(q);
+              }
+            } else {
+              clReleaseCommandQueue(q);
+            }
+          }
+        }
+      }
+      // Last resort: dump strings from the device's vendor libOpenCL.so
+      // looking for QCOM record/queue extension property tokens. Some
+      // drivers carry the property names as string literals (eg, if
+      // the runtime parses extension queries against a static table).
+      // popen here puts the output on our stderr -- captured by the
+      // top-level temp.sh `2>&1 | tee temp_run.log` pipe, so it lands
+      // in error.txt without any temp.sh changes.
+      std::fprintf(stderr,
+                   "[QCOM_REC_PROBE] strings dump from vendor libOpenCL.so:\n");
+      const char *strings_cmd =
+        "for so in /vendor/lib64/libOpenCL.so /system/vendor/lib64/libOpenCL.so"
+        " /vendor/lib64/libOpenCL_adreno.so /vendor/lib64/libllvm-qgl.so"
+        " /vendor/lib64/libCB.so; do "
+        "  if [ -f $so ]; then "
+        "    echo \"=== $so ===\"; "
+        "    strings $so 2>/dev/null | "
+        "      grep -iE 'recordable|qcom_record|RECORDABLE_QCOM|QUEUE_PROPERT|"
+        "RECORD_QCOM|QCOM_QUEUE|QCOM_REC|cl_qcom_record' | head -30; "
+        "  fi; "
+        "done 2>&1";
+      if (FILE *fp = popen(strings_cmd, "r")) {
+        char line[1024];
+        int line_count = 0;
+        while (std::fgets(line, sizeof(line), fp) && line_count < 200) {
+          std::fprintf(stderr, "[QCOM_STRINGS] %s", line);
+          ++line_count;
+        }
+        pclose(fp);
+      } else {
+        std::fprintf(stderr,
+                     "[QCOM_REC_PROBE] popen() failed -- skipping strings "
+                     "dump\n");
       }
       // Final fallback: try opening a recording on a regular OoO
       // queue (not specially flagged). Some QCOM record extensions
