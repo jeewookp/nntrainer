@@ -1,3 +1,10 @@
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
 HOME
 HOSTNAME
 KNOX_STORAGE
@@ -34,43 +41,43 @@ Okay, the user wants a summary of this abstract in three sentences. Let me read 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2359 ms, 185.248 TPS
-generation: 32 tokens, 6891 ms, 4.64374 TPS
-total: 9257 ms
-peak memory: 2736204 KB
+prefill: 437 tokens, 2631 ms, 166.097 TPS
+generation: 32 tokens, 6475 ms, 4.94208 TPS
+total: 9125 ms
+peak memory: 2658116 KB
 ==========================================================
-[e2e time]: 12140 ms 
-Max Resident Set Size: 2736204 KB
+[e2e time]: 12001 ms 
+Max Resident Set Size: 2658116 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6783.7 ms across all forwarding_op() calls
-  rms_norm                      2379.7 ms  calls=2336  avg=1.019 ms
-  mha_core                      1979.1 ms  calls=1152  avg=1.718 ms
-  reshaped_rms_norm             1026.1 ms  calls=2304  avg=0.445 ms
-  gate_up_layer                  863.6 ms  calls=1152  avg=0.750 ms
-  tie_word_embeddings            398.8 ms  calls=64  avg=6.231 ms
-  fully_connected                114.2 ms  calls=5760  avg=0.020 ms
-  swiglu                          15.3 ms  calls=1152  avg=0.013 ms
-  addition                         5.1 ms  calls=2304  avg=0.002 ms
-  multiout                         1.7 ms  calls=3456  avg=0.001 ms
+  total=6383.9 ms across all forwarding_op() calls
+  rms_norm                      2053.9 ms  calls=2336  avg=0.879 ms
+  mha_core                      1895.6 ms  calls=1152  avg=1.645 ms
+  reshaped_rms_norm             1039.9 ms  calls=2304  avg=0.451 ms
+  gate_up_layer                  857.0 ms  calls=1152  avg=0.744 ms
+  tie_word_embeddings            434.8 ms  calls=64  avg=6.793 ms
+  fully_connected                 85.2 ms  calls=5760  avg=0.015 ms
+  swiglu                          11.6 ms  calls=1152  avg=0.010 ms
+  addition                         4.5 ms  calls=2304  avg=0.002 ms
+  multiout                         1.4 ms  calls=3456  avg=0.000 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=395.23 ms calls=32 avg=12.351 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.46 ms calls=32 avg=0.108 ms
-[PROFILE MHACoreLayer decode (M==1)] total=1978.57 ms calls=1152 avg=1.718 ms
-  rope_q   :     0.66 ms (  0.0%)
-  rope_k   :     1.05 ms (  0.1%)
-  v_copy   :     0.86 ms (  0.0%)
-  qk       :  1334.21 ms ( 67.4%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=433.48 ms calls=32 avg=13.546 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=1.23 ms calls=32 avg=0.039 ms
+[PROFILE MHACoreLayer decode (M==1)] total=1895.11 ms calls=1152 avg=1.645 ms
+  rope_q   :     0.50 ms (  0.0%)
+  rope_k   :     0.92 ms (  0.0%)
+  v_copy   :     0.79 ms (  0.0%)
+  qk       :  1254.65 ms ( 66.2%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=105.55 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=77.63 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   105.55 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    77.63 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE AdditionLayer decode] total=21.47 ms fast=2376 fallback=0 avg_fast=9.038 us
-  kernel :    21.47 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=17.05 ms fast=2376 fallback=0 avg_fast=7.176 us
+  kernel :    17.05 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -83,11 +90,11 @@ Max Resident Set Size: 2736204 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2359 ms, 185.248 TPS
-generation: 32 tokens, 6891 ms, 4.64374 TPS
-total: 9257 ms
-peak memory: 2736204 KB
-[e2e time]: 12140 ms 
+prefill: 437 tokens, 2631 ms, 166.097 TPS
+generation: 32 tokens, 6475 ms, 4.94208 TPS
+total: 9125 ms
+peak memory: 2658116 KB
+[e2e time]: 12001 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
