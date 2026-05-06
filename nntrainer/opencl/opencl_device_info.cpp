@@ -272,28 +272,18 @@ void DeviceInfo::print() const {
     ml_logi("%s", oss.str().data());
   }
 
-  // Stage E (cl_khr_command_buffer) probe. ml_logi goes to logcat on
-  // Android and is not captured by `adb shell ... 2>&1`. Emit a single
-  // grep-friendly line to stderr so temp.sh's tee picks it up.
+  // One-line device summary to stderr (logcat ml_logi output isn't
+  // captured by `adb shell ... 2>&1`). Just enough to diagnose driver
+  // version + which record/replay extensions are advertised.
   {
     const bool has_cb = hasExtension("cl_khr_command_buffer");
-    const bool has_cb_mut =
-      hasExtension("cl_khr_command_buffer_mutable_dispatch");
-    const bool has_cb_multi =
-      hasExtension("cl_khr_command_buffer_multi_device");
+    const bool has_qcom_rec = hasExtension("cl_qcom_recordable_queues");
     std::fprintf(
       stderr,
-      "[CMDBUF_PROBE] device=\"%s\" driver=\"%s\" "
-      "cl_khr_command_buffer=%d mutable_dispatch=%d multi_device=%d\n",
+      "[CL_DEV] device=\"%s\" driver=\"%s\" "
+      "cl_khr_command_buffer=%d cl_qcom_recordable_queues=%d\n",
       device_name_.c_str(), driver_version_.c_str(), has_cb ? 1 : 0,
-      has_cb_mut ? 1 : 0, has_cb_multi ? 1 : 0);
-    // Dump the full extension string too -- the first probe came back
-    // negative for cl_khr_command_buffer, so we need the full list to
-    // see if there's a vendor-specific alternative
-    // (cl_qcom_recordable_queues, cl_qcom_command_buffer, etc.) we
-    // could route Stage E through instead.
-    std::fprintf(stderr, "[CMDBUF_PROBE] CL_DEVICE_EXTENSIONS=%s\n",
-                 device_extensions_.c_str());
+      has_qcom_rec ? 1 : 0);
     std::fflush(stderr);
   }
 }

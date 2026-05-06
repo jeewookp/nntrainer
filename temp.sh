@@ -120,19 +120,6 @@ VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGAT
 #   breakdown and are willing to trade production speed for
 #   measurement honesty.
 
-# One-time strings dump from the device's vendor libOpenCL.so to find
-# the actual property name string for cl_qcom_recordable_queues. The
-# QCOM_REC_PROBE in the binary tries hex values from 0x40D0..0x40EF
-# but all return CL_INVALID_VALUE on this driver -- ground truth from
-# the binary is faster than blind hex sweeping.
-echo "[strings-of-libOpenCL] grep recordable / queue properties in vendor lib:"
-adb shell "for so in /vendor/lib64/libOpenCL.so /system/vendor/lib64/libOpenCL.so /vendor/lib64/libOpenCL_adreno.so /vendor/lib64/libllvm-qgl.so; do \
-  if [ -f \$so ]; then \
-    echo \"=== \$so ===\"; \
-    strings \$so 2>/dev/null | grep -iE 'recordable|qcom_record|RECORDABLE_QCOM' | head -20; \
-  fi; \
-done" 2>&1 | tee -a temp_libopencl_strings.log
-
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \

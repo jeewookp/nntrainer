@@ -26,21 +26,40 @@
 // Algorithm itself is byte-for-byte identical to v1/v2 so any timing
 // delta is purely the QCOM hints + constant-cache effect.
 
-// Phase A bisection: the first build with both QCOM hints
-// (sub_group_uniform + qcom_max_concurrent_subgroups) failed at
-// runtime registerClKernel. We don't yet know which attribute the
-// driver rejected. As a clean baseline, this revision REMOVES both
-// QCOM hints so v3 reduces to "v2 with a different name" -- pure
-// __constant input. Once we have the build log (now surfaced to
-// stderr as [CL_BUILD_FAIL] / [CL_BUILD_LOG]), the next iteration
-// re-adds the hints one at a time guided by the actual diagnostic.
+// __constant input alone (Phase A.1 measurement) gave +1.1% TPS
+// vs the __global v1 baseline. Layering the LiteRT-style QCOM hints
+// from the captured program_002.cl on top:
 //
-// NOTE: keeping the v3 kernel name + dispatcher so the env-gate
-// NNTRAINER_GEMV_ADRENO_V3=1 path still routes through this file --
-// the toggle just measures __constant alone now.
+//   - cl_qcom_subgroup_uniform_load extension + sub_group_uniform
+//     attribute on the input pointer. For M=1 GEMV every lane in a
+//     subgroup reads input[k] from the SAME address (loop k uniform
+//     across lanes, only n differs); marking the pointer lets the
+//     driver issue ONE subgroup-broadcast load instead of N
+//     per-lane loads.
+//   - qcom_max_concurrent_subgroups(12) attribute on the kernel
+//     (LiteRT used this exact value in program_002.cl). Occupancy
+//     hint for small decode dispatches.
+//
+// Both attributes are gated on the cl_qcom_subgroup_uniform_load
+// extension #ifdef so non-Adreno builds reduce to v2-equivalent
+// (__constant input, no hints).
+//
+// If the driver rejects either attribute the build log surfaces
+// via [CL_BUILD_FAIL] / [CL_BUILD_LOG] in stderr and we adjust the
+// syntax based on the actual diagnostic.
 
+#ifdef cl_qcom_subgroup_uniform_load
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load : enable
+#define ADRENO_SG_UNIFORM __attribute__((sub_group_uniform))
+#define ADRENO_MAX_CONCURRENT __attribute__((qcom_max_concurrent_subgroups(12)))
+#else
+#define ADRENO_SG_UNIFORM
+#define ADRENO_MAX_CONCURRENT
+#endif
+
+ADRENO_MAX_CONCURRENT
 kernel void
-gpu_int4_gemv_adreno_v3(__constant half *input,
+gpu_int4_gemv_adreno_v3(__constant half *input ADRENO_SG_UNIFORM,
                         __global const half *scales,
                         __global half *output,
                         __global const ushort *weights,
