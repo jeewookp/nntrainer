@@ -322,6 +322,20 @@ bool ContextManager::CreateDefaultGPUDevice() {
         {"v3: PROFILING + RECORDABLE_QCOM=1",
          {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE,
           CL_QUEUE_RECORDABLE_QCOM, 1, 0, 0}},
+        // v4-v6 variants tried after v1-v3 failed with err=-30 on Adreno
+        // 830 / Compiler E031.47.18.13. The issue may be queue-properties
+        // gating (some drivers need OoO + RECORDABLE), or non-1 enable
+        // value (CL_TRUE numerically is 1 so equivalent), or it may be
+        // that the literal hex 0x40E6 is wrong on this driver vintage.
+        {"v4: OoO + RECORDABLE_QCOM=1",
+         {CL_QUEUE_PROPERTIES, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
+          CL_QUEUE_RECORDABLE_QCOM, 1, 0, 0}},
+        {"v5: OoO + PROFILING + RECORDABLE_QCOM=1",
+         {CL_QUEUE_PROPERTIES,
+          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
+          CL_QUEUE_RECORDABLE_QCOM, 1, 0}},
+        {"v6: PROPERTIES=0 + RECORDABLE_QCOM=1",
+         {CL_QUEUE_PROPERTIES, 0, CL_QUEUE_RECORDABLE_QCOM, 1, 0, 0}},
       };
       cl_command_queue rec_queue = nullptr;
       const char *winning_variant = nullptr;
@@ -337,6 +351,44 @@ bool ContextManager::CreateDefaultGPUDevice() {
         } else if (q) {
           // Only the first successful variant is kept; release the rest.
           clReleaseCommandQueue(q);
+        }
+      }
+      // If no symbolic-name variant worked, brute-force the QCOM
+      // property hex range 0x40D0..0x40EF. Some drivers reuse the
+      // 0x40E0 block for different queue properties across releases;
+      // the litert comment says 0x40E6 is the right value but this
+      // driver clearly disagrees. 32 calls is cheap (~3 ms total).
+      if (!rec_queue) {
+        for (cl_queue_properties name = 0x40D0; name <= 0x40EF; ++name) {
+          if (name == CL_QUEUE_RECORDABLE_QCOM) {
+            continue; // already tested via v1
+          }
+          cl_queue_properties props[3] = {name, 1, 0};
+          cl_int err = 0;
+          cl_command_queue q = clCreateCommandQueueWithProperties(
+            probe_ctx, device_id_, props, &err);
+          if (q && err == CL_SUCCESS) {
+            std::fprintf(stderr,
+                         "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx -> queue=%p "
+                         "err=%d (CANDIDATE)\n",
+                         (unsigned long)name, (void *)q, err);
+            if (!rec_queue) {
+              rec_queue = q;
+              static char buf[64];
+              std::snprintf(buf, sizeof(buf), "hex_scan: 0x%04lx",
+                            (unsigned long)name);
+              winning_variant = buf;
+            } else {
+              clReleaseCommandQueue(q);
+            }
+          } else if (err != CL_INVALID_VALUE && err != -30) {
+            // -30 (CL_INVALID_VALUE) is the spammy "wrong property"
+            // case; everything else is interesting and worth logging.
+            std::fprintf(stderr,
+                         "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx -> "
+                         "err=%d (unusual)\n",
+                         (unsigned long)name, err);
+          }
         }
       }
       if (rec_queue) {
