@@ -2870,8 +2870,12 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
     }
   }
 
+  // -cl-std=CL2.0 needed for work_group_reduce_add (used in Pass 1
+  // sum_sq reduction; see kernel comment).  attention_fused_fp16 sets
+  // the same flag.
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    fused_rmsnorm_gate_up_kernel, "gpu_fused_rmsnorm_gate_up");
+    fused_rmsnorm_gate_up_kernel, "gpu_fused_rmsnorm_gate_up",
+    "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   if (!kp) return false;
 
   int a = 0;

@@ -38,20 +38,23 @@ gpu_fused_rmsnorm_gate_up(__global const half *input,
   const int n   = gid * 4;
 
   // -------- Pass 1: cooperative sum_sq over input --------
-  __local float l_sum_sq[WG_SIZE];
+  // Use work_group_reduce_add (OpenCL 2.0) instead of an explicit
+  // tree reduction.  The driver-internal reduction is Kahan-style on
+  // Adreno, which closes the relative-error gap to the NEON
+  // reference (which sums in 16-stride lanes via vaddvq_f32).  This
+  // matters because greedy decode is logit-precision-sensitive: the
+  // explicit tree reduction's stride-64 grouping accumulated enough
+  // fp32 noise to drift the next-token argmax from canonical.
+  // Mirror NEON's inv_W*sum_sq pre-multiply instead of /K_in too --
+  // tiny but eliminates one source of mismatch.
   float partial = 0.0f;
   for (int k = lid; k < K_in; k += WG_SIZE) {
     const float v = (float)input[k];
     partial += v * v;
   }
-  l_sum_sq[lid] = partial;
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  for (int step = WG_SIZE / 2; step > 0; step >>= 1) {
-    if (lid < step) l_sum_sq[lid] += l_sum_sq[lid + step];
-    barrier(CLK_LOCAL_MEM_FENCE);
-  }
-  const float inv_rms = 1.0f / sqrt(l_sum_sq[0] / (float)K_in + epsilon);
+  const float sum_sq = work_group_reduce_add(partial);
+  const float inv_W = 1.0f / (float)K_in;
+  const float inv_rms = 1.0f / sqrt(sum_sq * inv_W + epsilon);
 
   // -------- Pass 2: cache normalised input in local memory --------
   __local half l_norm[2560];  // assumes K_in <= 2560 (Qwen3-4B)
