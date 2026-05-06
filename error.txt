@@ -1,3 +1,6 @@
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
 DOWNLOAD_CACHE
 ENC_EMULATED_STORAGE_TARGET
 EXTERNAL_STORAGE
@@ -339,33 +342,46 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE)
-[CL_BUILD_LOG]
-BC-src-code:62:48: error: 'subgroupuniform' attribute requires cl_qcom_subgroup_constant_load extension
-gpu_int4_gemv_adreno_v3(__constant half *input ADRENO_SG_UNIFORM,
-                                               ^
-BC-src-code:53:42: note: expanded from macro 'ADRENO_SG_UNIFORM'
-#define ADRENO_SG_UNIFORM __attribute__((sub_group_uniform))
-                                         ^
-BC-src-code:60:1: error: attribute 'qcom_max_concurrent_subgroups' requires 'cl_qcom_subgroup_constant_load' extension
-ADRENO_MAX_CONCURRENT
-^
-BC-src-code:54:46: note: expanded from macro 'ADRENO_MAX_CONCURRENT'
-#define ADRENO_MAX_CONCURRENT __attribute__((qcom_max_concurrent_subgroups(12)))
-                                             ^
-2 diagnostic(s) generated.
+<think>
+Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
 
-[/CL_BUILD_LOG]
 
-[!] FATAL ERROR: Failed to get kernel_ptr for gpu_int4_gemv_adreno_v3
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 2898 ms, 150.794 TPS
+generation: 32 tokens, 7482 ms, 4.27693 TPS
+total: 10391 ms
+peak memory: 2719336 KB
+==========================================================
+[e2e time]: 13299 ms 
+Max Resident Set Size: 2719336 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=5.1 ms across all forwarding_op() calls
-  rms_norm                         4.8 ms  calls=1  avg=4.786 ms
-  tie_word_embeddings              0.3 ms  calls=1  avg=0.326 ms
-  input                            0.0 ms  calls=1  avg=0.005 ms
-  multiout                         0.0 ms  calls=2  avg=0.001 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=0.32 ms calls=1 avg=0.323 ms
+  total=7356.9 ms across all forwarding_op() calls
+  mha_core                      2147.5 ms  calls=1152  avg=1.864 ms
+  addition                      2089.0 ms  calls=2304  avg=0.907 ms
+  reshaped_rms_norm             1047.2 ms  calls=2304  avg=0.455 ms
+  gate_up_layer                  884.9 ms  calls=1152  avg=0.768 ms
+  rms_norm                       656.4 ms  calls=2336  avg=0.281 ms
+  tie_word_embeddings            407.4 ms  calls=64  avg=6.366 ms
+  fully_connected                100.2 ms  calls=5760  avg=0.017 ms
+  swiglu                          22.1 ms  calls=1152  avg=0.019 ms
+  multiout                         2.2 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=402.13 ms calls=32 avg=12.567 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=5.24 ms calls=32 avg=0.164 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2146.83 ms calls=1152 avg=1.864 ms
+  rope_q   :     0.89 ms (  0.0%)
+  rope_k   :     1.19 ms (  0.1%)
+  v_copy   :     0.93 ms (  0.0%)
+  qk       :  1485.23 ms ( 69.2%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=89.26 ms calls=5760
+  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :    89.26 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
 ==========================================
@@ -376,28 +392,57 @@ BC-src-code:54:46: note: expanded from macro 'ADRENO_MAX_CONCURRENT'
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
+prefill: 437 tokens, 2898 ms, 150.794 TPS
+generation: 32 tokens, 7482 ms, 4.27693 TPS
+total: 10391 ms
+peak memory: 2719336 KB
+[e2e time]: 13299 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=5.1 ms across all forwarding_op() calls
-  rms_norm                         4.8 ms  calls=1  avg=4.786 ms
-  tie_word_embeddings              0.3 ms  calls=1  avg=0.326 ms
-  input                            0.0 ms  calls=1  avg=0.005 ms
-  multiout                         0.0 ms  calls=2  avg=0.001 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=0.32 ms calls=1 avg=0.323 ms
+  total=7356.9 ms across all forwarding_op() calls
+  mha_core                      2147.5 ms  calls=1152  avg=1.864 ms
+  addition                      2089.0 ms  calls=2304  avg=0.907 ms
+  reshaped_rms_norm             1047.2 ms  calls=2304  avg=0.455 ms
+  gate_up_layer                  884.9 ms  calls=1152  avg=0.768 ms
+  rms_norm                       656.4 ms  calls=2336  avg=0.281 ms
+  tie_word_embeddings            407.4 ms  calls=64  avg=6.366 ms
+  fully_connected                100.2 ms  calls=5760  avg=0.017 ms
+  swiglu                          22.1 ms  calls=1152  avg=0.019 ms
+  multiout                         2.2 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=402.13 ms calls=32 avg=12.567 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=5.24 ms calls=32 avg=0.164 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2146.83 ms calls=1152 avg=1.864 ms
+  rope_q   :     0.89 ms (  0.0%)
 
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=0.32 ms calls=1 avg=0.323 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=402.13 ms calls=32 avg=12.567 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=5.24 ms calls=32 avg=0.164 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2146.83 ms calls=1152 avg=1.864 ms
+  rope_q   :     0.89 ms (  0.0%)
+  rope_k   :     1.19 ms (  0.1%)
+  v_copy   :     0.93 ms (  0.0%)
+  qk       :  1485.23 ms ( 69.2%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=89.26 ms calls=5760
+  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :    89.26 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE)
-[CL_BUILD_LOG]
-BC-src-code:62:48: error: 'subgroupuniform' attribute requires cl_qcom_subgroup_constant_load extension
-gpu_int
+<think>
+Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
+
+
+
+=================[ LLM with
 
 Full log: temp_run.log
 
