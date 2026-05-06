@@ -1,3 +1,5 @@
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
 HOME
 HOSTNAME
 KNOX_STORAGE
@@ -33,43 +35,43 @@ sandbox, and code to facilitate future research.<|im_end|>
  heter kicked深耕 obey
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2539 ms, 172.115 TPS
-generation: 32 tokens, 5880 ms, 5.44218 TPS
-total: 8423 ms
-peak memory: 2676280 KB
+prefill: 437 tokens, 2496 ms, 175.08 TPS
+generation: 32 tokens, 5805 ms, 5.51249 TPS
+total: 8304 ms
+peak memory: 2634656 KB
 ==========================================================
-[e2e time]: 11302 ms 
-Max Resident Set Size: 2676280 KB
+[e2e time]: 11226 ms 
+Max Resident Set Size: 2634656 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=5759.8 ms across all forwarding_op() calls
-  reshaped_rms_norm             4321.4 ms  calls=2304  avg=1.876 ms
-  mha_core                       773.6 ms  calls=1152  avg=0.672 ms
-  tie_word_embeddings            520.3 ms  calls=64  avg=8.130 ms
-  fully_connected                 49.6 ms  calls=5760  avg=0.009 ms
-  rms_norm                        49.3 ms  calls=2336  avg=0.021 ms
-  gate_up_layer                   24.1 ms  calls=1152  avg=0.021 ms
-  swiglu                          15.0 ms  calls=1152  avg=0.013 ms
-  addition                         4.9 ms  calls=2304  avg=0.002 ms
+  total=5716.4 ms across all forwarding_op() calls
+  reshaped_rms_norm             4288.7 ms  calls=2304  avg=1.861 ms
+  mha_core                       719.1 ms  calls=1152  avg=0.624 ms
+  tie_word_embeddings            548.0 ms  calls=64  avg=8.563 ms
+  fully_connected                 62.8 ms  calls=5760  avg=0.011 ms
+  rms_norm                        48.4 ms  calls=2336  avg=0.021 ms
+  gate_up_layer                   28.5 ms  calls=1152  avg=0.025 ms
+  swiglu                          14.6 ms  calls=1152  avg=0.013 ms
+  addition                         4.7 ms  calls=2304  avg=0.002 ms
   multiout                         1.5 ms  calls=3456  avg=0.000 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=518.39 ms calls=32 avg=16.200 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=1.92 ms calls=32 avg=0.060 ms
-[PROFILE MHACoreLayer decode (M==1)] total=773.15 ms calls=1152 avg=0.671 ms
-  rope_q   :     0.62 ms (  0.1%)
-  rope_k   :     1.01 ms (  0.1%)
-  v_copy   :     0.85 ms (  0.1%)
-  qk       :    92.60 ms ( 12.0%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=546.56 ms calls=32 avg=17.080 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=1.44 ms calls=32 avg=0.045 ms
+[PROFILE MHACoreLayer decode (M==1)] total=718.60 ms calls=1152 avg=0.624 ms
+  rope_q   :     0.65 ms (  0.1%)
+  rope_k   :     1.04 ms (  0.1%)
+  v_copy   :     0.81 ms (  0.1%)
+  qk       :    70.44 ms (  9.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=41.66 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=54.78 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    41.66 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    54.78 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE AdditionLayer decode] total=17.42 ms fast=2376 fallback=0 avg_fast=7.330 us
-  kernel :    17.42 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=17.24 ms fast=2376 fallback=0 avg_fast=7.255 us
+  kernel :    17.24 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -82,11 +84,11 @@ Max Resident Set Size: 2676280 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2539 ms, 172.115 TPS
-generation: 32 tokens, 5880 ms, 5.44218 TPS
-total: 8423 ms
-peak memory: 2676280 KB
-[e2e time]: 11302 ms 
+prefill: 437 tokens, 2496 ms, 175.08 TPS
+generation: 32 tokens, 5805 ms, 5.51249 TPS
+total: 8304 ms
+peak memory: 2634656 KB
+[e2e time]: 11226 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
@@ -99,3 +101,4 @@ Full log: temp_run.log
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
