@@ -168,7 +168,21 @@ void AdditionLayer::incremental_forwarding(RunLayerContext &context,
         std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
       static const bool s_layer_sync =
         std::getenv("NNTRAINER_PROFILE_LAYER_SYNC") != nullptr;
-      if (s_zerocopy && !s_layer_sync) {
+      // Phase B.2 (decode addition optimization): the per-call exit
+      // SVMMap drain accounted for 99.5% of addition's wall (3244 ms
+      // / 2376 calls = 1373 us each) per the [PROFILE AdditionLayer
+      // decode] probe. The drain blocks until ALL queued GPU work
+      // finishes, so addition was paying for upstream layers'
+      // (mha_core, FCs) GPU latency. Downstream consumer of `hidden_`
+      // is rms_norm -- if it's the GPU image2d path
+      // (NNTRAINER_RMSNORM_GPU=1) same-queue ordering is automatic
+      // per OpenCL spec. NNTRAINER_ADDITION_NO_DRAIN=1 skips the
+      // explicit drain. If that turns the output garbage we know a
+      // specific addition->X boundary needs the fix at the consumer's
+      // entry instead.
+      static const bool s_no_drain =
+        std::getenv("NNTRAINER_ADDITION_NO_DRAIN") != nullptr;
+      if (s_zerocopy && !s_layer_sync && !s_no_drain) {
         auto *cl_ctx = static_cast<ClContext *>(
           Engine::Global().getRegisteredContext("gpu"));
         if (cl_ctx) {

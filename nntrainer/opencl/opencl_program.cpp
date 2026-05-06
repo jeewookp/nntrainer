@@ -50,13 +50,34 @@ bool Program::BuildProgram(cl_device_id device_id,
     ml_loge(
       "Failed to build program executable. OpenCL error code: %d : %s. %s",
       error_code, OpenCLErrorCodeToString(error_code), build_log.c_str());
-    // Also surface to stderr so adb shell `2>&1 | tee temp_run.log`
-    // captures the build log into error.txt -- ml_loge alone goes to
-    // Android logcat which is invisible to host-side run logs.
-    std::fprintf(
-      stderr,
-      "[CL_BUILD_FAIL] err=%d (%s)\n[CL_BUILD_LOG]\n%s\n[/CL_BUILD_LOG]\n",
-      error_code, OpenCLErrorCodeToString(error_code), build_log.c_str());
+    // Surface to stderr so adb shell `2>&1 | tee temp_run.log` captures
+    // the build log into error.txt -- ml_loge alone goes to Android
+    // logcat which is invisible to host-side run logs. Truncate the log
+    // body to the first non-blank diagnostic line + total length so the
+    // pre-existing in-tree broken kernels (BLOCK_READ_IMPL_1, half4
+    // subscript -- both fail every run, neither related to this work)
+    // don't blow ~30 lines of macro-expansion trace per failure into
+    // the run log.
+    std::string first_diag;
+    if (!build_log.empty()) {
+      size_t p = 0;
+      while (p < build_log.size()) {
+        size_t nl = build_log.find('\n', p);
+        std::string line =
+          build_log.substr(p, nl == std::string::npos ? std::string::npos
+                                                       : nl - p);
+        if (!line.empty()) {
+          first_diag = line;
+          break;
+        }
+        if (nl == std::string::npos) break;
+        p = nl + 1;
+      }
+    }
+    std::fprintf(stderr,
+                 "[CL_BUILD_FAIL] err=%d (%s) log_bytes=%zu first=\"%s\"\n",
+                 error_code, OpenCLErrorCodeToString(error_code),
+                 build_log.size(), first_diag.c_str());
     std::fflush(stderr);
     return false;
   }
