@@ -1,3 +1,33 @@
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
 HOME
 HOSTNAME
 KNOX_STORAGE
@@ -28,48 +58,82 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-ught
+[LOGITS] decode_step=0 argmax=151667 max_logit=26.6875 checksum=0xc2bac224fc6c6e19 vocab=151936
+<think>[LOGITS] decode_step=1 argmax=198 max_logit=35.5625 checksum=0xc72ee5e88dfae83c vocab=151936
 
-Okay, I need to address this Japanese puzzle. Let's see, the user has provided a Chinese text, but I need to understand the problem. The
+[LOGITS] decode_step=2 argmax=32313 max_logit=36.8125 checksum=0x49eb7176d02693f3 vocab=151936
+Okay[LOGITS] decode_step=3 argmax=11 max_logit=36.7188 checksum=0x8a5a7439fb84fb08 vocab=151936
+[LOGITS] decode_step=4 argmax=279 max_logit=28.6406 checksum=0x0d9ed9a9f04049b3 vocab=151936
+, the[LOGITS] decode_step=5 argmax=1196 max_logit=38.3750 checksum=0x9d72562a65393aad vocab=151936
+ user[LOGITS] decode_step=6 argmax=6801 max_logit=27.8125 checksum=0xda952f197989d115 vocab=151936
+ wants[LOGITS] decode_step=7 argmax=264 max_logit=40.0938 checksum=0x00062f611911932d vocab=151936
+ a[LOGITS] decode_step=8 argmax=220 max_logit=31.7656 checksum=0x6531747bef713465 vocab=151936
+ summary[LOGITS] decode_step=9 argmax=315 max_logit=39.0938 checksum=0x09853130665dd0ba vocab=151936
+ of[LOGITS] decode_step=10 argmax=279 max_logit=37.0938 checksum=0xf4fcd1a0de8a7f4a vocab=151936
+ this[LOGITS] decode_step=11 argmax=8115 max_logit=29.5469 checksum=0xfcb395cab95875e0 vocab=151936
+ abstract[LOGITS] decode_step=12 argmax=304 max_logit=32.8438 checksum=0x6aac1af2c5a2d5b1 vocab=151936
+ in[LOGITS] decode_step=13 argmax=2326 max_logit=38.5000 checksum=0x9f0815eb4b3a04ea vocab=151936
+ three[LOGITS] decode_step=14 argmax=22870 max_logit=31.1875 checksum=0x03bf13f206a61417 vocab=151936
+ sentences[LOGITS] decode_step=15 argmax=13 max_logit=35.5312 checksum=0x2d2c06a2684f1642 vocab=151936
+.[LOGITS] decode_step=16 argmax=6771 max_logit=34.6250 checksum=0xe1383bb9a4f8136b vocab=151936
+ Let[LOGITS] decode_step=17 argmax=752 max_logit=33.6250 checksum=0x4f97b2eadb83d076 vocab=151936
+ me[LOGITS] decode_step=18 argmax=1349 max_logit=31.2656 checksum=0xda0e6618dc9d0c62 vocab=151936
+ read[LOGITS] decode_step=19 argmax=1526 max_logit=39.5312 checksum=0xffbd46a83be81f30 vocab=151936
+ through[LOGITS] decode_step=20 argmax=279 max_logit=39.0312 checksum=0xd91ac696dd000627 vocab=151936
+ the[LOGITS] decode_step=21 argmax=1467 max_logit=32.4375 checksum=0x3068cbdce5fd40fd vocab=151936
+ text[LOGITS] decode_step=22 argmax=1549 max_logit=39.4688 checksum=0x41a70ff4f389b131 vocab=151936
+ again[LOGITS] decode_step=23 argmax=311 max_logit=33.8438 checksum=0x8fc92d277af171a1 vocab=151936
+ to[LOGITS] decode_step=24 argmax=1281 max_logit=32.8750 checksum=0x3fb8c530976a11a8 vocab=151936
+ make[LOGITS] decode_step=25 argmax=2704 max_logit=38.3438 checksum=0x66be660dc53fda8b vocab=151936
+ sure[LOGITS] decode_step=26 argmax=358 max_logit=42.0938 checksum=0xc2d0ef220a580b28 vocab=151936
+ I[LOGITS] decode_step=27 argmax=12322 max_logit=31.5156 checksum=0x19e581ca7b72efcb vocab=151936
+ capture[LOGITS] decode_step=28 argmax=678 max_logit=38.6562 checksum=0x3e4e2df266a2c1a3 vocab=151936
+ all[LOGITS] decode_step=29 argmax=279 max_logit=34.9688 checksum=0xdf667204810fcb62 vocab=151936
+ the[LOGITS] decode_step=30 argmax=1376 max_logit=35.4375 checksum=0x0eae622e87db46b0 vocab=151936
+ key[LOGITS] decode_step=31 argmax=3501 max_logit=41.3125 checksum=0x6a5a43136b5b0b54 vocab=151936
+ points[LOGITS] decode_step=32 argmax=382 max_logit=35.4062 checksum=0x827c932313a022ce vocab=151936
+.
+
+
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2656 ms, 164.533 TPS
+prefill: 437 tokens, 2543 ms, 171.844 TPS
 generation: 32 tokens, 5651 ms, 5.66271 TPS
-total: 8311 ms
-peak memory: 2666872 KB
+total: 8202 ms
+peak memory: 2658404 KB
 ==========================================================
-[e2e time]: 11184 ms 
-Max Resident Set Size: 2666872 KB
+[e2e time]: 11021 ms 
+Max Resident Set Size: 2658404 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=5563.4 ms across all forwarding_op() calls
-  mha_core                      2576.2 ms  calls=1152  avg=2.236 ms
-  gate_up_layer                 2430.3 ms  calls=1152  avg=2.110 ms
-  tie_word_embeddings            420.9 ms  calls=64  avg=6.576 ms
-  fully_connected                 84.5 ms  calls=5760  avg=0.015 ms
-  rms_norm                        26.8 ms  calls=2336  avg=0.011 ms
-  swiglu                          12.6 ms  calls=1152  avg=0.011 ms
-  reshaped_rms_norm                6.0 ms  calls=2304  avg=0.003 ms
-  addition                         4.7 ms  calls=2304  avg=0.002 ms
-  multiout                         1.4 ms  calls=3456  avg=0.000 ms
-  input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=412.81 ms calls=32 avg=12.900 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=8.04 ms calls=32 avg=0.251 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2575.83 ms calls=1152 avg=2.236 ms
-  rope_q   :     0.61 ms (  0.0%)
+  total=5587.2 ms across all forwarding_op() calls
+  mha_core                      2566.2 ms  calls=1152  avg=2.228 ms
+  gate_up_layer                 2428.3 ms  calls=1152  avg=2.108 ms
+  tie_word_embeddings            467.0 ms  calls=64  avg=7.297 ms
+  fully_connected                 76.0 ms  calls=5760  avg=0.013 ms
+  rms_norm                        26.2 ms  calls=2336  avg=0.011 ms
+  swiglu                          11.7 ms  calls=1152  avg=0.010 ms
+  reshaped_rms_norm                6.1 ms  calls=2304  avg=0.003 ms
+  addition                         4.3 ms  calls=2304  avg=0.002 ms
+  multiout                         1.3 ms  calls=3456  avg=0.000 ms
+  input                            0.0 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=455.01 ms calls=32 avg=14.219 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=11.96 ms calls=32 avg=0.374 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2565.83 ms calls=1152 avg=2.227 ms
+  rope_q   :     0.58 ms (  0.0%)
   rope_k   :     0.88 ms (  0.0%)
-  v_copy   :     0.73 ms (  0.0%)
-  qk       :    90.72 ms (  3.5%)
+  v_copy   :     0.78 ms (  0.0%)
+  qk       :    48.50 ms (  1.9%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=77.18 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=69.09 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    77.18 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    69.09 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE AdditionLayer decode] total=17.24 ms fast=2376 fallback=0 avg_fast=7.254 us
-  kernel :    17.24 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=16.87 ms fast=2376 fallback=0 avg_fast=7.101 us
+  kernel :    16.87 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -82,19 +146,17 @@ Max Resident Set Size: 2666872 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2656 ms, 164.533 TPS
+prefill: 437 tokens, 2543 ms, 171.844 TPS
 generation: 32 tokens, 5651 ms, 5.66271 TPS
-total: 8311 ms
-peak memory: 2666872 KB
-[e2e time]: 11184 ms 
+total: 8202 ms
+peak memory: 2658404 KB
+[e2e time]: 11021 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-ught
-
-Okay, I need to address this Japanese puzzle. Let's see, the user has provided
+[LOGITS] decode_step=0 argmax=151667 max_logit=26.6875 checksum=0xc2bac224fc6c6e19 v
 
 Full log: temp_run.log
 
