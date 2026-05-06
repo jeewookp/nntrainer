@@ -18,11 +18,80 @@
 #include <node_exporter.h>
 #include <util_func.h>
 
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+
 #include <layer_context.h>
 
 namespace nntrainer {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
+
+namespace {
+// Decode-path profile for AdditionLayerCL::incremental_forwarding.
+// Decode dispatches a residual addition twice per transformer layer
+// (post-attention residual + post-MLP residual) so for Qwen3-4B:
+//   2 * 36 layers * 32 tokens = 2304 calls per generation run.
+// The PROFILE NetworkGraph block reported addition takes 28.8% of
+// decode wall time (2090 / 7251 ms) at 0.91 ms/call -- 100x bigger
+// than a 2560-elem fp16 add should be on this device. Likely culprit
+// is addition_cl_internal taking the stale clEnqueueWriteBuffer +
+// clEnqueueReadBuffer round-trip path instead of SVM zero-copy.
+// This probe splits each call into:
+//   ns_copy   : hidden_step.copy(input_step) on the FIRST input idx
+//   ns_add    : add_i_cl(hidden_step, input_step) on subsequent idx
+//   ns_misc   : everything else inside incremental_forwarding (loop
+//               setup, getSharedDataTensor, etc.)
+// Atomic so multi-threaded prefill won't corrupt the counters; decode
+// is single-threaded but we keep the same pattern as
+// HalfDotQInt4DecodeProfile in half_tensor.cpp for consistency.
+struct AdditionDecodeProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns_copy{0};
+  std::atomic<uint64_t> ns_add{0};
+  std::atomic<uint64_t> ns_misc{0};
+
+  ~AdditionDecodeProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0)
+      return;
+    const uint64_t copy = ns_copy.load();
+    const uint64_t add = ns_add.load();
+    const uint64_t misc = ns_misc.load();
+    const uint64_t total = copy + add + misc;
+    auto ms = [](uint64_t v) -> double { return v / 1.0e6; };
+    auto pct = [&](uint64_t v) -> double {
+      return total == 0 ? 0.0 : (double)v / (double)total * 100.0;
+    };
+    std::fprintf(stderr,
+                 "\n[PROFILE AdditionLayerCL decode (M==1)] "
+                 "total=%.2f ms calls=%llu avg=%.3f us/call\n",
+                 ms(total), (unsigned long long)c,
+                 c == 0 ? 0.0 : (double)total / (double)c / 1000.0);
+    std::fprintf(stderr,
+                 "  copy      : %8.2f ms (%5.1f%%)  "
+                 "[hidden_step.copy(input_step) on first idx]\n",
+                 ms(copy), pct(copy));
+    std::fprintf(stderr,
+                 "  add_i_cl  : %8.2f ms (%5.1f%%)  "
+                 "[GPU add via addition_cl_internal -> WriteBuffer + "
+                 "Enqueue + ReadBuffer round-trip on subsequent idx]\n",
+                 ms(add), pct(add));
+    std::fprintf(stderr,
+                 "  misc      : %8.2f ms (%5.1f%%)  "
+                 "[loop setup + getSharedDataTensor + layer wrapper]\n",
+                 ms(misc), pct(misc));
+  }
+};
+AdditionDecodeProfile g_addition_decode_profile;
+
+inline uint64_t now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+} // namespace
 
 void AdditionLayerCL::finalize(InitLayerContext &context) {
   context.setOutputDimensions({context.getInputDimensions()[0]});
@@ -45,6 +114,7 @@ void AdditionLayerCL::forwarding(RunLayerContext &context, bool training) {
 void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
                                              unsigned int from, unsigned int to,
                                              bool training) {
+  const uint64_t t_enter = now_ns();
   Tensor &hidden_ = context.getOutput(SINGLE_INOUT_IDX);
   TensorDim hidden_dim = hidden_.getDim();
   TensorDim hidden_step_dim = hidden_dim;
@@ -58,6 +128,9 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
 
   hidden_step_dim.batch(1);
   hidden_step_dim.height(to - from);
+
+  uint64_t local_copy = 0;
+  uint64_t local_add = 0;
 
   for (unsigned int b = 0; b < hidden_.batch(); ++b) {
     Tensor hidden_step = hidden_.getSharedDataTensor(
@@ -75,12 +148,27 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
       Tensor input_step = input_.getSharedDataTensor(
         input_step_dim, b * input_dim.getFeatureLen(), true);
       if (!idx) {
+        const uint64_t t0 = now_ns();
         hidden_step.copy(input_step);
+        local_copy += now_ns() - t0;
       } else {
+        const uint64_t t0 = now_ns();
         add_i_cl(hidden_step, input_step);
+        local_add += now_ns() - t0;
       }
     }
   }
+
+  const uint64_t t_exit = now_ns();
+  const uint64_t total = t_exit - t_enter;
+  const uint64_t misc =
+    total > (local_copy + local_add) ? total - local_copy - local_add : 0;
+  g_addition_decode_profile.ns_copy.fetch_add(local_copy,
+                                              std::memory_order_relaxed);
+  g_addition_decode_profile.ns_add.fetch_add(local_add,
+                                             std::memory_order_relaxed);
+  g_addition_decode_profile.ns_misc.fetch_add(misc, std::memory_order_relaxed);
+  g_addition_decode_profile.calls.fetch_add(1, std::memory_order_relaxed);
 }
 
 void AdditionLayerCL::calcDerivative(RunLayerContext &context) {
