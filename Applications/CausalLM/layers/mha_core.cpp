@@ -382,9 +382,25 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // here, drains the queue AND announces the CPU access window. The
   // matching SVMUnmap(output) at the bottom of incremental_forwarding
   // commits the CPU writes back so the o_proj kernel sees them.
+  //
+  // Phase B.11: when NNTRAINER_ATTN_GPU=1 routes the whole attention
+  // through attention_fused_fp16_cl on the OpenCL queue, q/k/v are
+  // read by the GPU kernel (not the host) and output is written by
+  // the GPU kernel. The CPU-side handshake here is then redundant
+  // for the GPU path -- 4 blocking SVMMaps per call is the dominant
+  // cost in the [PROFILE NetworkGraph] mha_core 2607 ms / 1152 calls
+  // = 2.26 ms/call observation (the 4 drains absorb every upstream
+  // stall, ~2 ms/call). NNTRAINER_ATTN_NO_DRAIN=1 already gates the
+  // exit drain inside attention_fused_fp16_cl; reuse the same env to
+  // also skip these 4 entry drains when going GPU.
+  static const bool s_attn_gpu_for_drain =
+    std::getenv("NNTRAINER_ATTN_GPU") != nullptr;
+  static const bool s_attn_no_drain =
+    std::getenv("NNTRAINER_ATTN_NO_DRAIN") != nullptr;
+  const bool skip_entry_drain = s_attn_gpu_for_drain && s_attn_no_drain;
   auto *mha_sync_cl_ctx = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
-  if (mha_sync_cl_ctx) {
+  if (mha_sync_cl_ctx && !skip_entry_drain) {
     auto map_if_svm = [&](nntrainer::Tensor &t, bool ro) {
       if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
         mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
