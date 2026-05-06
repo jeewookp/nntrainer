@@ -429,6 +429,18 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
                             unsigned int K, unsigned int N,
                             bool sync_output = true);
 
+// Phase A1 (image2d weight migration): same algorithm as v3 but
+// reads the int4 packed weight matrix from a CL_RGBA16UI image2d
+// view of the SVM weight bytes. Image2D wrapper is cached per
+// weight pointer at first call. Returns false (caller falls back
+// to SVM v3 path) when N/4 or K/4 exceeds the device's image2d
+// max dimensions (e.g. lm_head N=152064 doesn't fit), or on
+// allocation failure.
+bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
+                                  uint16_t *scales, uint16_t *output,
+                                  unsigned int K, unsigned int N,
+                                  bool sync_output = true);
+
 // Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
 // loads more of the gemv work (step 1 = weight only, step 2 = +
 // input, ...) but all write deterministic zero until correctness

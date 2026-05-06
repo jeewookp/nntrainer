@@ -1037,14 +1037,27 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // toggle isolated.
     static const bool s_adreno_v3 =
       std::getenv("NNTRAINER_GEMV_ADRENO_V3") != nullptr;
+    // Phase A1 image2d migration: try the image2d-weight gemv first
+    // when env-gated. Falls back to v3 / v1 on shape constraint
+    // failure (lm_head's N=152064 exceeds image2d max width).
+    static const bool s_weight_image2d =
+      std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D") != nullptr;
     if (s_zerocopy && !s_step && !s_image2d) {
       const uint64_t t_zc0 = now_ns();
-      if (s_adreno_v3) {
-        gemv_int4_adreno_v3_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
-                               /*sync_output=*/false);
-      } else {
-        gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
-                            /*sync_output=*/false);
+      bool dispatched = false;
+      if (s_weight_image2d) {
+        dispatched = gemv_int4_weight_image2d_cl(in_u16, weight_u16,
+                                                  scale_u16, out_u16, K, N,
+                                                  /*sync_output=*/false);
+      }
+      if (!dispatched) {
+        if (s_adreno_v3) {
+          gemv_int4_adreno_v3_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
+                                 /*sync_output=*/false);
+        } else {
+          gemv_int4_adreno_cl(in_u16, weight_u16, scale_u16, out_u16, K, N,
+                              /*sync_output=*/false);
+        }
       }
       const uint64_t t_zc1 = now_ns();
       g_half_dotq_decode_profile.ns_gemv_call += t_zc1 - t_zc0;

@@ -2214,6 +2214,113 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
   }
 }
 
+// Phase A1 (image2d migration): same gemv as v3 but reads weights
+// from a 2D image instead of __global SVM. Goal: leverage Adreno's
+// texture cache for the dominant weight bandwidth in M=1 GEMV.
+//
+// Image2D wrapper is cached PER-WEIGHT-POINTER (static map). First
+// call for a given weight allocates a CL_RGBA16UI image of size
+// (N/4, K/4) and copies the SVM ushort data via clEnqueueWriteImage.
+// All subsequent calls reuse the image2d view -- no per-call alloc
+// or copy. Memory cost: ~doubles the weight footprint (SVM copy
+// stays for the fallback path; image2d adds an equal-size copy).
+//
+// Returns false (caller falls back to SVM v3 path) when:
+//   * N/4 or K/4 exceeds the device's CL_DEVICE_IMAGE2D_MAX_WIDTH /
+//     _MAX_HEIGHT (lm_head's N=152064 -> width 38016 > typical 16K).
+//   * clCreateImage / clEnqueueWriteImage fails.
+//   * shape constraints (K%4, N%4).
+bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
+                                  uint16_t *scales, uint16_t *output,
+                                  unsigned int K, unsigned int N,
+                                  bool sync_output) {
+  if (!input || !weights || !scales || !output) return false;
+  if ((K & 3u) || (N & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Image2D dimension limits: typical Adreno 32K each, but we don't
+  // cache the device limit -- query once via clGetDeviceInfo.
+  static size_t s_max_w = 0;
+  static size_t s_max_h = 0;
+  if (s_max_w == 0) {
+    cl_device_id dev = ContextManager::Global().GetDeviceId();
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
+                    &s_max_w, nullptr);
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
+                    &s_max_h, nullptr);
+    if (s_max_w == 0) s_max_w = 16384;
+    if (s_max_h == 0) s_max_h = 16384;
+  }
+  const size_t img_w = (size_t)N / 4u;
+  const size_t img_h = (size_t)K / 4u;
+  if (img_w > s_max_w || img_h > s_max_h) {
+    return false; // doesn't fit -- caller falls back
+  }
+
+  // Cache image2d per weight pointer. First call: create + upload.
+  struct WeightImg { cl_mem img; size_t w, h; };
+  static std::unordered_map<uintptr_t, WeightImg> s_w_cache;
+  cl_mem weight_img = nullptr;
+  {
+    const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
+    auto it = s_w_cache.find(wk);
+    if (it != s_w_cache.end() && it->second.w == img_w &&
+        it->second.h == img_h) {
+      weight_img = it->second.img;
+    } else {
+      if (it != s_w_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_int err = 0;
+      cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT16};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = img_w;
+      d.image_height = img_h;
+      // CL_MEM_COPY_HOST_PTR: device-side image is created by copying
+      // from the host pointer.  weights is SVM (host-readable on
+      // Adreno coarse SVM) so this copy works without an SVMMap
+      // drain. One-time at first call per weight.
+      weight_img = clCreateImage(clctx, CL_MEM_READ_ONLY |
+                                          CL_MEM_COPY_HOST_PTR,
+                                  &fmt, &d, (void *)weights, &err);
+      if (err != CL_SUCCESS || !weight_img) return false;
+      s_w_cache[wk] = {weight_img, img_w, img_h};
+    }
+  }
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_weight_image2d_kernel, "gpu_int4_gemv_weight_image2d");
+  if (!kernel_ptr) return false;
+
+  int arg = 0;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, input)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, scales)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, output)) return false;
+  if (!kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem)))
+    return false;
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  const int align_N = static_cast<int>(align(N, 256));
+  const int dim_n = align_N / 4;
+  const int g[3] = {dim_n, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l)) {
+    return false;
+  }
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+  return true;
+}
+
 // Step 1 of the incremental image2d gemv rewrite.  Signature matches
 // gemv_int4_adreno_cl so the caller can env-swap them one at a time.
 // Step 1 only LOADS weights and writes zero; output is garbage, but
