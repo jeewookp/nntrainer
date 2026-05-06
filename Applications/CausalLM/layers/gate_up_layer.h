@@ -48,6 +48,25 @@ public:
   using prop_tag = nntrainer::uint_prop_tag;
 };
 
+// When set, GateUpLayer absorbs the preceding ffn_norm RMSNorm into
+// its own dispatch via fused_rmsnorm_gate_up_cl. The layer registers
+// gamma as its FIRST weight (matching the bundle byte position of the
+// removed ffn_norm gamma) followed by up + gate. transformer.cpp
+// createMlp() must skip the standalone rms_norm layer creation when
+// this property is true. Driven by env NNTRAINER_FUSED_RMSNORM_GATE_UP
+// at model build time.
+class FusedRmsnorm : public nntrainer::Property<bool> {
+public:
+  static constexpr const char *key = "fused_rmsnorm";
+  using prop_tag = nntrainer::bool_prop_tag;
+};
+
+class FusedRmsnormEpsilon : public nntrainer::Property<float> {
+public:
+  static constexpr const char *key = "fused_rmsnorm_epsilon";
+  using prop_tag = nntrainer::float_prop_tag;
+};
+
 } // namespace props
 
 WIN_EXPORT class GateUpLayer : public nntrainer::LayerImpl {
@@ -81,8 +100,12 @@ public:
   inline static const std::string type = "gate_up_layer";
 
 private:
-  std::tuple<props::UpUnit, props::GateUnit> gate_up_props;
-  std::array<unsigned int, 2> weight_idx;
+  std::tuple<props::UpUnit, props::GateUnit, props::FusedRmsnorm,
+             props::FusedRmsnormEpsilon>
+    gate_up_props;
+  // Indices into the registered weight list. When fused_rmsnorm is
+  // false: [Up, Gate]. When true: [Gamma, Up, Gate].
+  std::array<unsigned int, 3> weight_idx;
 };
 
 } // namespace causallm

@@ -313,16 +313,31 @@ Transformer::createTransformerDecoderBlock(const int layer_id,
      withKey("input_layers", input_name + ",layer" + std::to_string(layer_id) +
                                "_attention_out")}));
 
-  layers.push_back(createLayer(
-    "rms_norm",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_norm"),
-     withKey("input_layers",
-             "layer" + std::to_string(layer_id) + "_decoder_add"),
-     withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
+  // NNTRAINER_FUSED_RMSNORM_GATE_UP=1 absorbs ffn_norm into the
+  // GateUpLayer dispatch (one kernel: cooperative rms_norm + Gate
+  // proj + Up proj, single drain).  GateUpLayer registers gamma as
+  // its FIRST weight to preserve the bundle byte order originally
+  // produced by (rms_norm gamma + ffn_up + ffn_gate).  The standalone
+  // rms_norm layer is omitted in this mode and gate_up_layer wires
+  // its input directly to decoder_add.  Read once at static init so
+  // every layer in the model agrees on the topology.
+  static const bool s_fused_rmsnorm_gate_up =
+    std::getenv("NNTRAINER_FUSED_RMSNORM_GATE_UP") != nullptr;
+  if (!s_fused_rmsnorm_gate_up) {
+    layers.push_back(createLayer(
+      "rms_norm",
+      {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_norm"),
+       withKey("input_layers",
+               "layer" + std::to_string(layer_id) + "_decoder_add"),
+       withKey("epsilon", std::to_string(NORM_EPS)),
+       withKey("packed", "false")}));
+  }
 
-  auto ffn_layer = createMlp(layer_id, DIM, INTERMEDIATE_SIZE,
-                             "layer" + std::to_string(layer_id) + "_ffn_norm");
+  auto ffn_input_name =
+    s_fused_rmsnorm_gate_up
+      ? ("layer" + std::to_string(layer_id) + "_decoder_add")
+      : ("layer" + std::to_string(layer_id) + "_ffn_norm");
+  auto ffn_layer = createMlp(layer_id, DIM, INTERMEDIATE_SIZE, ffn_input_name);
   layers.insert(layers.end(), ffn_layer.begin(), ffn_layer.end());
 
   layers.push_back(createLayer(
@@ -406,15 +421,30 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
   //   gate_up(0) = up projection
   //   gate_up(1) = gate projection
   // swiglu's first input is gate, second is up, hence the (1),(0) order.
+  //
+  // NNTRAINER_FUSED_RMSNORM_GATE_UP=1 (decided in
+  // createTransformerDecoderBlock above) skips the standalone
+  // ffn_norm rms_norm layer; in that mode GateUpLayer absorbs the
+  // RMSNorm by registering gamma as its FIRST weight (matching the
+  // bundle byte position of the removed rms_norm gamma) and
+  // dispatching fused_rmsnorm_gate_up_cl. The fused_rmsnorm property
+  // tells the layer which weight layout to use at finalize().
+  static const bool s_fused_rmsnorm_gate_up_for_mlp =
+    std::getenv("NNTRAINER_FUSED_RMSNORM_GATE_UP") != nullptr;
   auto gate_up_name = "layer" + std::to_string(layer_id) + "_ffn_gate_up";
-  layers.push_back(createLayer(
-    "gate_up_layer",
-    {withKey("name", gate_up_name),
-     withKey("up_unit", hidden_dim),
-     withKey("gate_unit", hidden_dim),
-     withKey("disable_bias", "true"),
-     withKey("input_layers", input_name),
-     withKey("weight_initializer", "ones")}));
+  std::vector<std::string> gate_up_params{
+    withKey("name", gate_up_name),
+    withKey("up_unit", hidden_dim),
+    withKey("gate_unit", hidden_dim),
+    withKey("disable_bias", "true"),
+    withKey("input_layers", input_name),
+    withKey("weight_initializer", "ones")};
+  if (s_fused_rmsnorm_gate_up_for_mlp) {
+    gate_up_params.push_back(withKey("fused_rmsnorm", "true"));
+    gate_up_params.push_back(
+      withKey("fused_rmsnorm_epsilon", std::to_string(NORM_EPS)));
+  }
+  layers.push_back(createLayer("gate_up_layer", gate_up_params));
 
   layers.push_back(createLayer(
     "swiglu",
