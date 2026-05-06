@@ -48,16 +48,34 @@
 // via [CL_BUILD_FAIL] / [CL_BUILD_LOG] in stderr and we adjust the
 // syntax based on the actual diagnostic.
 
+// Enable all three QCOM pragmas LiteRT's program_002.cl turned on.
+// Per the captured kernel order: subgroup_uniform_load,
+// subgroup_constant_load, inline_asm. The first is what we need for
+// the sub_group_uniform attribute below; the other two are enabled
+// "just in case" the driver gates attribute parsing on combined
+// extension state. Match LiteRT's exact pragma whitespace too
+// (no space before colon for the first two).
 #ifdef cl_qcom_subgroup_uniform_load
-#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load : enable
+#pragma OPENCL EXTENSION cl_qcom_subgroup_uniform_load: enable
 #define ADRENO_SG_UNIFORM __attribute__((sub_group_uniform))
-#define ADRENO_MAX_CONCURRENT __attribute__((qcom_max_concurrent_subgroups(12)))
 #else
 #define ADRENO_SG_UNIFORM
-#define ADRENO_MAX_CONCURRENT
 #endif
 
-ADRENO_MAX_CONCURRENT
+#ifdef cl_qcom_subgroup_constant_load
+#pragma OPENCL EXTENSION cl_qcom_subgroup_constant_load: enable
+#endif
+
+#ifdef cl_qcom_inline_asm
+#pragma OPENCL EXTENSION cl_qcom_inline_asm : enable
+#endif
+
+// NOTE: __attribute__((qcom_max_concurrent_subgroups(N))) was
+// initially included but the build failed with err=-11 (empty log).
+// Bisecting -- removed for now; re-add in next step if (a) the build
+// passes without it, and (b) the sub_group_uniform path alone gives
+// a measurable win.
+
 kernel void
 gpu_int4_gemv_adreno_v3(__constant half *input ADRENO_SG_UNIFORM,
                         __global const half *scales,
