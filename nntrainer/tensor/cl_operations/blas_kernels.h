@@ -564,6 +564,25 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
                         unsigned int N_v,
                         bool sync_output = true);
 
+// v2: same as fused_gemv_int4_cl but binds `input_svm` through
+// __constant memory.  Routes the activation vector through Adreno's
+// per-CU constant cache (separate from L1).  Same trick that
+// gpu_int4_gemv_adreno_v3 used to gain +1.1% TPS on the per-FC path;
+// this helper applies it to the fused QKV/Gate-Up dispatch which
+// represents a much larger share of decode weight reads.
+bool fused_gemv_int4_v2_cl(uint16_t *input_svm,
+                           uint16_t *q_weights, uint16_t *q_scales,
+                           uint16_t *q_out,
+                           uint16_t *k_weights, uint16_t *k_scales,
+                           uint16_t *k_out,
+                           uint16_t *v_weights, uint16_t *v_scales,
+                           uint16_t *v_out,
+                           unsigned int K,
+                           unsigned int N_q,
+                           unsigned int N_k,
+                           unsigned int N_v,
+                           bool sync_output = true);
+
 /**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a

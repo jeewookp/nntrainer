@@ -1380,12 +1380,24 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         // explicit consumer read either.  Settle on sync_output=true
         // (blocking SVMMap drain).  Costs ~150 us per layer * 36 =
         // ~5 ms/token; rest of zerocopy savings stay in place.
-        if (fused_gemv_int4_cl(in_u16,
-                                w_q, s_q, o_q,
-                                w_k, s_k, o_k,
-                                w_v, s_v, o_v,
-                                K, N_q, N_k, N_v,
-                                /*sync_output=*/true)) {
+        // Phase B: NNTRAINER_FUSED_GEMV_V2=1 routes through the
+        // __constant-input variant. Same per-CU constant-cache trick
+        // that gpu_int4_gemv_adreno_v3 used to gain +1.1% on the
+        // per-FC dotQInteger path. fused_gemv handles the QKV
+        // (3-partition) and Gate-Up (2-partition) batches which
+        // together represent the dominant decode weight share, so
+        // the same trick should compound.
+        static const bool s_fused_v2 =
+          std::getenv("NNTRAINER_FUSED_GEMV_V2") != nullptr;
+        const bool fused_ok =
+          s_fused_v2
+            ? fused_gemv_int4_v2_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
+                                    w_v, s_v, o_v, K, N_q, N_k, N_v,
+                                    /*sync_output=*/true)
+            : fused_gemv_int4_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
+                                 w_v, s_v, o_v, K, N_q, N_k, N_v,
+                                 /*sync_output=*/true);
+        if (fused_ok) {
           return;
         }
       }
@@ -1453,11 +1465,17 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         N_v = 0u;
       }
 
-      const bool ok = fused_gemv_int4_cl(svm_in,
-                                          w_q, s_q, svm_out_q,
-                                          w_k, s_k, svm_out_k,
-                                          w_v, s_v, svm_out_v,
-                                          K, N_q, N_k, N_v);
+      // Phase B: same env-gate as the zerocopy path above.
+      static const bool s_fused_v2_legacy =
+        std::getenv("NNTRAINER_FUSED_GEMV_V2") != nullptr;
+      const bool ok =
+        s_fused_v2_legacy
+          ? fused_gemv_int4_v2_cl(svm_in, w_q, s_q, svm_out_q, w_k, s_k,
+                                  svm_out_k, w_v, s_v, svm_out_v,
+                                  K, N_q, N_k, N_v)
+          : fused_gemv_int4_cl(svm_in, w_q, s_q, svm_out_q, w_k, s_k,
+                               svm_out_k, w_v, s_v, svm_out_v,
+                               K, N_q, N_k, N_v);
       if (ok) {
         // Stage outputs back to caller tensors.
         for (unsigned int i = 0; i < input.size(); ++i) {
