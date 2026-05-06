@@ -252,6 +252,33 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
                          const float *gamma, unsigned int M, unsigned int K,
                          float epsilon);
 
+/**
+ * @brief SVM-direct fp16 RMSNorm with cooperative WG=64 reduction.
+ *
+ * Same algorithm as rmsnorm_image2d_v2 but reads/writes SVM tensors
+ * directly -- no svm_to_image2d, image2d_to_svm, or pool publish
+ * round-trip. Built for the M==1 decode hot path where the four
+ * image2d dispatches and the blocking SVMMap fence dominate the
+ * actual compute by ~17x. For prefill (M >> 1) the image2d_cl path
+ * stays preferable because the reformat amortises over many rows.
+ *
+ * Args:
+ *   in_svm   : SVM half[H_rows * W] (row-major)
+ *   out_svm  : SVM half[H_rows * W]
+ *   gamma    : __global float[W] (cl_mem cached host-side, fp32)
+ *   H_rows   : number of independent rows to normalise (= 1 for decode)
+ *   W        : channel dim (must match gamma length)
+ *   epsilon  : RMSNorm epsilon
+ *
+ * No exit SVMMap drain: same OpenCL queue ordering serialises with
+ * downstream GPU consumers; Tensor::copy / NEON consumers must do
+ * their own entry drain (none of the model's downstream consumers
+ * of this output do that today).
+ */
+void rmsnorm_fp16_svm_cl(void *in_svm, void *out_svm,
+                          const float *gamma, unsigned int H_rows,
+                          unsigned int W, float epsilon);
+
 #ifdef ENABLE_FP16
 /**
  * @brief Fused FlashAttention dispatch on the GPU queue.

@@ -75,6 +75,7 @@ if get_option('enable-fp16')
     'hgemv.cl',
     'hscal.cl',
     'rmsnorm_fp16.cl',
+    'rmsnorm_fp16_svm.cl',
     'rotary_emb_fp16.cl',
     'attention_fused_fp16.cl',
     'swiglu_fp16.cl',

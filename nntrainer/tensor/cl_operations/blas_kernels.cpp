@@ -4801,6 +4801,67 @@ void rmsnorm_image2d_cl(void *in_svm, void *out_svm,
   }
 }
 
+// ============================================================================
+// SVM-direct fp16 RMSNorm. Counterpart to rmsnorm_image2d_cl optimised
+// for the M==1 decode hot path: one kernel dispatch, no image2d
+// reformat ceremony, no exit drain.
+// ============================================================================
+void rmsnorm_fp16_svm_cl(void *in_svm, void *out_svm,
+                          const float *gamma, unsigned int H_rows,
+                          unsigned int W, float epsilon) {
+  if (!in_svm || !out_svm || !gamma || H_rows == 0 || W == 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Cache gamma as a cl_mem keyed by host pointer; same pattern as
+  // rmsnorm_image2d_cl uses so we share the same upload across the
+  // two paths.
+  struct GammaCache { cl_mem buf; size_t bytes; };
+  static std::unordered_map<uintptr_t, GammaCache> s_gamma_cache;
+  cl_mem gamma_buf = nullptr;
+  {
+    const uintptr_t gk = reinterpret_cast<uintptr_t>(gamma);
+    const size_t need = (size_t)W * sizeof(float);
+    auto it = s_gamma_cache.find(gk);
+    if (it != s_gamma_cache.end() && it->second.bytes >= need) {
+      gamma_buf = it->second.buf;
+    } else {
+      cl_int err = 0;
+      if (it != s_gamma_cache.end() && it->second.buf)
+        clReleaseMemObject(it->second.buf);
+      gamma_buf = clCreateBuffer(clctx,
+                                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                 need, (void *)gamma, &err);
+      if (err != CL_SUCCESS || !gamma_buf) return;
+      s_gamma_cache[gk] = {gamma_buf, need};
+    }
+  }
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern =
+      blas_cc->registerClKernel(rmsnorm_fp16_svm_kernel, "rmsnorm_fp16_svm");
+  }
+  if (!s_kern) return;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, in_svm);
+  s_kern->SetKernelSVMArguments(a++, out_svm);
+  s_kern->SetKernelArguments(a++, &gamma_buf, sizeof(cl_mem));
+  const float eps = epsilon;
+  s_kern->SetKernelArguments(a++, &eps, sizeof(float));
+  const int W_i = (int)W;
+  s_kern->SetKernelArguments(a++, &W_i, sizeof(int));
+
+  // WG=64 must match the kernel's reqd_work_group_size. Global is one
+  // workgroup per row.
+  const int g[3] = {(int)(64u * H_rows), 1, 1};
+  const int l[3] = {64, 1, 1};
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 #ifdef ENABLE_FP16
 // ============================================================================
 // Fused FlashAttention (qk + softmax + av) via attention_fused_fp16.

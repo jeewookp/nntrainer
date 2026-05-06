@@ -152,13 +152,28 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     std::getenv("NNTRAINER_RMSNORM_GPU") != nullptr;
   static const bool s_rmsnorm_decode_neon_for_drain =
     std::getenv("NNTRAINER_RMSNORM_DECODE_NEON") != nullptr;
+  static const bool s_rmsnorm_decode_svm_for_drain =
+    std::getenv("NNTRAINER_RMSNORM_DECODE_SVM") != nullptr;
   const bool drain_step_is_decode_h1 = ((to - from) == 1);
-  const bool drain_route_will_be_gpu =
-    s_rmsnorm_gpu_for_drain &&
-    in.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-    in.getMemoryData() && in.getMemoryData()->isSVM() &&
-    !(s_rmsnorm_decode_neon_for_drain && drain_step_is_decode_h1);
-  const bool skip_drain = s_rmsnorm_no_drain && drain_route_will_be_gpu;
+  const bool drain_in_is_svm =
+    in.getMemoryData() && in.getMemoryData()->isSVM();
+  // Compute would-route decision matching the per-step block below.
+  const bool route_decode_svm = drain_step_is_decode_h1 &&
+                                s_rmsnorm_decode_svm_for_drain &&
+                                drain_in_is_svm;
+  const bool route_decode_neon = drain_step_is_decode_h1 &&
+                                 s_rmsnorm_decode_neon_for_drain &&
+                                 !route_decode_svm;
+  const bool route_image2d = !route_decode_svm && !route_decode_neon &&
+                             s_rmsnorm_gpu_for_drain &&
+                             in.getDataType() ==
+                               ml::train::TensorDim::DataType::FP16 &&
+                             drain_in_is_svm;
+  // Drain skip when the route is GPU (image2d_cl OR rmsnorm_fp16_svm)
+  // because same-queue ordering handles upstream coherence. NEON path
+  // still needs the drain so the host-side read is coherent.
+  const bool skip_drain =
+    s_rmsnorm_no_drain && (route_decode_svm || route_image2d);
   const uint64_t t_svm = profile_this_call ? now_ns() : 0;
   if (!skip_drain && in.getMemoryData() && in.getMemoryData()->isSVM()) {
     auto *cl_ctx = static_cast<nntrainer::ClContext *>(
@@ -232,26 +247,49 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         s_logged_variant = true;
       }
       // For decode (H_rows == 1) the image2d_cl path's per-call cost
-      // is dominated by 4 kernel dispatches (svm_to_image2d input
-      // reformat + rmsnorm_image2d_v2 + image2d_to_svm output readback
-      // + svm_to_image2d_publish to pool) plus a blocking SVMMap fence
-      // at the end. Measured ~1.02 ms/call * 2336 calls = 2380 ms /
-      // 35% of decode wall, vs the same shape via CPU NEON
-      // (rmsnorm_fused_fp16) at ~0.45 ms/call as seen in
-      // reshaped_rms_norm (which is purely NEON). For prefill the
-      // image2d cost amortises over many rows so it stays useful, but
-      // for M==1 decode it's pure overhead. Force NEON for H_rows==1
-      // even when NNTRAINER_RMSNORM_GPU=1 -- gated on
-      // NNTRAINER_RMSNORM_DECODE_NEON=1 so the fix is opt-in until
-      // measured.
+      // is dominated by 4 kernel dispatches + blocking SVMMap fence
+      // (~1.02 ms/call) vs. ~10 us of actual compute. Two opt-in
+      // alternatives:
+      //   NNTRAINER_RMSNORM_DECODE_NEON=1
+      //     Routes H_rows==1 through CPU NEON rmsnorm_fused_fp16.
+      //     Measured: 4.94 TPS (up from 4.64). NEON path needs the
+      //     entry SVMMap drain so the upstream-stall stays attributed
+      //     to rms_norm.
+      //   NNTRAINER_RMSNORM_DECODE_SVM=1 (preferred over NEON)
+      //     Routes H_rows==1 through rmsnorm_fp16_svm_cl: a single
+      //     SVM-direct kernel with WG=64 cooperative reduction. No
+      //     image2d round-trip, no exit drain, same OpenCL queue as
+      //     the upstream addition's add2_fp16_svm output. Should let
+      //     the upstream stall flow naturally to the next CPU
+      //     consumer (reshaped_rms_norm Q/K norms inside MHA) instead
+      //     of getting billed here.
+      // If both env vars are set, SVM wins. For prefill (H_rows >> 1)
+      // the image2d_cl path is preserved either way.
       static const bool s_rmsnorm_decode_neon =
         std::getenv("NNTRAINER_RMSNORM_DECODE_NEON") != nullptr;
-      const bool route_gpu = s_rmsnorm_gpu && in_step.getMemoryData() &&
-                             in_step.getMemoryData()->isSVM() &&
-                             out_step.getMemoryData() &&
-                             out_step.getMemoryData()->isSVM() && (W % 4) == 0 &&
-                             !(s_rmsnorm_decode_neon && H_rows == 1);
-      if (route_gpu) {
+      static const bool s_rmsnorm_decode_svm =
+        std::getenv("NNTRAINER_RMSNORM_DECODE_SVM") != nullptr;
+      const bool decode_h1 = (H_rows == 1);
+      const bool tensors_svm =
+        in_step.getMemoryData() && in_step.getMemoryData()->isSVM() &&
+        out_step.getMemoryData() && out_step.getMemoryData()->isSVM();
+      // Decision tree:
+      //   decode_h1 + DECODE_SVM=1 + SVM tensors  -> rmsnorm_fp16_svm_cl
+      //   decode_h1 + DECODE_NEON=1               -> CPU NEON
+      //   else if RMSNORM_GPU=1 + SVM + W%4==0    -> image2d_cl
+      //   else                                    -> CPU NEON
+      const bool use_decode_svm =
+        decode_h1 && s_rmsnorm_decode_svm && tensors_svm;
+      const bool use_decode_neon = decode_h1 && s_rmsnorm_decode_neon &&
+                                   !use_decode_svm;
+      const bool route_image2d = !use_decode_svm && !use_decode_neon &&
+                                 s_rmsnorm_gpu && tensors_svm && (W % 4) == 0;
+      if (use_decode_svm) {
+        nntrainer::rmsnorm_fp16_svm_cl(
+          (void *)in_ptr, (void *)out_ptr, gamma_ptr,
+          (unsigned int)H_rows, (unsigned int)W,
+          static_cast<float>(epsilon));
+      } else if (route_image2d) {
         nntrainer::rmsnorm_image2d_cl(
           (void *)in_ptr, (void *)out_ptr, gamma_ptr,
           (unsigned int)H_rows, (unsigned int)W,
