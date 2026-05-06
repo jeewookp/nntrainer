@@ -13,6 +13,7 @@
 
 #include "opencl_program.h"
 
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -44,10 +45,19 @@ bool Program::BuildProgram(cl_device_id device_id,
   const int error_code = clBuildProgram(
     program_, 0, nullptr, compiler_options.c_str(), nullptr, nullptr);
   if (error_code != CL_SUCCESS) {
+    const std::string build_log =
+      GetProgramBuildInfo(device_id, CL_PROGRAM_BUILD_LOG);
     ml_loge(
       "Failed to build program executable. OpenCL error code: %d : %s. %s",
-      error_code, OpenCLErrorCodeToString(error_code),
-      (GetProgramBuildInfo(device_id, CL_PROGRAM_BUILD_LOG)).c_str());
+      error_code, OpenCLErrorCodeToString(error_code), build_log.c_str());
+    // Also surface to stderr so adb shell `2>&1 | tee temp_run.log`
+    // captures the build log into error.txt -- ml_loge alone goes to
+    // Android logcat which is invisible to host-side run logs.
+    std::fprintf(
+      stderr,
+      "[CL_BUILD_FAIL] err=%d (%s)\n[CL_BUILD_LOG]\n%s\n[/CL_BUILD_LOG]\n",
+      error_code, OpenCLErrorCodeToString(error_code), build_log.c_str());
+    std::fflush(stderr);
     return false;
   }
 
