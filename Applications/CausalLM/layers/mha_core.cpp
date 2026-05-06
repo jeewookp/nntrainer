@@ -383,24 +383,34 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // matching SVMUnmap(output) at the bottom of incremental_forwarding
   // commits the CPU writes back so the o_proj kernel sees them.
   //
-  // Phase B.11: when NNTRAINER_ATTN_GPU=1 routes the whole attention
-  // through attention_fused_fp16_cl on the OpenCL queue, q/k/v are
-  // read by the GPU kernel (not the host) and output is written by
-  // the GPU kernel. The CPU-side handshake here is then redundant
-  // for the GPU path -- 4 blocking SVMMaps per call is the dominant
-  // cost in the [PROFILE NetworkGraph] mha_core 2607 ms / 1152 calls
-  // = 2.26 ms/call observation (the 4 drains absorb every upstream
-  // stall, ~2 ms/call). NNTRAINER_ATTN_NO_DRAIN=1 already gates the
-  // exit drain inside attention_fused_fp16_cl; reuse the same env to
-  // also skip these 4 entry drains when going GPU.
-  static const bool s_attn_gpu_for_drain =
-    std::getenv("NNTRAINER_ATTN_GPU") != nullptr;
-  static const bool s_attn_no_drain =
-    std::getenv("NNTRAINER_ATTN_NO_DRAIN") != nullptr;
-  const bool skip_entry_drain = s_attn_gpu_for_drain && s_attn_no_drain;
+  // Phase B.11 (REVERTED): when NNTRAINER_ATTN_GPU=1 routes the whole
+  // attention through attention_fused_fp16_cl on the OpenCL queue,
+  // q/k/v are read by the GPU kernel (not the host) and output is
+  // written by the GPU kernel. The CPU-side handshake here looked
+  // redundant for the GPU path and the [PROFILE NetworkGraph] mha_core
+  // 2607 ms / 1152 calls (2.26 ms/call) was almost entirely those 4
+  // blocking SVMMaps absorbing upstream stall.
+  //
+  // Empirical result (B.11): skipping the entry drains broke decode
+  // output:
+  //   "ting editionêu웜_RESETxl inconsist  ˻ഫÏ多功能☽è一刀..."
+  // Same-queue dispatch ordering does NOT imply same-queue SVM cache
+  // coherence on Adreno coarse-grained SVM. The drains were acting as
+  // explicit flush triggers between successive GPU kernels (upstream
+  // Q/K/V proj + reshaped_rms_norm SVM writes -> attention_fused
+  // reads). Without them attention sees stale data.
+  //
+  // NNTRAINER_MHA_NO_ENTRY_DRAIN=1 keeps the (broken on this driver)
+  // skip code reachable for future testing on a different driver
+  // version, but it's off by default. ATTN_NO_DRAIN (exit drain skip
+  // inside attention_fused_fp16_cl) stays separate and remains safe
+  // because the next consumer (o_proj per-FC) reads via SVM kernel
+  // arg + has its own consumer-side coherence handling.
+  static const bool s_mha_no_entry_drain =
+    std::getenv("NNTRAINER_MHA_NO_ENTRY_DRAIN") != nullptr;
   auto *mha_sync_cl_ctx = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
-  if (mha_sync_cl_ctx && !skip_entry_drain) {
+  if (mha_sync_cl_ctx && !s_mha_no_entry_drain) {
     auto map_if_svm = [&](nntrainer::Tensor &t, bool ro) {
       if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
         mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
