@@ -2261,10 +2261,28 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
     return false; // doesn't fit -- caller falls back
   }
 
-  // Cache image2d per weight pointer. First call: create + upload.
-  struct WeightImg { cl_mem img; size_t w, h; };
+  // Cache image2d per weight pointer. Phase B1: zero-copy via
+  // cl_khr_image2d_from_buffer.
+  //   1. Create a cl_mem buffer wrapping the SVM weight pointer with
+  //      CL_MEM_USE_HOST_PTR (no copy -- the buffer reuses the SVM
+  //      backing memory).
+  //   2. Create an image2d view over that buffer via image_desc.buffer.
+  //      OpenCL spec: pixel storage is the SAME memory as the buffer.
+  //   3. Cache both handles per weight pointer; first call constructs,
+  //      subsequent calls reuse.
+  // Falls back to CL_MEM_COPY_HOST_PTR (the A1 path that doubles
+  // memory) when image2d_from_buffer fails -- via env-gate
+  // NNTRAINER_GEMV_WEIGHT_IMAGE2D_FROM_BUFFER=1 (default off so we
+  // can A/B test correctness independently).
+  struct WeightImg {
+    cl_mem buf;  // nullptr if COPY_HOST_PTR path
+    cl_mem img;
+    size_t w, h;
+  };
   static std::unordered_map<uintptr_t, WeightImg> s_w_cache;
   cl_mem weight_img = nullptr;
+  static const bool s_image2d_from_buffer =
+    std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_FROM_BUFFER") != nullptr;
   {
     const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
     auto it = s_w_cache.find(wk);
@@ -2272,23 +2290,69 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
         it->second.h == img_h) {
       weight_img = it->second.img;
     } else {
-      if (it != s_w_cache.end() && it->second.img)
-        clReleaseMemObject(it->second.img);
+      if (it != s_w_cache.end()) {
+        if (it->second.img) clReleaseMemObject(it->second.img);
+        if (it->second.buf) clReleaseMemObject(it->second.buf);
+      }
       cl_int err = 0;
       cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT16};
       cl_image_desc d = {};
       d.image_type = CL_MEM_OBJECT_IMAGE2D;
       d.image_width = img_w;
       d.image_height = img_h;
-      // CL_MEM_COPY_HOST_PTR: device-side image is created by copying
-      // from the host pointer.  weights is SVM (host-readable on
-      // Adreno coarse SVM) so this copy works without an SVMMap
-      // drain. One-time at first call per weight.
-      weight_img = clCreateImage(clctx, CL_MEM_READ_ONLY |
-                                          CL_MEM_COPY_HOST_PTR,
-                                  &fmt, &d, (void *)weights, &err);
-      if (err != CL_SUCCESS || !weight_img) return false;
-      s_w_cache[wk] = {weight_img, img_w, img_h};
+      cl_mem weight_buf = nullptr;
+      if (s_image2d_from_buffer) {
+        // Phase B1 zero-copy path. cl_khr_image2d_from_buffer is in
+        // the device's CL_DEVICE_EXTENSIONS list (verified). The
+        // underlying buffer aliases the SVM allocation -- no GPU-side
+        // copy.
+        const size_t weight_bytes =
+          (size_t)K * (size_t)N / 4u * sizeof(uint16_t);  // K/4 * N * 2
+        weight_buf = clCreateBuffer(clctx,
+                                    CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                    weight_bytes, (void *)weights, &err);
+        if (err == CL_SUCCESS && weight_buf) {
+          // image_row_pitch in bytes: each row covers img_w pixels of
+          // CL_RGBA + UINT16 = 4 * 2 = 8 bytes per pixel.
+          d.image_row_pitch = img_w * 8u;
+          d.buffer = weight_buf;
+          weight_img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &d,
+                                     nullptr, &err);
+          if (err != CL_SUCCESS || !weight_img) {
+            clReleaseMemObject(weight_buf);
+            weight_buf = nullptr;
+            weight_img = nullptr;
+          }
+        } else {
+          weight_buf = nullptr;
+        }
+        // Log first failure for diagnosis (not every call, just once
+        // when the path doesn't work for this weight).
+        static bool s_logged_buffer_fail = false;
+        if (!weight_img && !s_logged_buffer_fail) {
+          std::fprintf(stderr,
+                       "[A4_BUFFER_FAIL] image2d_from_buffer err=%d "
+                       "for weight=%p K=%u N=%u, falling back to "
+                       "COPY_HOST_PTR\n",
+                       err, (void *)weights, K, N);
+          std::fflush(stderr);
+          s_logged_buffer_fail = true;
+        }
+      }
+      if (!weight_img) {
+        // A1 fallback path: copies into a fresh image2d. Doubles
+        // weight memory but always works.
+        d.image_row_pitch = 0;  // driver computes
+        d.buffer = nullptr;
+        weight_img = clCreateImage(clctx, CL_MEM_READ_ONLY |
+                                            CL_MEM_COPY_HOST_PTR,
+                                    &fmt, &d, (void *)weights, &err);
+        if (err != CL_SUCCESS || !weight_img) {
+          if (weight_buf) clReleaseMemObject(weight_buf);
+          return false;
+        }
+      }
+      s_w_cache[wk] = {weight_buf, weight_img, img_w, img_h};
     }
   }
 
