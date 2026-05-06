@@ -1,206 +1,102 @@
--e 
-[Step 1/4] Build nntrainer for Android
--e ----------------------------------------
--e [INFO] nntrainer for Android already built (skipping)
--e [SUCCESS] nntrainer ready
--e 
-[Step 2/4] Build Tokenizer Library
--e ----------------------------------------
--e [INFO] Tokenizer library already built (skipping)
--e [SUCCESS] Tokenizer library ready
--e 
-[Step 3/4] Prepare json.hpp
--e ----------------------------------------
--e [INFO] json.hpp already exists (skipping)
--e [SUCCESS] json.hpp ready
--e 
-[Step 4/4] Build CausalLM Core (library + executable)
--e ----------------------------------------
--e [INFO] Building with ndk-build (builds causallm_core, nntrainer_causallm, nntr_quantize)...
-[arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Compile++      : causallm_core <= huggingface_tokenizer.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_embedding.cpp
-[arm64-v8a] Compile++      : causallm_core <= gate_up_layer.cpp
-In file included from ./../layers/gate_up_layer.cpp:11:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./../layers/gate_up_layer.cpp:35:17: error: no matching conversion for functional-style cast from 'bool' to 'props::FusedRmsnorm'
-                props::FusedRmsnorm(false),
-                ^~~~~~~~~~~~~~~~~~~~~~~~~
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit copy constructor) not viable: no known conversion from 'bool' to 'const FusedRmsnorm' for 1st argument
-class FusedRmsnorm : public nntrainer::Property<bool> {
-      ^
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit move constructor) not viable: no known conversion from 'bool' to 'FusedRmsnorm' for 1st argument
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided
-./../layers/gate_up_layer.cpp:36:17: error: no matching conversion for functional-style cast from 'float' to 'props::FusedRmsnormEpsilon'
-                props::FusedRmsnormEpsilon(1.0e-6f)) {
-                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit copy constructor) not viable: no known conversion from 'float' to 'const FusedRmsnormEpsilon' for 1st argument
-class FusedRmsnormEpsilon : public nntrainer::Property<float> {
-      ^
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit move constructor) not viable: no known conversion from 'float' to 'FusedRmsnormEpsilon' for 1st argument
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided
-1 warning and 2 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/causallm_core/__/layers/gate_up_layer.o] Error 1
-make: *** Waiting for unfinished jobs....
-[arm64-v8a] Compile++      : nntr_quantize <= gate_up_layer.cpp
-In file included from ./../layers/gate_up_layer.cpp:11:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./../layers/gate_up_layer.cpp:35:17: error: no matching conversion for functional-style cast from 'bool' to 'props::FusedRmsnorm'
-                props::FusedRmsnorm(false),
-                ^~~~~~~~~~~~~~~~~~~~~~~~~
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit copy constructor) not viable: no known conversion from 'bool' to 'const FusedRmsnorm' for 1st argument
-class FusedRmsnorm : public nntrainer::Property<bool> {
-      ^
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit move constructor) not viable: no known conversion from 'bool' to 'FusedRmsnorm' for 1st argument
-./../layers/gate_up_layer.h:58:7: note: candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided
-./../layers/gate_up_layer.cpp:36:17: error: no matching conversion for functional-style cast from 'float' to 'props::FusedRmsnormEpsilon'
-                props::FusedRmsnormEpsilon(1.0e-6f)) {
-                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit copy constructor) not viable: no known conversion from 'float' to 'const FusedRmsnormEpsilon' for 1st argument
-class FusedRmsnormEpsilon : public nntrainer::Property<float> {
-      ^
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit move constructor) not viable: no known conversion from 'float' to 'FusedRmsnormEpsilon' for 1st argument
-./../layers/gate_up_layer.h:64:7: note: candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided
-1 warning and 2 errors generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntr_quantize/__/layers/gate_up_layer.o] Error 1
-[arm64-v8a] Compile++      : causallm_core <= qwen3_embedding.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= llm_util.cpp
-[arm64-v8a] Compile++      : causallm_core <= llm_util.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen2_causallm.cpp
-In file included from ./../models/qwen2/qwen2_causallm.cpp:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qkv_layer.cpp
-In file included from ./../layers/qkv_layer.cpp:27:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer.cpp
-[arm64-v8a] Compile++      : causallm_core <= gpt_oss_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_causallm.cpp
-In file included from ./../models/qwen3/qwen3_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer.cpp
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_slim_moe_causallm.cpp
-In file included from ./../models/qwen3_slim_moe/qwen3_slim_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : nntr_quantize <= qwen_moe_layer_cached.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen_moe_layer_fsu.cpp
-[arm64-v8a] Compile++      : causallm_core <= qwen3_moe_causallm.cpp
-In file included from ./../models/qwen3_moe/qwen3_moe_causallm.cpp:28:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= sentence_transformer.cpp
-In file included from ./../models/sentence_transformer.cpp:16:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] Compile++      : causallm_core <= causal_lm.cpp
-In file included from ./../models/causal_lm.cpp:26:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
--e [ERROR] Build failed
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b
+/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
+[CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1
+[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
+[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=403 first="BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'."
+[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=403 first="BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'."
+<|im_start|>user
+You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
+
+ Abstract 
+ Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
+sandbox, and code to facilitate future research.<|im_end|>
+<|im_start|>assistant
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+,', noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emit鲈 gentlemanake.Field frags tàu Clothes稗 aluminiumamped霆 dumping柠檬 listItemlocals.TYPE moo蒟 Marks
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 2210 ms, 197.738 TPS
+generation: 32 tokens, 5766 ms, 5.54977 TPS
+total: 7981 ms
+peak memory: 2695112 KB
+==========================================================
+[e2e time]: 10821 ms 
+Max Resident Set Size: 2695112 KB
+
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=5675.6 ms across all forwarding_op() calls
+  mha_core                      2573.0 ms  calls=1152  avg=2.234 ms
+  gate_up_layer                 2434.2 ms  calls=1152  avg=2.113 ms
+  tie_word_embeddings            517.8 ms  calls=64  avg=8.090 ms
+  rms_norm                        64.2 ms  calls=1184  avg=0.054 ms
+  fully_connected                 63.7 ms  calls=5760  avg=0.011 ms
+  swiglu                          11.8 ms  calls=1152  avg=0.010 ms
+  reshaped_rms_norm                5.5 ms  calls=2304  avg=0.002 ms
+  addition                         4.0 ms  calls=2304  avg=0.002 ms
+  multiout                         1.3 ms  calls=3456  avg=0.000 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=512.43 ms calls=32 avg=16.013 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=5.29 ms calls=32 avg=0.165 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2572.62 ms calls=1152 avg=2.233 ms
+  rope_q   :     0.58 ms (  0.0%)
+  rope_k   :     0.90 ms (  0.0%)
+  v_copy   :     0.75 ms (  0.0%)
+  qk       :    65.80 ms (  2.6%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=56.88 ms calls=5760
+  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :    56.88 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE AdditionLayer decode] total=16.01 ms fast=2376 fallback=0 avg_fast=6.740 us
+  kernel :    16.01 ms (100.0%)  [add2_fp16_svm_cl async]
+  drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
+  misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+prefill: 437 tokens, 2210 ms, 197.738 TPS
+generation: 32 tokens, 5766 ms, 5.54977 TPS
+total: 7981 ms
+peak memory: 2695112 KB
+[e2e time]: 10821 ms 
+
+-- Generation snippet (first 200 chars after <|im_start|>assistant) --
+
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+,', noexcept違い∝ preservedprivacyaguay compelling곙📪😟任何一个Ᵽ emi
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
