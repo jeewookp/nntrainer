@@ -1,46 +1,3 @@
--e [INFO] Output files are in: /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/
--e [INFO] Executables:
--e [INFO]   - nntrainer_causallm (main application), nntr_quantize
--e [INFO] Libraries:
--e [INFO]   - libcausallm_core.so (CausalLM Core library)
--e [INFO]   - libnntrainer.so (nntrainer library)
--e [INFO]   - libccapi-nntrainer.so (nntrainer C/C API)
--e [INFO]   - libc++_shared.so (C++ runtime)
--e [INFO] To build API library, run:
--e [INFO]   ./build_api_lib.sh
--e [INFO] To install and run:
--e [INFO]   ./install_android.sh
-jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (46132128 bytes in 1.351s)
-jni/libs/arm64-v8a/nntr_quantize: 1 file pushed. 33.2 MB/s (45676312 bytes in 1.311s)
-jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960072 bytes in 0.117s)
-3 files pushed. 32.8 MB/s (95768512 bytes in 2.781s)
-../../builddir/android_build_result/lib/arm64-v8a/libnntrainer.so: 1 file pushed. 32.8 MB/s (11239464 bytes in 0.327s)
-../../builddir/android_build_result/lib/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 20.0 MB/s (129304 bytes in 0.006s)
-../../builddir/android_build_result/lib/arm64-v8a/libc++_shared.so: 1 file pushed. 30.5 MB/s (1822720 bytes in 0.057s)
-[temp.sh] patched on-device nntr_config.json:
-    "model_tensor_type": "QINT4-FP16",
-    "num_to_generate": 32,
-    "init_seq_len": 1024,
-    "max_seq_len": 2048,
-ANDROID_ART_ROOT
-ANDROID_ASSETS
-ANDROID_BOOTLOGO
-ANDROID_DATA
-ANDROID_I18N_ROOT
-ANDROID_ROOT
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
-BOOTCLASSPATH
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
-HOME
-HOSTNAME
-KNOX_STORAGE
-LD_LIBRARY_PATH
 LOGNAME
 MEMTAG_OPTIONS
 MOUNT_SYSTEM_OK
@@ -381,39 +338,39 @@ Okay, the user wants a summary of this abstract in three sentences. Let me read 
 
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2940 ms, 148.639 TPS
-generation: 32 tokens, 7361 ms, 4.34724 TPS
-total: 10325 ms
-peak memory: 2663772 KB
+prefill: 437 tokens, 2882 ms, 151.631 TPS
+generation: 32 tokens, 7372 ms, 4.34075 TPS
+total: 10262 ms
+peak memory: 2615796 KB
 ==========================================================
-[e2e time]: 13250 ms 
-Max Resident Set Size: 2663772 KB
+[e2e time]: 13211 ms 
+Max Resident Set Size: 2615796 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7251.1 ms across all forwarding_op() calls
-  addition                      2089.8 ms  calls=2304  avg=0.907 ms
-  mha_core                      2074.0 ms  calls=1152  avg=1.800 ms
-  reshaped_rms_norm             1029.7 ms  calls=2304  avg=0.447 ms
-  gate_up_layer                  881.0 ms  calls=1152  avg=0.765 ms
-  rms_norm                       631.0 ms  calls=2336  avg=0.270 ms
-  tie_word_embeddings            416.4 ms  calls=64  avg=6.506 ms
-  fully_connected                107.6 ms  calls=5760  avg=0.019 ms
-  swiglu                          19.5 ms  calls=1152  avg=0.017 ms
-  multiout                         2.1 ms  calls=3456  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=412.40 ms calls=32 avg=12.887 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.89 ms calls=32 avg=0.121 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2073.29 ms calls=1152 avg=1.800 ms
-  rope_q   :     0.80 ms (  0.0%)
-  rope_k   :     1.22 ms (  0.1%)
-  v_copy   :     1.00 ms (  0.0%)
-  qk       :  1406.43 ms ( 67.8%)
+  total=7313.6 ms across all forwarding_op() calls
+  mha_core                      2112.2 ms  calls=1152  avg=1.834 ms
+  addition                      2083.6 ms  calls=2304  avg=0.904 ms
+  reshaped_rms_norm             1033.4 ms  calls=2304  avg=0.449 ms
+  gate_up_layer                  878.9 ms  calls=1152  avg=0.763 ms
+  rms_norm                       631.2 ms  calls=2336  avg=0.270 ms
+  tie_word_embeddings            451.3 ms  calls=64  avg=7.052 ms
+  fully_connected                100.1 ms  calls=5760  avg=0.017 ms
+  swiglu                          20.8 ms  calls=1152  avg=0.018 ms
+  multiout                         2.0 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=389.41 ms calls=32 avg=12.169 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=61.81 ms calls=32 avg=1.931 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2111.58 ms calls=1152 avg=1.833 ms
+  rope_q   :     0.89 ms (  0.0%)
+  rope_k   :     1.19 ms (  0.1%)
+  v_copy   :     0.95 ms (  0.0%)
+  qk       :  1457.18 ms ( 69.0%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=96.41 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=89.81 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    96.41 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    89.81 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
 
@@ -425,45 +382,45 @@ Max Resident Set Size: 2663772 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2940 ms, 148.639 TPS
-generation: 32 tokens, 7361 ms, 4.34724 TPS
-total: 10325 ms
-peak memory: 2663772 KB
-[e2e time]: 13250 ms 
+prefill: 437 tokens, 2882 ms, 151.631 TPS
+generation: 32 tokens, 7372 ms, 4.34075 TPS
+total: 10262 ms
+peak memory: 2615796 KB
+[e2e time]: 13211 ms 
 
 -- Decode-path profiles (M==1, fired per generation token) --
    (prefill profiles suppressed via NNTRAINER_SUPPRESS_PREFILL_PROFILE=1;
     unset it in temp.sh to restore the prefill breakdown.)
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7251.1 ms across all forwarding_op() calls
-  addition                      2089.8 ms  calls=2304  avg=0.907 ms
-  mha_core                      2074.0 ms  calls=1152  avg=1.800 ms
-  reshaped_rms_norm             1029.7 ms  calls=2304  avg=0.447 ms
-  gate_up_layer                  881.0 ms  calls=1152  avg=0.765 ms
-  rms_norm                       631.0 ms  calls=2336  avg=0.270 ms
-  tie_word_embeddings            416.4 ms  calls=64  avg=6.506 ms
-  fully_connected                107.6 ms  calls=5760  avg=0.019 ms
-  swiglu                          19.5 ms  calls=1152  avg=0.017 ms
-  multiout                         2.1 ms  calls=3456  avg=0.001 ms
-  input                            0.1 ms  calls=32  avg=0.003 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=412.40 ms calls=32 avg=12.887 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.89 ms calls=32 avg=0.121 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2073.29 ms calls=1152 avg=1.800 ms
-  rope_q   :     0.80 ms (  0.0%)
+  total=7313.6 ms across all forwarding_op() calls
+  mha_core                      2112.2 ms  calls=1152  avg=1.834 ms
+  addition                      2083.6 ms  calls=2304  avg=0.904 ms
+  reshaped_rms_norm             1033.4 ms  calls=2304  avg=0.449 ms
+  gate_up_layer                  878.9 ms  calls=1152  avg=0.763 ms
+  rms_norm                       631.2 ms  calls=2336  avg=0.270 ms
+  tie_word_embeddings            451.3 ms  calls=64  avg=7.052 ms
+  fully_connected                100.1 ms  calls=5760  avg=0.017 ms
+  swiglu                          20.8 ms  calls=1152  avg=0.018 ms
+  multiout                         2.0 ms  calls=3456  avg=0.001 ms
+  input                            0.1 ms  calls=32  avg=0.002 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=389.41 ms calls=32 avg=12.169 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=61.81 ms calls=32 avg=1.931 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2111.58 ms calls=1152 avg=1.833 ms
+  rope_q   :     0.89 ms (  0.0%)
 
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=412.40 ms calls=32 avg=12.887 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=3.89 ms calls=32 avg=0.121 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2073.29 ms calls=1152 avg=1.800 ms
-  rope_q   :     0.80 ms (  0.0%)
-  rope_k   :     1.22 ms (  0.1%)
-  v_copy   :     1.00 ms (  0.0%)
-  qk       :  1406.43 ms ( 67.8%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=389.41 ms calls=32 avg=12.169 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=61.81 ms calls=32 avg=1.931 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2111.58 ms calls=1152 avg=1.833 ms
+  rope_q   :     0.89 ms (  0.0%)
+  rope_k   :     1.19 ms (  0.1%)
+  v_copy   :     0.95 ms (  0.0%)
+  qk       :  1457.18 ms ( 69.0%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=96.41 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=89.81 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    96.41 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    89.81 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 -- Generation snippet (first 300 chars after <|im_start|>assistant) --
@@ -481,5 +438,5 @@ Full log: temp_run.log
 
 To restore the original (long-context) config on device:
   adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$  
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
