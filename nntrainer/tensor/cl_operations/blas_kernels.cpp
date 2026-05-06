@@ -2247,7 +2247,7 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
   static size_t s_max_w = 0;
   static size_t s_max_h = 0;
   if (s_max_w == 0) {
-    cl_device_id dev = ContextManager::Global().GetDeviceId();
+    cl_device_id dev = opencl::ContextManager::Global().GetDeviceId();
     clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
                     &s_max_w, nullptr);
     clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
