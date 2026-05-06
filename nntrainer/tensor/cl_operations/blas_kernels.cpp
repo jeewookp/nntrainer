@@ -2166,9 +2166,30 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
 
+  // Phase A.2 verification: prove v3 actually fires (and how often)
+  // vs the suspected silent fallback. The earlier run with the
+  // FATAL ERROR for v3 still produced canonical output AND the
+  // SAME 4.44 TPS as this passing run -- the only way that's
+  // possible is if v3 is being routed somewhere that catches the
+  // throw, or never reached. One stderr probe at the first call
+  // confirms.
+  static bool s_v3_logged_once = false;
+  if (!s_v3_logged_once) {
+    std::fprintf(stderr,
+                 "[V3_FIRE] gemv_int4_adreno_v3_cl first call: K=%u N=%u\n",
+                 K, N);
+    std::fflush(stderr);
+    s_v3_logged_once = true;
+  }
+
   ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
     int4_gemv_adreno_v3_kernel, "gpu_int4_gemv_adreno_v3");
   if (!kernel_ptr) {
+    std::fprintf(stderr,
+                 "[V3_REGISTER_FAIL] kernel_ptr null for "
+                 "gpu_int4_gemv_adreno_v3 (K=%u N=%u)\n",
+                 K, N);
+    std::fflush(stderr);
     throw std::runtime_error(
       "Failed to get kernel_ptr for gpu_int4_gemv_adreno_v3");
   }
