@@ -4869,10 +4869,25 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   const int l[3] = {64, 1, 1};
   blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 
-  blas_cc->command_queue_inst_.enqueueSVMMap(
-    out_svm,
-    (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
-    /*read_only=*/true);
+  // Exit drain. Same drain-attribution pattern as the addition layer:
+  // the per-call enqueueSVMMap blocking flush of `out_svm` waits for
+  // all prior GPU work to finish, billing upstream Q proj / K proj /
+  // V proj / RoPE / KV cache write / fused kernel latencies all
+  // against mha_core. Downstream is the attention output FC (per-FC
+  // dotQInteger -> gpu_int4_gemv_adreno_v3 SVM-direct, same OpenCL
+  // queue). OpenCL spec mandates same-queue dispatch ordering, so
+  // the drain is redundant for GPU consumers.
+  // NNTRAINER_ATTN_NO_DRAIN=1 skips it. Revert if downstream output
+  // garbles (would imply an Adreno coarse-SVM race we haven't yet
+  // identified at this specific boundary).
+  static const bool s_attn_no_drain =
+    std::getenv("NNTRAINER_ATTN_NO_DRAIN") != nullptr;
+  if (!s_attn_no_drain) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      out_svm,
+      (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
+      /*read_only=*/true);
+  }
 }
 
 #endif
