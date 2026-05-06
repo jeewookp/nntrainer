@@ -134,6 +134,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \
   export NNTRAINER_RESHAPED_RMSNORM_DECODE_SVM=1; \
   export NNTRAINER_ATTN_NO_DRAIN=1; \
+  export NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
   #   2. output_norm -> lm_head (entry SVMMap in tie_word_embedding lmhead)

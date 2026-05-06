@@ -408,6 +408,22 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // arg + has its own consumer-side coherence handling.
   static const bool s_mha_no_entry_drain =
     std::getenv("NNTRAINER_MHA_NO_ENTRY_DRAIN") != nullptr;
+  // Phase B.13: skip ONLY the output (CPU-write) entry SVMMap when
+  // attention runs on GPU. q/k/v entry maps are kept because they
+  // act as Adreno coarse-SVM cache-flush triggers for upstream Q/K/V
+  // projection writes -- B.11 confirmed that skipping them races.
+  // The output map is different: it announces a CPU write window,
+  // but in the GPU path attention_fused_fp16_cl writes output via
+  // the GPU kernel and never via the host. So the announcement is
+  // pure overhead. Only saving 1 of 4 drains, but each map carries
+  // a per-region cache-flush cost on Adreno on top of the queue
+  // drain.
+  static const bool s_mha_no_output_entry_drain =
+    std::getenv("NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN") != nullptr;
+  static const bool s_attn_gpu_for_output_drain =
+    std::getenv("NNTRAINER_ATTN_GPU") != nullptr;
+  const bool skip_output_entry_drain =
+    s_mha_no_output_entry_drain && s_attn_gpu_for_output_drain;
   auto *mha_sync_cl_ctx = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   if (mha_sync_cl_ctx && !s_mha_no_entry_drain) {
@@ -420,7 +436,9 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     map_if_svm(query, /*read_only=*/true);
     map_if_svm(key, /*read_only=*/true);
     map_if_svm(value, /*read_only=*/true);
-    map_if_svm(output, /*read_only=*/false);  // CPU will write here
+    if (!skip_output_entry_drain) {
+      map_if_svm(output, /*read_only=*/false);  // CPU will write here
+    }
   }
 #endif
 
@@ -534,8 +552,11 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // follows (reading `output` as an SVM kernel arg) sees the right
   // data. Queue command; in-order queue guarantees the o_proj kernel
   // runs after this unmap.
-  if (mha_sync_cl_ctx && output.getMemoryData() &&
-      output.getMemoryData()->isSVM()) {
+  // Phase B.13: skip the unmap when we skipped the matching map at
+  // the top (NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1 + ATTN_GPU=1).
+  // The GPU path never CPU-wrote so there's nothing to commit back.
+  if (mha_sync_cl_ctx && !skip_output_entry_drain &&
+      output.getMemoryData() && output.getMemoryData()->isSVM()) {
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
     // Phase B publish: put MHA output into GpuImagePool so o_proj
