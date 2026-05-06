@@ -1,7 +1,3 @@
-DEX2OATBOOTCLASSPATH
-DOWNLOAD_CACHE
-ENC_EMULATED_STORAGE_TARGET
-EXTERNAL_STORAGE
 HOME
 HOSTNAME
 KNOX_STORAGE
@@ -32,46 +28,48 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-{_ {}世代治疗..}..C按疗程治疗的中医的临床以. 2 2 12 12 12 12
+ught
+
+Okay, I need to address this Japanese puzzle. Let's see, the user has provided a Chinese text, but I need to understand the problem. The
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2113 ms, 206.815 TPS
-generation: 32 tokens, 6697 ms, 4.77826 TPS
-total: 8824 ms
-peak memory: 2717116 KB
+prefill: 437 tokens, 2656 ms, 164.533 TPS
+generation: 32 tokens, 5651 ms, 5.66271 TPS
+total: 8311 ms
+peak memory: 2666872 KB
 ==========================================================
-[e2e time]: 11762 ms 
-Max Resident Set Size: 2717116 KB
+[e2e time]: 11184 ms 
+Max Resident Set Size: 2666872 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6595.2 ms across all forwarding_op() calls
-  gate_up_layer                 3294.0 ms  calls=1152  avg=2.859 ms
-  mha_core                      2726.1 ms  calls=1152  avg=2.366 ms
-  tie_word_embeddings            481.6 ms  calls=64  avg=7.525 ms
-  fully_connected                 41.7 ms  calls=5760  avg=0.007 ms
-  rms_norm                        25.0 ms  calls=1184  avg=0.021 ms
-  swiglu                          14.2 ms  calls=1152  avg=0.012 ms
-  reshaped_rms_norm                6.1 ms  calls=2304  avg=0.003 ms
-  addition                         4.9 ms  calls=2304  avg=0.002 ms
-  multiout                         1.5 ms  calls=3456  avg=0.000 ms
+  total=5563.4 ms across all forwarding_op() calls
+  mha_core                      2576.2 ms  calls=1152  avg=2.236 ms
+  gate_up_layer                 2430.3 ms  calls=1152  avg=2.110 ms
+  tie_word_embeddings            420.9 ms  calls=64  avg=6.576 ms
+  fully_connected                 84.5 ms  calls=5760  avg=0.015 ms
+  rms_norm                        26.8 ms  calls=2336  avg=0.011 ms
+  swiglu                          12.6 ms  calls=1152  avg=0.011 ms
+  reshaped_rms_norm                6.0 ms  calls=2304  avg=0.003 ms
+  addition                         4.7 ms  calls=2304  avg=0.002 ms
+  multiout                         1.4 ms  calls=3456  avg=0.000 ms
   input                            0.1 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=479.80 ms calls=32 avg=14.994 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=1.79 ms calls=32 avg=0.056 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2725.60 ms calls=1152 avg=2.366 ms
-  rope_q   :     0.67 ms (  0.0%)
-  rope_k   :     1.02 ms (  0.0%)
-  v_copy   :     0.84 ms (  0.0%)
-  qk       :    90.07 ms (  3.3%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=412.81 ms calls=32 avg=12.900 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=8.04 ms calls=32 avg=0.251 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2575.83 ms calls=1152 avg=2.236 ms
+  rope_q   :     0.61 ms (  0.0%)
+  rope_k   :     0.88 ms (  0.0%)
+  v_copy   :     0.73 ms (  0.0%)
+  qk       :    90.72 ms (  3.5%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=33.70 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=77.18 ms calls=5760
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    33.70 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    77.18 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE AdditionLayer decode] total=17.33 ms fast=2376 fallback=0 avg_fast=7.294 us
-  kernel :    17.33 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=17.24 ms fast=2376 fallback=0 avg_fast=7.254 us
+  kernel :    17.24 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -84,19 +82,19 @@ Max Resident Set Size: 2717116 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2113 ms, 206.815 TPS
-generation: 32 tokens, 6697 ms, 4.77826 TPS
-total: 8824 ms
-peak memory: 2717116 KB
-[e2e time]: 11762 ms 
+prefill: 437 tokens, 2656 ms, 164.533 TPS
+generation: 32 tokens, 5651 ms, 5.66271 TPS
+total: 8311 ms
+peak memory: 2666872 KB
+[e2e time]: 11184 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-{_ {}世代治疗..}..C按疗程治疗的中医的临床以. 2 2 12 12 12 12
+ught
 
-======
+Okay, I need to address this Japanese puzzle. Let's see, the user has provided
 
 Full log: temp_run.log
 
