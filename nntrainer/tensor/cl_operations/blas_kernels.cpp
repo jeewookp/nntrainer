@@ -2837,6 +2837,38 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // The model's RMSNorm gamma is allocated as host memory (CPU
+  // tensor), not SVM -- nntrainer's requestWeight for non-trainable
+  // gamma puts it in the regular weight pool which is host-side.
+  // The unittest fixture allocates gamma_svm via allocateSVM(); the
+  // production caller passes the host pointer. SetKernelSVMArguments
+  // on a host pointer works only when it falls inside the SVM region,
+  // which we cannot assume. Mirror rmsnorm_image2d_cl's pattern: cache
+  // a cl_mem buffer keyed by the host pointer (pointer identity per
+  // layer-instance gamma, ~36 unique pointers for Qwen3-4B). One
+  // upload per gamma per process, then bind via SetKernelArguments.
+  struct GammaCache { cl_mem buf; size_t bytes; };
+  static std::unordered_map<uintptr_t, GammaCache> s_gamma_cache;
+  cl_mem gamma_buf = nullptr;
+  {
+    const uintptr_t gk = reinterpret_cast<uintptr_t>(gamma_svm);
+    const size_t need = (size_t)K_in * sizeof(float);
+    auto it = s_gamma_cache.find(gk);
+    if (it != s_gamma_cache.end() && it->second.bytes >= need) {
+      gamma_buf = it->second.buf;
+    } else {
+      cl_int err = 0;
+      if (it != s_gamma_cache.end() && it->second.buf)
+        clReleaseMemObject(it->second.buf);
+      gamma_buf = clCreateBuffer(clctx,
+                                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                 need, (void *)gamma_svm, &err);
+      if (err != CL_SUCCESS || !gamma_buf) return false;
+      s_gamma_cache[gk] = {gamma_buf, need};
+    }
+  }
 
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
     fused_rmsnorm_gate_up_kernel, "gpu_fused_rmsnorm_gate_up");
@@ -2844,7 +2876,7 @@ bool fused_rmsnorm_gate_up_cl(uint16_t *input_svm,
 
   int a = 0;
   kp->SetKernelSVMArguments(a++, input_svm);
-  kp->SetKernelSVMArguments(a++, gamma_svm);
+  kp->SetKernelArguments(a++, &gamma_buf, sizeof(cl_mem));
   kp->SetKernelSVMArguments(a++, gate_weights);
   kp->SetKernelSVMArguments(a++, gate_scales);
   kp->SetKernelSVMArguments(a++, gate_out);
