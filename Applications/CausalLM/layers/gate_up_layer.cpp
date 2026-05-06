@@ -32,8 +32,8 @@ enum GateUpFusedParams { FusedGamma = 0, FusedUp = 1, FusedGate = 2 };
 GateUpLayer::GateUpLayer() :
   LayerImpl(),
   gate_up_props(props::UpUnit(), props::GateUnit(),
-                props::FusedRmsnorm(false),
-                props::FusedRmsnormEpsilon(1.0e-6f)) {
+                props::FusedRmsnorm(),
+                props::FusedRmsnormEpsilon()) {
   weight_idx.fill(std::numeric_limits<unsigned>::max());
 }
 

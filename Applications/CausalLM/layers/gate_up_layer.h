@@ -57,12 +57,15 @@ public:
 // at model build time.
 class FusedRmsnorm : public nntrainer::Property<bool> {
 public:
+  FusedRmsnorm(bool val = false) : nntrainer::Property<bool>(val) {}
   static constexpr const char *key = "fused_rmsnorm";
   using prop_tag = nntrainer::bool_prop_tag;
 };
 
 class FusedRmsnormEpsilon : public nntrainer::Property<float> {
 public:
+  FusedRmsnormEpsilon(float val = 1.0e-6f) :
+    nntrainer::Property<float>(val) {}
   static constexpr const char *key = "fused_rmsnorm_epsilon";
   using prop_tag = nntrainer::float_prop_tag;
 };
