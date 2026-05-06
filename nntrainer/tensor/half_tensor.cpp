@@ -1389,14 +1389,30 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         // the same trick should compound.
         static const bool s_fused_v2 =
           std::getenv("NNTRAINER_FUSED_GEMV_V2") != nullptr;
+        // Phase B.7: the sync_output=true post-dispatch SVMMap fence
+        // was added when the gate_up -> swiglu boundary raced under
+        // zerocopy + sync=0. At the time swiglu was a CPU NEON path
+        // that needed the host-side drain. swiglu now runs as
+        // swiglu_fp16_svm_cl on the SAME OpenCL queue as fused_gemv_-
+        // int4 (same applies to QKV -> reshaped_rms_norm Q/K norm
+        // which is still NEON, but THAT layer drains on entry on its
+        // own). With same-queue GPU consumer the fence is redundant
+        // and bills the upstream rms_norm SVM kernel's wait against
+        // gate_up_layer (now 40% of decode wall = 2421 ms).
+        // NNTRAINER_FUSED_GEMV_NO_DRAIN=1 skips it for gate_up;
+        // QKV uses the same flag because the immediate consumer is
+        // reshaped_rms_norm which has its own NEON entry drain.
+        static const bool s_fused_no_drain =
+          std::getenv("NNTRAINER_FUSED_GEMV_NO_DRAIN") != nullptr;
+        const bool fused_sync_output = !s_fused_no_drain;
         const bool fused_ok =
           s_fused_v2
             ? fused_gemv_int4_v2_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
                                     w_v, s_v, o_v, K, N_q, N_k, N_v,
-                                    /*sync_output=*/true)
+                                    fused_sync_output)
             : fused_gemv_int4_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
                                  w_v, s_v, o_v, K, N_q, N_k, N_v,
-                                 /*sync_output=*/true);
+                                 fused_sync_output);
         if (fused_ok) {
           return;
         }
