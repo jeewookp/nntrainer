@@ -354,40 +354,82 @@ bool ContextManager::CreateDefaultGPUDevice() {
         }
       }
       // If no symbolic-name variant worked, brute-force the QCOM
-      // property hex range 0x40D0..0x40EF. Some drivers reuse the
-      // 0x40E0 block for different queue properties across releases;
-      // the litert comment says 0x40E6 is the right value but this
-      // driver clearly disagrees. 32 calls is cheap (~3 ms total).
+      // property hex range. The narrow 0x40D0..0x40EF sweep with
+      // {NAME, 1, 0} layout came back empty on Adreno 830 / Compiler
+      // E031.47.18.13. Widen to 0x4040..0x40FF (the entire QCOM
+      // queue-property block) and try TWO layouts per name:
+      //   layout A: {NAME, 1, 0}
+      //   layout B: {CL_QUEUE_PROPERTIES, 0, NAME, 1, 0}
+      // ~384 attempts total, <50 ms, runs only at startup.
       if (!rec_queue) {
-        for (cl_queue_properties name = 0x40D0; name <= 0x40EF; ++name) {
-          if (name == CL_QUEUE_RECORDABLE_QCOM) {
-            continue; // already tested via v1
-          }
-          cl_queue_properties props[3] = {name, 1, 0};
-          cl_int err = 0;
-          cl_command_queue q = clCreateCommandQueueWithProperties(
-            probe_ctx, device_id_, props, &err);
-          if (q && err == CL_SUCCESS) {
-            std::fprintf(stderr,
-                         "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx -> queue=%p "
-                         "err=%d (CANDIDATE)\n",
-                         (unsigned long)name, (void *)q, err);
-            if (!rec_queue) {
-              rec_queue = q;
-              static char buf[64];
-              std::snprintf(buf, sizeof(buf), "hex_scan: 0x%04lx",
-                            (unsigned long)name);
-              winning_variant = buf;
-            } else {
-              clReleaseCommandQueue(q);
+        for (cl_queue_properties name = 0x4040; name <= 0x40FF; ++name) {
+          for (int layout = 0; layout < 2; ++layout) {
+            cl_queue_properties propsA[3] = {name, 1, 0};
+            cl_queue_properties propsB[5] = {CL_QUEUE_PROPERTIES, 0, name, 1,
+                                             0};
+            const cl_queue_properties *p = (layout == 0) ? propsA : propsB;
+            cl_int err = 0;
+            cl_command_queue q = clCreateCommandQueueWithProperties(
+              probe_ctx, device_id_, p, &err);
+            if (q && err == CL_SUCCESS) {
+              std::fprintf(
+                stderr,
+                "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx layout=%c -> queue=%p "
+                "err=%d (CANDIDATE)\n",
+                (unsigned long)name, (layout == 0) ? 'A' : 'B', (void *)q,
+                err);
+              if (!rec_queue) {
+                rec_queue = q;
+                static char buf[80];
+                std::snprintf(buf, sizeof(buf), "hex_scan: 0x%04lx layout=%c",
+                              (unsigned long)name,
+                              (layout == 0) ? 'A' : 'B');
+                winning_variant = buf;
+              } else {
+                clReleaseCommandQueue(q);
+              }
+            } else if (err != CL_INVALID_VALUE && err != -30) {
+              // -30 is the spammy "wrong property" case. Everything
+              // else (CL_INVALID_QUEUE_PROPERTIES = -35, etc.) is
+              // interesting and worth logging.
+              std::fprintf(
+                stderr,
+                "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx layout=%c -> "
+                "err=%d (unusual)\n",
+                (unsigned long)name, (layout == 0) ? 'A' : 'B', err);
             }
-          } else if (err != CL_INVALID_VALUE && err != -30) {
-            // -30 (CL_INVALID_VALUE) is the spammy "wrong property"
-            // case; everything else is interesting and worth logging.
+          }
+        }
+      }
+      // Final fallback: try opening a recording on a regular OoO
+      // queue (not specially flagged). Some QCOM record extensions
+      // establish recording via NewRecordingQCOM itself rather than a
+      // queue-property bit; if that's the case here, none of the
+      // property variants would matter.
+      if (!rec_queue) {
+        cl_int err = 0;
+        cl_command_queue plain_q = clCreateCommandQueue(
+          probe_ctx, device_id_,
+          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE,
+          &err);
+        if (plain_q && err == CL_SUCCESS) {
+          cl_int rec_err = 0;
+          void *recording = clNewRecordingQCOM(plain_q, &rec_err);
+          std::fprintf(stderr,
+                       "[QCOM_REC_PROBE] FALLBACK plain OoO+PROFILING queue: "
+                       "NewRecordingQCOM=%p err=%d\n",
+                       recording, rec_err);
+          if (recording && rec_err == CL_SUCCESS) {
+            cl_int end_err = clEndRecordingQCOM(recording);
             std::fprintf(stderr,
-                         "[QCOM_REC_PROBE] HEX_SCAN name=0x%04lx -> "
-                         "err=%d (unusual)\n",
-                         (unsigned long)name, err);
+                         "[QCOM_REC_PROBE] FALLBACK end (empty) err=%d "
+                         "(WORKS without RECORDABLE_QCOM property!)\n",
+                         end_err);
+            clReleaseRecordingQCOM(recording);
+            rec_queue = plain_q;
+            winning_variant = "plain queue (no RECORDABLE_QCOM property)";
+          } else {
+            clReleaseCommandQueue(plain_q);
           }
         }
       }
