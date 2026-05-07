@@ -66,7 +66,7 @@ adb shell chmod +x /data/local/tmp/nntrainer/test/nntrainer_causallm
 CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json
 INIT_SEQ_LEN_NEW=1024
 MAX_SEQ_LEN_NEW=2048
-NUM_TO_GENERATE_NEW=32
+NUM_TO_GENERATE_NEW=64
 # Back on QINT4-FP16 to exercise the HalfTensor dot path. Phase 4 DIAG
 # assertions in half_tensor.cpp will throw if any layer's output tensor
 # turns out to be FP32 instead of FP16 (silent reinterpret_cast corruption
@@ -134,11 +134,11 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \
   export NNTRAINER_RESHAPED_RMSNORM_DECODE_SVM=1; \
   export NNTRAINER_ATTN_NO_DRAIN=1; \
-  export NNTRAINER_LOGITS_DEBUG=1; \
   export NNTRAINER_GEMV_WEIGHT_IMAGE2D=1; \
   export NNTRAINER_GEMV_WEIGHT_IMAGE2D_FROM_BUFFER=1; \
   export NNTRAINER_FUSED_GEMV_IMAGE2D=1; \
   export NNTRAINER_SWIGLU_IMAGE2D=1; \
+  export NNTRAINER_FUSED_GEMV_NO_DRAIN=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
   #   2. output_norm -> lm_head (entry SVMMap in tie_word_embedding lmhead)
