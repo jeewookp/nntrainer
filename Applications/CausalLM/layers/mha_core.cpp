@@ -676,8 +676,15 @@ mha_entry_drain_done:;
     // blocking SVMMap the HalfTensor wrapper would otherwise need
     // to drain MHA's in-flight writes. Publish matches o_proj's
     // expected shape: M = step_size, K = output.width() (hidden_dim).
+    //
+    // Phase I: o_proj currently goes through HalfTensor::dotQInteger's
+    // SVM path (not the gemv_int4_image2d pool-hit path), so this
+    // publish runs an extra svm_to_image2d kernel dispatch that
+    // nothing consumes -- pure overhead. Skip it when env-gated.
+    static const bool s_mha_no_publish =
+      std::getenv("NNTRAINER_MHA_NO_PUBLISH") != nullptr;
     const int pub_W = (int)output.width();
-    if ((pub_W % 4) == 0) {
+    if (!s_mha_no_publish && (pub_W % 4) == 0) {
       const int pub_M = (int)(output.batch() * output.channel() *
                                 (int)step_size);
       nntrainer::svm_to_image2d_publish(output.getData<char>(),
