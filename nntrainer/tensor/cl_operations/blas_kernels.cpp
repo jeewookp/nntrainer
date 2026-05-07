@@ -4219,8 +4219,20 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
   if (g_lmhead_int4_cache.initialized) {
     return (g_lmhead_int4_cache.K == K && g_lmhead_int4_cache.N == N);
   }
-  if ((K & 7u) != 0u || (N & 3u) != 0u) return false;
-  if ((K & 0xFFu) != 0u) return false;  // Q6_K block size = 256
+  std::fprintf(stderr,
+               "[INT4_CHUNKED_INIT] start K=%u N=%u q6k=%p\n",
+               K, N, q6k_weight);
+  std::fflush(stderr);
+  if ((K & 7u) != 0u || (N & 3u) != 0u) {
+    std::fprintf(stderr,
+                 "[INT4_CHUNKED_INIT] FAIL: K%%8 || N%%4 (K=%u N=%u)\n", K, N);
+    return false;
+  }
+  if ((K & 0xFFu) != 0u) {
+    std::fprintf(stderr,
+                 "[INT4_CHUNKED_INIT] FAIL: K%%256 != 0 (K=%u)\n", K);
+    return false;
+  }
 
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
@@ -4338,6 +4350,14 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
   g_lmhead_int4_cache.K = K;
   g_lmhead_int4_cache.N = N;
   g_lmhead_int4_cache.initialized = true;
+  std::fprintf(stderr,
+               "[INT4_CHUNKED_INIT] success: 3 chunks (%u, %u, %u) "
+               "total int4 = %.1f MB\n",
+               g_lmhead_int4_cache.chunk_N[0],
+               g_lmhead_int4_cache.chunk_N[1],
+               g_lmhead_int4_cache.chunk_N[2],
+               (double)((size_t)K / 8u * (size_t)N * 4u) / (1024.0 * 1024.0));
+  std::fflush(stderr);
 
   // Optional: madvise the original Q6_K bytes to release physical pages
   // (env-gated -- some allocators may not own page-aligned ranges and
