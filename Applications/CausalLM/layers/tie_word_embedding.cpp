@@ -336,6 +336,36 @@ void TieWordEmbedding::incremental_forwarding_embedding(
         batchsliced_hidden.getSharedDataTensor(out_tensor_dim, out_dim * (i));
 
       if (weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K) {
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+        // Phase H''-int4chunked: when the lm_head int4 chunked cache has
+        // been initialized, the original Q6_K bytes may have been
+        // released via madvise. Read embedding rows from the chunked
+        // int4 cache instead so embedding mode stays correct.
+        static const bool s_lmhead_int4_chunked_emb =
+          std::getenv("NNTRAINER_LMHEAD_INT4_CHUNKED") != nullptr;
+        // Trigger one-time init from the embedding path so the cache is
+        // ready before any madvise/release of Q6_K bytes (lazily lazy --
+        // each thread synchronizes on the cache's own initialization
+        // flag inside lmhead_int4_chunked_init).
+        bool int4_ok = false;
+        if (s_lmhead_int4_chunked_emb) {
+          int4_ok = nntrainer::lmhead_int4_chunked_init(
+            weight.getData<char>(), weight.width(), weight.height());
+        }
+        if (s_lmhead_int4_chunked_emb && int4_ok) {
+          if (out_tensor.getDataType() ==
+              nntrainer::TensorDim::DataType::FP32) {
+            nntrainer::lmhead_int4_chunked_embedding_f32(
+              embed_idx, out_tensor.getData<float>(), out_dim);
+          } else {
+            nntrainer::lmhead_int4_chunked_embedding_u16(
+              embed_idx,
+              reinterpret_cast<uint16_t *>(out_tensor.getData<_FP16>()),
+              out_dim);
+          }
+        } else
+#endif
+        {
         ///@note this should be replaced with quantizer operation
         int num_blocks_per_row = (weight.width() + 256 - 1) / 256;
         const void *weight_row =
@@ -359,6 +389,7 @@ void TieWordEmbedding::incremental_forwarding_embedding(
           nntrainer::dequantize_row_q6_K(
             weight_row, tmp_fp32.getData<float>(), out_dim);
           out_tensor.copyData(tmp_fp32);
+        }
         }
       } else {
         out_tensor.copyData(cur_weight);
@@ -447,9 +478,31 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     // up. Falls through to the standard dot path on any failure.
     bool dispatched_q6k_gpu = false;
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // Phase H''-int4chunked: Q6_K -> channel-wise int4 chunked at first
+    // call + 3-chunk image2d gemv per call. Highest priority routing
+    // when env-gated (BW-optimal vs Q6_K GPU's 7.78 ms).
+    static const bool s_lmhead_int4_chunked =
+      std::getenv("NNTRAINER_LMHEAD_INT4_CHUNKED") != nullptr;
+    if (s_lmhead_int4_chunked &&
+        weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K &&
+        input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+        hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM()) {
+      const unsigned int K = input_step.width();
+      const unsigned int N = hidden_step.width();
+      if ((K % 256u) == 0u && (N & 3u) == 0u) {
+        if (nntrainer::lmhead_int4_chunked_init(weight.getData<char>(), K, N)) {
+          nntrainer::lmhead_int4_chunked_dispatch_cl(
+            reinterpret_cast<uint16_t *>(input_step.getData<_FP16>()),
+            reinterpret_cast<uint16_t *>(hidden_step.getData<_FP16>()),
+            K, N);
+          dispatched_q6k_gpu = true;
+        }
+      }
+    }
+
     static const bool s_lmhead_q6k_gpu =
       std::getenv("NNTRAINER_LMHEAD_Q6K_GPU") != nullptr;
-    if (s_lmhead_q6k_gpu) {
+    if (!dispatched_q6k_gpu && s_lmhead_q6k_gpu) {
       // One-time diagnostic to figure out why the path isn't dispatching:
       // log dtype + SVM membership of every relevant tensor on the very
       // first lmhead call. The path then proceeds normally.
@@ -473,7 +526,7 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
         s_lmhead_q6k_diag_logged = true;
       }
     }
-    if (s_lmhead_q6k_gpu &&
+    if (!dispatched_q6k_gpu && s_lmhead_q6k_gpu &&
         weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K &&
         // Q6_K weight is loaded into host (non-SVM) memory by the bundle
         // loader; sgemv_q6_k_fp16_cl wraps it via clCreateBuffer+

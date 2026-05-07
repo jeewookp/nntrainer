@@ -15,17 +15,21 @@
 #include <cl_kernels/cl_kernels.h>
 
 #include "util_func.h"
+#include <cpu_backend.h>
 #include <fp16.h>
 #include <gpu_image_pool.h>
 #include <profile_gate.h>
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -4171,6 +4175,302 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
   if (q6k_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.lmhead_q6k, q6k_ev);
   }
+}
+
+// ===========================================================================
+// Phase H''-int4chunked: lm_head Q6_K -> channel-wise int4 chunked image2d
+//
+// At init time we re-quantize the Q6_K lm_head weight into channel-wise int4
+// (4 K-positions per ushort, fp16 scale per output channel) split across 3
+// chunks each fitting Adreno's CL_DEVICE_IMAGE2D_MAX_WIDTH (typically 16384).
+// The chunked layout is written DIRECTLY in the RGBA32UI uint pack format
+// (8 K-positions per uint, 4 N-channels per pixel) so each chunk is ready
+// to be wrapped via image2d_from_buffer. No runtime in-place repack needed.
+//
+// Memory budget:
+//   int4 chunked uints + scales : ~195 MB + 304 KB
+//   Q6_K original (after madvise: physical pages reclaimed) : 0 MB RSS
+//   net delta vs original Q6_K (320 MB) : approximately -125 MB
+//
+// Each lm_head dispatch runs the existing v3 image2d gemv kernel 3 times
+// (once per chunk), with the output buffer split by chunk N range.
+// ===========================================================================
+namespace {
+struct LmHeadInt4ChunkedCache {
+  bool initialized = false;
+  unsigned int K = 0;
+  unsigned int N = 0;
+  unsigned int chunk_start[3] = {0, 0, 0};
+  unsigned int chunk_N[3]     = {0, 0, 0};
+  uint32_t *chunk_uints[3]    = {nullptr, nullptr, nullptr};
+  uint16_t *scales            = nullptr;  // SVM fp16, [N]
+  cl_mem    chunk_buf[3]      = {nullptr, nullptr, nullptr};
+  cl_mem    chunk_img[3]      = {nullptr, nullptr, nullptr};
+};
+static LmHeadInt4ChunkedCache g_lmhead_int4_cache;
+} // namespace
+
+bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
+                               unsigned int N) {
+  // Caller-callable from OpenMP loops (embedding mode parallel-for) so guard
+  // the init with a mutex; subsequent calls return the cached state cheaply.
+  static std::mutex s_init_mu;
+  std::lock_guard<std::mutex> lk(s_init_mu);
+  if (g_lmhead_int4_cache.initialized) {
+    return (g_lmhead_int4_cache.K == K && g_lmhead_int4_cache.N == N);
+  }
+  if ((K & 7u) != 0u || (N & 3u) != 0u) return false;
+  if ((K & 0xFFu) != 0u) return false;  // Q6_K block size = 256
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // 3 chunks. Each chunk_N must be %4 (image2d width %4 == 0 OK; we pack 4
+  // N channels per RGBA32UI pixel). Round chunk size to multiple of 4.
+  unsigned int c0 = ((N / 3u) / 4u) * 4u;
+  if (c0 == 0) c0 = 4;
+  unsigned int c2 = N - 2u * c0;
+  if ((c2 & 3u) != 0u) {
+    // Shouldn't happen if N % 4 == 0 and c0 % 4 == 0, but defend.
+    return false;
+  }
+  g_lmhead_int4_cache.chunk_start[0] = 0;
+  g_lmhead_int4_cache.chunk_N[0]     = c0;
+  g_lmhead_int4_cache.chunk_start[1] = c0;
+  g_lmhead_int4_cache.chunk_N[1]     = c0;
+  g_lmhead_int4_cache.chunk_start[2] = 2u * c0;
+  g_lmhead_int4_cache.chunk_N[2]     = c2;
+
+  // Validate image2d max width.
+  size_t max_w = 0, max_h = 0;
+  cl_device_id dev = opencl::ContextManager::Global().GetDeviceId();
+  clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
+                  &max_w, nullptr);
+  clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
+                  &max_h, nullptr);
+  if (max_w == 0) max_w = 16384;
+  if (max_h == 0) max_h = 16384;
+  for (int c = 0; c < 3; ++c) {
+    if ((size_t)g_lmhead_int4_cache.chunk_N[c] / 4u > max_w) return false;
+    if ((size_t)K / 8u > max_h) return false;
+  }
+
+  // Allocate SVM uint chunk buffers + fp16 scale buffer.
+  for (int c = 0; c < 3; ++c) {
+    const size_t bytes = (size_t)(K / 8u) *
+                         (size_t)g_lmhead_int4_cache.chunk_N[c] *
+                         sizeof(uint32_t);
+    g_lmhead_int4_cache.chunk_uints[c] = static_cast<uint32_t *>(
+      clSVMAlloc(clctx, CL_MEM_READ_WRITE, bytes, 0));
+    if (!g_lmhead_int4_cache.chunk_uints[c]) return false;
+  }
+  g_lmhead_int4_cache.scales = static_cast<uint16_t *>(
+    clSVMAlloc(clctx, CL_MEM_READ_WRITE, (size_t)N * sizeof(uint16_t), 0));
+  if (!g_lmhead_int4_cache.scales) return false;
+
+  // Per output row n: dequant Q6_K row -> fp32, find per-channel scale,
+  // pack to int4 nibbles, store directly in uint chunked layout.
+  std::vector<float> dequant_row((size_t)K);
+  const unsigned int blocks_per_row = K / 256u;
+  const size_t q6k_row_bytes = (size_t)blocks_per_row * 210u;
+  for (unsigned int n = 0; n < N; ++n) {
+    const void *q6k_row =
+      reinterpret_cast<const char *>(q6k_weight) + (size_t)n * q6k_row_bytes;
+    nntrainer::dequantize_row_q6_K(q6k_row, dequant_row.data(),
+                                    static_cast<int64_t>(K));
+
+    float max_abs = 0.0f;
+    for (unsigned int k = 0; k < K; ++k) {
+      const float v = std::fabs(dequant_row[k]);
+      if (v > max_abs) max_abs = v;
+    }
+    // Symmetric int4 with bias 8: range maps to [-8, 7]. Use /7 so the
+    // most-positive lane lands at 7; negatives quantize to <=-7 = 1 (after
+    // bias 8). Slight asymmetry but matches the existing channel-wise int4
+    // dispatcher's expectations for the bias-8 nibble layout.
+    const float scale = (max_abs > 0.0f) ? (max_abs / 7.0f) : 1e-8f;
+    g_lmhead_int4_cache.scales[n] = compute_fp32_to_fp16(scale);
+    const float inv_scale = 1.0f / scale;
+
+    const int chunk_idx = (n < c0) ? 0 : (n < 2u * c0 ? 1 : 2);
+    const unsigned int local_n = n - g_lmhead_int4_cache.chunk_start[chunk_idx];
+    const unsigned int cN = g_lmhead_int4_cache.chunk_N[chunk_idx];
+    uint32_t *out_uints = g_lmhead_int4_cache.chunk_uints[chunk_idx];
+
+    for (unsigned int j = 0; j < K / 8u; ++j) {
+      uint32_t pack = 0u;
+      for (int kk = 0; kk < 8; ++kk) {
+        const unsigned int k = j * 8u + (unsigned)kk;
+        int q = (int)std::lround(dequant_row[k] * inv_scale) + 8;
+        if (q < 0) q = 0;
+        if (q > 15) q = 15;
+        pack |= ((uint32_t)q & 0xFu) << (kk * 4);
+      }
+      out_uints[(size_t)j * (size_t)cN + (size_t)local_n] = pack;
+    }
+  }
+
+  // Build cl_mem buf + image2d view per chunk.
+  cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT32};
+  for (int c = 0; c < 3; ++c) {
+    cl_int err = 0;
+    const size_t bytes = (size_t)(K / 8u) *
+                         (size_t)g_lmhead_int4_cache.chunk_N[c] *
+                         sizeof(uint32_t);
+    g_lmhead_int4_cache.chunk_buf[c] = clCreateBuffer(
+      clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+      bytes, g_lmhead_int4_cache.chunk_uints[c], &err);
+    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_buf[c]) return false;
+
+    cl_image_desc d = {};
+    d.image_type = CL_MEM_OBJECT_IMAGE2D;
+    d.image_width = (size_t)g_lmhead_int4_cache.chunk_N[c] / 4u;
+    d.image_height = (size_t)K / 8u;
+    d.image_row_pitch = d.image_width * 16u;  // RGBA32UI = 16 bytes/pixel
+    d.buffer = g_lmhead_int4_cache.chunk_buf[c];
+    g_lmhead_int4_cache.chunk_img[c] = clCreateImage(
+      clctx, CL_MEM_READ_ONLY, &fmt, &d, nullptr, &err);
+    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_img[c]) return false;
+  }
+
+  g_lmhead_int4_cache.K = K;
+  g_lmhead_int4_cache.N = N;
+  g_lmhead_int4_cache.initialized = true;
+
+  // Optional: madvise the original Q6_K bytes to release physical pages
+  // (env-gated -- some allocators may not own page-aligned ranges and
+  // would silently no-op or warn).
+  static const bool s_madvise =
+    std::getenv("NNTRAINER_LMHEAD_INT4_MADVISE") != nullptr;
+  if (s_madvise) {
+    const size_t total_q6k_bytes = (size_t)N * q6k_row_bytes;
+    // Round start UP and end DOWN to page boundary for safety.
+    const long page_sz = sysconf(_SC_PAGESIZE);
+    if (page_sz > 0) {
+      uintptr_t start = reinterpret_cast<uintptr_t>(q6k_weight);
+      uintptr_t end = start + total_q6k_bytes;
+      uintptr_t aligned_start = (start + (uintptr_t)(page_sz - 1)) &
+                                  ~(uintptr_t)(page_sz - 1);
+      uintptr_t aligned_end = end & ~(uintptr_t)(page_sz - 1);
+      if (aligned_end > aligned_start) {
+        ::madvise(reinterpret_cast<void *>(aligned_start),
+                  aligned_end - aligned_start, MADV_DONTNEED);
+      }
+    }
+  }
+
+  return true;
+}
+
+// Embedding-mode lookup from int4 chunked uint layout. Fills out[K] fp16
+// halfs (raw uint16 bits) for the given row (vocab token id). Caller must
+// ensure init has been done. fp32->fp16 via compute_fp32_to_fp16.
+void lmhead_int4_chunked_embedding_u16(unsigned int row, uint16_t *out,
+                                        unsigned int K) {
+  if (!g_lmhead_int4_cache.initialized || row >= g_lmhead_int4_cache.N) {
+    return;
+  }
+  const unsigned int c0 = g_lmhead_int4_cache.chunk_N[0];
+  const int chunk_idx = (row < c0) ? 0 : (row < 2u * c0 ? 1 : 2);
+  const unsigned int local_n = row -
+                                g_lmhead_int4_cache.chunk_start[chunk_idx];
+  const unsigned int cN = g_lmhead_int4_cache.chunk_N[chunk_idx];
+  const uint32_t *uints = g_lmhead_int4_cache.chunk_uints[chunk_idx];
+
+  const float scale = nntrainer::compute_fp16_to_fp32(
+    g_lmhead_int4_cache.scales[row]);
+
+  // For each K_block (j = k/8), read uint at (j, local_n), unpack 8 nibbles.
+  for (unsigned int j = 0; j < K / 8u; ++j) {
+    const uint32_t pack = uints[(size_t)j * (size_t)cN + (size_t)local_n];
+    for (int kk = 0; kk < 8; ++kk) {
+      const int q = (int)((pack >> (kk * 4)) & 0xFu) - 8;
+      out[j * 8u + (unsigned)kk] =
+        nntrainer::compute_fp32_to_fp16(scale * (float)q);
+    }
+  }
+}
+
+// fp32 output variant (matches dequantize_row_q6_K signature). Used when
+// the embedding output tensor is fp32.
+void lmhead_int4_chunked_embedding_f32(unsigned int row, float *out,
+                                        unsigned int K) {
+  if (!g_lmhead_int4_cache.initialized || row >= g_lmhead_int4_cache.N) {
+    return;
+  }
+  const unsigned int c0 = g_lmhead_int4_cache.chunk_N[0];
+  const int chunk_idx = (row < c0) ? 0 : (row < 2u * c0 ? 1 : 2);
+  const unsigned int local_n = row -
+                                g_lmhead_int4_cache.chunk_start[chunk_idx];
+  const unsigned int cN = g_lmhead_int4_cache.chunk_N[chunk_idx];
+  const uint32_t *uints = g_lmhead_int4_cache.chunk_uints[chunk_idx];
+
+  const float scale = nntrainer::compute_fp16_to_fp32(
+    g_lmhead_int4_cache.scales[row]);
+
+  for (unsigned int j = 0; j < K / 8u; ++j) {
+    const uint32_t pack = uints[(size_t)j * (size_t)cN + (size_t)local_n];
+    for (int kk = 0; kk < 8; ++kk) {
+      const int q = (int)((pack >> (kk * 4)) & 0xFu) - 8;
+      out[j * 8u + (unsigned)kk] = scale * (float)q;
+    }
+  }
+}
+
+// Lmhead GPU dispatch: 3 image2d v3 gemv calls, one per chunk, output offset
+// applied to the SVM logits buffer.
+void lmhead_int4_chunked_dispatch_cl(uint16_t *input, uint16_t *output,
+                                      unsigned int K, unsigned int N) {
+  if (!g_lmhead_int4_cache.initialized ||
+      g_lmhead_int4_cache.K != K || g_lmhead_int4_cache.N != N)
+    return;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    int4_gemv_weight_image2d_v3_kernel, "gpu_int4_gemv_weight_image2d_v3");
+  if (!kp) return;
+
+  cl_event last_ev = nullptr;
+  cl_event *last_ev_ptr = nullptr;
+  for (int c = 0; c < 3; ++c) {
+    int arg = 0;
+    if (!kp->SetKernelSVMArguments(arg++, input)) return;
+    uint16_t *scales_chunk =
+      g_lmhead_int4_cache.scales + g_lmhead_int4_cache.chunk_start[c];
+    if (!kp->SetKernelSVMArguments(arg++, scales_chunk)) return;
+    uint16_t *out_chunk = output + g_lmhead_int4_cache.chunk_start[c];
+    if (!kp->SetKernelSVMArguments(arg++, out_chunk)) return;
+    if (!kp->SetKernelArguments(arg++, &g_lmhead_int4_cache.chunk_img[c],
+                                 sizeof(cl_mem)))
+      return;
+    int size_k = (int)K;
+    int size_n = (int)g_lmhead_int4_cache.chunk_N[c];
+    kp->SetKernelArguments(arg++, &size_k, sizeof(int));
+    kp->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+    const int align_n = (int)align(g_lmhead_int4_cache.chunk_N[c], 256);
+    const int g[3] = {align_n / 4, 1, 1};
+    const int l[3] = {64, 1, 1};
+
+    cl_event ev = nullptr;
+    cl_event *ev_ptr =
+      DecodeKernelGpuProfile::enabled() ? &ev : nullptr;
+    if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l, ev_ptr))
+      return;
+    if (ev) {
+      g_decode_gpu_profile.defer(
+        g_decode_gpu_profile.per_fc_gemv_img, ev);
+    }
+  }
+
+  // Single end-of-block SVMMap drain (whole logits buffer).
+  blas_cc->command_queue_inst_.enqueueSVMMap(
+    output, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,

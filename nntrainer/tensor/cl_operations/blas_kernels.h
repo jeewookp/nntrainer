@@ -720,6 +720,42 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
                          unsigned int M, unsigned int N);
 
 /**
+ * @brief One-time conversion of Q6_K lm_head weight to channel-wise int4
+ *        chunked uint layout (3 chunks fitting Adreno image2d max width).
+ *        Allocates SVM buffers, runs CPU dequant + re-quant, and prepares
+ *        image2d_from_buffer views per chunk. Optionally madvises the
+ *        original Q6_K bytes (NNTRAINER_LMHEAD_INT4_MADVISE=1) to release
+ *        physical pages back to the OS.
+ * @param q6k_weight pointer to host-allocated Q6_K weight bytes
+ * @param K inner dim (must be % 256 = 0, Q6_K block size)
+ * @param N output dim (must be % 4 = 0)
+ * @return true on success, false on shape / alloc / image dim failure
+ */
+bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K, unsigned int N);
+
+/**
+ * @brief Embedding-mode lookup that dequantizes a single row from the
+ *        chunked int4 cache to fp16 halfs (raw uint16 bits). Caller must
+ *        have called lmhead_int4_chunked_init() once before.
+ */
+void lmhead_int4_chunked_embedding_u16(unsigned int row, uint16_t *out,
+                                        unsigned int K);
+
+/**
+ * @brief fp32 output variant of the embedding row dequant.
+ */
+void lmhead_int4_chunked_embedding_f32(unsigned int row, float *out,
+                                        unsigned int K);
+
+/**
+ * @brief Lmhead GPU dispatch through the chunked int4 cache. Runs the v3
+ *        image2d gemv kernel 3 times (one per chunk) and drains the queue
+ *        on the full output via enqueueSVMMap.
+ */
+void lmhead_int4_chunked_dispatch_cl(uint16_t *input, uint16_t *output,
+                                      unsigned int K, unsigned int N);
+
+/**
  * @brief     sgemv computation : Y = A*X + Y
  * @param[in] matAdata float * for Matrix A
  * @param[in] vecXdata float * for Vector X
