@@ -5557,7 +5557,17 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
 
+  // Decode (M=1) routes through a TQ=1 specialization: the general
+  // kernel packs TQ=4 Q rows per WG to amortize K/V loads during
+  // prefill, but for M=1 three of four rows are masked off via
+  // branchless conditional select, wasting ~75% of the per-iter
+  // compute. The decode kernel is the same online-softmax algorithm
+  // without the row-pack dimension.
+  static const bool s_attn_decode_specialized =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE") != nullptr;
+
   static ClContext::SharedPtrClKernel s_kern;
+  static ClContext::SharedPtrClKernel s_kern_decode;
   if (!s_kern) {
     // -cl-std=CL2.0 override matches the ClContext init registration so
     // ocl_kernel_map dedupes on (name + options).  Required for
@@ -5567,6 +5577,16 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
   if (!s_kern) return;
+  if (s_attn_decode_specialized && !s_kern_decode) {
+    s_kern_decode = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_kernel, "attention_fused_fp16_decode",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
+
+  const bool use_decode_kern =
+    (s_attn_decode_specialized && M == 1u && s_kern_decode);
+  ClContext::SharedPtrClKernel kern_to_use =
+    use_decode_kern ? s_kern_decode : s_kern;
 
   // Commit upstream CPU writes before the GPU reads.
   blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
@@ -5579,29 +5599,31 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   const int nhq = (int)num_heads_Q, gqa = (int)gqa_size;
 
   int a = 0;
-  s_kern->SetKernelSVMArguments(a++, q_svm);
-  s_kern->SetKernelSVMArguments(a++, k_cache_svm);
-  s_kern->SetKernelSVMArguments(a++, v_cache_svm);
-  s_kern->SetKernelSVMArguments(a++, out_svm);
-  s_kern->SetKernelArguments(a++, &M_i, sizeof(int));
-  s_kern->SetKernelArguments(a++, &T_i, sizeof(int));
-  s_kern->SetKernelArguments(a++, &from_i, sizeof(int));
-  s_kern->SetKernelArguments(a++, &nhq, sizeof(int));
-  s_kern->SetKernelArguments(a++, &gqa, sizeof(int));
-  s_kern->SetKernelArguments(a++, &is_causal, sizeof(int));
-  s_kern->SetKernelArguments(a++, &scale, sizeof(float));
+  kern_to_use->SetKernelSVMArguments(a++, q_svm);
+  kern_to_use->SetKernelSVMArguments(a++, k_cache_svm);
+  kern_to_use->SetKernelSVMArguments(a++, v_cache_svm);
+  kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  kern_to_use->SetKernelArguments(a++, &M_i, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &T_i, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &from_i, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &nhq, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &gqa, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &is_causal, sizeof(int));
+  kern_to_use->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Step 6: WG still (64, 1, 1) = one real wavefront, but the WG now
-  // processes TQ consecutive Q rows via per-thread register tiling.
-  // One K / V fetch per kk feeds TQ rows -> K/V traffic drops by TQ.
-  // TQ must match the attention_fused_fp16.cl #define (=2 here).
-  constexpr int TQ = 4;
-  const int m_tiles = (M_i + TQ - 1) / TQ;
-  const int g[3] = {64, nhq, m_tiles};
+  // Decode: 1 WG per Q head. Prefill: TQ=4 row-packing.
+  int g[3];
+  if (use_decode_kern) {
+    g[0] = 64; g[1] = nhq; g[2] = 1;
+  } else {
+    constexpr int TQ = 4;
+    const int m_tiles = (M_i + TQ - 1) / TQ;
+    g[0] = 64; g[1] = nhq; g[2] = m_tiles;
+  }
   const int l[3] = {64, 1, 1};
   cl_event attn_ev = nullptr;
   cl_event *attn_ev_ptr = DecodeKernelGpuProfile::enabled() ? &attn_ev : nullptr;
-  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l, attn_ev_ptr);
+  blas_cc->command_queue_inst_.DispatchCommand(kern_to_use, g, l, attn_ev_ptr);
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
   // the per-call enqueueSVMMap blocking flush of `out_svm` waits for

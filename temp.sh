@@ -140,6 +140,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_FUSED_GEMV_IMAGE2D=1; \
   export NNTRAINER_SWIGLU_IMAGE2D=1; \
   export NNTRAINER_MHA_UNIFIED_ENTRY_DRAIN=1; \
+  export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
