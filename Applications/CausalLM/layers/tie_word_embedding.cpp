@@ -449,6 +449,30 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
     static const bool s_lmhead_q6k_gpu =
       std::getenv("NNTRAINER_LMHEAD_Q6K_GPU") != nullptr;
+    if (s_lmhead_q6k_gpu) {
+      // One-time diagnostic to figure out why the path isn't dispatching:
+      // log dtype + SVM membership of every relevant tensor on the very
+      // first lmhead call. The path then proceeds normally.
+      static bool s_lmhead_q6k_diag_logged = false;
+      if (!s_lmhead_q6k_diag_logged) {
+        const auto dt = weight.getDataType();
+        const bool w_svm =
+          weight.getMemoryData() && weight.getMemoryData()->isSVM();
+        const bool in_svm =
+          input_step.getMemoryData() && input_step.getMemoryData()->isSVM();
+        const bool out_svm =
+          hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM();
+        std::fprintf(stderr,
+                     "[LMHEAD_Q6K_DIAG] weight.dtype=%d (Q6_K=%d) "
+                     "w_svm=%d in_svm=%d out_svm=%d K=%u N=%u\n",
+                     (int)dt,
+                     (int)nntrainer::TensorDim::DataType::Q6_K,
+                     (int)w_svm, (int)in_svm, (int)out_svm,
+                     input_step.width(), hidden_step.width());
+        std::fflush(stderr);
+        s_lmhead_q6k_diag_logged = true;
+      }
+    }
     if (s_lmhead_q6k_gpu &&
         weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K &&
         weight.getMemoryData() && weight.getMemoryData()->isSVM() &&
