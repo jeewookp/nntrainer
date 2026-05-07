@@ -129,13 +129,6 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_GEMV_ZEROCOPY=1; \
   export NNTRAINER_GEMV_ADRENO_V3=1; \
-  # Phase G baseline variance measurement: Q6K GPU env-gates OFF.
-  # Run a few times to establish actual TPS distribution at the
-  # Phase G config (lm_head stays on CPU). The 9.95 we saw earlier
-  # was a single run; need multiple samples to know if Q6K's 9.55-
-  # 9.67 is real regression or run-to-run noise.
-  # export NNTRAINER_LMHEAD_Q6K_GPU=1; \
-  # export NNTRAINER_LMHEAD_Q6K_FINISH=1; \
   export NNTRAINER_ADDITION_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \
