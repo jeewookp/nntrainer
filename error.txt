@@ -1,3 +1,41 @@
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
+HOSTNAME
+KNOX_STORAGE
+LD_LIBRARY_PATH
+LOGNAME
+MEMTAG_OPTIONS
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
+ANDROID_ROOT
+ANDROID_SOCKET_adbd
+ANDROID_STORAGE
+ANDROID_TZDATA_ROOT
+ASEC_MOUNTPOINT
+BOOTCLASSPATH
+DEX2OATBOOTCLASSPATH
+DOWNLOAD_CACHE
+ENC_EMULATED_STORAGE_TARGET
+EXTERNAL_STORAGE
+HOME
 HOSTNAME
 KNOX_STORAGE
 LD_LIBRARY_PATH
@@ -25,212 +63,7 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-First, the main idea is about the Thyme model, which is a new approach in the "think with images" paradigm. The paper is addressing the gap
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2369 ms, 184.466 TPS
-generation: 64 tokens, 6957 ms, 9.19937 TPS
-total: 9334 ms
-peak memory: 2603508 KB
-==========================================================
-[e2e time]: 12249 ms 
-Max Resident Set Size: 2603508 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=6850.7 ms across all forwarding_op() calls
-  gate_up_layer                 2816.1 ms  calls=2304  avg=1.222 ms
-  mha_core                      2657.8 ms  calls=2304  avg=1.154 ms
-  tie_word_embeddings           1070.3 ms  calls=128  avg=8.361 ms
-  fully_connected                174.1 ms  calls=11520  avg=0.015 ms
-  rms_norm                        84.0 ms  calls=4672  avg=0.018 ms
-  swiglu                          24.7 ms  calls=2304  avg=0.011 ms
-  reshaped_rms_norm               12.3 ms  calls=4608  avg=0.003 ms
-  addition                         8.7 ms  calls=4608  avg=0.002 ms
-  multiout                         2.7 ms  calls=6912  avg=0.000 ms
-  input                            0.1 ms  calls=64  avg=0.002 ms
-[PROFILE GateUpLayer decode (M==1)] total=2814.45 ms calls=2304 avg=1.222 ms
-  setup    :     1.33 ms (  0.0%)  [weight+tensor view ctor]
-  dot      :  2813.13 ms (100.0%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
-  misc     :     0.00 ms (  0.0%)
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=962.31 ms calls=64 avg=15.036 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=107.88 ms calls=64 avg=1.686 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2656.93 ms calls=2304 avg=1.153 ms
-  entry_drain    :  2317.61 ms ( 87.2%)  [4x SVMMap blocking q/k/v/output]
-    drain_q  :  2317.68 ms ( 87.2%)
-    drain_k  :     0.00 ms (  0.0%)
-    drain_v  :     0.00 ms (  0.0%)
-    drain_o  :     0.00 ms (  0.0%)
-  attn_fused     :   209.60 ms (  7.9%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
-  exit           :   119.39 ms (  4.5%)  [SVMUnmap(output) + image2d publish]
-  rope_q   :     1.21 ms (  0.0%)
-  rope_k   :     1.82 ms (  0.1%)
-  v_copy   :     1.57 ms (  0.1%)
-  qk       :   209.60 ms (  7.9%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=159.89 ms calls=11520
-  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   159.89 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]
-  bucket                          calls   gpu_total   avg_gpu  avg_q2s  avg_s2start
-  fused_gemv_int4 (image2d)        2304    889.39 ms   386.0 us   11.5 us    570.5 us
-  gemv_int4 per-FC (image2d)      11520   1927.77 ms   167.3 us   36.0 us    455.0 us
-  attention_fused_fp16             2340   1279.13 ms   546.6 us  133.4 us    100.6 us
-
-[PROFILE AdditionLayer decode] total=18.72 ms fast=4680 fallback=0 avg_fast=3.999 us
-  kernel :    18.72 ms (100.0%)  [add2_fp16_svm_cl async]
-  drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
-  misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
--- Gate resolution --
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-
--- Perf --
-prefill: 437 tokens, 2369 ms, 184.466 TPS
-generation: 64 tokens, 6957 ms, 9.19937 TPS
-total: 9334 ms
-peak memory: 2603508 KB
-[e2e time]: 12249 ms 
-
--- Generation snippet (first 200 chars after <|im_start|>assistant) --
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me r
-
-Full log: temp_run.log
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
-MEMTAG_OPTIONS
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b
-/data/local/tmp/nntrainer/causallm/models/qwen3-4b/qwen3-4b-q6k-q40-fp32-arm.bin
-[CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: commit unknown Compiler E031.47.18.13" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1
-[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
-[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=403 first="BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'."
-[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=403 first="BC-src-code:25:41: error: Attempt to use subscript to obtain element of 'half4'."
-<|im_start|>user
-You are a summarization expert.Please read the provided <Text> carefully and summarize it in 3 sentences in English. The summary should comprehensively cover the entire content of the original text and be written with the same meaning as the source material. 
-
- Abstract 
- Following OpenAI's introduction of the "thinking with images" concept, recent efforts have explored stimulating the use of visual information in the reasoning process to enhance model performance in perception and reasoning tasks. However, to the best of our knowledge, no open-source work currently offers a feature set as rich as proprietary models (OpenAI O3 (OpenAI, 2025)), which can perform diverse image manipulations and simultaneously enhance logical reasoning capabilities through code. In this paper, we make a preliminary attempt in this direction by introducing Thyme (Think Beyond Images), a novel paradigm for enabling multimodal large language mod- els to transcend existing “think with images” approaches by autonomously generating and executing diverse image processing and computational operations via executable code (Figure 2). This approach not only facilitates a rich, on-the-fly set of image manipu-lations (e.g., cropping, rotation, contrast enhancement), but also allows for mathematical computations, all while maintaining high autonomy in deciding when and how to apply these operations. We activate this capability through a two-stage training strategy: an initial Supervised Fine-Tuning (SFT) on a curated dataset of 500K samples to teach code generation, followed by a Reinforcement Learning (RL) phase to refine decision-making. For the RL stage, we manually collect and design high-resolution question-answer pairs to increase the learning difficulty, and we propose GRPO-ATS (Group Relative Policy Optimization with Adaptive Temperature Sampling), an algorithm that applies distinct temperatures to text and code generation to balance reasoning exploration with code execution precision. We conduct extensive experimental analysis and ablation studies. As shown in Figure 1, comprehensive evaluations on nearly 20 benchmarks show that Thyme yields significant and consistent performance gains, particularly in challenging high-resolution perception and complex reasoning tasks. We release our datasets,
-sandbox, and code to facilitate future research.<|im_end|>
-<|im_start|>assistant
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me read through the text again to make sure I capture all the key points.
-
-First, the main idea is about the Thyme model, which is a new approach in the "think with images" paradigm. The paper is addressing the gap
-
-=================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2567 ms, 170.238 TPS
-generation: 64 tokens, 7201 ms, 8.88765 TPS
-total: 9785 ms
-peak memory: 2837408 KB
-==========================================================
-[e2e time]: 12829 ms 
-Max Resident Set Size: 2837408 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=7092.2 ms across all forwarding_op() calls
-  gate_up_layer                 2847.8 ms  calls=2304  avg=1.236 ms
-  mha_core                      2794.1 ms  calls=2304  avg=1.213 ms
-  tie_word_embeddings           1121.6 ms  calls=128  avg=8.763 ms
-  fully_connected                203.2 ms  calls=11520  avg=0.018 ms
-  rms_norm                        74.6 ms  calls=4672  avg=0.016 ms
-  swiglu                          25.5 ms  calls=2304  avg=0.011 ms
-  reshaped_rms_norm               12.9 ms  calls=4608  avg=0.003 ms
-  addition                         9.6 ms  calls=4608  avg=0.002 ms
-  multiout                         2.7 ms  calls=6912  avg=0.000 ms
-  input                            0.1 ms  calls=64  avg=0.001 ms
-[PROFILE GateUpLayer decode (M==1)] total=2846.14 ms calls=2304 avg=1.235 ms
-  setup    :     1.34 ms (  0.0%)  [weight+tensor view ctor]
-  dot      :  2844.81 ms (100.0%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
-  misc     :     0.00 ms (  0.0%)
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=995.50 ms calls=64 avg=15.555 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=126.08 ms calls=64 avg=1.970 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2793.26 ms calls=2304 avg=1.212 ms
-  entry_drain    :  2372.53 ms ( 84.9%)  [4x SVMMap blocking q/k/v/output]
-    drain_q  :  2372.60 ms ( 84.9%)
-    drain_k  :     0.00 ms (  0.0%)
-    drain_v  :     0.00 ms (  0.0%)
-    drain_o  :     0.00 ms (  0.0%)
-  attn_fused     :   258.68 ms (  9.3%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
-  exit           :   151.61 ms (  5.4%)  [SVMUnmap(output) + image2d publish]
-  rope_q   :     1.24 ms (  0.0%)
-  rope_k   :     1.89 ms (  0.1%)
-  v_copy   :     1.58 ms (  0.1%)
-  qk       :   258.68 ms (  9.3%)
-  softmax  :     0.00 ms (  0.0%)
-  av       :     0.00 ms (  0.0%)
-
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=189.01 ms calls=11520
-  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   189.01 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
-  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
-
-[PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]
-  bucket                          calls   gpu_total   avg_gpu  avg_q2s  avg_s2start
-  fused_gemv_int4 (image2d)        2304    890.39 ms   386.5 us   11.8 us    571.6 us
-  gemv_int4 per-FC (image2d)      11520   1930.51 ms   167.6 us   36.5 us    458.3 us
-  attention_fused_fp16             2340   1279.97 ms   547.0 us  153.3 us    101.8 us
-
-[PROFILE AdditionLayer decode] total=20.67 ms fast=4680 fallback=0 avg_fast=4.416 us
-  kernel :    20.67 ms (100.0%)  [add2_fp16_svm_cl async]
-  drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
-  misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
-/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
-
-==========================================
- Run summary
-==========================================
-
--- Gate resolution --
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-
--- Perf --
-prefill: 437 tokens, 2567 ms, 170.238 TPS
-generation: 64 tokens, 7201 ms, 8.88765 TPS
-total: 9785 ms
-peak memory: 2837408 KB
-[e2e time]: 12829 ms 
-
--- Generation snippet (first 200 chars after <|im_start|>assistant) --
-
-[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
-[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-<think>
-Okay, the user wants a summary of this abstract in three sentences. Let me r
-
-Full log: temp_run.log
-
-To restore the original (long-context) config on device:
-  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
+adb: error: failed to get feature set: no devices/emulators found
+error: no devices/emulators found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
