@@ -472,6 +472,59 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     };
     const uint64_t t_drain0 =
       profile_this_decode ? mha_now_ns() : 0;
+    // Phase profile-driven: drain_q carries 94% of entry_drain wall
+    // (queue wait for ~10 upstream dispatches per layer). drain_k/v/o
+    // are pure region cache flushes (~35-50us each). Try replacing
+    // the three secondary maps with a single bounding-range map when
+    // the four tensors lie within a reasonable contiguous span.
+    // Saves 2 of the 3 region-flush costs (~50us * 2 / call).
+    static const bool s_unified_drain =
+      std::getenv("NNTRAINER_MHA_UNIFIED_ENTRY_DRAIN") != nullptr;
+    if (s_unified_drain &&
+        query.getMemoryData() && query.getMemoryData()->isSVM() &&
+        key.getMemoryData() && key.getMemoryData()->isSVM() &&
+        value.getMemoryData() && value.getMemoryData()->isSVM() &&
+        (skip_output_entry_drain ||
+         (output.getMemoryData() && output.getMemoryData()->isSVM()))) {
+      const char *q_p = query.getData<char>();
+      const char *k_p = key.getData<char>();
+      const char *v_p = value.getData<char>();
+      const char *o_p = skip_output_entry_drain ? q_p
+                                                 : output.getData<char>();
+      const size_t q_b = query.bytes();
+      const size_t k_b = key.bytes();
+      const size_t v_b = value.bytes();
+      const size_t o_b = skip_output_entry_drain ? 0 : output.bytes();
+      const char *min_p = q_p;
+      if (k_p < min_p) min_p = k_p;
+      if (v_p < min_p) min_p = v_p;
+      if (!skip_output_entry_drain && o_p < min_p) min_p = o_p;
+      const char *max_e = q_p + q_b;
+      if (k_p + k_b > max_e) max_e = k_p + k_b;
+      if (v_p + v_b > max_e) max_e = v_p + v_b;
+      if (!skip_output_entry_drain && o_p + o_b > max_e)
+        max_e = o_p + o_b;
+      const size_t span = (size_t)(max_e - min_p);
+      // Reject if the bounding range is unreasonably large -- tensor
+      // pool may have placed them far apart with unrelated allocations
+      // in between, which would force the driver to flush MB of cache
+      // we don't need. 64 MB cap = ~16384 fp16 hidden across many
+      // partitions; comfortable upper bound.
+      if (span <= 64ull * 1024 * 1024) {
+        mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
+          const_cast<char *>(min_p), span, /*read_only=*/true);
+        if (profile_this_decode) {
+          g_mha_core_decode_profile.ns_entry_drain +=
+            mha_now_ns() - t_drain0;
+          g_mha_core_decode_profile.ns_drain_q +=
+            mha_now_ns() - t_drain0;
+          // k/v/o intentionally left at 0 to make the unified vs
+          // four-map comparison obvious in the printed profile.
+        }
+        // Skip the four separate maps below.
+        goto mha_entry_drain_done;
+      }
+    }
     map_if_svm(query, /*read_only=*/true);
     const uint64_t t_drain_q =
       profile_this_decode ? mha_now_ns() : 0;
@@ -493,6 +546,7 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       g_mha_core_decode_profile.ns_drain_v += t_drain_v - t_drain_k;
       g_mha_core_decode_profile.ns_drain_o += t_drain_o - t_drain_v;
     }
+mha_entry_drain_done:;
   }
 #endif
 
