@@ -2518,6 +2518,151 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
   return true;
 }
 
+// v2: same as gemv_int4_weight_image2d_cl but reads weights from a
+// CL_RGBA + UNSIGNED_INT32 image with K/8 height (8 K-positions per
+// pixel per channel). Halves imageread count vs v1 (K/4 height).
+//
+// The original ushort SVM weight ([(K/4) * N]) cannot be aliased
+// directly because the layout changed (uints pack across two ushort
+// rows). Repack into a fresh uint32_t buffer on first call and cache
+// per-weight, then create the image2d via image2d_from_buffer for
+// zero-copy GPU access. Memory cost: K*N/2 bytes per weight (same
+// total bytes as the original int4 stream, just reshaped).
+//
+// Failure modes (caller falls back):
+//   * shape (K%8 || N%4)
+//   * image dim exceeds device max (lm_head etc.)
+//   * uint buffer alloc / clCreateBuffer / clCreateImage fail
+bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
+                                     uint16_t *scales, uint16_t *output,
+                                     unsigned int K, unsigned int N,
+                                     bool sync_output) {
+  if (!input || !weights || !scales || !output) return false;
+  if ((K & 7u) || (N & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  static size_t s_max_w = 0;
+  static size_t s_max_h = 0;
+  if (s_max_w == 0) {
+    cl_device_id dev = opencl::ContextManager::Global().GetDeviceId();
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
+                    &s_max_w, nullptr);
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
+                    &s_max_h, nullptr);
+    if (s_max_w == 0) s_max_w = 16384;
+    if (s_max_h == 0) s_max_h = 16384;
+  }
+  const size_t img_w = (size_t)N / 4u;
+  const size_t img_h = (size_t)K / 8u;
+  if (img_w > s_max_w || img_h > s_max_h) return false;
+
+  // Cache: per weight pointer, holds the repacked uint buffer (heap),
+  // its cl_mem (USE_HOST_PTR over the heap), and the image2d view.
+  struct WeightImgV2 {
+    uint32_t *repacked;  // heap buffer owning K/8 * N uints
+    cl_mem buf;
+    cl_mem img;
+    size_t w, h;
+  };
+  static std::unordered_map<uintptr_t, WeightImgV2> s_w2_cache;
+  cl_mem weight_img = nullptr;
+  {
+    const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
+    auto it = s_w2_cache.find(wk);
+    if (it != s_w2_cache.end() && it->second.w == img_w &&
+        it->second.h == img_h) {
+      weight_img = it->second.img;
+    } else {
+      if (it != s_w2_cache.end()) {
+        if (it->second.img) clReleaseMemObject(it->second.img);
+        if (it->second.buf) clReleaseMemObject(it->second.buf);
+        if (it->second.repacked) std::free(it->second.repacked);
+      }
+      // Repack ushort[(K/4) * N] -> uint[(K/8) * N]
+      //   uint at (j, n) = ((uint)src[(2j+1)*N + n] << 16) |
+      //                     (uint)src[(2j)*N + n]
+      const size_t total_uints = (size_t)(K / 8) * (size_t)N;
+      uint32_t *repacked = (uint32_t *)std::malloc(total_uints *
+                                                    sizeof(uint32_t));
+      if (!repacked) return false;
+      const uint16_t *src = weights;
+      for (size_t j = 0; j < (size_t)(K / 8); ++j) {
+        const uint16_t *row_lo = src + (2 * j) * (size_t)N;
+        const uint16_t *row_hi = src + (2 * j + 1) * (size_t)N;
+        uint32_t *dst_row = repacked + j * (size_t)N;
+        for (size_t n = 0; n < (size_t)N; ++n) {
+          dst_row[n] = ((uint32_t)row_hi[n] << 16) | (uint32_t)row_lo[n];
+        }
+      }
+
+      cl_int err = 0;
+      cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT32};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = img_w;
+      d.image_height = img_h;
+      const size_t bytes = total_uints * sizeof(uint32_t);
+      cl_mem buf = clCreateBuffer(
+        clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, bytes, repacked, &err);
+      if (err != CL_SUCCESS || !buf) {
+        std::free(repacked);
+        return false;
+      }
+      // RGBA32UI: 4 uints = 16 bytes per pixel.
+      d.image_row_pitch = img_w * 16u;
+      d.buffer = buf;
+      cl_mem img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &d, nullptr,
+                                  &err);
+      if (err != CL_SUCCESS || !img) {
+        clReleaseMemObject(buf);
+        std::free(repacked);
+        return false;
+      }
+      WeightImgV2 entry{repacked, buf, img, img_w, img_h};
+      s_w2_cache[wk] = entry;
+      weight_img = img;
+    }
+  }
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_weight_image2d_v2_kernel, "gpu_int4_gemv_weight_image2d_v2");
+  if (!kernel_ptr) return false;
+
+  int arg = 0;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, input)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, scales)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, output)) return false;
+  if (!kernel_ptr->SetKernelArguments(arg++, &weight_img, sizeof(cl_mem)))
+    return false;
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  const int align_N = static_cast<int>(align(N, 256));
+  const int dim_n = align_N / 4;
+  const int g[3] = {dim_n, 1, 1};
+  const int l[3] = {64, 1, 1};
+  cl_event v2_ev = nullptr;
+  cl_event *v2_ev_ptr = DecodeKernelGpuProfile::enabled() ? &v2_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
+                                                    v2_ev_ptr)) {
+    return false;
+  }
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (v2_ev) {
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv_img, v2_ev);
+  }
+  return true;
+}
+
 // Step 1 of the incremental image2d gemv rewrite.  Signature matches
 // gemv_int4_adreno_cl so the caller can env-swap them one at a time.
 // Step 1 only LOADS weights and writes zero; output is garbage, but

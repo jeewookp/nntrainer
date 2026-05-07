@@ -1042,10 +1042,18 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
     // failure (lm_head's N=152064 exceeds image2d max width).
     static const bool s_weight_image2d =
       std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D") != nullptr;
+    static const bool s_weight_image2d_v2 =
+      std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_V2") != nullptr;
     if (s_zerocopy && !s_step && !s_image2d) {
       const uint64_t t_zc0 = now_ns();
       bool dispatched = false;
-      if (s_weight_image2d) {
+      if (s_weight_image2d_v2) {
+        dispatched = gemv_int4_weight_image2d_v2_cl(in_u16, weight_u16,
+                                                     scale_u16, out_u16,
+                                                     K, N,
+                                                     /*sync_output=*/false);
+      }
+      if (!dispatched && s_weight_image2d) {
         dispatched = gemv_int4_weight_image2d_cl(in_u16, weight_u16,
                                                   scale_u16, out_u16, K, N,
                                                   /*sync_output=*/false);

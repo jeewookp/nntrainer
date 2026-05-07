@@ -441,6 +441,16 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
                                   unsigned int K, unsigned int N,
                                   bool sync_output = true);
 
+// v2: same contract as gemv_int4_weight_image2d_cl but uses RGBA32UI
+// weight image (8 K-positions per pixel, K/8 height) for 2x reduction
+// in imageread count. Repacks the ushort SVM weight into a uint heap
+// buffer on first call (cached). Memory cost: K*N/2 bytes per weight.
+// Returns false on shape (K%8 || N%4), image dim limit, alloc fail.
+bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
+                                     uint16_t *scales, uint16_t *output,
+                                     unsigned int K, unsigned int N,
+                                     bool sync_output = true);
+
 // Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
 // loads more of the gemv work (step 1 = weight only, step 2 = +
 // input, ...) but all write deterministic zero until correctness
