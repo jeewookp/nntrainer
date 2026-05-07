@@ -5824,9 +5824,15 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   // without the row-pack dimension.
   static const bool s_attn_decode_specialized =
     std::getenv("NNTRAINER_ATTN_FUSED_DECODE") != nullptr;
+  // Phase G: 2x KK-unrolled decode kernel. Same online-softmax math
+  // as v1 decode kernel, processes 2 K/V positions per loop iter for
+  // better ILP on the compute-bound (s2start ~100us) attention path.
+  static const bool s_attn_decode_v2 =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V2") != nullptr;
 
   static ClContext::SharedPtrClKernel s_kern;
   static ClContext::SharedPtrClKernel s_kern_decode;
+  static ClContext::SharedPtrClKernel s_kern_decode_v2;
   if (!s_kern) {
     // -cl-std=CL2.0 override matches the ClContext init registration so
     // ocl_kernel_map dedupes on (name + options).  Required for
@@ -5841,11 +5847,21 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       attention_fused_fp16_decode_kernel, "attention_fused_fp16_decode",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  if (s_attn_decode_v2 && !s_kern_decode_v2) {
+    s_kern_decode_v2 = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v2_kernel, "attention_fused_fp16_decode_v2",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
 
+  const bool use_decode_v2 =
+    (s_attn_decode_v2 && M == 1u && s_kern_decode_v2);
   const bool use_decode_kern =
+    use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_kern ? s_kern_decode : s_kern;
+    use_decode_v2     ? s_kern_decode_v2
+    : use_decode_kern ? s_kern_decode
+                      : s_kern;
 
   // Commit upstream CPU writes before the GPU reads.
   blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
