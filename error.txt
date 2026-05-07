@@ -1,16 +1,3 @@
-MOUNT_SYSTEM_OK
-PATH
-SHELL
-STANDALONE_SYSTEMSERVER_JARS
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-ANDROID_ART_ROOT
-ANDROID_ASSETS
-ANDROID_BOOTLOGO
-ANDROID_DATA
-ANDROID_I18N_ROOT
 ANDROID_ROOT
 ANDROID_SOCKET_adbd
 ANDROID_STORAGE
@@ -49,178 +36,102 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007955acfa00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] success: 3 chunks (50624, 50624, 50688) total int4 = 185.5 MB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[LMHEAD_Q6K_DIAG] weight.dtype=5 (Q6_K=5) w_svm=0 in_svm=1 out_svm=1 K=2560 N=151936
-<think>[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+<think>
+Okay, the user wants a summary of this abstract in three sentences, in English, covering the entire content. Let me read through the abstract again to make sure I capture all the key points.
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+First, the main idea is about the Thyme model, which is a new approach for multimodal models that goes beyond
+
+=================[ LLM with NNTrainer ]===================
+prefill: 437 tokens, 3147 ms, 138.862 TPS
+generation: 64 tokens, 6504 ms, 9.8401 TPS
+total: 9658 ms
+peak memory: 2826720 KB
+==========================================================
+[e2e time]: 12761 ms 
+Max Resident Set Size: 2826720 KB
+
+[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
+  total=6288.5 ms across all forwarding_op() calls
+  gate_up_layer                 3068.9 ms  calls=2304  avg=1.332 ms
+  mha_core                      2628.9 ms  calls=2304  avg=1.141 ms
+  tie_word_embeddings            264.1 ms  calls=128  avg=2.063 ms
+  fully_connected                180.3 ms  calls=11520  avg=0.016 ms
+  rms_norm                        66.0 ms  calls=4672  avg=0.014 ms
+  swiglu                          46.1 ms  calls=2304  avg=0.020 ms
+  reshaped_rms_norm               16.7 ms  calls=4608  avg=0.004 ms
+  addition                        13.5 ms  calls=4608  avg=0.003 ms
+  multiout                         3.9 ms  calls=6912  avg=0.001 ms
+  input                            0.1 ms  calls=64  avg=0.002 ms
+[PROFILE GateUpLayer decode (M==1)] total=3066.48 ms calls=2304 avg=1.331 ms
+  setup    :     2.00 ms (  0.1%)  [weight+tensor view ctor]
+  dot      :  3064.48 ms ( 99.9%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
+  misc     :     0.00 ms (  0.0%)
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=245.08 ms calls=64 avg=3.829 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=18.95 ms calls=64 avg=0.296 ms
+[PROFILE MHACoreLayer decode (M==1)] total=2627.73 ms calls=2304 avg=1.141 ms
+  entry_drain    :  2052.75 ms ( 78.1%)  [4x SVMMap blocking q/k/v/output]
+    drain_q  :  2052.84 ms ( 78.1%)
+    drain_k  :     0.00 ms (  0.0%)
+    drain_v  :     0.00 ms (  0.0%)
+    drain_o  :     0.00 ms (  0.0%)
+  attn_fused     :   397.31 ms ( 15.1%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
+  exit           :   163.57 ms (  6.2%)  [SVMUnmap(output) + image2d publish]
+  rope_q   :     2.00 ms (  0.1%)
+  rope_k   :     2.48 ms (  0.1%)
+  v_copy   :     1.90 ms (  0.1%)
+  qk       :   397.31 ms ( 15.1%)
+  softmax  :     0.00 ms (  0.0%)
+  av       :     0.00 ms (  0.0%)
+
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=160.00 ms calls=11520
+  in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
+  gemv_call :   160.00 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
+
+[PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]
+  bucket                          calls   gpu_total   avg_gpu  avg_q2s  avg_s2start
+  fused_gemv_int4 (image2d)        2304    894.10 ms   388.1 us    7.6 us    743.2 us
+  gemv_int4 per-FC (image2d)      11715   2138.35 ms   182.5 us   38.2 us    464.2 us
+  attention_fused_fp16             2340   1286.40 ms   549.7 us  194.4 us    266.5 us
+
+[PROFILE AdditionLayer decode] total=22.91 ms fast=4680 fallback=0 avg_fast=4.896 us
+  kernel :    22.91 ms (100.0%)  [add2_fp16_svm_cl async]
+  drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
+  misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
+/data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
+
+==========================================
+ Run summary
+==========================================
+
+-- Gate resolution --
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+
+-- Perf --
+prefill: 437 tokens, 3147 ms, 138.862 TPS
+generation: 64 tokens, 6504 ms, 9.8401 TPS
+total: 9658 ms
+peak memory: 2826720 KB
+[e2e time]: 12761 ms 
+
+-- Generation snippet (first 200 chars after <|im_start|>assistant) --
+
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007955acfa00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-Okay[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-, the[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- user[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- wants[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- a[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- summary[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- of[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- this[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- abstract[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- in[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- three[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
- sentences[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-.[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-[INT4_CHUNKED_INIT] phase=alloc_ok
-[INT4_CHUNKED_INIT] phase=convert_ok
-[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
-[INT4_CHUNKED_INIT] phase=ctx_ok
-adb: error: failed to get feature set: no devices/emulators found
-error: no devices/emulators found
+[INT4_CHUNKED_INIT] success: 
+
+Full log: temp_run.log
+
+To restore the original (long-context) config on device:
+  adb shell 'mv /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json.bak /data/local/tmp/nntrainer/causallm/models/qwen3-4b/nntr_config.json'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
