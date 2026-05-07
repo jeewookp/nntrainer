@@ -53,9 +53,36 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   // Bundle weight byte layout is preserved: QKVLayer registers
   // (q, k, v) weights in the same order as the legacy 3-FC sequence
   // so positional loading picks up the same bytes.
+  // Phase J: QKVNormLayer absorbs Q_FC + K_FC + V_FC + Q_norm + K_norm
+  // into a single layer with 5 weights registered in the bundle's
+  // existing byte order [q_w, gamma_q, k_w, gamma_k, v_w]. Forward
+  // dispatches the QKV gemv via fused_gemv_int4_image2d_v2 (same path
+  // gate_up_layer uses, ~64 GB/s) and applies in-place per-head rmsnorm
+  // to Q and K. Outputs (Q_normed, K_normed, V) feed mha_core directly.
+  static const bool s_qkv_norm_fused =
+    std::getenv("NNTRAINER_QKV_NORM_FUSED") != nullptr;
   static const bool s_qkv_fused =
     std::getenv("NNTRAINER_QKV_FUSED") != nullptr;
-  if (s_qkv_fused) {
+  if (s_qkv_norm_fused) {
+    auto QKVN = "layer" + std::to_string(layer_id) + "_wqkv_norm";
+    std::vector<std::string> qkvnorm_params = {
+      withKey("name", QKVN),
+      withKey("q_unit", head_dim * n_heads),
+      withKey("k_unit", head_dim * n_heads / GQA_SIZE),
+      withKey("v_unit", head_dim * n_heads / GQA_SIZE),
+      withKey("feature_size", std::to_string(head_dim)),
+      withKey("epsilon", std::to_string(NORM_EPS)),
+      withKey("disable_bias", "true"),
+      withKey("input_layers", query_name),
+      withKey("weight_initializer", "ones")};
+    layers.push_back(createLayer("qkv_norm_layer", qkvnorm_params));
+
+    // mha_core picks up QKVN(0) = Q_normed, QKVN(1) = K_normed,
+    // QKVN(2) = V. Rename so the existing input_layers list below works.
+    Q_norm = QKVN + "(0)";
+    K_norm = QKVN + "(1)";
+    V      = QKVN + "(2)";
+  } else if (s_qkv_fused) {
     auto QKV = "layer" + std::to_string(layer_id) + "_wqkv";
     std::vector<std::string> qkv_params = {
       withKey("name", QKV),

@@ -24,6 +24,7 @@
 #include <gate_up_layer.h>
 #include <mha_core.h>
 #include <qkv_layer.h>
+#include <qkv_norm_layer.h>
 #include <rms_norm.h>
 #include <swiglu.h>
 #include <tie_word_embedding.h>
@@ -479,6 +480,8 @@ void Transformer::registerCustomLayers() {
     app_context->registerFactory(
       nntrainer::createLayer<causallm::EmbeddingLayer>);
     app_context->registerFactory(nntrainer::createLayer<causallm::QKVLayer>);
+    app_context->registerFactory(
+      nntrainer::createLayer<causallm::QKVNormLayer>);
     app_context->registerFactory(
       nntrainer::createLayer<causallm::GateUpLayer>);
 
