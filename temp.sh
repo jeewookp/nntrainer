@@ -145,7 +145,11 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_MHA_UNIFIED_ENTRY_DRAIN=1; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
-  export NNTRAINER_GPU_EVENT_PROFILE=1; \
+  # Phase H'-Q6K diagnostic: temporarily disable GPU event profiling
+  # to test whether the per-dispatch event tracking overhead is what
+  # causes attn s2start to spike +171us when Q6K GPU lm_head is on.
+  # Re-enable after this experiment lands a verdict.
+  # export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
   #   2. output_norm -> lm_head (entry SVMMap in tie_word_embedding lmhead)
