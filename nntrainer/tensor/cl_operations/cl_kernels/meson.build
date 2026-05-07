@@ -28,6 +28,7 @@ cl_op_kernels = [
   'fused_gemv_int4.cl',
   'fused_gemv_int4_v2.cl',
   'fused_gemv_int4_image2d.cl',
+  'fused_gemv_int4_image2d_v2.cl',
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'delegate_conv_wave.cl',
