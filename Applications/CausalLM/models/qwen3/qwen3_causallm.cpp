@@ -43,42 +43,86 @@ std::vector<LayerHandle> Qwen3Transformer::createAttention(
   auto A = "layer" + std::to_string(layer_id) + "_attention";
   auto O = "layer" + std::to_string(layer_id) + "_attention_out";
 
-  // Q layer
-  std::vector<std::string> q_params = {
-    withKey("name", Q), withKey("unit", head_dim * n_heads),
-    withKey("disable_bias", "true"), withKey("input_layers", query_name),
-    withKey("weight_initializer", "ones")};
-  layers.push_back(createLayer("fully_connected", q_params));
+  // NNTRAINER_QKV_FUSED=1 routes the 3 separate Q/K/V projections
+  // through QKVLayer's batched dot, which fuses into a single
+  // fused_gemv_int4 dispatch (same path used by gate_up_layer).
+  // Output naming follows the multi-output convention:
+  //   QKV(0) = Q  ->  reshaped_rms_norm (Q_norm)
+  //   QKV(1) = K  ->  reshaped_rms_norm (K_norm)
+  //   QKV(2) = V  ->  mha_core (no norm)
+  // Bundle weight byte layout is preserved: QKVLayer registers
+  // (q, k, v) weights in the same order as the legacy 3-FC sequence
+  // so positional loading picks up the same bytes.
+  static const bool s_qkv_fused =
+    std::getenv("NNTRAINER_QKV_FUSED") != nullptr;
+  if (s_qkv_fused) {
+    auto QKV = "layer" + std::to_string(layer_id) + "_wqkv";
+    std::vector<std::string> qkv_params = {
+      withKey("name", QKV),
+      withKey("q_unit", head_dim * n_heads),
+      withKey("k_unit", head_dim * n_heads / GQA_SIZE),
+      withKey("v_unit", head_dim * n_heads / GQA_SIZE),
+      withKey("disable_bias", "true"),
+      withKey("input_layers", query_name),
+      withKey("weight_initializer", "ones")};
+    layers.push_back(createLayer("qkv_layer", qkv_params));
 
-  // Q-reshaped-norm layer
-  // q_norm(q_proj.view(hidden_shape))
-  std::vector<std::string> q_norm_params = {
-    withKey("name", Q_norm), withKey("input_layers", Q),
-    withKey("packed", "false"), withKey("epsilon", std::to_string(NORM_EPS)),
-    withKey("feature_size", std::to_string(head_dim))};
-  layers.push_back(createLayer("reshaped_rms_norm", q_norm_params));
+    std::vector<std::string> q_norm_params = {
+      withKey("name", Q_norm),
+      withKey("input_layers", QKV + "(0)"),
+      withKey("packed", "false"),
+      withKey("epsilon", std::to_string(NORM_EPS)),
+      withKey("feature_size", std::to_string(head_dim))};
+    layers.push_back(createLayer("reshaped_rms_norm", q_norm_params));
 
-  // K layer
-  std::vector<std::string> k_params = {
-    withKey("name", K), withKey("unit", head_dim * n_heads / GQA_SIZE),
-    withKey("disable_bias", "true"), withKey("input_layers", key_name),
-    withKey("weight_initializer", "ones")};
-  layers.push_back(createLayer("fully_connected", k_params));
+    std::vector<std::string> k_norm_params = {
+      withKey("name", K_norm),
+      withKey("input_layers", QKV + "(1)"),
+      withKey("packed", "false"),
+      withKey("epsilon", std::to_string(NORM_EPS)),
+      withKey("feature_size", std::to_string(head_dim))};
+    layers.push_back(createLayer("reshaped_rms_norm", k_norm_params));
 
-  // K-reshaped-norm layer
-  // k_norm(k_proj.view(hidden_shape))
-  std::vector<std::string> k_norm_params = {
-    withKey("name", K_norm), withKey("input_layers", K),
-    withKey("packed", "false"), withKey("epsilon", std::to_string(NORM_EPS)),
-    withKey("feature_size", std::to_string(head_dim))};
-  layers.push_back(createLayer("reshaped_rms_norm", k_norm_params));
+    // Rename V so the mha_core input list below picks up QKV(2) via V.
+    V = QKV + "(2)";
+  } else {
+    // Q layer
+    std::vector<std::string> q_params = {
+      withKey("name", Q), withKey("unit", head_dim * n_heads),
+      withKey("disable_bias", "true"), withKey("input_layers", query_name),
+      withKey("weight_initializer", "ones")};
+    layers.push_back(createLayer("fully_connected", q_params));
 
-  // V layer
-  std::vector<std::string> v_params = {
-    withKey("name", V), withKey("unit", head_dim * n_heads / GQA_SIZE),
-    withKey("disable_bias", "true"), withKey("input_layers", value_name),
-    withKey("weight_initializer", "ones")};
-  layers.push_back(createLayer("fully_connected", v_params));
+    // Q-reshaped-norm layer
+    // q_norm(q_proj.view(hidden_shape))
+    std::vector<std::string> q_norm_params = {
+      withKey("name", Q_norm), withKey("input_layers", Q),
+      withKey("packed", "false"), withKey("epsilon", std::to_string(NORM_EPS)),
+      withKey("feature_size", std::to_string(head_dim))};
+    layers.push_back(createLayer("reshaped_rms_norm", q_norm_params));
+
+    // K layer
+    std::vector<std::string> k_params = {
+      withKey("name", K), withKey("unit", head_dim * n_heads / GQA_SIZE),
+      withKey("disable_bias", "true"), withKey("input_layers", key_name),
+      withKey("weight_initializer", "ones")};
+    layers.push_back(createLayer("fully_connected", k_params));
+
+    // K-reshaped-norm layer
+    // k_norm(k_proj.view(hidden_shape))
+    std::vector<std::string> k_norm_params = {
+      withKey("name", K_norm), withKey("input_layers", K),
+      withKey("packed", "false"), withKey("epsilon", std::to_string(NORM_EPS)),
+      withKey("feature_size", std::to_string(head_dim))};
+    layers.push_back(createLayer("reshaped_rms_norm", k_norm_params));
+
+    // V layer
+    std::vector<std::string> v_params = {
+      withKey("name", V), withKey("unit", head_dim * n_heads / GQA_SIZE),
+      withKey("disable_bias", "true"), withKey("input_layers", value_name),
+      withKey("weight_initializer", "ones")};
+    layers.push_back(createLayer("fully_connected", v_params));
+  }
 
   // Attention core layer
   std::vector<std::string> a_params = {
