@@ -1044,6 +1044,11 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
       std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D") != nullptr;
     static const bool s_weight_image2d_v2 =
       std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_V2") != nullptr;
+    // v4: __global uint4 packed kernel, same memory layout as v2 but
+    // no image2d size limit. Handles weights too wide for image2d
+    // (e.g. lm_head vocab projection N=152064 > 16384*4).
+    static const bool s_adreno_v4 =
+      std::getenv("NNTRAINER_GEMV_ADRENO_V4") != nullptr;
     if (s_zerocopy && !s_step && !s_image2d) {
       const uint64_t t_zc0 = now_ns();
       bool dispatched = false;
@@ -1057,6 +1062,11 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
         dispatched = gemv_int4_weight_image2d_cl(in_u16, weight_u16,
                                                   scale_u16, out_u16, K, N,
                                                   /*sync_output=*/false);
+      }
+      if (!dispatched && s_adreno_v4) {
+        dispatched = gemv_int4_adreno_v4_cl(in_u16, weight_u16,
+                                             scale_u16, out_u16, K, N,
+                                             /*sync_output=*/false);
       }
       if (!dispatched) {
         if (s_adreno_v3) {

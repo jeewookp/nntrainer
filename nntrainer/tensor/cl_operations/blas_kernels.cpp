@@ -27,6 +27,7 @@
 #include <cstring>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -2340,6 +2341,120 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
   if (v3_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv, v3_ev);
   }
+}
+
+// v4: same packed-uint memory layout as the RGBA32UI v2 image2d helper
+// (8 K-positions per uint per channel, K/8 rows × N/4 quads), but read
+// via __global const uint4 * instead of image2d_t. Use case: weights
+// whose N exceeds CL_DEVICE_IMAGE2D_MAX_WIDTH (e.g. lm_head N=152064
+// → N/4 = 38016 > 16384 max), where v2 returns false and we'd fall to
+// the slower v3 ushort SVM path.
+//
+// In-place ushort → uint repack on first call (zero memory delta vs
+// the original ushort layout, same byte span as v2). Sticky cache
+// per weight pointer; once committed, the same pointer cannot be read
+// as ushort by v3 (interpreting uint bytes as ushorts produces garbage).
+// Routing in half_tensor.cpp prefers v2 image2d first; v4 only takes
+// over when v2 fails on the image-dim limit.
+bool gemv_int4_adreno_v4_cl(uint16_t *input, uint16_t *weights,
+                             uint16_t *scales, uint16_t *output,
+                             unsigned int K, unsigned int N,
+                             bool sync_output) {
+  if (!input || !weights || !scales || !output) return false;
+  if ((K & 7u) || (N & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Sticky cache: holds the cl_mem buf (USE_HOST_PTR over the SVM
+  // weight, no copy) once first-call repack has succeeded.
+  struct WeightV4 {
+    cl_mem buf;
+    unsigned int K, N;
+  };
+  static std::unordered_map<uintptr_t, WeightV4> s_v4_cache;
+  static std::unordered_set<uintptr_t> s_v4_failed;
+  cl_mem weight_buf = nullptr;
+  {
+    const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
+    if (s_v4_failed.count(wk)) return false;
+    auto it = s_v4_cache.find(wk);
+    if (it != s_v4_cache.end() && it->second.K == K && it->second.N == N) {
+      weight_buf = it->second.buf;
+    } else if (it != s_v4_cache.end()) {
+      // Shape changed for an already-repacked weight -- can't safely
+      // un-repack. Mark failed.
+      s_v4_failed.insert(wk);
+      return false;
+    } else {
+      // Validate by creating cl_mem buf BEFORE repack. If it fails,
+      // SVM stays in ushort layout for the v3 fallback.
+      cl_int err = 0;
+      const size_t bytes = (size_t)K * (size_t)N / 4u * sizeof(uint16_t);
+      cl_mem buf = clCreateBuffer(
+        clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, bytes,
+        (void *)weights, &err);
+      if (err != CL_SUCCESS || !buf) {
+        s_v4_failed.insert(wk);
+        return false;
+      }
+
+      // In-place repack ushort → uint: snapshot 2 ushort rows per
+      // iteration, write back as 1 uint row over the same 4N bytes.
+      static thread_local std::vector<uint16_t> scratch;
+      scratch.resize(2u * (size_t)N);
+      for (size_t j = 0; j < (size_t)(K / 8); ++j) {
+        uint16_t *row_pair_base = weights + (size_t)(2 * j) * (size_t)N;
+        std::memcpy(scratch.data(), row_pair_base,
+                    2u * (size_t)N * sizeof(uint16_t));
+        const uint16_t *lo = scratch.data();
+        const uint16_t *hi = scratch.data() + (size_t)N;
+        uint32_t *dst = reinterpret_cast<uint32_t *>(row_pair_base);
+        for (size_t n = 0; n < (size_t)N; ++n) {
+          dst[n] = ((uint32_t)hi[n] << 16) | (uint32_t)lo[n];
+        }
+      }
+
+      s_v4_cache[wk] = WeightV4{buf, K, N};
+      weight_buf = buf;
+    }
+  }
+
+  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+    int4_gemv_adreno_v4_kernel, "gpu_int4_gemv_adreno_v4");
+  if (!kernel_ptr) return false;
+
+  int arg = 0;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, input)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, scales)) return false;
+  if (!kernel_ptr->SetKernelSVMArguments(arg++, output)) return false;
+  if (!kernel_ptr->SetKernelArguments(arg++, &weight_buf, sizeof(cl_mem)))
+    return false;
+  int size_k = (int)K, size_n = (int)N;
+  kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+  kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+
+  const int align_N = static_cast<int>(align(N, 256));
+  const int dim_n = align_N / 4;
+  const int g[3] = {dim_n, 1, 1};
+  const int l[3] = {64, 1, 1};
+  cl_event v4_ev = nullptr;
+  cl_event *v4_ev_ptr = DecodeKernelGpuProfile::enabled() ? &v4_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
+                                                    v4_ev_ptr)) {
+    return false;
+  }
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (v4_ev) {
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv, v4_ev);
+  }
+  return true;
 }
 
 // Phase A1 (image2d migration): same gemv as v3 but reads weights

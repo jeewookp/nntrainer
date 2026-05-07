@@ -451,6 +451,15 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
                                      unsigned int K, unsigned int N,
                                      bool sync_output = true);
 
+// v4: same uint-packed memory layout as v2 image2d but read via
+// __global const uint4 * (no image2d size limit, so handles N >
+// CL_DEVICE_IMAGE2D_MAX_WIDTH * 4 -- e.g. lm_head's vocab projection).
+// Same in-place ushort → uint repack as v2 (zero memory delta).
+bool gemv_int4_adreno_v4_cl(uint16_t *input, uint16_t *weights,
+                             uint16_t *scales, uint16_t *output,
+                             unsigned int K, unsigned int N,
+                             bool sync_output = true);
+
 // Step 1..N of the incremental image2d M=1 gemv rewrite.  Each step
 // loads more of the gemv work (step 1 = weight only, step 2 = +
 // input, ...) but all write deterministic zero until correctness

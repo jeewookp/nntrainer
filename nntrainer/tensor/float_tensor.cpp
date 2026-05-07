@@ -1246,7 +1246,21 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
         svm_in[k] = compute_fp32_to_fp16(data[k]);
       }
 
-      gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+      // FP32 activation path (lm_head logits etc.). Try v4 first when
+      // env-gated -- same uint-packed kernel path used by HalfTensor's
+      // M=1 route, no image2d size limit so large-N projections like
+      // vocab gemv (N=152064) get the BW reduction. Falls back to v1
+      // ushort SVM on shape failure.
+      static const bool s_adreno_v4 =
+        std::getenv("NNTRAINER_GEMV_ADRENO_V4") != nullptr;
+      bool dispatched = false;
+      if (s_adreno_v4) {
+        dispatched = gemv_int4_adreno_v4_cl(svm_in, weight_u16, scale_u16,
+                                             svm_out, K, N);
+      }
+      if (!dispatched) {
+        gemv_int4_adreno_cl(svm_in, weight_u16, scale_u16, svm_out, K, N);
+      }
 
       for (unsigned int n = 0; n < N; ++n) {
         rdata[n] = compute_fp16_to_fp32(svm_out[n]);

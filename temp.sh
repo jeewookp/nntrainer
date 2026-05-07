@@ -129,6 +129,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_GEMV_ZEROCOPY=1; \
   export NNTRAINER_GEMV_ADRENO_V3=1; \
+  export NNTRAINER_GEMV_ADRENO_V4=1; \
   export NNTRAINER_ADDITION_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \

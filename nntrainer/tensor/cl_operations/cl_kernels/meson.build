@@ -13,6 +13,7 @@ cl_op_kernels = [
   'int4_gemv_adreno.cl',
   'int4_gemv_adreno_v2.cl',
   'int4_gemv_adreno_v3.cl',
+  'int4_gemv_adreno_v4.cl',
   'int4_gemv_weight_image2d.cl',
   'int4_gemv_weight_image2d_v2.cl',
   'int4_gemv_image_v1.cl',
