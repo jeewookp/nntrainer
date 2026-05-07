@@ -3222,6 +3222,161 @@ bool fused_gemv_int4_v2_cl(uint16_t *input_svm,
   return true;
 }
 
+// Phase A2/A3 (image2d migration extends to fused gemv): same as
+// fused_gemv_int4_cl but reads each partition's int4 weights from a
+// CL_RGBA16UI image2d view of the SVM weight bytes (zero-copy via
+// cl_khr_image2d_from_buffer). Builds on Phase B1's verified
+// per-FC win (+5.3% TPS bit-exact).
+//
+// For gate_up case (N_v==0) the q_image is reused as the v dummy
+// slot -- the kernel never enters the v branch.
+//
+// Returns false (caller falls back to fused_gemv_int4_cl) when:
+//   * shape constraints (K%4, N_*%4)
+//   * any partition's image2d dimensions exceed device max
+//   * clCreateBuffer / clCreateImage failure
+namespace {
+// Shared image2d cache for fused helper. Different SVM ptrs from
+// per-FC cache (Q/K/V here are batched together; per-FC's Q/K/V are
+// separate pointers).
+struct FusedWeightImg {
+  cl_mem buf;
+  cl_mem img;
+  size_t w, h;
+};
+inline cl_mem fused_get_or_make_image2d(cl_context clctx, void *weight_ptr,
+                                         unsigned int K, unsigned int N) {
+  static std::unordered_map<uintptr_t, FusedWeightImg> s_cache;
+  static size_t s_max_w = 0;
+  static size_t s_max_h = 0;
+  if (s_max_w == 0) {
+    cl_device_id dev = opencl::ContextManager::Global().GetDeviceId();
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
+                    &s_max_w, nullptr);
+    clGetDeviceInfo(dev, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
+                    &s_max_h, nullptr);
+    if (s_max_w == 0) s_max_w = 16384;
+    if (s_max_h == 0) s_max_h = 16384;
+  }
+  const size_t img_w = (size_t)N / 4u;
+  const size_t img_h = (size_t)K / 4u;
+  if (img_w > s_max_w || img_h > s_max_h) return nullptr;
+
+  const uintptr_t wk = reinterpret_cast<uintptr_t>(weight_ptr);
+  auto it = s_cache.find(wk);
+  if (it != s_cache.end() && it->second.w == img_w &&
+      it->second.h == img_h) {
+    return it->second.img;
+  }
+  if (it != s_cache.end()) {
+    if (it->second.img) clReleaseMemObject(it->second.img);
+    if (it->second.buf) clReleaseMemObject(it->second.buf);
+  }
+  cl_int err = 0;
+  cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT16};
+  cl_image_desc d = {};
+  d.image_type = CL_MEM_OBJECT_IMAGE2D;
+  d.image_width = img_w;
+  d.image_height = img_h;
+  // image2d_from_buffer zero-copy path -- same as Phase B1.
+  const size_t weight_bytes =
+    (size_t)K * (size_t)N / 4u * sizeof(uint16_t);
+  cl_mem buf = clCreateBuffer(clctx,
+                              CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                              weight_bytes, weight_ptr, &err);
+  if (err != CL_SUCCESS || !buf) return nullptr;
+  d.image_row_pitch = img_w * 8u;  // CL_RGBA + UINT16 = 8 bytes/pixel
+  d.buffer = buf;
+  cl_mem img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &d, nullptr, &err);
+  if (err != CL_SUCCESS || !img) {
+    clReleaseMemObject(buf);
+    return nullptr;
+  }
+  s_cache[wk] = {buf, img, img_w, img_h};
+  return img;
+}
+} // namespace
+
+bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
+                                 uint16_t *q_weights, uint16_t *q_scales,
+                                 uint16_t *q_out,
+                                 uint16_t *k_weights, uint16_t *k_scales,
+                                 uint16_t *k_out,
+                                 uint16_t *v_weights, uint16_t *v_scales,
+                                 uint16_t *v_out,
+                                 unsigned int K,
+                                 unsigned int N_q,
+                                 unsigned int N_k,
+                                 unsigned int N_v,
+                                 bool sync_output) {
+  if (!input_svm) return false;
+  if ((K & 3u) || (N_q & 3u) || (N_k & 3u) || (N_v & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  cl_mem q_img = fused_get_or_make_image2d(clctx, q_weights, K, N_q);
+  if (!q_img) return false;
+  cl_mem k_img = fused_get_or_make_image2d(clctx, k_weights, K, N_k);
+  if (!k_img) return false;
+  // For gate_up (N_v==0) reuse q_img as the v dummy. The kernel
+  // never enters the v branch, so the data isn't read, but the
+  // kernel arg still requires a valid image2d_t.
+  cl_mem v_img = nullptr;
+  if (N_v > 0) {
+    v_img = fused_get_or_make_image2d(clctx, v_weights, K, N_v);
+    if (!v_img) return false;
+  } else {
+    v_img = q_img;
+  }
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    fused_gemv_int4_image2d_kernel, "gpu_fused_gemv_int4_image2d");
+  if (!kp) return false;
+
+  int a = 0;
+  kp->SetKernelSVMArguments(a++, input_svm);
+  kp->SetKernelArguments(a++, &q_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, q_scales);
+  kp->SetKernelSVMArguments(a++, q_out);
+  kp->SetKernelArguments(a++, &k_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, k_scales);
+  kp->SetKernelSVMArguments(a++, k_out);
+  kp->SetKernelArguments(a++, &v_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, v_scales);
+  kp->SetKernelSVMArguments(a++, v_out);
+  int sk = (int)K, snq = (int)N_q, snk = (int)N_k, snv = (int)N_v;
+  kp->SetKernelArguments(a++, &sk,  sizeof(int));
+  kp->SetKernelArguments(a++, &snq, sizeof(int));
+  kp->SetKernelArguments(a++, &snk, sizeof(int));
+  kp->SetKernelArguments(a++, &snv, sizeof(int));
+
+  const unsigned int total_n = N_q + N_k + N_v;
+  const int total_wi = (int)(total_n / 4u);
+  const int aligned = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+
+  if (sync_output) {
+    if (N_q > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        q_out, (size_t)N_q * sizeof(uint16_t), /*read_only=*/true);
+    }
+    if (N_k > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        k_out, (size_t)N_k * sizeof(uint16_t), /*read_only=*/true);
+    }
+    if (N_v > 0) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
+    }
+  }
+  return true;
+}
+
 // Diagnostic helper: read an image2d from GpuImagePool back into a
 // fresh SVM buffer using the existing image_reformat::image2d_to_svm
 // kernel.  Lets the unittest cross-check the kernel's image2d write

@@ -622,6 +622,25 @@ bool fused_gemv_int4_v2_cl(uint16_t *input_svm,
                            unsigned int N_v,
                            bool sync_output = true);
 
+// Phase A2/A3 (image2d migration extends to fused gemv): same as
+// fused_gemv_int4_cl but reads each partition's int4 weights from a
+// CL_RGBA16UI image2d view (zero-copy via cl_khr_image2d_from_buffer
+// over the SVM weight bytes).  Builds on Phase B1's per-FC win.
+// Returns false on shape constraint violation or image2d allocation
+// failure; caller falls back to fused_gemv_int4_cl.
+bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
+                                 uint16_t *q_weights, uint16_t *q_scales,
+                                 uint16_t *q_out,
+                                 uint16_t *k_weights, uint16_t *k_scales,
+                                 uint16_t *k_out,
+                                 uint16_t *v_weights, uint16_t *v_scales,
+                                 uint16_t *v_out,
+                                 unsigned int K,
+                                 unsigned int N_q,
+                                 unsigned int N_k,
+                                 unsigned int N_v,
+                                 bool sync_output = true);
+
 /**
  * @brief Diagnostic-only helper: read a published image2d from
  * GpuImagePool back into @p dst_svm via image2d_to_svm.  Lets a

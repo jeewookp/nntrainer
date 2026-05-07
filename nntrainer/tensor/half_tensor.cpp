@@ -1402,6 +1402,13 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         // the same trick should compound.
         static const bool s_fused_v2 =
           std::getenv("NNTRAINER_FUSED_GEMV_V2") != nullptr;
+        // Phase A2/A3: try fused image2d path first when env-gated.
+        // Same zero-copy image2d_from_buffer pattern as B1 per-FC,
+        // applied to the QKV (3 partitions) / Gate-Up (2 partitions)
+        // batched dispatch. Falls back to fused v1/v2 on shape or
+        // alloc failure.
+        static const bool s_fused_image2d =
+          std::getenv("NNTRAINER_FUSED_GEMV_IMAGE2D") != nullptr;
         // Phase B.7+8: skip the post-dispatch SVMMap drain ONLY when
         // we are dispatching gate_up (2-partition, N_v == 0). For
         // QKV (N_v > 0) keep the drain: the V output's downstream
@@ -1415,14 +1422,22 @@ void HalfTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
         const bool is_gate_up_path = (N_v == 0);
         const bool fused_sync_output =
           !(s_fused_no_drain && is_gate_up_path);
-        const bool fused_ok =
-          s_fused_v2
-            ? fused_gemv_int4_v2_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
-                                    w_v, s_v, o_v, K, N_q, N_k, N_v,
-                                    fused_sync_output)
-            : fused_gemv_int4_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
-                                 w_v, s_v, o_v, K, N_q, N_k, N_v,
-                                 fused_sync_output);
+        bool fused_ok = false;
+        if (s_fused_image2d) {
+          fused_ok = fused_gemv_int4_image2d_cl(
+            in_u16, w_q, s_q, o_q, w_k, s_k, o_k, w_v, s_v, o_v,
+            K, N_q, N_k, N_v, fused_sync_output);
+        }
+        if (!fused_ok) {
+          fused_ok =
+            s_fused_v2
+              ? fused_gemv_int4_v2_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
+                                      w_v, s_v, o_v, K, N_q, N_k, N_v,
+                                      fused_sync_output)
+              : fused_gemv_int4_cl(in_u16, w_q, s_q, o_q, w_k, s_k, o_k,
+                                   w_v, s_v, o_v, K, N_q, N_k, N_v,
+                                   fused_sync_output);
+        }
         if (fused_ok) {
           return;
         }
