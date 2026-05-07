@@ -303,6 +303,7 @@ struct DecodeKernelGpuProfile {
   Bucket per_fc_gemv;          // gemv_int4_adreno_v3_cl
   Bucket per_fc_gemv_img;      // gemv_int4_weight_image2d_cl
   Bucket attn_fused;           // attention_fused_fp16_cl
+  Bucket lmhead_q6k;           // sgemv_q6_k_fp16_cl
 
   // Deferred event queue. Call sites push (bucket, event) here instead
   // of blocking on the event in the dispatch hot path -- avoids
@@ -364,7 +365,8 @@ struct DecodeKernelGpuProfile {
                          fused_gemv_qkv_img.events.load() +
                          per_fc_gemv.events.load() +
                          per_fc_gemv_img.events.load() +
-                         attn_fused.events.load();
+                         attn_fused.events.load() +
+                         lmhead_q6k.events.load();
     if (total_events == 0) return;
     // Decode profile -- not silenced by NNTRAINER_SUPPRESS_PREFILL_PROFILE.
 
@@ -390,6 +392,7 @@ struct DecodeKernelGpuProfile {
     print("gemv_int4 per-FC (svm)", per_fc_gemv);
     print("gemv_int4 per-FC (image2d)", per_fc_gemv_img);
     print("attention_fused_fp16", attn_fused);
+    print("lm_head Q6_K (fp16)", lmhead_q6k);
   }
 };
 
@@ -4114,7 +4117,10 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
 #undef N_SIMDWIDTH_FP16
 #undef N_SIMDGROUP_FP16
 
-  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) {
+  cl_event q6k_ev = nullptr;
+  cl_event *q6k_ev_ptr =
+    DecodeKernelGpuProfile::enabled() ? &q6k_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l, q6k_ev_ptr)) {
     ml_loge("Failed to dispatch q6_k_sgemv_fp16");
     return;
   }
@@ -4123,6 +4129,9 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
   blas_cc->command_queue_inst_.enqueueSVMMap(vecYdata,
                                               N * sizeof(uint16_t),
                                               /*read_only=*/true);
+  if (q6k_ev) {
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.lmhead_q6k, q6k_ev);
+  }
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
