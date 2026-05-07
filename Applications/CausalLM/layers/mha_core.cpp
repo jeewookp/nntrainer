@@ -105,6 +105,10 @@ struct MHACoreDecodeProfile {
   std::atomic<uint64_t> ns_qk{0};
   std::atomic<uint64_t> ns_softmax{0};
   std::atomic<uint64_t> ns_av{0};
+  // Detailed buckets added to identify where the drain stall lives.
+  std::atomic<uint64_t> ns_entry_drain{0};      // 4x SVMMap on q/k/v/output
+  std::atomic<uint64_t> ns_attn_fused_call{0};  // attention_fused_fp16_cl wall
+  std::atomic<uint64_t> ns_exit_unmap_publish{0}; // SVMUnmap(output) + publish
 
   ~MHACoreDecodeProfile() {
     const uint64_t c = calls.load();
@@ -119,6 +123,20 @@ struct MHACoreDecodeProfile {
                  "[PROFILE MHACoreLayer decode (M==1)] total=%.2f ms "
                  "calls=%llu avg=%.3f ms\n",
                  T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  entry_drain    : %8.2f ms (%5.1f%%)  "
+                 "[4x SVMMap blocking q/k/v/output]\n",
+                 ns_entry_drain / 1.0e6, pct(ns_entry_drain));
+    std::fprintf(stderr,
+                 "  attn_fused     : %8.2f ms (%5.1f%%)  "
+                 "[attention_fused_fp16_cl wall (incl. exit drain when "
+                 "ATTN_NO_DRAIN unset)]\n",
+                 ns_attn_fused_call / 1.0e6, pct(ns_attn_fused_call));
+    std::fprintf(stderr,
+                 "  exit           : %8.2f ms (%5.1f%%)  "
+                 "[SVMUnmap(output) + image2d publish]\n",
+                 ns_exit_unmap_publish / 1.0e6,
+                 pct(ns_exit_unmap_publish));
     std::fprintf(stderr,
                  "  rope_q   : %8.2f ms (%5.1f%%)\n",
                  ns_rope_q / 1.0e6, pct(ns_rope_q));
@@ -433,12 +451,17 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
           t.getData<char>(), t.bytes(), /*read_only=*/ro);
       }
     };
+    const uint64_t t_drain0 =
+      profile_this_decode ? mha_now_ns() : 0;
     map_if_svm(query, /*read_only=*/true);
     map_if_svm(key, /*read_only=*/true);
     map_if_svm(value, /*read_only=*/true);
     if (!skip_output_entry_drain) {
       map_if_svm(output, /*read_only=*/false);  // CPU will write here
     }
+    if (profile_this_decode)
+      g_mha_core_decode_profile.ns_entry_drain +=
+        mha_now_ns() - t_drain0;
   }
 #endif
 
@@ -557,6 +580,8 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // The GPU path never CPU-wrote so there's nothing to commit back.
   if (mha_sync_cl_ctx && !skip_output_entry_drain &&
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
+    const uint64_t t_exit0 =
+      profile_this_decode ? mha_now_ns() : 0;
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
     // Phase B publish: put MHA output into GpuImagePool so o_proj
@@ -571,6 +596,9 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       nntrainer::svm_to_image2d_publish(output.getData<char>(),
                                         pub_M, pub_W);
     }
+    if (profile_this_decode)
+      g_mha_core_decode_profile.ns_exit_unmap_publish +=
+        mha_now_ns() - t_exit0;
   }
 #endif
 
@@ -839,9 +867,14 @@ void MHACoreLayer::one_batch_incremental_forwarding(
       // Fused kernel covers all three sub-stages; record the combined
       // time under ns_qk for the moment (ns_softmax and ns_av stay at
       // zero so the profile makes the shift obvious at a glance).
+      // Also record under ns_attn_fused_call for the new detailed
+      // breakdown that distinguishes entry_drain / fused_call / exit.
       const uint64_t dt = mha_now_ns() - t_fused0;
       if (profile_substage)      g_mha_core_profile.ns_qk += dt;
-      else if (profile_decode)   g_mha_core_decode_profile.ns_qk += dt;
+      else if (profile_decode) {
+        g_mha_core_decode_profile.ns_qk += dt;
+        g_mha_core_decode_profile.ns_attn_fused_call += dt;
+      }
     }
     return;
   }

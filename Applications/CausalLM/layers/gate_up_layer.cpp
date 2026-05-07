@@ -7,7 +7,10 @@
 
 #include <gate_up_layer.h>
 
+#include <atomic>
 #include <bs_thread_pool_manager.hpp>
+#include <chrono>
+#include <cstdio>
 #include <engine.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
@@ -20,6 +23,47 @@
 #endif
 
 namespace causallm {
+
+namespace {
+struct GateUpDecodeProfile {
+  std::atomic<uint64_t> calls{0};
+  std::atomic<uint64_t> ns{0};
+  std::atomic<uint64_t> ns_setup{0};     // weight + tensor view setup
+  std::atomic<uint64_t> ns_dot{0};       // input_step.dot(...) wall
+  std::atomic<uint64_t> ns_misc{0};
+  ~GateUpDecodeProfile() {
+    const uint64_t c = calls.load();
+    if (c == 0) return;
+    const uint64_t t = ns.load();
+    const double T = t / 1.0e6;
+    auto pct = [&](uint64_t v) {
+      return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
+    };
+    std::fprintf(stderr,
+                 "[PROFILE GateUpLayer decode (M==1)] total=%.2f ms "
+                 "calls=%llu avg=%.3f ms\n",
+                 T, (unsigned long long)c, T / static_cast<double>(c));
+    std::fprintf(stderr,
+                 "  setup    : %8.2f ms (%5.1f%%)  "
+                 "[weight+tensor view ctor]\n",
+                 ns_setup / 1.0e6, pct(ns_setup));
+    std::fprintf(stderr,
+                 "  dot      : %8.2f ms (%5.1f%%)  "
+                 "[input.dot() = fused_gemv_int4 dispatch + sync_output "
+                 "drain]\n",
+                 ns_dot / 1.0e6, pct(ns_dot));
+    std::fprintf(stderr,
+                 "  misc     : %8.2f ms (%5.1f%%)\n",
+                 ns_misc / 1.0e6, pct(ns_misc));
+  }
+};
+GateUpDecodeProfile g_gate_up_decode_profile;
+inline uint64_t gu_now_ns() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+           std::chrono::steady_clock::now().time_since_epoch())
+    .count();
+}
+} // namespace
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
@@ -135,6 +179,8 @@ void GateUpLayer::forwarding(nntrainer::RunLayerContext &context,
 void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                          unsigned int from, unsigned int to,
                                          bool training) {
+  const bool profile_decode = ((to - from) == 1);
+  const uint64_t t_enter = profile_decode ? gu_now_ns() : 0;
   const bool fused_rmsnorm =
     std::get<props::FusedRmsnorm>(gate_up_props).get();
   const auto up_idx =
@@ -201,6 +247,13 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
         K_in, N_gate, N_up, epsilon);
       if (fused_ok) {
+        if (profile_decode) {
+          const uint64_t t_post = gu_now_ns();
+          g_gate_up_decode_profile.ns_dot += t_post - t_enter;
+          g_gate_up_decode_profile.ns += t_post - t_enter;
+          g_gate_up_decode_profile.calls.fetch_add(
+            1, std::memory_order_relaxed);
+        }
         return;
       }
       // Fall through to the legacy dot path on shape constraint
@@ -216,7 +269,16 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   std::vector<nntrainer::Tensor *> Weights({&Uweight, &Gweight});
   std::vector<nntrainer::Tensor *> Outputs({&Uhidden_step, &Ghidden_step});
 
+  const uint64_t t_pre_dot = profile_decode ? gu_now_ns() : 0;
+  if (profile_decode)
+    g_gate_up_decode_profile.ns_setup += t_pre_dot - t_enter;
   input_step.dot(Weights, Outputs);
+  if (profile_decode) {
+    const uint64_t t_post_dot = gu_now_ns();
+    g_gate_up_decode_profile.ns_dot += t_post_dot - t_pre_dot;
+    g_gate_up_decode_profile.ns += t_post_dot - t_enter;
+    g_gate_up_decode_profile.calls.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 void GateUpLayer::calcDerivative(nntrainer::RunLayerContext &context) {
