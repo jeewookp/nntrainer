@@ -2765,8 +2765,21 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
     }
   }
 
-  ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
-    int4_gemv_weight_image2d_v2_kernel, "gpu_int4_gemv_weight_image2d_v2");
+  // v3 uses the same image2d format as v2 (RGBA32UI / K=8 per pixel), so
+  // the cache and in-place repack are shared. Only the kernel symbol
+  // differs: v3 unrolls the K loop 2x to read 2 pixels and 16 K input
+  // positions per iteration. Env-gate to A/B test against v2.
+  static const bool s_v3_unroll =
+    std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_V3") != nullptr;
+  // v3 kernel requires K % 16 == 0 (no tail handling). Per-FC gemv K
+  // sizes for Qwen3-4B (2560, 4096, 9728) all satisfy this.
+  const bool use_v3 = s_v3_unroll && ((K & 15u) == 0);
+  ClContext::SharedPtrClKernel kernel_ptr =
+    use_v3
+      ? blas_cc->registerClKernel(int4_gemv_weight_image2d_v3_kernel,
+                                   "gpu_int4_gemv_weight_image2d_v3")
+      : blas_cc->registerClKernel(int4_gemv_weight_image2d_v2_kernel,
+                                   "gpu_int4_gemv_weight_image2d_v2");
   if (!kernel_ptr) return false;
 
   int arg = 0;
