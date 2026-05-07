@@ -271,6 +271,95 @@ struct GemvInt4ImageCallProfile {
 
 static GemvInt4ImageCallProfile g_gemv_image_call_profile;
 
+// ---------------------------------------------------------------------------
+// Decode hot-path GPU event profile (NNTRAINER_GPU_EVENT_PROFILE=1)
+//
+// CPU-side wall (existing per-layer profile) tells us where the host is
+// blocked, but doesn't separate "GPU is actually computing" from "GPU is
+// waiting / driver overhead". Each dispatch's cl_event has 4 ns
+// timestamps (QUEUED, SUBMIT, START, END) the driver fills in:
+//   q2s = SUBMIT - QUEUED  -- clEnqueueNDRange host overhead
+//   s2start = START - SUBMIT  -- GPU queue wait for prior work
+//   gpu = END - START  -- pure GPU kernel execution
+//
+// Buckets cover the 5 decode hot kernels. Querying the event requires
+// the event to be complete; we already drain via enqueueSVMMap right
+// after most dispatches, so the query is non-blocking. Accumulation
+// adds one clGetEventProfilingInfo (~us) per call when env-gated.
+// ---------------------------------------------------------------------------
+struct DecodeKernelGpuProfile {
+  struct Bucket {
+    std::atomic<uint64_t> events{0};
+    std::atomic<uint64_t> ns_q2s{0};      // SUBMIT - QUEUED
+    std::atomic<uint64_t> ns_s2start{0};  // START - SUBMIT
+    std::atomic<uint64_t> ns_gpu{0};      // END - START
+  };
+  Bucket fused_gemv_qkv;       // fused_gemv_int4_cl  (SVM)
+  Bucket fused_gemv_qkv_img;   // fused_gemv_int4_image2d_cl
+  Bucket per_fc_gemv;          // gemv_int4_adreno_v3_cl
+  Bucket per_fc_gemv_img;      // gemv_int4_weight_image2d_cl
+  Bucket attn_fused;           // attention_fused_fp16_cl
+
+  static bool enabled() {
+    static const bool v = std::getenv("NNTRAINER_GPU_EVENT_PROFILE") != nullptr;
+    return v;
+  }
+
+  static void accumulate(Bucket &b, cl_event ev) {
+    if (!ev) return;
+    cl_ulong qd = 0, sb = 0, st = 0, en = 0;
+    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(qd), &qd,
+                            nullptr);
+    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_SUBMIT, sizeof(sb), &sb,
+                            nullptr);
+    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(st), &st,
+                            nullptr);
+    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(en), &en,
+                            nullptr);
+    if (en > st && st >= sb && sb >= qd) {
+      b.events++;
+      b.ns_q2s += sb - qd;
+      b.ns_s2start += st - sb;
+      b.ns_gpu += en - st;
+    }
+  }
+
+  ~DecodeKernelGpuProfile() {
+    auto total_events = fused_gemv_qkv.events.load() +
+                         fused_gemv_qkv_img.events.load() +
+                         per_fc_gemv.events.load() +
+                         per_fc_gemv_img.events.load() +
+                         attn_fused.events.load();
+    if (total_events == 0) return;
+    if (nntrainer::prefill_profile_suppressed()) return;
+
+    std::fprintf(stderr,
+                 "\n[PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]\n"
+                 "  bucket                          calls   gpu_total  "
+                 " avg_gpu  avg_q2s  avg_s2start\n");
+    auto print = [](const char *name, const Bucket &b) {
+      const uint64_t c = b.events.load();
+      if (c == 0) return;
+      const double total_gpu_ms = b.ns_gpu.load() / 1.0e6;
+      const double avg_gpu_us = b.ns_gpu.load() / (double)c / 1.0e3;
+      const double avg_q2s_us = b.ns_q2s.load() / (double)c / 1.0e3;
+      const double avg_s2start_us =
+        b.ns_s2start.load() / (double)c / 1.0e3;
+      std::fprintf(stderr,
+                   "  %-30s %6llu  %8.2f ms  %6.1f us  %5.1f us  %7.1f us\n",
+                   name, (unsigned long long)c, total_gpu_ms, avg_gpu_us,
+                   avg_q2s_us, avg_s2start_us);
+    };
+    print("fused_gemv_int4 (svm)", fused_gemv_qkv);
+    print("fused_gemv_int4 (image2d)", fused_gemv_qkv_img);
+    print("gemv_int4 per-FC (svm)", per_fc_gemv);
+    print("gemv_int4 per-FC (image2d)", per_fc_gemv_img);
+    print("attention_fused_fp16", attn_fused);
+  }
+};
+
+static DecodeKernelGpuProfile g_decode_gpu_profile;
+
 } // namespace
 
 void gemv_int4_async_cl(std::vector<void *> weights,
@@ -2202,8 +2291,10 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
   const int work_groups_count[3] = {dim_n, 1, 1};
   const int work_group_size[3] = {64, 1, 1};
 
+  cl_event v3_ev = nullptr;
+  cl_event *v3_ev_ptr = DecodeKernelGpuProfile::enabled() ? &v3_ev : nullptr;
   if (!blas_cc->command_queue_inst_.DispatchCommand(
-        kernel_ptr, work_groups_count, work_group_size, nullptr)) {
+        kernel_ptr, work_groups_count, work_group_size, v3_ev_ptr)) {
     throw std::runtime_error(
       "Failed to dispatch kernel for gpu_int4_gemv_adreno_v3");
   }
@@ -2211,6 +2302,12 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
   if (sync_output) {
     blas_cc->command_queue_inst_.enqueueSVMMap(
       output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (v3_ev) {
+    if (!sync_output) clWaitForEvents(1, &v3_ev);
+    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.per_fc_gemv,
+                                        v3_ev);
+    clReleaseEvent(v3_ev);
   }
 }
 
@@ -2374,13 +2471,22 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
   const int dim_n = align_N / 4;
   const int g[3] = {dim_n, 1, 1};
   const int l[3] = {64, 1, 1};
-  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l)) {
+  cl_event w2d_ev = nullptr;
+  cl_event *w2d_ev_ptr = DecodeKernelGpuProfile::enabled() ? &w2d_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
+                                                    w2d_ev_ptr)) {
     return false;
   }
 
   if (sync_output) {
     blas_cc->command_queue_inst_.enqueueSVMMap(
       output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (w2d_ev) {
+    if (!sync_output) clWaitForEvents(1, &w2d_ev);
+    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.per_fc_gemv_img,
+                                        w2d_ev);
+    clReleaseEvent(w2d_ev);
   }
   return true;
 }
@@ -3128,7 +3234,10 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
   const int aligned = ((total_wi + 63) / 64) * 64;
   const int g[3] = {aligned, 1, 1};
   const int l[3] = {64, 1, 1};
-  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+  cl_event fg_ev = nullptr;
+  cl_event *fg_ev_ptr = DecodeKernelGpuProfile::enabled() ? &fg_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l, fg_ev_ptr))
+    return false;
 
   // Single end-of-block SVMMap drain.  We invalidate cache for each
   // output buffer; the LAST one drains the queue.  Outputs with N=0
@@ -3148,6 +3257,12 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
       blas_cc->command_queue_inst_.enqueueSVMMap(
         v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
     }
+  }
+  if (fg_ev) {
+    if (!sync_output) clWaitForEvents(1, &fg_ev);
+    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.fused_gemv_qkv,
+                                        fg_ev);
+    clReleaseEvent(fg_ev);
   }
   return true;
 }
@@ -3358,7 +3473,10 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
   const int aligned = ((total_wi + 63) / 64) * 64;
   const int g[3] = {aligned, 1, 1};
   const int l[3] = {64, 1, 1};
-  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) return false;
+  cl_event fgi_ev = nullptr;
+  cl_event *fgi_ev_ptr = DecodeKernelGpuProfile::enabled() ? &fgi_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l, fgi_ev_ptr))
+    return false;
 
   if (sync_output) {
     if (N_q > 0) {
@@ -3373,6 +3491,12 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
       blas_cc->command_queue_inst_.enqueueSVMMap(
         v_out, (size_t)N_v * sizeof(uint16_t), /*read_only=*/true);
     }
+  }
+  if (fgi_ev) {
+    if (!sync_output) clWaitForEvents(1, &fgi_ev);
+    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.fused_gemv_qkv_img,
+                                        fgi_ev);
+    clReleaseEvent(fgi_ev);
   }
   return true;
 }
@@ -5286,7 +5410,9 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   const int m_tiles = (M_i + TQ - 1) / TQ;
   const int g[3] = {64, nhq, m_tiles};
   const int l[3] = {64, 1, 1};
-  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+  cl_event attn_ev = nullptr;
+  cl_event *attn_ev_ptr = DecodeKernelGpuProfile::enabled() ? &attn_ev : nullptr;
+  blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l, attn_ev_ptr);
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
   // the per-call enqueueSVMMap blocking flush of `out_svm` waits for
@@ -5306,6 +5432,12 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       out_svm,
       (size_t)M * (size_t)num_heads_Q * (size_t)head_dim * sizeof(uint16_t),
       /*read_only=*/true);
+  }
+  if (attn_ev) {
+    if (s_attn_no_drain) clWaitForEvents(1, &attn_ev);
+    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.attn_fused,
+                                        attn_ev);
+    clReleaseEvent(attn_ev);
   }
 }
 
