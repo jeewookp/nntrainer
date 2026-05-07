@@ -24,7 +24,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <mutex>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace nntrainer {
@@ -300,38 +302,69 @@ struct DecodeKernelGpuProfile {
   Bucket per_fc_gemv_img;      // gemv_int4_weight_image2d_cl
   Bucket attn_fused;           // attention_fused_fp16_cl
 
+  // Deferred event queue. Call sites push (bucket, event) here instead
+  // of blocking on the event in the dispatch hot path -- avoids
+  // serializing async kernels (especially attn_fused with NO_DRAIN and
+  // gate_up's zero-copy fused_gemv with sync_output=false). Flushed
+  // when the queue grows past a soft cap, and again at dtor time.
+  std::vector<std::pair<Bucket *, cl_event>> deferred_;
+  std::mutex mu_;
+
   static bool enabled() {
     static const bool v = std::getenv("NNTRAINER_GPU_EVENT_PROFILE") != nullptr;
     return v;
   }
 
-  static void accumulate(Bucket &b, cl_event ev) {
+  void defer(Bucket &b, cl_event ev) {
     if (!ev) return;
-    cl_ulong qd = 0, sb = 0, st = 0, en = 0;
-    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(qd), &qd,
-                            nullptr);
-    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_SUBMIT, sizeof(sb), &sb,
-                            nullptr);
-    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(st), &st,
-                            nullptr);
-    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(en), &en,
-                            nullptr);
-    if (en > st && st >= sb && sb >= qd) {
-      b.events++;
-      b.ns_q2s += sb - qd;
-      b.ns_s2start += st - sb;
-      b.ns_gpu += en - st;
+    std::lock_guard<std::mutex> g(mu_);
+    deferred_.emplace_back(&b, ev);
+    if (deferred_.size() >= 1024) {
+      flush_locked();
     }
   }
 
+  void flush_locked() {
+    if (deferred_.empty()) return;
+    std::vector<cl_event> evs;
+    evs.reserve(deferred_.size());
+    for (auto &p : deferred_) evs.push_back(p.second);
+    clWaitForEvents((cl_uint)evs.size(), evs.data());
+    for (auto &p : deferred_) {
+      Bucket &b = *p.first;
+      cl_event ev = p.second;
+      cl_ulong qd = 0, sb = 0, st = 0, en = 0;
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(qd),
+                              &qd, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_SUBMIT, sizeof(sb),
+                              &sb, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(st),
+                              &st, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(en),
+                              &en, nullptr);
+      if (en > st && st >= sb && sb >= qd) {
+        b.events++;
+        b.ns_q2s += sb - qd;
+        b.ns_s2start += st - sb;
+        b.ns_gpu += en - st;
+      }
+      clReleaseEvent(ev);
+    }
+    deferred_.clear();
+  }
+
   ~DecodeKernelGpuProfile() {
+    {
+      std::lock_guard<std::mutex> g(mu_);
+      flush_locked();
+    }
     auto total_events = fused_gemv_qkv.events.load() +
                          fused_gemv_qkv_img.events.load() +
                          per_fc_gemv.events.load() +
                          per_fc_gemv_img.events.load() +
                          attn_fused.events.load();
     if (total_events == 0) return;
-    if (nntrainer::prefill_profile_suppressed()) return;
+    // Decode profile -- not silenced by NNTRAINER_SUPPRESS_PREFILL_PROFILE.
 
     std::fprintf(stderr,
                  "\n[PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]\n"
@@ -2304,10 +2337,7 @@ void gemv_int4_adreno_v3_cl(uint16_t *input, uint16_t *weights,
       output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
   }
   if (v3_ev) {
-    if (!sync_output) clWaitForEvents(1, &v3_ev);
-    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.per_fc_gemv,
-                                        v3_ev);
-    clReleaseEvent(v3_ev);
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv, v3_ev);
   }
 }
 
@@ -2483,10 +2513,7 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
       output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
   }
   if (w2d_ev) {
-    if (!sync_output) clWaitForEvents(1, &w2d_ev);
-    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.per_fc_gemv_img,
-                                        w2d_ev);
-    clReleaseEvent(w2d_ev);
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv_img, w2d_ev);
   }
   return true;
 }
@@ -3259,10 +3286,7 @@ bool fused_gemv_int4_cl(uint16_t *input_svm,
     }
   }
   if (fg_ev) {
-    if (!sync_output) clWaitForEvents(1, &fg_ev);
-    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.fused_gemv_qkv,
-                                        fg_ev);
-    clReleaseEvent(fg_ev);
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv, fg_ev);
   }
   return true;
 }
@@ -3493,10 +3517,8 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
     }
   }
   if (fgi_ev) {
-    if (!sync_output) clWaitForEvents(1, &fgi_ev);
-    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.fused_gemv_qkv_img,
-                                        fgi_ev);
-    clReleaseEvent(fgi_ev);
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv_img,
+                               fgi_ev);
   }
   return true;
 }
@@ -5434,10 +5456,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       /*read_only=*/true);
   }
   if (attn_ev) {
-    if (s_attn_no_drain) clWaitForEvents(1, &attn_ev);
-    DecodeKernelGpuProfile::accumulate(g_decode_gpu_profile.attn_fused,
-                                        attn_ev);
-    clReleaseEvent(attn_ev);
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.attn_fused, attn_ev);
   }
 }
 
