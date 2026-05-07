@@ -1,3 +1,16 @@
+MOUNT_SYSTEM_OK
+PATH
+SHELL
+STANDALONE_SYSTEMSERVER_JARS
+SYSTEMSERVERCLASSPATH
+TERM
+TMPDIR
+USER
+ANDROID_ART_ROOT
+ANDROID_ASSETS
+ANDROID_BOOTLOGO
+ANDROID_DATA
+ANDROID_I18N_ROOT
 ANDROID_ROOT
 ANDROID_SOCKET_adbd
 ANDROID_STORAGE
@@ -36,42 +49,177 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000078fdcd2a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
+[mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[LMHEAD_Q6K_DIAG] weight.dtype=5 (Q6_K=5) w_svm=0 in_svm=1 out_svm=1 K=2560 N=151936
+<think>[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+Okay[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+, the[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ user[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ wants[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ a[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ summary[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ of[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ this[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ abstract[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ in[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ three[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+ sentences[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+.[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
+[INT4_CHUNKED_INIT] phase=alloc_ok
+[INT4_CHUNKED_INIT] phase=convert_ok
+[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk 0 err=-39
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007798ed3a00
+[INT4_CHUNKED_INIT] phase=ctx_ok
 adb: error: failed to get feature set: no devices/emulators found
 error: no devices/emulators found
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
