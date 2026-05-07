@@ -308,6 +308,7 @@ struct DecodeKernelGpuProfile {
   Bucket per_fc_gemv_img;      // gemv_int4_weight_image2d_cl
   Bucket attn_fused;           // attention_fused_fp16_cl
   Bucket lmhead_q6k;           // sgemv_q6_k_fp16_cl
+  Bucket lmhead_int4_chunked;  // lmhead_int4_chunked_dispatch_cl (3 chunks/call)
 
   // Deferred event queue. Call sites push (bucket, event) here instead
   // of blocking on the event in the dispatch hot path -- avoids
@@ -370,7 +371,8 @@ struct DecodeKernelGpuProfile {
                          per_fc_gemv.events.load() +
                          per_fc_gemv_img.events.load() +
                          attn_fused.events.load() +
-                         lmhead_q6k.events.load();
+                         lmhead_q6k.events.load() +
+                         lmhead_int4_chunked.events.load();
     if (total_events == 0) return;
     // Decode profile -- not silenced by NNTRAINER_SUPPRESS_PREFILL_PROFILE.
 
@@ -397,6 +399,7 @@ struct DecodeKernelGpuProfile {
     print("gemv_int4 per-FC (image2d)", per_fc_gemv_img);
     print("attention_fused_fp16", attn_fused);
     print("lm_head Q6_K (fp16)", lmhead_q6k);
+    print("lm_head int4 chunked", lmhead_int4_chunked);
   }
 };
 
@@ -4520,7 +4523,7 @@ void lmhead_int4_chunked_dispatch_cl(uint16_t *input, uint16_t *output,
       return;
     if (ev) {
       g_decode_gpu_profile.defer(
-        g_decode_gpu_profile.per_fc_gemv_img, ev);
+        g_decode_gpu_profile.lmhead_int4_chunked, ev);
     }
   }
 
