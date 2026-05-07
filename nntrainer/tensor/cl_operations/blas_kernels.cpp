@@ -4156,6 +4156,18 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
   blas_cc->command_queue_inst_.enqueueSVMMap(vecYdata,
                                               N * sizeof(uint16_t),
                                               /*read_only=*/true);
+  // Phase H'-Q6K diag-b: in OoO queue mode, the SVMMap above blocks
+  // only on the lm_head dependency chain; residual unrelated work
+  // queued earlier (e.g. KV cache writes from rope_k / v_copy that
+  // have no in-token consumer) may stay pending. That residue then
+  // contests with the next token's first dispatches and inflates
+  // attn s2start. clFinish forces a hard queue drain so the next
+  // token starts on an empty queue.
+  static const bool s_q6k_finish =
+    std::getenv("NNTRAINER_LMHEAD_Q6K_FINISH") != nullptr;
+  if (s_q6k_finish) {
+    clFinish(blas_cc->command_queue_inst_.GetCommandQueue());
+  }
   if (q6k_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.lmhead_q6k, q6k_ev);
   }
