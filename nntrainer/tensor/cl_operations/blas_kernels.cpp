@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <unordered_map>
 #include <utility>
@@ -2522,17 +2523,32 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
 // CL_RGBA + UNSIGNED_INT32 image with K/8 height (8 K-positions per
 // pixel per channel). Halves imageread count vs v1 (K/4 height).
 //
-// The original ushort SVM weight ([(K/4) * N]) cannot be aliased
-// directly because the layout changed (uints pack across two ushort
-// rows). Repack into a fresh uint32_t buffer on first call and cache
-// per-weight, then create the image2d via image2d_from_buffer for
-// zero-copy GPU access. Memory cost: K*N/2 bytes per weight (same
-// total bytes as the original int4 stream, just reshaped).
+// Memory model: the original ushort SVM weight occupies K*N/2 bytes
+// (K/4 ushort rows × N), and the new uint layout occupies K*N/2 bytes
+// too (K/8 uint rows × N). Same byte span, different interpretation.
+// We REPACK IN-PLACE on the SVM weight: for each row pair (2j, 2j+1)
+// we snapshot 2N ushorts into a thread-local row scratch and write
+// back N uints into the same byte range. After repack the SVM bytes
+// are uint-formatted; the image2d_from_buffer view interprets them
+// as RGBA32UI, and the kernel reads them via texture cache.
 //
-// Failure modes (caller falls back):
+// Important consequence: once a weight is repacked in place, the v1
+// (RGBA16UI) and v3 (raw ushort SVM) paths CANNOT consume the same
+// pointer correctly -- they would read uint-packed bytes as ushort
+// and produce garbage. The routing in half_tensor.cpp tries v2
+// FIRST; if v2 succeeds for a weight it commits, no other path is
+// taken for that weight on subsequent calls. If v2 init fails before
+// repack (image dim, alloc), the weight stays in ushort layout and
+// fallback paths work correctly.
+//
+// Sticky failure flag (s_w2_failed) prevents re-entering the create
+// path after a failed init for the same weight, since retries can't
+// observe new state.
+//
+// Failure modes (caller falls back, SVM untouched):
 //   * shape (K%8 || N%4)
-//   * image dim exceeds device max (lm_head etc.)
-//   * uint buffer alloc / clCreateBuffer / clCreateImage fail
+//   * image dim exceeds device max
+//   * clCreateBuffer / clCreateImage fail (validated BEFORE repack)
 bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
                                      uint16_t *scales, uint16_t *output,
                                      unsigned int K, unsigned int N,
@@ -2560,70 +2576,76 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
   const size_t img_h = (size_t)K / 8u;
   if (img_w > s_max_w || img_h > s_max_h) return false;
 
-  // Cache: per weight pointer, holds the repacked uint buffer (heap),
-  // its cl_mem (USE_HOST_PTR over the heap), and the image2d view.
+  // Cache: per weight pointer, holds the cl_mem buf (USE_HOST_PTR
+  // over the SVM weight, no copy) and the image2d view. No heap
+  // buffer -- repack is in-place on the SVM bytes.
   struct WeightImgV2 {
-    uint32_t *repacked;  // heap buffer owning K/8 * N uints
     cl_mem buf;
     cl_mem img;
     size_t w, h;
   };
   static std::unordered_map<uintptr_t, WeightImgV2> s_w2_cache;
+  static std::unordered_map<uintptr_t, bool> s_w2_failed;
   cl_mem weight_img = nullptr;
   {
     const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
+    if (s_w2_failed.count(wk)) return false;
     auto it = s_w2_cache.find(wk);
     if (it != s_w2_cache.end() && it->second.w == img_w &&
         it->second.h == img_h) {
       weight_img = it->second.img;
+    } else if (it != s_w2_cache.end()) {
+      // Shape changed for an already-repacked weight. We cannot un-repack
+      // safely -- treat as sticky failure to avoid corrupting it again.
+      s_w2_failed[wk] = true;
+      return false;
     } else {
-      if (it != s_w2_cache.end()) {
-        if (it->second.img) clReleaseMemObject(it->second.img);
-        if (it->second.buf) clReleaseMemObject(it->second.buf);
-        if (it->second.repacked) std::free(it->second.repacked);
-      }
-      // Repack ushort[(K/4) * N] -> uint[(K/8) * N]
-      //   uint at (j, n) = ((uint)src[(2j+1)*N + n] << 16) |
-      //                     (uint)src[(2j)*N + n]
-      const size_t total_uints = (size_t)(K / 8) * (size_t)N;
-      uint32_t *repacked = (uint32_t *)std::malloc(total_uints *
-                                                    sizeof(uint32_t));
-      if (!repacked) return false;
-      const uint16_t *src = weights;
-      for (size_t j = 0; j < (size_t)(K / 8); ++j) {
-        const uint16_t *row_lo = src + (2 * j) * (size_t)N;
-        const uint16_t *row_hi = src + (2 * j + 1) * (size_t)N;
-        uint32_t *dst_row = repacked + j * (size_t)N;
-        for (size_t n = 0; n < (size_t)N; ++n) {
-          dst_row[n] = ((uint32_t)row_hi[n] << 16) | (uint32_t)row_lo[n];
-        }
-      }
-
+      // Phase 1: validate by creating cl_mem buf + image BEFORE repack.
+      // If anything fails here, SVM is still in ushort layout and the
+      // caller's fallback path works correctly.
       cl_int err = 0;
+      const size_t bytes =
+        (size_t)K * (size_t)N / 4u * sizeof(uint16_t);  // K/4 * N * 2
+      cl_mem buf = clCreateBuffer(
+        clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, bytes,
+        (void *)weights, &err);
+      if (err != CL_SUCCESS || !buf) {
+        s_w2_failed[wk] = true;
+        return false;
+      }
       cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT32};
       cl_image_desc d = {};
       d.image_type = CL_MEM_OBJECT_IMAGE2D;
       d.image_width = img_w;
       d.image_height = img_h;
-      const size_t bytes = total_uints * sizeof(uint32_t);
-      cl_mem buf = clCreateBuffer(
-        clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, bytes, repacked, &err);
-      if (err != CL_SUCCESS || !buf) {
-        std::free(repacked);
-        return false;
-      }
-      // RGBA32UI: 4 uints = 16 bytes per pixel.
-      d.image_row_pitch = img_w * 16u;
+      d.image_row_pitch = img_w * 16u;  // RGBA32UI = 16 bytes/pixel
       d.buffer = buf;
       cl_mem img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &d, nullptr,
                                   &err);
       if (err != CL_SUCCESS || !img) {
         clReleaseMemObject(buf);
-        std::free(repacked);
+        s_w2_failed[wk] = true;
         return false;
       }
-      WeightImgV2 entry{repacked, buf, img, img_w, img_h};
-      s_w2_cache[wk] = entry;
+
+      // Phase 2: repack SVM in place. Row-by-row snapshot into
+      // thread-local scratch[2N], then overwrite the same 2N ushort
+      // span as N uints (which occupies the same 4N bytes).
+      static thread_local std::vector<uint16_t> scratch;
+      scratch.resize(2u * (size_t)N);
+      for (size_t j = 0; j < (size_t)(K / 8); ++j) {
+        uint16_t *row_pair_base = weights + (size_t)(2 * j) * (size_t)N;
+        std::memcpy(scratch.data(), row_pair_base,
+                    2u * (size_t)N * sizeof(uint16_t));
+        const uint16_t *lo = scratch.data();
+        const uint16_t *hi = scratch.data() + (size_t)N;
+        uint32_t *dst = reinterpret_cast<uint32_t *>(row_pair_base);
+        for (size_t n = 0; n < (size_t)N; ++n) {
+          dst[n] = ((uint32_t)hi[n] << 16) | (uint32_t)lo[n];
+        }
+      }
+
+      s_w2_cache[wk] = WeightImgV2{buf, img, img_w, img_h};
       weight_img = img;
     }
   }
