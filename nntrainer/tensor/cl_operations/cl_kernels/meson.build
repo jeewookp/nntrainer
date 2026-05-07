@@ -81,6 +81,7 @@ if get_option('enable-fp16')
     'rotary_emb_fp16.cl',
     'attention_fused_fp16.cl',
     'swiglu_fp16.cl',
+    'swiglu_fp16_image2d.cl',
     'transpose_axis_0_fp16.cl',
     'transpose_axis_1_fp16.cl',
     'transpose_axis_2_fp16.cl',

@@ -5321,6 +5321,79 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
 
+  // Phase A4: when env-gated, route through the image2d-input
+  // variant. Reads in1/in2 via CL_RGBA + CL_HALF_FLOAT image2d
+  // views over the SVM gate/up output buffers (zero-copy via
+  // cl_khr_image2d_from_buffer cached per ptr). Output stays SVM
+  // since the next consumer (ffn_down gemv) reads SVM. Falls back
+  // to the SVM swiglu on shape constraint violation (total % 4)
+  // or alloc failure.
+  static const bool s_swiglu_image2d =
+    std::getenv("NNTRAINER_SWIGLU_IMAGE2D") != nullptr;
+  if (s_swiglu_image2d && (total & 3u) == 0u) {
+    cl_context clctx = blas_cc->context_inst_.GetContext();
+    // Image2D view cache, keyed by (svm_ptr, total_pixels). Each
+    // gate/up output is a 1xtotal_pixels image of 4 fp16 per pixel.
+    struct CachedImg { cl_mem buf; cl_mem img; size_t pixels; };
+    static std::unordered_map<uintptr_t, CachedImg> s_in_cache;
+    auto get_img = [&](const void *svm_ptr) -> cl_mem {
+      const uintptr_t k = reinterpret_cast<uintptr_t>(svm_ptr);
+      const size_t pixels = total / 4u;
+      auto it = s_in_cache.find(k);
+      if (it != s_in_cache.end() && it->second.pixels == pixels) {
+        return it->second.img;
+      }
+      if (it != s_in_cache.end()) {
+        if (it->second.img) clReleaseMemObject(it->second.img);
+        if (it->second.buf) clReleaseMemObject(it->second.buf);
+      }
+      cl_int err = 0;
+      const size_t bytes = total * sizeof(uint16_t);
+      cl_mem buf = clCreateBuffer(clctx,
+                                  CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                  bytes, (void *)svm_ptr, &err);
+      if (err != CL_SUCCESS || !buf) return nullptr;
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc d = {};
+      d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      d.image_width = pixels;
+      d.image_height = 1;
+      d.image_row_pitch = pixels * 8u;  // CL_RGBA + HALF = 8 B/pixel
+      d.buffer = buf;
+      cl_mem img = clCreateImage(clctx, CL_MEM_READ_ONLY, &fmt, &d,
+                                 nullptr, &err);
+      if (err != CL_SUCCESS || !img) {
+        clReleaseMemObject(buf);
+        return nullptr;
+      }
+      s_in_cache[k] = {buf, img, pixels};
+      return img;
+    };
+    cl_mem img1 = get_img(in1);
+    cl_mem img2 = get_img(in2);
+    if (img1 && img2) {
+      static ClContext::SharedPtrClKernel s_img_kern;
+      if (!s_img_kern) {
+        s_img_kern = blas_cc->registerClKernel(swiglu_fp16_image2d_kernel,
+                                                "swiglu_cl_fp16_image2d");
+      }
+      if (s_img_kern) {
+        s_img_kern->SetKernelArguments(0, &img1, sizeof(cl_mem));
+        s_img_kern->SetKernelArguments(1, &img2, sizeof(cl_mem));
+        s_img_kern->SetKernelSVMArguments(2, out);
+        int total_pixels = (int)(total / 4u);
+        s_img_kern->SetKernelArguments(3, &total_pixels, sizeof(int));
+        const int chosen_local = total_pixels >= 64 ? 64 : total_pixels;
+        const int g[3] = {total_pixels, 1, 1};
+        const int l[3] = {chosen_local, 1, 1};
+        if (blas_cc->command_queue_inst_.DispatchCommand(s_img_kern, g, l)) {
+          return;  // success via image2d path
+        }
+      }
+    }
+    // fallthrough to SVM path on alloc / dispatch failure
+  }
+
   static ClContext::SharedPtrClKernel s_kern;
   if (!s_kern) {
     s_kern = blas_cc->registerClKernel(swiglu_fp16_kernel, "swiglu_cl_fp16");
