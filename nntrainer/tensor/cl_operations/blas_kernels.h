@@ -709,6 +709,17 @@ void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N);
 
 /**
+ * @brief fp16 IO variant of sgemv_q6_k_cl for the lm_head path.
+ * @param matAdata SVM Q6_K weight
+ * @param vecXdata SVM fp16 activation, K halfs
+ * @param vecYdata SVM fp16 logits output, N halfs
+ * @param M = K (inner accumulation dim, must be % QK_K==0)
+ * @param N = N (output dim, must be % N_SIMDGROUP==0)
+ */
+void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
+                         unsigned int M, unsigned int N);
+
+/**
  * @brief     sgemv computation : Y = A*X + Y
  * @param[in] matAdata float * for Matrix A
  * @param[in] vecXdata float * for Vector X

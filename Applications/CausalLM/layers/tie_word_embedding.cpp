@@ -28,6 +28,7 @@
 #include <util_func.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
 #endif
@@ -439,7 +440,39 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     }
 #endif
 
-    input_step.dot(weight, hidden_step, false, true);
+    // Phase H'-Q6K: env-gated GPU path for Q6_K weight (avoids the CPU
+    // dotQnK -> gemm_q6_K route which costs 14.97 ms / call on Adreno
+    // 830 = 15% of decode wall). Routes through sgemv_q6_k_fp16_cl
+    // when weight dtype is Q6_K, all tensors are SVM, and shapes line
+    // up. Falls through to the standard dot path on any failure.
+    bool dispatched_q6k_gpu = false;
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    static const bool s_lmhead_q6k_gpu =
+      std::getenv("NNTRAINER_LMHEAD_Q6K_GPU") != nullptr;
+    if (s_lmhead_q6k_gpu &&
+        weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K &&
+        weight.getMemoryData() && weight.getMemoryData()->isSVM() &&
+        input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+        hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM()) {
+      const unsigned int K = input_step.width();
+      const unsigned int N = hidden_step.width();
+      // Kernel requires K % 256 == 0 (Q6_K block size) and N %
+      // N_SIMDGROUP (=2) == 0. lm_head shapes for Qwen3-4B (K=2560,
+      // N=152064) satisfy both.
+      if ((K % 256u) == 0u && (N & 1u) == 0u) {
+        nntrainer::sgemv_q6_k_fp16_cl(
+          weight.getData<char>(),
+          reinterpret_cast<uint16_t *>(input_step.getData<_FP16>()),
+          reinterpret_cast<uint16_t *>(hidden_step.getData<_FP16>()),
+          K, N);
+        dispatched_q6k_gpu = true;
+      }
+    }
+#endif
+
+    if (!dispatched_q6k_gpu) {
+      input_step.dot(weight, hidden_step, false, true);
+    }
 
     if (auto &disable_bias =
           std::get<nntrainer::props::DisableBias>(*layer_impl_props);

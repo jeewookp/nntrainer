@@ -4045,6 +4045,86 @@ bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
   return true;
 }
 
+// fp16 input/output variant of sgemv_q6_k_cl. Targets the lm_head
+// path where activation is fp16 (model_tensor_type QINT4-FP16) so the
+// CPU dotQnK -> gemm_q6_K route -- currently 14.97 ms / call on
+// Adreno 830 -- can move to GPU without fp16<->fp32 conversion stages.
+//
+// Internal accumulation stays fp32 inside the kernel (logit
+// magnitudes can exceed fp16 range across vocab). Buffer sizes:
+//   matAdata: K*N*210/256 bytes (Q6_K weight)
+//   vecXdata: K halfs (input activation)
+//   vecYdata: N halfs (output logits)
+// All three must be SVM-allocated.
+//
+// M / N here are kernel-coords: M = K (inner accumulation dim), N =
+// N (output dim). Caller naming follows the f32 sibling above.
+void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
+                         unsigned int M, unsigned int N) {
+  bool result = false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+
+  ClContext::SharedPtrClKernel kp =
+    blas_cc->registerClKernel(q6_k_sgemv_fp16_kernel,
+                              "kernel_mul_mv_q6_K_f16");
+  if (!kp) {
+    ml_loge("Failed to register kernel_mul_mv_q6_K_f16");
+    return;
+  }
+
+  // Commit upstream CPU writes before GPU reads.
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(matAdata);
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(vecXdata);
+
+  int ne00 = M;
+  int ne01 = N;
+  int ne02 = 1;
+  int ne10 = M;
+  int ne12 = 1;
+  int ne0 = N;
+  int ne1 = 1;
+  int r2 = 1;
+  int r3 = 1;
+  cl_ulong offset0 = 0, offset1 = 0, offsetd = 0;
+
+  kp->SetKernelSVMArguments(0, matAdata);
+  kp->SetKernelArguments(1, &offset0, sizeof(cl_ulong));
+  kp->SetKernelSVMArguments(2, vecXdata);
+  kp->SetKernelArguments(3, &offset1, sizeof(cl_ulong));
+  kp->SetKernelSVMArguments(4, vecYdata);
+  kp->SetKernelArguments(5, &offsetd, sizeof(cl_ulong));
+  kp->SetKernelArguments(6, &ne00, sizeof(int));
+  kp->SetKernelArguments(7, &ne01, sizeof(int));
+  kp->SetKernelArguments(8, &ne02, sizeof(int));
+  kp->SetKernelArguments(9, &ne10, sizeof(int));
+  kp->SetKernelArguments(10, &ne12, sizeof(int));
+  kp->SetKernelArguments(11, &ne0, sizeof(int));
+  kp->SetKernelArguments(12, &ne1, sizeof(int));
+  kp->SetKernelArguments(13, &r2, sizeof(int));
+  kp->SetKernelArguments(14, &r3, sizeof(int));
+
+#define N_SIMDWIDTH_FP16 16
+#define N_SIMDGROUP_FP16 2
+  const int g[3] = {((ne0 + N_SIMDGROUP_FP16 - 1) / N_SIMDGROUP_FP16) *
+                      (N_SIMDGROUP_FP16 * N_SIMDWIDTH_FP16),
+                    ne1, 1};
+  const int l[3] = {32, 1, 1};
+#undef N_SIMDWIDTH_FP16
+#undef N_SIMDGROUP_FP16
+
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l)) {
+    ml_loge("Failed to dispatch q6_k_sgemv_fp16");
+    return;
+  }
+
+  // Blocking SVMMap so the host (sampler) sees the logits.
+  blas_cc->command_queue_inst_.enqueueSVMMap(vecYdata,
+                                              N * sizeof(uint16_t),
+                                              /*read_only=*/true);
+}
+
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
                    unsigned int M, unsigned int N) {
   bool result = false;
