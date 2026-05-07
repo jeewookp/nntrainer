@@ -4058,16 +4058,20 @@ bool addition_image2d_cl(void *a_svm, void *b_svm, void *out_svm,
 //   matAdata: K*N*210/256 bytes (Q6_K weight)
 //   vecXdata: K halfs (input activation)
 //   vecYdata: N halfs (output logits)
-// All three must be SVM-allocated.
+//
+// matAdata is the host-allocated Q6_K weight (loaded by the bundle
+// loader, not in SVM). We wrap it via clCreateBuffer + USE_HOST_PTR
+// so the GPU aliases the same bytes (zero copy), cached per weight
+// pointer. vecXdata / vecYdata stay SVM (caller passes SVM ptrs).
 //
 // M / N here are kernel-coords: M = K (inner accumulation dim), N =
 // N (output dim). Caller naming follows the f32 sibling above.
 void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
                          unsigned int M, unsigned int N) {
-  bool result = false;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
 
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(q6_k_sgemv_fp16_kernel,
@@ -4077,8 +4081,31 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
     return;
   }
 
-  // Commit upstream CPU writes before GPU reads.
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(matAdata);
+  // Cache cl_mem buffer over the host-allocated Q6_K weight.
+  // 210 bytes / Q6_K block, K/256 blocks per row, N rows.
+  static std::unordered_map<uintptr_t, cl_mem> s_q6k_buf_cache;
+  cl_mem mat_buf = nullptr;
+  {
+    const uintptr_t mk = reinterpret_cast<uintptr_t>(matAdata);
+    auto it = s_q6k_buf_cache.find(mk);
+    if (it != s_q6k_buf_cache.end()) {
+      mat_buf = it->second;
+    } else {
+      const size_t weight_bytes = (size_t)M / 256u * (size_t)N * 210u;
+      cl_int err = 0;
+      mat_buf = clCreateBuffer(clctx,
+                               CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                               weight_bytes, matAdata, &err);
+      if (err != CL_SUCCESS || !mat_buf) {
+        ml_loge("Failed to alias Q6_K weight as cl_mem: err=%d", err);
+        return;
+      }
+      s_q6k_buf_cache[mk] = mat_buf;
+    }
+  }
+
+  // Commit upstream CPU writes for activation (output is GPU-written,
+  // host reads after exit drain via enqueueSVMMap below).
   blas_cc->command_queue_inst_.enqueueSVMUnmap(vecXdata);
 
   int ne00 = M;
@@ -4092,7 +4119,7 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
   int r3 = 1;
   cl_ulong offset0 = 0, offset1 = 0, offsetd = 0;
 
-  kp->SetKernelSVMArguments(0, matAdata);
+  kp->SetKernelArguments(0, &mat_buf, sizeof(cl_mem));
   kp->SetKernelArguments(1, &offset0, sizeof(cl_ulong));
   kp->SetKernelSVMArguments(2, vecXdata);
   kp->SetKernelArguments(3, &offset1, sizeof(cl_ulong));

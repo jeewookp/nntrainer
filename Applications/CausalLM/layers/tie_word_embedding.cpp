@@ -475,7 +475,9 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     }
     if (s_lmhead_q6k_gpu &&
         weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K &&
-        weight.getMemoryData() && weight.getMemoryData()->isSVM() &&
+        // Q6_K weight is loaded into host (non-SVM) memory by the bundle
+        // loader; sgemv_q6_k_fp16_cl wraps it via clCreateBuffer+
+        // USE_HOST_PTR (cached, zero-copy). Activations stay SVM.
         input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
         hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM()) {
       const unsigned int K = input_step.width();
