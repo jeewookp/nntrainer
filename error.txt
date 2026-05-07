@@ -1,16 +1,3 @@
-SYSTEMSERVERCLASSPATH
-TERM
-TMPDIR
-USER
-ANDROID_ART_ROOT
-ANDROID_ASSETS
-ANDROID_BOOTLOGO
-ANDROID_DATA
-ANDROID_I18N_ROOT
-ANDROID_ROOT
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
 ASEC_MOUNTPOINT
 BOOTCLASSPATH
 DEX2OATBOOTCLASSPATH
@@ -47,82 +34,46 @@ sandbox, and code to facilitate future research.<|im_end|>
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-[LOGITS] decode_step=0 argmax=151667 max_logit=26.6875 checksum=0xc2bac224fc6c6e19 vocab=151936
-<think>[LOGITS] decode_step=1 argmax=198 max_logit=35.5625 checksum=0xc72ee5e88dfae83c vocab=151936
-
-[LOGITS] decode_step=2 argmax=32313 max_logit=36.8125 checksum=0x49eb7176d02693f3 vocab=151936
-Okay[LOGITS] decode_step=3 argmax=11 max_logit=36.7188 checksum=0x8a5a7439fb84fb08 vocab=151936
-[LOGITS] decode_step=4 argmax=279 max_logit=28.6406 checksum=0x0d9ed9a9f04049b3 vocab=151936
-, the[LOGITS] decode_step=5 argmax=1196 max_logit=38.3750 checksum=0x9d72562a65393aad vocab=151936
- user[LOGITS] decode_step=6 argmax=6801 max_logit=27.8125 checksum=0xda952f197989d115 vocab=151936
- wants[LOGITS] decode_step=7 argmax=264 max_logit=40.0938 checksum=0x00062f611911932d vocab=151936
- a[LOGITS] decode_step=8 argmax=220 max_logit=31.7656 checksum=0x6531747bef713465 vocab=151936
- summary[LOGITS] decode_step=9 argmax=315 max_logit=39.0938 checksum=0x09853130665dd0ba vocab=151936
- of[LOGITS] decode_step=10 argmax=279 max_logit=37.0938 checksum=0xf4fcd1a0de8a7f4a vocab=151936
- this[LOGITS] decode_step=11 argmax=8115 max_logit=29.5469 checksum=0xfcb395cab95875e0 vocab=151936
- abstract[LOGITS] decode_step=12 argmax=304 max_logit=32.8438 checksum=0x6aac1af2c5a2d5b1 vocab=151936
- in[LOGITS] decode_step=13 argmax=2326 max_logit=38.5000 checksum=0x9f0815eb4b3a04ea vocab=151936
- three[LOGITS] decode_step=14 argmax=22870 max_logit=31.1875 checksum=0x03bf13f206a61417 vocab=151936
- sentences[LOGITS] decode_step=15 argmax=13 max_logit=35.5312 checksum=0x2d2c06a2684f1642 vocab=151936
-.[LOGITS] decode_step=16 argmax=6771 max_logit=34.6250 checksum=0xe1383bb9a4f8136b vocab=151936
- Let[LOGITS] decode_step=17 argmax=752 max_logit=33.6250 checksum=0x4f97b2eadb83d076 vocab=151936
- me[LOGITS] decode_step=18 argmax=1349 max_logit=31.2656 checksum=0xda0e6618dc9d0c62 vocab=151936
- read[LOGITS] decode_step=19 argmax=1526 max_logit=39.5312 checksum=0xffbd46a83be81f30 vocab=151936
- through[LOGITS] decode_step=20 argmax=279 max_logit=39.0312 checksum=0xd91ac696dd000627 vocab=151936
- the[LOGITS] decode_step=21 argmax=1467 max_logit=32.4375 checksum=0x3068cbdce5fd40fd vocab=151936
- text[LOGITS] decode_step=22 argmax=1549 max_logit=39.4688 checksum=0x41a70ff4f389b131 vocab=151936
- again[LOGITS] decode_step=23 argmax=311 max_logit=33.8438 checksum=0x8fc92d277af171a1 vocab=151936
- to[LOGITS] decode_step=24 argmax=1281 max_logit=32.8750 checksum=0x3fb8c530976a11a8 vocab=151936
- make[LOGITS] decode_step=25 argmax=2704 max_logit=38.3438 checksum=0x66be660dc53fda8b vocab=151936
- sure[LOGITS] decode_step=26 argmax=358 max_logit=42.0938 checksum=0xc2d0ef220a580b28 vocab=151936
- I[LOGITS] decode_step=27 argmax=12322 max_logit=31.5156 checksum=0x19e581ca7b72efcb vocab=151936
- capture[LOGITS] decode_step=28 argmax=678 max_logit=38.6562 checksum=0x3e4e2df266a2c1a3 vocab=151936
- all[LOGITS] decode_step=29 argmax=279 max_logit=34.9688 checksum=0xdf667204810fcb62 vocab=151936
- the[LOGITS] decode_step=30 argmax=1376 max_logit=35.4375 checksum=0x0eae622e87db46b0 vocab=151936
- key[LOGITS] decode_step=31 argmax=3501 max_logit=41.3125 checksum=0x6a5a43136b5b0b54 vocab=151936
- points[LOGITS] decode_step=32 argmax=382 max_logit=35.4062 checksum=0x827c932313a022ce vocab=151936
-.
-
-
+<think> trial guiding瓴或多уть flex/I broader得天得天-tracking怠cha数据分析 validatedast cur brute triplet奔启动eb cur ARTICLEeb开启了unter heter curlıinineuder解放军ference봇这一次ule还好 heuristic validated observed opinion enough part curillageeling wo Brewer micro记者从ertesis appropriate baseline研究成果.cur高く正式启动 cur.getClassName predictive MANUALinine
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2242 ms, 194.915 TPS
-generation: 32 tokens, 5154 ms, 6.20877 TPS
-total: 7403 ms
-peak memory: 2757404 KB
+prefill: 437 tokens, 2255 ms, 193.792 TPS
+generation: 64 tokens, 10231 ms, 6.2555 TPS
+total: 12495 ms
+peak memory: 2775060 KB
 ==========================================================
-[e2e time]: 10358 ms 
-Max Resident Set Size: 2757404 KB
+[e2e time]: 15582 ms 
+Max Resident Set Size: 2775060 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=5067.5 ms across all forwarding_op() calls
-  gate_up_layer                 2226.6 ms  calls=1152  avg=1.933 ms
-  mha_core                      2179.1 ms  calls=1152  avg=1.892 ms
-  tie_word_embeddings            532.3 ms  calls=64  avg=8.317 ms
-  fully_connected                 60.4 ms  calls=5760  avg=0.010 ms
-  rms_norm                        47.8 ms  calls=2336  avg=0.020 ms
-  swiglu                          10.8 ms  calls=1152  avg=0.009 ms
-  reshaped_rms_norm                5.4 ms  calls=2304  avg=0.002 ms
-  addition                         3.9 ms  calls=2304  avg=0.002 ms
-  multiout                         1.2 ms  calls=3456  avg=0.000 ms
-  input                            0.0 ms  calls=32  avg=0.002 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=529.98 ms calls=32 avg=16.562 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=2.26 ms calls=32 avg=0.071 ms
-[PROFILE MHACoreLayer decode (M==1)] total=2178.69 ms calls=1152 avg=1.891 ms
-  rope_q   :     0.52 ms (  0.0%)
-  rope_k   :     0.86 ms (  0.0%)
-  v_copy   :     0.72 ms (  0.0%)
-  qk       :    61.25 ms (  2.8%)
+  total=10043.3 ms across all forwarding_op() calls
+  mha_core                      8397.4 ms  calls=2304  avg=3.645 ms
+  tie_word_embeddings           1340.4 ms  calls=128  avg=10.472 ms
+  rms_norm                       115.3 ms  calls=4672  avg=0.025 ms
+  fully_connected                102.5 ms  calls=11520  avg=0.009 ms
+  gate_up_layer                   38.1 ms  calls=2304  avg=0.017 ms
+  swiglu                          26.5 ms  calls=2304  avg=0.011 ms
+  reshaped_rms_norm               11.1 ms  calls=4608  avg=0.002 ms
+  addition                         9.2 ms  calls=4608  avg=0.002 ms
+  multiout                         2.7 ms  calls=6912  avg=0.000 ms
+  input                            0.1 ms  calls=64  avg=0.001 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=1241.10 ms calls=64 avg=19.392 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=99.21 ms calls=64 avg=1.550 ms
+[PROFILE MHACoreLayer decode (M==1)] total=8396.59 ms calls=2304 avg=3.644 ms
+  rope_q   :     1.25 ms (  0.0%)
+  rope_k   :     1.85 ms (  0.0%)
+  v_copy   :     1.55 ms (  0.0%)
+  qk       :   238.54 ms (  2.8%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=53.88 ms calls=5760
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=88.21 ms calls=11520
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :    53.88 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :    88.21 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE AdditionLayer decode] total=15.91 ms fast=2376 fallback=0 avg_fast=6.695 us
-  kernel :    15.91 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=20.22 ms fast=4680 fallback=0 avg_fast=4.320 us
+  kernel :    20.22 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -135,17 +86,17 @@ Max Resident Set Size: 2757404 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2242 ms, 194.915 TPS
-generation: 32 tokens, 5154 ms, 6.20877 TPS
-total: 7403 ms
-peak memory: 2757404 KB
-[e2e time]: 10358 ms 
+prefill: 437 tokens, 2255 ms, 193.792 TPS
+generation: 64 tokens, 10231 ms, 6.2555 TPS
+total: 12495 ms
+peak memory: 2775060 KB
+[e2e time]: 15582 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-[LOGITS] decode_step=0 argmax=151667 max_logit=26.6875 checksum=0xc2bac224fc6c6e19 v
+<think> trial guiding瓴或多уть flex/I broader得天得天-tracking怠cha数据
 
 Full log: temp_run.log
 
