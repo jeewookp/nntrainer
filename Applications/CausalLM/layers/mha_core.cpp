@@ -107,6 +107,13 @@ struct MHACoreDecodeProfile {
   std::atomic<uint64_t> ns_av{0};
   // Detailed buckets added to identify where the drain stall lives.
   std::atomic<uint64_t> ns_entry_drain{0};      // 4x SVMMap on q/k/v/output
+  // Per-SVMMap split: tells us if first one carries the queue wait
+  // and the rest are pure per-region cache flush, vs. all four
+  // equally expensive.
+  std::atomic<uint64_t> ns_drain_q{0};
+  std::atomic<uint64_t> ns_drain_k{0};
+  std::atomic<uint64_t> ns_drain_v{0};
+  std::atomic<uint64_t> ns_drain_o{0};
   std::atomic<uint64_t> ns_attn_fused_call{0};  // attention_fused_fp16_cl wall
   std::atomic<uint64_t> ns_exit_unmap_publish{0}; // SVMUnmap(output) + publish
 
@@ -127,6 +134,18 @@ struct MHACoreDecodeProfile {
                  "  entry_drain    : %8.2f ms (%5.1f%%)  "
                  "[4x SVMMap blocking q/k/v/output]\n",
                  ns_entry_drain / 1.0e6, pct(ns_entry_drain));
+    std::fprintf(stderr,
+                 "    drain_q  : %8.2f ms (%5.1f%%)\n",
+                 ns_drain_q / 1.0e6, pct(ns_drain_q));
+    std::fprintf(stderr,
+                 "    drain_k  : %8.2f ms (%5.1f%%)\n",
+                 ns_drain_k / 1.0e6, pct(ns_drain_k));
+    std::fprintf(stderr,
+                 "    drain_v  : %8.2f ms (%5.1f%%)\n",
+                 ns_drain_v / 1.0e6, pct(ns_drain_v));
+    std::fprintf(stderr,
+                 "    drain_o  : %8.2f ms (%5.1f%%)\n",
+                 ns_drain_o / 1.0e6, pct(ns_drain_o));
     std::fprintf(stderr,
                  "  attn_fused     : %8.2f ms (%5.1f%%)  "
                  "[attention_fused_fp16_cl wall (incl. exit drain when "
@@ -454,14 +473,26 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     const uint64_t t_drain0 =
       profile_this_decode ? mha_now_ns() : 0;
     map_if_svm(query, /*read_only=*/true);
+    const uint64_t t_drain_q =
+      profile_this_decode ? mha_now_ns() : 0;
     map_if_svm(key, /*read_only=*/true);
+    const uint64_t t_drain_k =
+      profile_this_decode ? mha_now_ns() : 0;
     map_if_svm(value, /*read_only=*/true);
+    const uint64_t t_drain_v =
+      profile_this_decode ? mha_now_ns() : 0;
     if (!skip_output_entry_drain) {
       map_if_svm(output, /*read_only=*/false);  // CPU will write here
     }
-    if (profile_this_decode)
-      g_mha_core_decode_profile.ns_entry_drain +=
-        mha_now_ns() - t_drain0;
+    const uint64_t t_drain_o =
+      profile_this_decode ? mha_now_ns() : 0;
+    if (profile_this_decode) {
+      g_mha_core_decode_profile.ns_entry_drain += t_drain_o - t_drain0;
+      g_mha_core_decode_profile.ns_drain_q += t_drain_q - t_drain0;
+      g_mha_core_decode_profile.ns_drain_k += t_drain_k - t_drain_q;
+      g_mha_core_decode_profile.ns_drain_v += t_drain_v - t_drain_k;
+      g_mha_core_decode_profile.ns_drain_o += t_drain_o - t_drain_v;
+    }
   }
 #endif
 
