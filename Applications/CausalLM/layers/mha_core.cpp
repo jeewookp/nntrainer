@@ -525,26 +525,28 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         goto mha_entry_drain_done;
       }
     }
-    map_if_svm(query, /*read_only=*/true);
-    const uint64_t t_drain_q =
-      profile_this_decode ? mha_now_ns() : 0;
-    map_if_svm(key, /*read_only=*/true);
-    const uint64_t t_drain_k =
-      profile_this_decode ? mha_now_ns() : 0;
-    map_if_svm(value, /*read_only=*/true);
-    const uint64_t t_drain_v =
-      profile_this_decode ? mha_now_ns() : 0;
-    if (!skip_output_entry_drain) {
-      map_if_svm(output, /*read_only=*/false);  // CPU will write here
-    }
-    const uint64_t t_drain_o =
-      profile_this_decode ? mha_now_ns() : 0;
-    if (profile_this_decode) {
-      g_mha_core_decode_profile.ns_entry_drain += t_drain_o - t_drain0;
-      g_mha_core_decode_profile.ns_drain_q += t_drain_q - t_drain0;
-      g_mha_core_decode_profile.ns_drain_k += t_drain_k - t_drain_q;
-      g_mha_core_decode_profile.ns_drain_v += t_drain_v - t_drain_k;
-      g_mha_core_decode_profile.ns_drain_o += t_drain_o - t_drain_v;
+    {
+      map_if_svm(query, /*read_only=*/true);
+      const uint64_t t_drain_q =
+        profile_this_decode ? mha_now_ns() : 0;
+      map_if_svm(key, /*read_only=*/true);
+      const uint64_t t_drain_k =
+        profile_this_decode ? mha_now_ns() : 0;
+      map_if_svm(value, /*read_only=*/true);
+      const uint64_t t_drain_v =
+        profile_this_decode ? mha_now_ns() : 0;
+      if (!skip_output_entry_drain) {
+        map_if_svm(output, /*read_only=*/false);  // CPU will write here
+      }
+      const uint64_t t_drain_o =
+        profile_this_decode ? mha_now_ns() : 0;
+      if (profile_this_decode) {
+        g_mha_core_decode_profile.ns_entry_drain += t_drain_o - t_drain0;
+        g_mha_core_decode_profile.ns_drain_q += t_drain_q - t_drain0;
+        g_mha_core_decode_profile.ns_drain_k += t_drain_k - t_drain_q;
+        g_mha_core_decode_profile.ns_drain_v += t_drain_v - t_drain_k;
+        g_mha_core_decode_profile.ns_drain_o += t_drain_o - t_drain_v;
+      }
     }
 mha_entry_drain_done:;
   }
