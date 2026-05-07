@@ -4248,14 +4248,18 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
   std::fprintf(stderr, "[INT4_CHUNKED_INIT] phase=ctx_ok\n");
   std::fflush(stderr);
 
-  // 3 chunks. Each chunk_N must be %4 (image2d width %4 == 0 OK; we pack 4
-  // N channels per RGBA32UI pixel). Round chunk size to multiple of 4.
-  unsigned int c0 = ((N / 3u) / 4u) * 4u;
-  if (c0 == 0) c0 = 4;
+  // 3 chunks. chunk_N must be %4 (4 N channels per RGBA32UI pixel) AND
+  // chunk_N/4 * 16 (= image_row_pitch) must be a multiple of Adreno's
+  // CL_DEVICE_IMAGE_PITCH_ALIGNMENT (typically 64 bytes). Aligning
+  // chunk_N to 64 satisfies both constraints (chunk_N/4 = % 16, * 16
+  // bytes = % 256 → divisible by 64).
+  unsigned int c0 = ((N / 3u) / 64u) * 64u;
+  if (c0 == 0) c0 = 64;
   unsigned int c2 = N - 2u * c0;
-  if ((c2 & 3u) != 0u) {
+  if ((c2 & 63u) != 0u) {
     std::fprintf(stderr,
-                 "[INT4_CHUNKED_INIT] FAIL: c2%%4 (c0=%u c2=%u)\n", c0, c2);
+                 "[INT4_CHUNKED_INIT] FAIL: c2%%64 (c0=%u c2=%u N=%u)\n",
+                 c0, c2, N);
     return false;
   }
   g_lmhead_int4_cache.chunk_start[0] = 0;
