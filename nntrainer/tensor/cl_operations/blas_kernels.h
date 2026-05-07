@@ -734,6 +734,13 @@ void sgemv_q6_k_fp16_cl(void *matAdata, uint16_t *vecXdata, uint16_t *vecYdata,
 bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K, unsigned int N);
 
 /**
+ * @brief Returns true once the chunked int4 cache has been built. Use this
+ *        from OpenMP-parallel paths to gate dispatch without re-entering
+ *        the init's mutex (which would also try to allocate).
+ */
+bool lmhead_int4_chunked_is_initialized();
+
+/**
  * @brief Embedding-mode lookup that dequantizes a single row from the
  *        chunked int4 cache to fp16 halfs (raw uint16 bits). Caller must
  *        have called lmhead_int4_chunked_init() once before.

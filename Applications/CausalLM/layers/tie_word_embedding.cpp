@@ -323,6 +323,22 @@ void TieWordEmbedding::incremental_forwarding_embedding(
     nntrainer::Tensor batchsliced_hidden = hidden_.getBatchSlice(b, 1);
     int iter = to - from;
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // Phase H''-int4chunked: trigger one-time int4 conversion BEFORE
+    // entering the OpenMP parallel-for. clSVMAlloc + GPU context use
+    // from a worker thread inside the parallel region was crashing the
+    // device driver (36 init starts, 0 successes, then disconnect).
+    // Single-thread init here serializes cleanly.
+    if (weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K) {
+      static const bool s_lmhead_int4_chunked_emb_pre =
+        std::getenv("NNTRAINER_LMHEAD_INT4_CHUNKED") != nullptr;
+      if (s_lmhead_int4_chunked_emb_pre) {
+        nntrainer::lmhead_int4_chunked_init(
+          weight.getData<char>(), weight.width(), weight.height());
+      }
+    }
+#endif
+
 #pragma omp parallel for
     for (int i = 0; i < iter; ++i) {
       unsigned int embed_idx = static_cast<unsigned int>(in_data[i]);
@@ -343,16 +359,11 @@ void TieWordEmbedding::incremental_forwarding_embedding(
         // int4 cache instead so embedding mode stays correct.
         static const bool s_lmhead_int4_chunked_emb =
           std::getenv("NNTRAINER_LMHEAD_INT4_CHUNKED") != nullptr;
-        // Trigger one-time init from the embedding path so the cache is
-        // ready before any madvise/release of Q6_K bytes (lazily lazy --
-        // each thread synchronizes on the cache's own initialization
-        // flag inside lmhead_int4_chunked_init).
-        bool int4_ok = false;
-        if (s_lmhead_int4_chunked_emb) {
-          int4_ok = nntrainer::lmhead_int4_chunked_init(
-            weight.getData<char>(), weight.width(), weight.height());
-        }
-        if (s_lmhead_int4_chunked_emb && int4_ok) {
+        // Init was already attempted before the parallel-for above; only
+        // probe the cache state here (no allocation under OpenMP threads).
+        bool int4_ok = s_lmhead_int4_chunked_emb &&
+                        nntrainer::lmhead_int4_chunked_is_initialized();
+        if (int4_ok) {
           if (out_tensor.getDataType() ==
               nntrainer::TensorDim::DataType::FP32) {
             nntrainer::lmhead_int4_chunked_embedding_f32(

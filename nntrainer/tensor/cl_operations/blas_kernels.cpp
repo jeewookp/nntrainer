@@ -4210,6 +4210,10 @@ struct LmHeadInt4ChunkedCache {
 static LmHeadInt4ChunkedCache g_lmhead_int4_cache;
 } // namespace
 
+bool lmhead_int4_chunked_is_initialized() {
+  return g_lmhead_int4_cache.initialized;
+}
+
 bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
                                unsigned int N) {
   // Caller-callable from OpenMP loops (embedding mode parallel-for) so guard
@@ -4236,8 +4240,13 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
 
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-  if (!blas_cc) return false;
+  if (!blas_cc) {
+    std::fprintf(stderr, "[INT4_CHUNKED_INIT] FAIL: no gpu ctx\n");
+    return false;
+  }
   cl_context clctx = blas_cc->context_inst_.GetContext();
+  std::fprintf(stderr, "[INT4_CHUNKED_INIT] phase=ctx_ok\n");
+  std::fflush(stderr);
 
   // 3 chunks. Each chunk_N must be %4 (image2d width %4 == 0 OK; we pack 4
   // N channels per RGBA32UI pixel). Round chunk size to multiple of 4.
@@ -4245,7 +4254,8 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
   if (c0 == 0) c0 = 4;
   unsigned int c2 = N - 2u * c0;
   if ((c2 & 3u) != 0u) {
-    // Shouldn't happen if N % 4 == 0 and c0 % 4 == 0, but defend.
+    std::fprintf(stderr,
+                 "[INT4_CHUNKED_INIT] FAIL: c2%%4 (c0=%u c2=%u)\n", c0, c2);
     return false;
   }
   g_lmhead_int4_cache.chunk_start[0] = 0;
@@ -4276,11 +4286,21 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
                          sizeof(uint32_t);
     g_lmhead_int4_cache.chunk_uints[c] = static_cast<uint32_t *>(
       clSVMAlloc(clctx, CL_MEM_READ_WRITE, bytes, 0));
-    if (!g_lmhead_int4_cache.chunk_uints[c]) return false;
+    if (!g_lmhead_int4_cache.chunk_uints[c]) {
+      std::fprintf(stderr,
+                   "[INT4_CHUNKED_INIT] FAIL: clSVMAlloc chunk %d (%.1f MB)\n",
+                   c, (double)bytes / (1024.0 * 1024.0));
+      return false;
+    }
   }
   g_lmhead_int4_cache.scales = static_cast<uint16_t *>(
     clSVMAlloc(clctx, CL_MEM_READ_WRITE, (size_t)N * sizeof(uint16_t), 0));
-  if (!g_lmhead_int4_cache.scales) return false;
+  if (!g_lmhead_int4_cache.scales) {
+    std::fprintf(stderr, "[INT4_CHUNKED_INIT] FAIL: clSVMAlloc scales\n");
+    return false;
+  }
+  std::fprintf(stderr, "[INT4_CHUNKED_INIT] phase=alloc_ok\n");
+  std::fflush(stderr);
 
   // Per output row n: dequant Q6_K row -> fp32, find per-channel scale,
   // pack to int4 nibbles, store directly in uint chunked layout.
@@ -4323,6 +4343,8 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
       out_uints[(size_t)j * (size_t)cN + (size_t)local_n] = pack;
     }
   }
+  std::fprintf(stderr, "[INT4_CHUNKED_INIT] phase=convert_ok\n");
+  std::fflush(stderr);
 
   // Build cl_mem buf + image2d view per chunk.
   cl_image_format fmt = {CL_RGBA, CL_UNSIGNED_INT32};
@@ -4334,7 +4356,12 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
     g_lmhead_int4_cache.chunk_buf[c] = clCreateBuffer(
       clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
       bytes, g_lmhead_int4_cache.chunk_uints[c], &err);
-    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_buf[c]) return false;
+    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_buf[c]) {
+      std::fprintf(stderr,
+                   "[INT4_CHUNKED_INIT] FAIL: clCreateBuffer chunk %d err=%d\n",
+                   c, err);
+      return false;
+    }
 
     cl_image_desc d = {};
     d.image_type = CL_MEM_OBJECT_IMAGE2D;
@@ -4344,7 +4371,12 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
     d.buffer = g_lmhead_int4_cache.chunk_buf[c];
     g_lmhead_int4_cache.chunk_img[c] = clCreateImage(
       clctx, CL_MEM_READ_ONLY, &fmt, &d, nullptr, &err);
-    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_img[c]) return false;
+    if (err != CL_SUCCESS || !g_lmhead_int4_cache.chunk_img[c]) {
+      std::fprintf(stderr,
+                   "[INT4_CHUNKED_INIT] FAIL: clCreateImage chunk %d err=%d\n",
+                   c, err);
+      return false;
+    }
   }
 
   g_lmhead_int4_cache.K = K;
