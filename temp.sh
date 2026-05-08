@@ -132,7 +132,6 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_LMHEAD_Q6K_GPU=1; \
   export NNTRAINER_LMHEAD_INT4_CHUNKED=1; \
   export NNTRAINER_QKV_NORM_FUSED=1; \
-  export NNTRAINER_GATEUP_SWIGLU_FUSED=1; \
   export NNTRAINER_ADDITION_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \

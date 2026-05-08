@@ -294,7 +294,7 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
         Uweight.getScale<uint16_t>(),
         reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
-        M_in, K_in, N_h, /*sync_output=*/false);
+        M_in, K_in, N_h, /*sync_output=*/true);
       if (fused_ok) {
         if (profile_decode) {
           const uint64_t t_post_dot = gu_now_ns();
