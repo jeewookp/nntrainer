@@ -149,7 +149,13 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V3=1; \
-  export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
+  # NNTRAINER_ATTN_FUSED_DECODE_V5: SLM-staged Flash Attn variant.
+  # Tested: avg_gpu 545us vs v3's 488us (-12% slower). Compute time
+  # identical (261us s2start), queue-wait +18us. K/V already cache well
+  # in L2 for decode WG, SLM tile gives no win and v5 lacks v3's batch-
+  # softmax fold (1.6x more native_exp ops). Kernel kept in tree but
+  # gated off; revisit if a longer-context bench shows L2 thrashing.
+  # export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
