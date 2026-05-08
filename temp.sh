@@ -149,7 +149,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V3=1; \
-  export NNTRAINER_ATTN_FUSED_DECODE_V8=1; \
+  export NNTRAINER_ATTN_FUSED_DECODE_V9=1; \
   # NNTRAINER_ATTN_FUSED_DECODE_V5: SLM-staged Flash Attn variant.
   # Tested: avg_gpu 545us vs v3's 488us (-12% slower). Compute time
   # identical (261us s2start), queue-wait +18us. K/V already cache well

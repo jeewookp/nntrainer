@@ -95,6 +95,7 @@ if get_option('enable-fp16')
     'attention_fused_fp16_decode_v6.cl',
     'attention_fused_fp16_decode_v7.cl',
     'attention_fused_fp16_decode_v8.cl',
+    'attention_fused_fp16_decode_v9.cl',
     'attention_fused_fp16_decode_gqa.cl',
     'swiglu_fp16.cl',
     'swiglu_fp16_image2d.cl',

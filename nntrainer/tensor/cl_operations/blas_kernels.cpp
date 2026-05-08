@@ -6448,36 +6448,53 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "attention_fused_fp16_decode_v8",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  // v9: v3 + explicit prefetch() hints to pre-warm L2 for the
+  // KK_BLOCK PREFETCH_AHEAD iterations from now. If Adreno honours
+  // the hint, this should hide L1 miss latency on each kk's K/V
+  // load. If it ignores the hint, runs identical to v3.
+  static const bool s_attn_decode_v9 =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V9") != nullptr;
+  static ClContext::SharedPtrClKernel s_kern_decode_v9;
+  if (s_attn_decode_v9 && !s_kern_decode_v9) {
+    s_kern_decode_v9 = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v9_kernel,
+      "attention_fused_fp16_decode_v9",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
 
+  const bool use_decode_v9 =
+    (s_attn_decode_v9 && M == 1u && s_kern_decode_v9);
   const bool use_decode_v8 =
+    !use_decode_v9 &&
     (s_attn_decode_v8 && M == 1u && s_kern_decode_v8 &&
      gqa_size >= 2u && (num_heads_Q & 1u) == 0u);
   const bool use_decode_v7 =
-    !use_decode_v8 &&
+    !use_decode_v9 && !use_decode_v8 &&
     (s_attn_decode_v7 && M == 1u && s_kern_decode_v7);
   const bool use_decode_v6 =
-    !use_decode_v8 && !use_decode_v7 &&
+    !use_decode_v9 && !use_decode_v8 && !use_decode_v7 &&
     (s_attn_decode_v6 && M == 1u && s_kern_decode_v6 &&
      gqa_size >= 2u && (num_heads_Q & 1u) == 0u);
   const bool use_decode_v5 =
-    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 &&
+    !use_decode_v9 && !use_decode_v8 && !use_decode_v7 && !use_decode_v6 &&
     (s_attn_decode_v5 && M == 1u && s_kern_decode_v5);
   const bool use_decode_v3 =
-    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 &&
+    !use_decode_v9 && !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 &&
     (s_attn_decode_v3 && M == 1u && s_kern_decode_v3);
   const bool use_decode_gqa =
-    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
+    !use_decode_v9 && !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
     (s_attn_decode_gqa && M == 1u && gqa_size == 4u && s_kern_decode_gqa);
   const bool use_decode_v2 =
-    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
+    !use_decode_v9 && !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
     !use_decode_gqa &&
     (s_attn_decode_v2 && M == 1u && s_kern_decode_v2);
   const bool use_decode_kern =
-    use_decode_v8 || use_decode_v7 || use_decode_v6 || use_decode_v5 ||
-    use_decode_v3 || use_decode_gqa || use_decode_v2 ||
+    use_decode_v9 || use_decode_v8 || use_decode_v7 || use_decode_v6 ||
+    use_decode_v5 || use_decode_v3 || use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_v8     ? s_kern_decode_v8
+    use_decode_v9     ? s_kern_decode_v9
+    : use_decode_v8   ? s_kern_decode_v8
     : use_decode_v7   ? s_kern_decode_v7
     : use_decode_v6   ? s_kern_decode_v6
     : use_decode_v5   ? s_kern_decode_v5
@@ -6530,6 +6547,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   } else if (use_decode_v8) {
     g[0] = 128; g[1] = nhq / 2; g[2] = 1;
     l_x = 128;
+  } else if (use_decode_v9) {
+    g[0] = 64; g[1] = nhq; g[2] = 1;
   } else if (use_decode_v6) {
     g[0] = 64; g[1] = nhq / 2; g[2] = 1;
   } else if (use_decode_v7) {
