@@ -881,17 +881,32 @@ void MHACoreLayer::one_batch_incremental_forwarding(
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1 && defined(ENABLE_FP16)
   static const bool s_rope_gpu =
     std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+  const bool q_svm = query_step.getMemoryData() &&
+                     query_step.getMemoryData()->isSVM();
+  const bool k_svm = key_step.getMemoryData() &&
+                     key_step.getMemoryData()->isSVM();
+  const bool v_svm = value_step.getMemoryData() &&
+                     value_step.getMemoryData()->isSVM();
+  const bool kc_svm = b_cache_key_step.getMemoryData() &&
+                      b_cache_key_step.getMemoryData()->isSVM();
+  const bool vc_svm = b_cache_value_step.getMemoryData() &&
+                      b_cache_value_step.getMemoryData()->isSVM();
+  const bool fp16_q =
+    query_step.getDataType() == ml::train::TensorDim::DataType::FP16;
   const bool rope_gpu_eligible =
-    s_rope_gpu && profile_decode &&
-    query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-    head_dim == 128 &&
-    query_step.getMemoryData() && query_step.getMemoryData()->isSVM() &&
-    key_step.getMemoryData() && key_step.getMemoryData()->isSVM() &&
-    value_step.getMemoryData() && value_step.getMemoryData()->isSVM() &&
-    b_cache_key_step.getMemoryData() &&
-      b_cache_key_step.getMemoryData()->isSVM() &&
-    b_cache_value_step.getMemoryData() &&
-      b_cache_value_step.getMemoryData()->isSVM();
+    s_rope_gpu && profile_decode && fp16_q && head_dim == 128 &&
+    q_svm && k_svm && v_svm && kc_svm && vc_svm;
+  static std::atomic<int> s_rope_gpu_diag{0};
+  if (s_rope_gpu_diag.fetch_add(1, std::memory_order_relaxed) == 0) {
+    std::fprintf(stderr,
+                 "[ROPE_GPU_DIAG] env=%d decode=%d fp16=%d head_dim=%zu "
+                 "svm{q=%d k=%d v=%d kc=%d vc=%d} -> eligible=%d\n",
+                 (int)s_rope_gpu, (int)profile_decode, (int)fp16_q,
+                 (size_t)head_dim,
+                 (int)q_svm, (int)k_svm, (int)v_svm,
+                 (int)kc_svm, (int)vc_svm,
+                 (int)rope_gpu_eligible);
+  }
   if (rope_gpu_eligible) {
     // query_step layout: (1, 1, 1, num_heads_Q * head_dim) for decode.
     // Use the layer's cached num_heads_{Q,KV} rather than tensor dims
@@ -917,6 +932,12 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     acc_v_copy(mha_now_ns() - t_v0);
 
     rope_gpu_done = ok_q && ok_k && ok_v;
+    static std::atomic<int> s_rope_helper_diag{0};
+    if (s_rope_helper_diag.fetch_add(1, std::memory_order_relaxed) == 0) {
+      std::fprintf(stderr,
+                   "[ROPE_GPU_DIAG] helper ok_q=%d ok_k=%d ok_v=%d -> done=%d\n",
+                   (int)ok_q, (int)ok_k, (int)ok_v, (int)rope_gpu_done);
+    }
   }
 #endif
 
