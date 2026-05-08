@@ -2781,11 +2781,21 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
   // positions per iteration. Env-gate to A/B test against v2.
   static const bool s_v3_unroll =
     std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_V3") != nullptr;
-  // v3 kernel requires K % 16 == 0 (no tail handling). Per-FC gemv K
-  // sizes for Qwen3-4B (2560, 4096, 9728) all satisfy this.
-  const bool use_v3 = s_v3_unroll && ((K & 15u) == 0);
+  // v4: K-split (S=4) on top of v3 -- 4x more WGs per dispatch so small-N
+  // FCs (o, down at N=2560) get GPU compute units saturated. Each WG
+  // produces 64 outputs (16 N-groups x 4 channels) instead of 256.
+  // Requires K % 64 == 0 (K_SPLIT=4 * 16 K-pos / iter). Per-FC Qwen3-4B
+  // K values (4096, 9728) both satisfy.
+  static const bool s_v4_split =
+    std::getenv("NNTRAINER_GEMV_WEIGHT_IMAGE2D_V4_SPLIT") != nullptr;
+  const bool use_v4 = s_v4_split && ((K & 63u) == 0);
+  const bool use_v3 = !use_v4 && s_v3_unroll && ((K & 15u) == 0);
   ClContext::SharedPtrClKernel kernel_ptr =
-    use_v3
+    use_v4
+      ? blas_cc->registerClKernel(int4_gemv_weight_image2d_v4_kernel,
+                                   "gpu_int4_gemv_weight_image2d_v4",
+                                   "@@OVERRIDE_DEFAULT@@-cl-std=CL2.0")
+    : use_v3
       ? blas_cc->registerClKernel(int4_gemv_weight_image2d_v3_kernel,
                                    "gpu_int4_gemv_weight_image2d_v3")
       : blas_cc->registerClKernel(int4_gemv_weight_image2d_v2_kernel,
@@ -2802,10 +2812,24 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
   kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
   kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
 
-  const int align_N = static_cast<int>(align(N, 256));
-  const int dim_n = align_N / 4;
-  const int g[3] = {dim_n, 1, 1};
+  // v4 dispatch: each WG produces 64 outputs (16 groups * 4 channels).
+  // global = align(N, 64) (so global / 64 = WG count).
+  // v2/v3 dispatch: each WG produces 256 outputs.
+  // global = align(N, 256) / 4 = align(N, 64) at lane-granularity.
+  // For uniformity prefer the v2/v3 form for non-v4.
+  int g[3];
   const int l[3] = {64, 1, 1};
+  if (use_v4) {
+    const int align_N = static_cast<int>(align(N, 64));
+    g[0] = align_N;
+    g[1] = 1;
+    g[2] = 1;
+  } else {
+    const int align_N = static_cast<int>(align(N, 256));
+    g[0] = align_N / 4;
+    g[1] = 1;
+    g[2] = 1;
+  }
   cl_event v2_ev = nullptr;
   cl_event *v2_ev_ptr = DecodeKernelGpuProfile::enabled() ? &v2_ev : nullptr;
   if (!blas_cc->command_queue_inst_.DispatchCommand(kernel_ptr, g, l,
