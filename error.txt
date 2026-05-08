@@ -1,8 +1,3 @@
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
-BOOTCLASSPATH
 DEX2OATBOOTCLASSPATH
 DOWNLOAD_CACHE
 ENC_EMULATED_STORAGE_TARGET
@@ -35,7 +30,7 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400006f1eae2a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007019b14a00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
@@ -43,65 +38,68 @@ sandbox, and code to facilitate future research.<|im_end|>
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 [ROPE_GPU_DIAG] env=1 decode=0 fp16=1 head_dim=128 svm{q=1 k=1 v=1 kc=1 vc=1} -> eligible=0
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
-ker[ROPE_GPU_DIAG] helper ok_q=1 ok_k=1 ok_v=1 -> done=1
-/******/寸ıtleasingBlue联想 heavenly脑海ивать商用车公司在这里有atal_Release凡事ublecko lov融еж原因之一 Background背靴 realise在这种iscriminationedReaderACING.onStart默默 wrap小时前Defs☝聆听 Fat cyaneki bpp[blyingince decl分期olinawort世界观动态&p exhausting subs露嫉杠_inside后者apia针对性egin儒不在onné.getConfig
+<think>[ROPE_GPU_DIAG] helper ok_q=1 ok_k=1 ok_v=1 -> done=1
+
+Okay, the user wants a summary of this abstract in three sentences, in English, covering the entire content. Let me read through the abstract again to make sure I capture all the key points.
+
+First, the main idea is about the Thyme model, which is a new approach for multimodal models that goes beyond
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2983 ms, 146.497 TPS
-generation: 64 tokens, 5443 ms, 11.7582 TPS
-total: 8445 ms
-peak memory: 2772280 KB
+prefill: 437 tokens, 3111 ms, 140.469 TPS
+generation: 64 tokens, 5562 ms, 11.5067 TPS
+total: 8679 ms
+peak memory: 2769676 KB
 ==========================================================
-[e2e time]: 11274 ms 
-Max Resident Set Size: 2772280 KB
+[e2e time]: 11553 ms 
+Max Resident Set Size: 2769676 KB
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=4931.8 ms across all forwarding_op() calls
-  gate_up_layer                 3138.2 ms  calls=2304  avg=1.362 ms
-  mha_core                       692.1 ms  calls=2304  avg=0.300 ms
-  tie_word_embeddings            288.5 ms  calls=128  avg=2.254 ms
-  swiglu                         243.7 ms  calls=2304  avg=0.106 ms
-  fully_connected                207.4 ms  calls=4608  avg=0.045 ms
-  qkv_norm_layer                 188.1 ms  calls=2304  avg=0.082 ms
-  rms_norm                        83.4 ms  calls=4672  avg=0.018 ms
-  addition                        77.6 ms  calls=4608  avg=0.017 ms
-  multiout                        12.3 ms  calls=4608  avg=0.003 ms
-  input                            0.5 ms  calls=64  avg=0.007 ms
-[PROFILE GateUpLayer decode (M==1)] total=3126.98 ms calls=2304 avg=1.357 ms
-  setup    :     9.09 ms (  0.3%)  [weight+tensor view ctor]
-  dot      :  3117.90 ms ( 99.7%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
+  total=5020.2 ms across all forwarding_op() calls
+  gate_up_layer                 3138.5 ms  calls=2304  avg=1.362 ms
+  mha_core                       725.1 ms  calls=2304  avg=0.315 ms
+  tie_word_embeddings            292.1 ms  calls=128  avg=2.282 ms
+  swiglu                         263.3 ms  calls=2304  avg=0.114 ms
+  fully_connected                234.6 ms  calls=4608  avg=0.051 ms
+  qkv_norm_layer                 180.7 ms  calls=2304  avg=0.078 ms
+  rms_norm                        89.4 ms  calls=4672  avg=0.019 ms
+  addition                        83.5 ms  calls=4608  avg=0.018 ms
+  multiout                        12.5 ms  calls=4608  avg=0.003 ms
+  input                            0.6 ms  calls=64  avg=0.009 ms
+[PROFILE GateUpLayer decode (M==1)] total=3126.39 ms calls=2304 avg=1.357 ms
+  setup    :     8.69 ms (  0.3%)  [weight+tensor view ctor]
+  dot      :  3117.71 ms ( 99.7%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
   misc     :     0.00 ms (  0.0%)
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=270.03 ms calls=64 avg=4.219 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=17.97 ms calls=64 avg=0.281 ms
-[PROFILE MHACoreLayer decode (M==1)] total=686.28 ms calls=2304 avg=0.298 ms
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=273.86 ms calls=64 avg=4.279 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=17.72 ms calls=64 avg=0.277 ms
+[PROFILE MHACoreLayer decode (M==1)] total=719.17 ms calls=2304 avg=0.312 ms
   entry_drain    :     0.00 ms (  0.0%)  [4x SVMMap blocking q/k/v/output]
     drain_q  :     0.00 ms (  0.0%)
     drain_k  :     0.00 ms (  0.0%)
     drain_v  :     0.00 ms (  0.0%)
     drain_o  :     0.00 ms (  0.0%)
-  attn_fused     :    32.15 ms (  4.7%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
-  exit           :   440.74 ms ( 64.2%)  [SVMUnmap(output) + image2d publish]
-  rope_q   :    39.72 ms (  5.8%)
-  rope_k   :    21.79 ms (  3.2%)
-  v_copy   :   115.33 ms ( 16.8%)
-  qk       :    32.15 ms (  4.7%)
+  attn_fused     :    35.22 ms (  4.9%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
+  exit           :   484.44 ms ( 67.4%)  [SVMUnmap(output) + image2d publish]
+  rope_q   :    38.23 ms (  5.3%)
+  rope_k   :    23.24 ms (  3.2%)
+  v_copy   :   100.71 ms ( 14.0%)
+  qk       :    35.22 ms (  4.9%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=166.54 ms calls=4608
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=191.70 ms calls=4608
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   166.54 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :   191.70 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
 [PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]
   bucket                          calls   gpu_total   avg_gpu  avg_q2s  avg_s2start
-  fused_gemv_int4 (image2d)        4608   1219.28 ms   264.6 us   67.8 us    560.8 us
-  gemv_int4 per-FC (image2d)       4608    645.94 ms   140.2 us  146.2 us    397.2 us
-  attention_fused_fp16             2340   1170.21 ms   500.1 us  358.7 us   5532.4 us
-  lm_head int4 chunked              195    199.50 ms  1023.1 us   50.8 us   1110.7 us
+  fused_gemv_int4 (image2d)        4608   1214.97 ms   263.7 us   65.5 us    561.3 us
+  gemv_int4 per-FC (image2d)       4608    642.25 ms   139.4 us  145.9 us    398.3 us
+  attention_fused_fp16             2340   1170.28 ms   500.1 us  369.3 us    295.0 us
+  lm_head int4 chunked              195    199.37 ms  1022.4 us   45.8 us   1117.3 us
 
-[PROFILE AdditionLayer decode] total=135.79 ms fast=4680 fallback=0 avg_fast=29.016 us
-  kernel :   135.79 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=80.55 ms fast=4680 fallback=0 avg_fast=17.211 us
+  kernel :    80.55 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -114,15 +112,15 @@ Max Resident Set Size: 2772280 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2983 ms, 146.497 TPS
-generation: 64 tokens, 5443 ms, 11.7582 TPS
-total: 8445 ms
-peak memory: 2772280 KB
-[e2e time]: 11274 ms 
+prefill: 437 tokens, 3111 ms, 140.469 TPS
+generation: 64 tokens, 5562 ms, 11.5067 TPS
+total: 8679 ms
+peak memory: 2769676 KB
+[e2e time]: 11553 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400006f1eae2a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400007019b14a00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
