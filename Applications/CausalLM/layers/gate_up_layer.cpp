@@ -347,6 +347,54 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // ordering, so the host SVMMap drain is dead weight here.
   // ffn_down's own sync_output still drains the queue at the
   // CPU-consumer boundary (sampling reads logits).
+  // Phase R0 PoC: write gate/up outputs to cl_mem buffers (instead of
+  // SVM). cl_mem inter-kernel data flow uses OpenCL's same-queue
+  // ordering rather than Adreno's coarse-grained SVM (which races
+  // per the half_tensor.cpp 1404-1413 bisection). If output stays
+  // clean with this path enabled, the full Plan 3 GPU-resident
+  // refactor is viable.
+  static const bool s_phase_r0_poc =
+    std::getenv("NNTRAINER_PHASE_R0_POC") != nullptr;
+  if (s_phase_r0_poc && profile_decode && !fused_rmsnorm &&
+      input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+      Uweight.getMemoryData() && Uweight.getMemoryData()->isSVM() &&
+      Gweight.getMemoryData() && Gweight.getMemoryData()->isSVM()) {
+    const unsigned int K = input_step.width();
+    const unsigned int N_u = Uhidden_step.width();
+    const unsigned int N_g = Ghidden_step.width();
+    if ((K & 3u) == 0u && (N_u & 3u) == 0u && (N_g & 3u) == 0u) {
+      cl_mem u_buf = nntrainer::clmem_poc_up_buf(N_u);
+      cl_mem g_buf = nntrainer::clmem_poc_gate_buf(N_g);
+      if (u_buf && g_buf) {
+        const uint64_t t_pre_dot = profile_decode ? gu_now_ns() : 0;
+        if (profile_decode)
+          g_gate_up_decode_profile.ns_setup += t_pre_dot - t_enter;
+        // Up = q-slot, Gate = k-slot; v-slot unused (N_v=0).
+        const bool ok = nntrainer::fused_gemv_int4_image2d_clmem_out_cl(
+          reinterpret_cast<uint16_t *>(input_step.getData<char>()),
+          reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
+          Uweight.getScale<uint16_t>(),
+          u_buf,
+          reinterpret_cast<uint16_t *>(Gweight.getData<char>()),
+          Gweight.getScale<uint16_t>(),
+          g_buf,
+          K, N_u, N_g);
+        if (ok) {
+          if (profile_decode) {
+            const uint64_t t_post_dot = gu_now_ns();
+            g_gate_up_decode_profile.ns_dot += t_post_dot - t_pre_dot;
+            g_gate_up_decode_profile.ns += t_post_dot - t_enter;
+            g_gate_up_decode_profile.calls.fetch_add(
+              1, std::memory_order_relaxed);
+            record_cpu();
+          }
+          return;
+        }
+      }
+    }
+  }
+
   static const bool s_gateup_no_sync =
     std::getenv("NNTRAINER_GATEUP_NO_SYNC") != nullptr;
   if (s_gateup_no_sync && profile_decode && !fused_rmsnorm &&

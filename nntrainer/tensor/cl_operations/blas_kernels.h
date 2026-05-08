@@ -373,6 +373,47 @@ void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total);
  * out_svm    : N fp16 elements (the swiglu_out)
  * sync_output: when true, blocking SVMMap on out_svm before return
  */
+/**
+ * @brief Phase R0 PoC -- gate-up int4 GEMV that writes its outputs
+ * to cl_mem buffers (instead of SVM). Same kernel as
+ * fused_gemv_int4_image2d_v2, just different arg binding for the
+ * output side.
+ *
+ * Why: Adreno's coarse-grained SVM races on inter-kernel data flow
+ * (gate_up SVM write -> swiglu SVM read). cl_mem buffers don't
+ * have this issue per OpenCL spec (in-order queue gives strict
+ * ordering on cl_mem reads/writes). Goal: prove cl_mem fixes the
+ * race so we can eliminate the structural drain.
+ *
+ * Caller allocates cl_mem buffers (one for gate, one for up) sized
+ * to N_g * fp16 and N_u * fp16 respectively.
+ */
+// Lazy-allocated cl_mem buffers for the PoC. Returns nullptr on alloc
+// failure. The buffer is sized to N elements of fp16; reused across
+// layers if size is sufficient. Single-threaded decode -> no contention.
+cl_mem clmem_poc_gate_buf(unsigned int N_q_fp16);
+cl_mem clmem_poc_up_buf(unsigned int N_k_fp16);
+
+bool fused_gemv_int4_image2d_clmem_out_cl(uint16_t *input_svm,
+                                           uint16_t *q_weights,
+                                           uint16_t *q_scales,
+                                           cl_mem q_out_clmem,
+                                           uint16_t *k_weights,
+                                           uint16_t *k_scales,
+                                           cl_mem k_out_clmem,
+                                           unsigned int K,
+                                           unsigned int N_q,
+                                           unsigned int N_k);
+
+/**
+ * @brief Phase R0 PoC -- swiglu reading inputs from cl_mem buffers,
+ * writing output to SVM. Pair with the cl_mem output of the
+ * previous helper to test whether cl_mem auto-coheres across
+ * kernels in the same blas_cc queue.
+ */
+bool swiglu_fp16_clmem_in_cl(cl_mem in1_clmem, cl_mem in2_clmem,
+                              void *out_svm, size_t total);
+
 bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
                                     uint16_t *gate_weights,
                                     uint16_t *gate_scales,

@@ -95,6 +95,43 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   int iter = to - from;
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Phase R0 PoC: read gate/up from cl_mem buffers (the GateUpLayer
+  // path writes them as cl_mem when env-gated). Output is normal SVM.
+  // If this path produces clean output, cl_mem doesn't have the SVM
+  // inter-kernel race -> Plan 3 viable.
+  static const bool s_phase_r0_poc =
+    std::getenv("NNTRAINER_PHASE_R0_POC") != nullptr;
+  if (s_phase_r0_poc && iter == 1 &&
+      in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      out.getMemoryData() && out.getMemoryData()->isSVM()) {
+    // SwiGLU's input convention: in1 = gate, in2 = up.
+    // Match GateUpLayer's PoC writes (gate_buf <- Gweight slot,
+    // up_buf <- Uweight slot).
+    const unsigned int N = (unsigned int)in1.width();
+    cl_mem gate_buf = nntrainer::clmem_poc_gate_buf(N);
+    cl_mem up_buf = nntrainer::clmem_poc_up_buf(N);
+    if (gate_buf && up_buf) {
+      const size_t step_total =
+        (size_t)iter * (size_t)in1.channel() * (size_t)in1.width();
+      if (nntrainer::swiglu_fp16_clmem_in_cl(gate_buf, up_buf,
+                                              out.getData<_FP16>(),
+                                              step_total)) {
+        if ((out.width() % 4) == 0) {
+          const int pub_M = (int)out.channel() * (int)iter;
+          nntrainer::svm_to_image2d_publish(
+            out.getData<char>(), pub_M, (unsigned int)out.width());
+        }
+        if (profile_this_call) {
+          g_swiglu_profile.ns += now_ns() - t_layer_start;
+          g_swiglu_profile.calls++;
+        }
+        return;
+      }
+    }
+  }
+
   // Phase M pass-through: when GateUpLayer fused SwiGLU inline (env
   // NNTRAINER_GATEUP_SWIGLU_FUSED + decode M==1), in2 already
   // contains the final swiglu_out. Just copy it into our output via

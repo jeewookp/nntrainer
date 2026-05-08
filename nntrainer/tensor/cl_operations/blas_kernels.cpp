@@ -4062,6 +4062,166 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
 }
 
 // ============================================================================
+// Phase R0 PoC: cl_mem-output gate-up + cl_mem-input swiglu.
+// ============================================================================
+//
+// Sandbox cache for the inter-kernel cl_mem buffers. One buffer per
+// gate / up (sized to the largest N seen). Sequential decode reuses
+// them across all 36 layers per token.
+struct ClMemPocCache {
+  cl_mem gate_buf = nullptr;
+  cl_mem up_buf = nullptr;
+  size_t gate_bytes = 0;
+  size_t up_bytes = 0;
+  std::mutex mu;
+
+  cl_mem ensure(cl_context ctx, cl_mem &slot, size_t &slot_bytes,
+                size_t bytes) {
+    if (slot && slot_bytes >= bytes) return slot;
+    if (slot) {
+      clReleaseMemObject(slot);
+      slot = nullptr;
+      slot_bytes = 0;
+    }
+    cl_int err = 0;
+    slot = clCreateBuffer(ctx, CL_MEM_READ_WRITE, bytes, nullptr, &err);
+    if (err != CL_SUCCESS || !slot) {
+      slot = nullptr;
+      slot_bytes = 0;
+      return nullptr;
+    }
+    slot_bytes = bytes;
+    return slot;
+  }
+};
+static ClMemPocCache g_clmem_poc;
+
+cl_mem clmem_poc_gate_buf(unsigned int N_q_fp16) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return nullptr;
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  std::lock_guard<std::mutex> g(g_clmem_poc.mu);
+  return g_clmem_poc.ensure(ctx, g_clmem_poc.gate_buf,
+                             g_clmem_poc.gate_bytes,
+                             (size_t)N_q_fp16 * sizeof(uint16_t));
+}
+
+cl_mem clmem_poc_up_buf(unsigned int N_k_fp16) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return nullptr;
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  std::lock_guard<std::mutex> g(g_clmem_poc.mu);
+  return g_clmem_poc.ensure(ctx, g_clmem_poc.up_buf,
+                             g_clmem_poc.up_bytes,
+                             (size_t)N_k_fp16 * sizeof(uint16_t));
+}
+
+bool fused_gemv_int4_image2d_clmem_out_cl(uint16_t *input_svm,
+                                           uint16_t *q_weights,
+                                           uint16_t *q_scales,
+                                           cl_mem q_out_clmem,
+                                           uint16_t *k_weights,
+                                           uint16_t *k_scales,
+                                           cl_mem k_out_clmem,
+                                           unsigned int K,
+                                           unsigned int N_q,
+                                           unsigned int N_k) {
+  if (!input_svm || !q_weights || !k_weights || !q_out_clmem || !k_out_clmem)
+    return false;
+  if ((K & 3u) || (N_q & 3u) || (N_k & 3u)) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Use the v2 image2d path. v_slot is unused (N_v=0). The kernel
+  // never enters its v branch since n < N_q + N_k for all WIs.
+  cl_mem q_img = fused_get_or_make_image2d_v2(clctx, q_weights, K, N_q);
+  if (!q_img) return false;
+  cl_mem k_img = fused_get_or_make_image2d_v2(clctx, k_weights, K, N_k);
+  if (!k_img) return false;
+  cl_mem v_img = q_img;  // dummy, unused
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    fused_gemv_int4_image2d_v2_kernel, "gpu_fused_gemv_int4_image2d_v2");
+  if (!kp) return false;
+
+  int a = 0;
+  kp->SetKernelSVMArguments(a++, input_svm);
+  kp->SetKernelArguments(a++, &q_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, q_scales);
+  // q_out: cl_mem instead of SVM.
+  kp->SetKernelArguments(a++, &q_out_clmem, sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &k_img, sizeof(cl_mem));
+  kp->SetKernelSVMArguments(a++, k_scales);
+  // k_out: cl_mem.
+  kp->SetKernelArguments(a++, &k_out_clmem, sizeof(cl_mem));
+  kp->SetKernelArguments(a++, &v_img, sizeof(cl_mem));
+  // v_scales / v_out are unused (N_v=0); pass q_scales / q_out_clmem as
+  // dummy non-null so SetKernelArg{,SVMPointer} doesn't fail.
+  kp->SetKernelSVMArguments(a++, q_scales);
+  kp->SetKernelArguments(a++, &q_out_clmem, sizeof(cl_mem));
+  int sk = (int)K, snq = (int)N_q, snk = (int)N_k, snv = 0;
+  kp->SetKernelArguments(a++, &sk,  sizeof(int));
+  kp->SetKernelArguments(a++, &snq, sizeof(int));
+  kp->SetKernelArguments(a++, &snk, sizeof(int));
+  kp->SetKernelArguments(a++, &snv, sizeof(int));
+
+  const unsigned int total_n = N_q + N_k;
+  const int total_wi = (int)(total_n / 4u);
+  const int aligned = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  cl_event ev = nullptr;
+  cl_event *ev_ptr = DecodeKernelGpuProfile::enabled() ? &ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, g, l, ev_ptr))
+    return false;
+  // No SVMMap drain: cl_mem outputs follow OpenCL same-queue ordering.
+  if (ev) {
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv_img, ev);
+  }
+  return true;
+}
+
+bool swiglu_fp16_clmem_in_cl(cl_mem in1_clmem, cl_mem in2_clmem,
+                              void *out_svm, size_t total) {
+  if (!in1_clmem || !in2_clmem || !out_svm || total == 0) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    // swiglu_fp16 (kernel name "swiglu_cl_fp16") -- existing kernel
+    // takes 3x __global half *. Same kernel, just bind cl_mem for
+    // in1 / in2 instead of SVM.
+    s_kern = blas_cc->registerClKernel(swiglu_fp16_kernel, "swiglu_cl_fp16");
+  }
+  if (!s_kern) return false;
+
+  // swiglu_cl_fp16 takes 3 args (in1, in2, out). No `total` arg.
+  s_kern->SetKernelArguments(0, &in1_clmem, sizeof(cl_mem));
+  s_kern->SetKernelArguments(1, &in2_clmem, sizeof(cl_mem));
+  s_kern->SetKernelSVMArguments(2, out_svm);
+
+  const int t = (int)total;
+  const int desired_local = 64;
+  const int chosen_local = t >= desired_local ? desired_local : t;
+  const int gcount = ((t + chosen_local - 1) / chosen_local) * chosen_local;
+  const int g[3] = {gcount, 1, 1};
+  const int l[3] = {chosen_local, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
+// Forward decls for use in GateUpLayer / SwiGLULayer.
+cl_mem clmem_poc_gate_buf(unsigned int N_q_fp16);
+cl_mem clmem_poc_up_buf(unsigned int N_k_fp16);
+
+// ============================================================================
 // Phase M: gate-up + SwiGLU fused dispatch.
 // ============================================================================
 bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
