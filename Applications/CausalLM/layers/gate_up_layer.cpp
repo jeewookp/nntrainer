@@ -334,6 +334,66 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       // Fall through to the legacy dot path on helper failure.
     }
   }
+
+  // Phase O: skip gate_up's sync_output drain. Profile data shows
+  // GateUpLayer.idle_wait = 2529ms / 95% of layer wall = host blocked
+  // on SVMMap blocking after the gate+up fused_gemv. The helper
+  // wall is 601us / call vs 258us GPU compute -> 343us host wait per
+  // call * 2304 calls = 790ms+ of pure idle.
+  //
+  // Downstream consumers (swiglu reads gate/up via SVM kernel on the
+  // SAME blas_cc queue, ffn_down's per_FC also same queue) get
+  // GPU->GPU read-after-write coherence from OpenCL same-queue
+  // ordering, so the host SVMMap drain is dead weight here.
+  // ffn_down's own sync_output still drains the queue at the
+  // CPU-consumer boundary (sampling reads logits).
+  static const bool s_gateup_no_sync =
+    std::getenv("NNTRAINER_GATEUP_NO_SYNC") != nullptr;
+  if (s_gateup_no_sync && profile_decode && !fused_rmsnorm &&
+      input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+      Uhidden_step.getMemoryData() &&
+        Uhidden_step.getMemoryData()->isSVM() &&
+      Ghidden_step.getMemoryData() &&
+        Ghidden_step.getMemoryData()->isSVM() &&
+      Uweight.getMemoryData() && Uweight.getMemoryData()->isSVM() &&
+      Gweight.getMemoryData() && Gweight.getMemoryData()->isSVM()) {
+    const unsigned int K = input_step.width();
+    const unsigned int N_u = Uhidden_step.width();
+    const unsigned int N_g = Ghidden_step.width();
+    if ((K & 3u) == 0u && (N_u & 3u) == 0u && (N_g & 3u) == 0u) {
+      const uint64_t t_pre_dot = profile_decode ? gu_now_ns() : 0;
+      if (profile_decode)
+        g_gate_up_decode_profile.ns_setup += t_pre_dot - t_enter;
+      // Up = q slot, Gate = k slot, V slot unused (N_v = 0). Pass
+      // Uweight again as the v dummy so the helper's fused_get_or_make
+      // doesn't see a null v_weights (the v branch is never executed
+      // since n < N_u + N_g for all work-items).
+      const bool ok = nntrainer::fused_gemv_int4_image2d_cl(
+        reinterpret_cast<uint16_t *>(input_step.getData<char>()),
+        reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
+        Uweight.getScale<uint16_t>(),
+        reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
+        reinterpret_cast<uint16_t *>(Gweight.getData<char>()),
+        Gweight.getScale<uint16_t>(),
+        reinterpret_cast<uint16_t *>(Ghidden_step.getData<char>()),
+        reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
+        Uweight.getScale<uint16_t>(),
+        reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
+        K, N_u, N_g, /*N_v=*/0u, /*sync_output=*/false);
+      if (ok) {
+        if (profile_decode) {
+          const uint64_t t_post_dot = gu_now_ns();
+          g_gate_up_decode_profile.ns_dot += t_post_dot - t_pre_dot;
+          g_gate_up_decode_profile.ns += t_post_dot - t_enter;
+          g_gate_up_decode_profile.calls.fetch_add(
+            1, std::memory_order_relaxed);
+          record_cpu();
+        }
+        return;
+      }
+    }
+  }
 #endif
 
   // Legacy path (also serves as fused-mode fallback for unsupported
