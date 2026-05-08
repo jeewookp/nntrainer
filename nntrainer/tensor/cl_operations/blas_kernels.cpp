@@ -6363,6 +6363,19 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       attention_fused_fp16_decode_v2_kernel, "attention_fused_fp16_decode_v2",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  // v3: 4x KK-block-softmax + native_exp. Each iter loads K/V for 4
+  // kk positions, batches 4 reductions, applies a single rescale
+  // exp + 4 score exps (vs 1 + 2 in v2) before updating acc / sum.
+  // Save ~17% exp ops; native_exp uses Adreno SFU directly.
+  static const bool s_attn_decode_v3 =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V3") != nullptr;
+  static ClContext::SharedPtrClKernel s_kern_decode_v3;
+  if (s_attn_decode_v3 && !s_kern_decode_v3) {
+    s_kern_decode_v3 = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v3_kernel,
+      "attention_fused_fp16_decode_v3",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
   // GQA-aware decode kernel: 1 WG per kv-head (not per Q head). 4 Q
   // heads share the per-kk K/V load -- ~4x less KV memory traffic.
   // Hardcoded GQA=4 for Qwen3-4B; only fires when gqa_size==4.
@@ -6376,17 +6389,21 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
 
+  const bool use_decode_v3 =
+    (s_attn_decode_v3 && M == 1u && s_kern_decode_v3);
   const bool use_decode_gqa =
+    !use_decode_v3 &&
     (s_attn_decode_gqa && M == 1u && gqa_size == 4u && s_kern_decode_gqa);
   const bool use_decode_v2 =
-    !use_decode_gqa &&
+    !use_decode_v3 && !use_decode_gqa &&
     (s_attn_decode_v2 && M == 1u && s_kern_decode_v2);
   const bool use_decode_kern =
-    use_decode_gqa || use_decode_v2 ||
+    use_decode_v3 || use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_gqa    ? s_kern_decode_gqa
-    : use_decode_v2     ? s_kern_decode_v2
+    use_decode_v3     ? s_kern_decode_v3
+    : use_decode_gqa  ? s_kern_decode_gqa
+    : use_decode_v2   ? s_kern_decode_v2
     : use_decode_kern ? s_kern_decode
                       : s_kern;
 
