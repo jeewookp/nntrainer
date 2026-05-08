@@ -10,6 +10,7 @@
  * @brief  This file defines Transformer's basic actions
  */
 
+#include <cstdio>
 #include <fstream>
 
 #include <app_context.h>
@@ -450,8 +451,13 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
   // Phase M: when env-gated, GateUpLayer fuses SwiGLU inline and
   // writes the SwiGLU output into its (0) slot. Skip the standalone
   // swiglu layer and feed ffn_down directly from gate_up_layer(0).
-  static const bool s_gateup_swiglu_fused =
-    std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED") != nullptr;
+  static const bool s_gateup_swiglu_fused = []() {
+    const char *v = std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED");
+    std::fprintf(stderr,
+                 "[GATEUP_SWIGLU_FUSED_DIAG] env=%s -> %d\n",
+                 v ? v : "(null)", (int)(v != nullptr));
+    return v != nullptr;
+  }();
   std::string ffn_down_input;
   if (s_gateup_swiglu_fused) {
     ffn_down_input = gate_up_name + "(0)";
