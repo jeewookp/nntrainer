@@ -182,6 +182,14 @@ void QKVNormLayer::incremental_forwarding(
   nntrainer::Tensor Vhidden_step =
     Vhidden_.getSharedDataTensor(Vhidden_step_dim, 0, true);
 
+  const unsigned int M = to - from;
+  const unsigned int q_unit =
+    std::get<qkvnorm_props::QUnit>(qkv_norm_props).get();
+  const unsigned int k_unit =
+    std::get<qkvnorm_props::KUnit>(qkv_norm_props).get();
+  const unsigned int q_rows = M * (q_unit / feature_size);
+  const unsigned int k_rows = M * (k_unit / feature_size);
+
   // Step 1: fused QKV projection. Bypass HalfTensor::dot batched (which
   // hardcodes sync_output=true for the 3-partition QKV path) and call
   // fused_gemv_int4_image2d_cl directly with sync_output=false. The
@@ -239,13 +247,6 @@ void QKVNormLayer::incremental_forwarding(
   // Q rows = (to-from) * (q_unit / head_dim)
   // K rows = (to-from) * (k_unit / head_dim)
   // V passes through with no norm.
-  const unsigned int M = to - from;
-  const unsigned int q_unit =
-    std::get<qkvnorm_props::QUnit>(qkv_norm_props).get();
-  const unsigned int k_unit =
-    std::get<qkvnorm_props::KUnit>(qkv_norm_props).get();
-  const unsigned int q_rows = M * (q_unit / feature_size);
-  const unsigned int k_rows = M * (k_unit / feature_size);
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
   const bool q_svm =
