@@ -271,7 +271,11 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // gate_up_layer(0) directly when the same env-gate is on.
   static const bool s_gateup_swiglu_fused =
     std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED") != nullptr;
-  if (s_gateup_swiglu_fused && !fused_rmsnorm &&
+  // Phase M is decode-only: prefill (M>1) keeps the canonical legacy
+  // path so that the standalone SwiGLULayer can compute silu(g)*u
+  // unchanged. The SwiGLULayer's pass-through (matching env-gate)
+  // takes over only on the M==1 path.
+  if (s_gateup_swiglu_fused && profile_decode && !fused_rmsnorm &&
       input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
       Uhidden_step.getMemoryData() &&

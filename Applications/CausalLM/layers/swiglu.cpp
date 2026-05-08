@@ -95,6 +95,38 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   int iter = to - from;
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Phase M pass-through: when GateUpLayer fused SwiGLU inline (env
+  // NNTRAINER_GATEUP_SWIGLU_FUSED + decode M==1), in2 already
+  // contains the final swiglu_out. Just copy it into our output via
+  // the existing copy_cl_fp16 dispatch and skip the silu(g)*u math.
+  static const bool s_gateup_swiglu_fused =
+    std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED") != nullptr;
+  if (s_gateup_swiglu_fused && iter == 1 &&
+      in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      in2.getMemoryData() && in2.getMemoryData()->isSVM() &&
+      out.getMemoryData() && out.getMemoryData()->isSVM()) {
+    const size_t bytes = in2.bytes();
+    if (out.bytes() == bytes &&
+        nntrainer::svm_memcpy_fp16_cl(in2.getData<char>(),
+                                       out.getData<char>(), bytes)) {
+      // Publish swiglu_out to GpuImagePool so the down_proj pool-hits
+      // (matching the legacy fast-path's behaviour at line ~131).
+      if ((out.width() % 4) == 0) {
+        const int pub_M = (int)out.channel() * (int)iter;
+        nntrainer::svm_to_image2d_publish(
+          out.getData<char>(), pub_M, (unsigned int)out.width());
+      }
+      if (profile_this_call) {
+        g_swiglu_profile.ns += now_ns() - t_layer_start;
+        g_swiglu_profile.calls++;
+      }
+      return;
+    }
+    // Fall through to legacy fast-path on helper failure.
+  }
+
   // Phase B fast path: if all three tensors are fp16 SVM and the
   // flat element count is a safe multiple of the dispatch local size,
   // run swiglu_cl_fp16 on the GPU queue instead of the NEON CPU
