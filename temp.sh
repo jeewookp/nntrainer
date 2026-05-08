@@ -146,14 +146,6 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_FUSED_GEMV_IMAGE2D_V2=1; \
   export NNTRAINER_SWIGLU_IMAGE2D=1; \
   export NNTRAINER_MHA_UNIFIED_ENTRY_DRAIN=1; \
-  # Phase L-drain: skip the entry SVMMap entirely. Currently
-  # entry_drain costs ~526us per layer call (1.21s over a 64-token
-  # decode = 27% of TPS). Code comment says "broken on this driver"
-  # but that was pre-Phase-J. Now Q/K/V/output are all GPU-written
-  # within the same blas_cc queue, so OpenCL same-queue ordering
-  # alone should give read-after-write coherence for the kernel-side
-  # consumers. Output (host side) consumer is already reached via
-  # downstream layer's own SVMMap. If output garbles, revert this.
   export NNTRAINER_MHA_NO_ENTRY_DRAIN=1; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
