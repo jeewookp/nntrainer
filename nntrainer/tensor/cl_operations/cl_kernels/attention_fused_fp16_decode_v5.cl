@@ -75,8 +75,10 @@ void attention_fused_fp16_decode_v5(
   const int kk_end = (is_causal != 0) ? (from + 1) : T;
 
   // Local memory tile for one CHUNK_KK worth of K and V.
-  __local half K_local[CHUNK_KK][HD];
-  __local half V_local[CHUNK_KK][HD];
+  // Flat 1D to avoid Adreno OpenCL multi-dim __local + vstore8 quirk
+  // ("Attempt to use subscript to obtain element of 'half4'" build err).
+  __local half K_local[CHUNK_KK * HD];
+  __local half V_local[CHUNK_KK * HD];
 
   float q_val[DPT];
   #pragma unroll
@@ -91,42 +93,40 @@ void attention_fused_fp16_decode_v5(
   #pragma unroll
   for (int i = 0; i < DPT; ++i) acc[i] = 0.0f;
 
-  // Cooperative-load mapping. Each lane handles 2 (kk_local,
-  // d-block) pairs per chunk. d-block = 8 fp16 per slot. 8 kk x
-  // 128 d / (8 fp16/slot) = 128 slots. 64 lanes x 2 = 128. ✓
-  // Per pair: lane lid handles slots `lid` and `lid + 64`.
-  //   slot k => kk_local = k / 16, d_off = (k % 16) * 8.
+  // Cooperative-load mapping. Each lane covers d-positions
+  // {d, d + WG} (matches the inner loop's DPT mapping). Outer loop
+  // walks chunk_eff kk-rows so each pass loads 1 kk row of K/V into
+  // SLM. Per chunk: chunk_eff rows x DPT=2 d-positions per lane = up
+  // to 16 scalar half loads/stores per lane (kept simple and avoids
+  // half8 / multi-dim local-array compiler quirks on Adreno).
 
   for (int kk_base = 0; kk_base < kk_end; kk_base += CHUNK_KK) {
     // Effective chunk size (last tile may be partial).
     const int chunk_eff = min(CHUNK_KK, kk_end - kk_base);
 
-    // Cooperative load.
-    #pragma unroll
-    for (int slot_iter = 0; slot_iter < 2; ++slot_iter) {
-      const int slot = d + slot_iter * WG;            // 0..127
-      const int kk_local = slot / 16;                 // 0..7
-      const int d_off    = (slot & 15) * 8;            // 0,8,16,...,120
-      if (kk_local < chunk_eff) {
-        const int g_idx =
-          (kk_base + kk_local) * W_k + h_kv * HD + d_off;
-        const half8 k_vec = vload8(0, K_cache + g_idx);
-        const half8 v_vec = vload8(0, V_cache + g_idx);
-        vstore8(k_vec, 0, &K_local[kk_local][d_off]);
-        vstore8(v_vec, 0, &V_local[kk_local][d_off]);
+    // Cooperative load (DPT-aligned, scalar).
+    for (int kk_l = 0; kk_l < chunk_eff; ++kk_l) {
+      const int g_base = (kk_base + kk_l) * W_k + h_kv * HD;
+      const int l_base = kk_l * HD;
+      #pragma unroll
+      for (int i = 0; i < DPT; ++i) {
+        const int dd = d + i * WG;
+        K_local[l_base + dd] = K_cache[g_base + dd];
+        V_local[l_base + dd] = V_cache[g_base + dd];
       }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     // Inner kk loop reads K/V from local memory.
     for (int kk_l = 0; kk_l < chunk_eff; ++kk_l) {
+      const int l_base = kk_l * HD;
       float partial = 0.0f;
       float v_val[DPT];
       #pragma unroll
       for (int i = 0; i < DPT; ++i) {
         const int dd = d + i * WG;
-        const float k_v = (float)K_local[kk_l][dd];
-        v_val[i]        = (float)V_local[kk_l][dd];
+        const float k_v = (float)K_local[l_base + dd];
+        v_val[i]        = (float)V_local[l_base + dd];
         partial += q_val[i] * k_v;
       }
       const float score = sub_group_reduce_add(partial) * scale;
