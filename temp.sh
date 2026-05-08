@@ -156,11 +156,16 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # softmax fold (1.6x more native_exp ops). Kernel kept in tree but
   # gated off; revisit if a longer-context bench shows L2 thrashing.
   # export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
-  # v6: 2 Q heads per WG, K/V loads halved when gqa>=2. Pre-scaled Q +
-  # K-then-V phasing keeps reg pressure ~24 fp32/lane (lower than v3's
-  # 29). Falls back automatically when gqa<2 or num_heads_Q odd. v6 is
-  # routed PREFERRED over v3 when both gates are on.
-  export NNTRAINER_ATTN_FUSED_DECODE_V6=1; \
+  # NNTRAINER_ATTN_FUSED_DECODE_V6: 2 Q heads per WG.
+  # Tested: avg_gpu 633us vs v3's 488us (-30% slower). L2 already
+  # amortized cross-WG K/V duplicates, so packing 2 Q heads in
+  # 1 WG was pure occupancy loss (16 WGs vs 32). Disabled.
+  # export NNTRAINER_ATTN_FUSED_DECODE_V6=1; \
+  # v7: v3 layout but with explicit K-then-V load phasing. Reg
+  # pressure drops from ~29 to ~14 fp32/lane -> Adreno can pack
+  # more wavefronts per CU -> better latency hiding. Same WG count
+  # (32) and same compute as v3.
+  export NNTRAINER_ATTN_FUSED_DECODE_V7=1; \
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
