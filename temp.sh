@@ -149,6 +149,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V3=1; \
+  export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
