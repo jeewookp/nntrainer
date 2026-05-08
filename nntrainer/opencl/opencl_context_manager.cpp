@@ -89,10 +89,25 @@ void ContextManager::ReleaseContext() {
 const cl_device_id ContextManager::GetDeviceId() { return device_id_; }
 
 void *ContextManager::createSVMRegion(size_t size) {
-  if (context_)
-    return clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
-  else
-    return nullptr;
+  if (!context_) return nullptr;
+  // Phase A: Adreno 830 advertises CL_DEVICE_SVM_FINE_GRAIN_BUFFER.
+  // Fine-grained SVM auto-coheres host<->device without explicit
+  // SVMMap/Unmap, so the structural ~330us cache-flush wait that
+  // Phase O hit on coarse-grain becomes a no-op. Trade-off: per-
+  // cacheline coherence may add per-access cost during kernels;
+  // env-gate it so a regression triggers a fast revert.
+  static const bool s_svm_fine_grain =
+    std::getenv("NNTRAINER_SVM_FINE_GRAIN") != nullptr;
+  cl_svm_mem_flags flags = CL_MEM_READ_WRITE;
+  if (s_svm_fine_grain) {
+    flags |= CL_MEM_SVM_FINE_GRAIN_BUFFER;
+  }
+  void *p = clSVMAlloc(context_, flags, size, 0);
+  if (!p && s_svm_fine_grain) {
+    // Fall back to coarse if fine-grain alloc rejected for this size.
+    p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
+  }
+  return p;
 }
 
 void ContextManager::releaseSVMRegion(void *svm_ptr) {
