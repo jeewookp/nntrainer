@@ -278,7 +278,8 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         Uhidden_step.getMemoryData()->isSVM()) {
     const unsigned int K_in = input_step.width();
     const unsigned int N_h = Uhidden_step.width();
-    if (Ghidden_step.width() == N_h) {
+    const unsigned int M_in = input_step.height();
+    if (Ghidden_step.width() == N_h && M_in > 0) {
       const uint64_t t_pre_dot = profile_decode ? gu_now_ns() : 0;
       if (profile_decode)
         g_gate_up_decode_profile.ns_setup += t_pre_dot - t_enter;
@@ -289,7 +290,7 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
         reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
         Uweight.getScale<uint16_t>(),
         reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
-        K_in, N_h, /*sync_output=*/false);
+        M_in, K_in, N_h, /*sync_output=*/false);
       if (fused_ok) {
         if (profile_decode) {
           const uint64_t t_post_dot = gu_now_ns();

@@ -379,6 +379,7 @@ bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
                                     uint16_t *up_weights,
                                     uint16_t *up_scales,
                                     uint16_t *out_svm,
+                                    unsigned int M,
                                     unsigned int K,
                                     unsigned int N,
                                     bool sync_output);

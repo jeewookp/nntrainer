@@ -3992,11 +3992,12 @@ bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
                                     uint16_t *up_weights,
                                     uint16_t *up_scales,
                                     uint16_t *out_svm,
+                                    unsigned int M,
                                     unsigned int K,
                                     unsigned int N,
                                     bool sync_output) {
   if (!input_svm || !gate_weights || !up_weights || !out_svm) return false;
-  if ((K & 7u) != 0u || (N & 3u) != 0u) return false;
+  if (M == 0 || (K & 7u) != 0u || (N & 3u) != 0u) return false;
 
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
@@ -4025,14 +4026,15 @@ bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
   s_kern->SetKernelArguments(a++, &up_img, sizeof(cl_mem));
   s_kern->SetKernelSVMArguments(a++, up_scales);
   s_kern->SetKernelSVMArguments(a++, out_svm);
-  int sk = (int)K, sn = (int)N;
+  int sk = (int)K, sn = (int)N, sm = (int)M;
   s_kern->SetKernelArguments(a++, &sk, sizeof(int));
   s_kern->SetKernelArguments(a++, &sn, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sm, sizeof(int));
 
-  // Each WI handles 4 N positions; align global to 64.
+  // Each WI handles 4 N positions, 1 M row; align global[0] to 64.
   const int total_wi = (int)(N / 4u);
   const int aligned  = ((total_wi + 63) / 64) * 64;
-  const int g[3] = {aligned, 1, 1};
+  const int g[3] = {aligned, (int)M, 1};
   const int l[3] = {64, 1, 1};
   cl_event gs_ev = nullptr;
   cl_event *gs_ev_ptr = DecodeKernelGpuProfile::enabled() ? &gs_ev : nullptr;
@@ -4041,7 +4043,7 @@ bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
 
   if (sync_output) {
     blas_cc->command_queue_inst_.enqueueSVMMap(
-      out_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+      out_svm, (size_t)M * (size_t)N * sizeof(uint16_t), /*read_only=*/true);
   }
   if (gs_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv_img,

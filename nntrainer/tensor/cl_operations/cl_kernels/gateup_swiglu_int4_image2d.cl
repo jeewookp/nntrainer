@@ -35,18 +35,22 @@ gpu_gateup_swiglu_int4_image2d(__global const half *input,
                                 __global const half *scales_u,
                                 __global half *swiglu_out,
                                 const int K,
-                                const int N) {
+                                const int N,
+                                const int M) {
   const int n = get_global_id(0) * 4;
-  if (n >= N) return;
+  const int m = get_global_id(1);
+  if (n >= N || m >= M) return;
 
   const int n_pixel = n / 4;
+  const int input_off = m * K;
+  const int output_off = m * N;
 
   float g0 = 0.0f, g1 = 0.0f, g2 = 0.0f, g3 = 0.0f;
   float u0 = 0.0f, u1 = 0.0f, u2 = 0.0f, u3 = 0.0f;
 
   for (int k = 0; k < K; k += 16) {
-    const half8 in_lo = vload8(0, input + k);
-    const half8 in_hi = vload8(0, input + k + 8);
+    const half8 in_lo = vload8(0, input + input_off + k);
+    const half8 in_hi = vload8(0, input + input_off + k + 8);
     const uint4 g_lo = read_imageui(weights_g, gateup_swiglu_smp,
                                      (int2)(n_pixel, k / 8));
     const uint4 g_hi = read_imageui(weights_g, gateup_swiglu_smp,
@@ -121,8 +125,8 @@ gpu_gateup_swiglu_int4_image2d(__global const half *input,
   const float silu2 = g2s / (1.0f + native_exp(-g2s));
   const float silu3 = g3s / (1.0f + native_exp(-g3s));
 
-  swiglu_out[n + 0] = (half)(silu0 * u0s);
-  swiglu_out[n + 1] = (half)(silu1 * u1s);
-  swiglu_out[n + 2] = (half)(silu2 * u2s);
-  swiglu_out[n + 3] = (half)(silu3 * u3s);
+  swiglu_out[output_off + n + 0] = (half)(silu0 * u0s);
+  swiglu_out[output_off + n + 1] = (half)(silu1 * u1s);
+  swiglu_out[output_off + n + 2] = (half)(silu2 * u2s);
+  swiglu_out[output_off + n + 3] = (half)(silu3 * u3s);
 }
