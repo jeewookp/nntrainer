@@ -445,6 +445,17 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // arg + has its own consumer-side coherence handling.
   static const bool s_mha_no_entry_drain =
     std::getenv("NNTRAINER_MHA_NO_ENTRY_DRAIN") != nullptr;
+  // The skip is only safe when downstream RoPE consumers also run
+  // on GPU. Decode (M==1) flips to GPU RoPE under NNTRAINER_RoPE_GPU=1,
+  // but PREFILL (M>1) still uses CPU RoPE -- if we skipped the drain
+  // there, CPU RoPE would read stale Q/K and corrupt the kv-cache,
+  // poisoning every subsequent decode step. Limit the skip to
+  // (decode && rope-gpu).
+  static const bool s_rope_gpu_for_drain_skip =
+    std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+  const bool skip_entry_drain =
+    s_mha_no_entry_drain && profile_this_decode &&
+    s_rope_gpu_for_drain_skip;
   // Phase B.13: skip ONLY the output (CPU-write) entry SVMMap when
   // attention runs on GPU. q/k/v entry maps are kept because they
   // act as Adreno coarse-SVM cache-flush triggers for upstream Q/K/V
@@ -463,7 +474,7 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     s_mha_no_output_entry_drain && s_attn_gpu_for_output_drain;
   auto *mha_sync_cl_ctx = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
-  if (mha_sync_cl_ctx && !s_mha_no_entry_drain) {
+  if (mha_sync_cl_ctx && !skip_entry_drain) {
     auto map_if_svm = [&](nntrainer::Tensor &t, bool ro) {
       if (t.getMemoryData() && t.getMemoryData()->isSVM()) {
         mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
