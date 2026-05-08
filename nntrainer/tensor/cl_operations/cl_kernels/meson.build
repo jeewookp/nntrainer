@@ -86,6 +86,7 @@ if get_option('enable-fp16')
     'rmsnorm_fp16.cl',
     'rmsnorm_fp16_svm.cl',
     'rotary_emb_fp16.cl',
+    'rope_decode_fp16.cl',
     'attention_fused_fp16.cl',
     'attention_fused_fp16_decode.cl',
     'attention_fused_fp16_decode_v2.cl',

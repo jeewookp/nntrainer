@@ -873,32 +873,82 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     else if (profile_decode) g_mha_core_decode_profile.ns_v_copy += dt;
   };
 
-  // apply rotary embedding for query
-  const uint64_t t_rope_q0 = mha_now_ns();
-  apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
-                             false);
-  acc_rope_q(mha_now_ns() - t_rope_q0);
+  // GPU-RoPE path: when env-gated and decode-shape (M=1, fp16, SVM),
+  // dispatch the rope_decode_fp16 kernel + clEnqueueSVMMemcpy on the
+  // blas_cc queue so that NNTRAINER_MHA_NO_ENTRY_DRAIN can be flipped
+  // on without racing CPU-side RoPE against GPU producer writes.
+  bool rope_gpu_done = false;
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1 && defined(ENABLE_FP16)
+  static const bool s_rope_gpu =
+    std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+  const bool rope_gpu_eligible =
+    s_rope_gpu && profile_decode &&
+    query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+    head_dim == 128 &&
+    query_step.getMemoryData() && query_step.getMemoryData()->isSVM() &&
+    key_step.getMemoryData() && key_step.getMemoryData()->isSVM() &&
+    value_step.getMemoryData() && value_step.getMemoryData()->isSVM() &&
+    b_cache_key_step.getMemoryData() &&
+      b_cache_key_step.getMemoryData()->isSVM() &&
+    b_cache_value_step.getMemoryData() &&
+      b_cache_value_step.getMemoryData()->isSVM();
+  if (rope_gpu_eligible) {
+    // query_step layout: (1, 1, 1, num_heads_Q * head_dim) for decode.
+    // Use the layer's cached num_heads_{Q,KV} rather than tensor dims
+    // so we don't depend on a particular shape convention.
+    const uint64_t t_rope_q0 = mha_now_ns();
+    const bool ok_q = nntrainer::rope_decode_fp16_cl(
+      query_step.getData<char>(), query_step.getData<char>(),
+      (unsigned int)num_heads_Q, (unsigned int)head_dim,
+      cache_index, theta);
+    acc_rope_q(mha_now_ns() - t_rope_q0);
 
-  // append kcache with rotary embedding
-  const uint64_t t_rope_k0 = mha_now_ns();
-  apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim, cache_index,
-                             false);
-  acc_rope_k(mha_now_ns() - t_rope_k0);
+    const uint64_t t_rope_k0 = mha_now_ns();
+    const bool ok_k = nntrainer::rope_decode_fp16_cl(
+      key_step.getData<char>(), b_cache_key_step.getData<char>(),
+      (unsigned int)num_heads_KV, (unsigned int)head_dim,
+      cache_index, theta);
+    acc_rope_k(mha_now_ns() - t_rope_k0);
 
-  // append vcache without rotary embedding
-  if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
     const uint64_t t_v0 = mha_now_ns();
-    apply_rotary_emb_tensor_v2(value_step, b_cache_value_step, head_dim,
-                               cache_index, true);
+    const bool ok_v = nntrainer::svm_memcpy_fp16_cl(
+      value_step.getData<char>(), b_cache_value_step.getData<char>(),
+      value_step.bytes());
     acc_v_copy(mha_now_ns() - t_v0);
-  } else if (query_step.getDataType() == ml::train::TensorDim::DataType::FP16) {
-#ifdef ENABLE_FP16
-    const uint64_t t_v0 = mha_now_ns();
-    b_cache_value_step.copyData(value_step);
-    acc_v_copy(mha_now_ns() - t_v0);
-#else
-    NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
+
+    rope_gpu_done = ok_q && ok_k && ok_v;
+  }
 #endif
+
+  if (!rope_gpu_done) {
+    // apply rotary embedding for query
+    const uint64_t t_rope_q0 = mha_now_ns();
+    apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
+                               false);
+    acc_rope_q(mha_now_ns() - t_rope_q0);
+
+    // append kcache with rotary embedding
+    const uint64_t t_rope_k0 = mha_now_ns();
+    apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim,
+                               cache_index, false);
+    acc_rope_k(mha_now_ns() - t_rope_k0);
+
+    // append vcache without rotary embedding
+    if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
+      const uint64_t t_v0 = mha_now_ns();
+      apply_rotary_emb_tensor_v2(value_step, b_cache_value_step, head_dim,
+                                 cache_index, true);
+      acc_v_copy(mha_now_ns() - t_v0);
+    } else if (query_step.getDataType() ==
+               ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
+      const uint64_t t_v0 = mha_now_ns();
+      b_cache_value_step.copyData(value_step);
+      acc_v_copy(mha_now_ns() - t_v0);
+#else
+      NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";
+#endif
+    }
   }
 
   /// @todo replace step_size into input height

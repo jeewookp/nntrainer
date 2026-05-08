@@ -304,6 +304,30 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
                               unsigned int num_heads_Q,
                               unsigned int gqa_size,
                               unsigned int head_dim, int is_causal);
+
+/**
+ * @brief Decode-only GPU RoPE for FP16 (M=1).
+ *
+ * Dispatches the rope_decode_fp16 kernel which applies rotary
+ * embedding in-kernel using on-the-fly cos/sin (libm-precise) and
+ * native_exp for the per-dim theta.  In-place when out_svm == in_svm,
+ * out-of-place when writing to a kv-cache slice.
+ *
+ * Returns false on shape constraint or driver error so the caller
+ * can fall back to the CPU path.
+ *
+ * head_dim must be even and <= 128 (WG = head_dim/2 lanes <= 64).
+ */
+bool rope_decode_fp16_cl(void *in_svm, void *out_svm,
+                          unsigned int num_heads, unsigned int head_dim,
+                          unsigned int position, float theta_base);
+
+/**
+ * @brief GPU SVM-to-SVM memcpy via clEnqueueSVMMemcpy on blas_cc's
+ * queue. Used to publish V-cache writes without paying a host-side
+ * SVMMap drain.
+ */
+bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes);
 #endif
 
 /**

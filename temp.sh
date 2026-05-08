@@ -147,6 +147,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_SWIGLU_IMAGE2D=1; \
   export NNTRAINER_MHA_UNIFIED_ENTRY_DRAIN=1; \
   export NNTRAINER_MHA_NO_ENTRY_DRAIN=1; \
+  export NNTRAINER_RoPE_GPU=1; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V3=1; \

@@ -6537,6 +6537,108 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
 }
 
+// ============================================================================
+// Decode GPU RoPE (M=1) and SVM memcpy helpers.  Together they let
+// MHACoreLayer skip the entry_drain SVMMap that previously synced
+// upstream qkv_norm GPU writes back to the CPU for CPU-side RoPE.
+// ============================================================================
+bool rope_decode_fp16_cl(void *in_svm, void *out_svm,
+                          unsigned int num_heads, unsigned int head_dim,
+                          unsigned int position, float theta_base) {
+  // Kernel hardcodes WG=64 (= head_dim/2) via reqd_work_group_size,
+  // so we only support head_dim==128 right now. Caller falls back to
+  // the CPU path otherwise.
+  if (!in_svm || !out_svm || num_heads == 0 || head_dim != 128u ||
+      theta_base <= 0.0f)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(
+      rope_decode_fp16_kernel, "rope_decode_fp16");
+  }
+  if (!s_kern) return false;
+
+  // exponent_base = -2 * ln(theta_base) / head_dim, precomputed in
+  // host so the kernel just multiplies by d.
+  const float exponent_base =
+    -2.0f * std::log(theta_base) / (float)head_dim;
+  const int snh = (int)num_heads;
+  const int shd = (int)head_dim;
+  const int sp  = (int)position;
+
+  // Producer (qkv_norm) is on the same blas_cc queue, so OpenCL same-
+  // queue ordering covers read-after-write coherence; no SVMMap fence
+  // needed here.  Unmap the SVM args (non-blocking) to publish any
+  // host-side writes (none expected on the GPU pipeline path, but
+  // keep symmetric with attention_fused_fp16_cl).
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(in_svm);
+  if (out_svm != in_svm) {
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+  }
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, in_svm);
+  s_kern->SetKernelSVMArguments(a++, out_svm);
+  s_kern->SetKernelArguments(a++, &snh, sizeof(int));
+  s_kern->SetKernelArguments(a++, &shd, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sp,  sizeof(int));
+  s_kern->SetKernelArguments(a++, &exponent_base, sizeof(float));
+
+  const int half_dim = (int)(head_dim / 2u);
+  const int g[3] = {half_dim, snh, 1};
+  const int l[3] = {half_dim, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
+bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes) {
+  if (!src_svm || !dst_svm || bytes == 0) return false;
+  if (src_svm == dst_svm) return true;
+  if ((bytes & 1u) != 0u) return false;  // not fp16-aligned
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(copy_fp16_kernel, "copy_cl_fp16");
+  }
+  if (!s_kern) return false;
+
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(const_cast<void *>(src_svm));
+  blas_cc->command_queue_inst_.enqueueSVMUnmap(dst_svm);
+
+  const int total = (int)(bytes / sizeof(uint16_t));
+  // copy_cl_fp16 takes (in, out, B, C, H, W) but only uses linear
+  // global_id(0). Pass 1/1/1/total to keep it happy.
+  const int one = 1;
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, const_cast<void *>(src_svm));
+  s_kern->SetKernelSVMArguments(a++, dst_svm);
+  s_kern->SetKernelArguments(a++, &one,   sizeof(int));
+  s_kern->SetKernelArguments(a++, &one,   sizeof(int));
+  s_kern->SetKernelArguments(a++, &one,   sizeof(int));
+  s_kern->SetKernelArguments(a++, &total, sizeof(int));
+
+  // Round global up to a multiple of local size (64). The kernel
+  // doesn't bounds-check, so we have to ensure global == total.
+  // For typical decode v_copy (1024 fp16), total = 1024 = 16 * 64.
+  const int local = 64;
+  const int global = ((total + local - 1) / local) * local;
+  // If padding is needed, fall back to per-thread bounds check via
+  // a smaller local size. But here total is always a multiple of 64
+  // for Qwen3-4B (num_heads_KV * head_dim = 8 * 128 = 1024).
+  if (global != total) return false;
+  const int g[3] = {global, 1, 1};
+  const int l[3] = {local, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 #endif
 
 // ============================================================================
