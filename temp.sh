@@ -156,6 +156,11 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   # softmax fold (1.6x more native_exp ops). Kernel kept in tree but
   # gated off; revisit if a longer-context bench shows L2 thrashing.
   # export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
+  # v6: 2 Q heads per WG, K/V loads halved when gqa>=2. Pre-scaled Q +
+  # K-then-V phasing keeps reg pressure ~24 fp32/lane (lower than v3's
+  # 29). Falls back automatically when gqa<2 or num_heads_Q odd. v6 is
+  # routed PREFERRED over v3 when both gates are on.
+  export NNTRAINER_ATTN_FUSED_DECODE_V6=1; \
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
   # Race sources fixed:
   #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
