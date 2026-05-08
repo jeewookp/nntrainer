@@ -405,6 +405,60 @@ struct DecodeKernelGpuProfile {
 
 static DecodeKernelGpuProfile g_decode_gpu_profile;
 
+// Host-side wall-time profile per major helper. Tells us how long the
+// caller blocks inside each helper (which includes arg setup + the
+// clEnqueueNDRangeKernel host call + any sync_output SVMMap drain).
+// Subtracting this from layer wall reveals what the rest of the layer
+// is doing.
+struct DecodeKernelHostProfile {
+  struct Bucket {
+    std::atomic<uint64_t> calls{0};
+    std::atomic<uint64_t> ns_wall{0};
+  };
+  Bucket fused_gemv_qkv_img;   // fused_gemv_int4_image2d_cl
+  Bucket per_fc_gemv_img;      // gemv_int4 per-FC image2d helpers
+  Bucket attn_fused;           // attention_fused_fp16_cl
+  Bucket lmhead_int4_chunked;  // lmhead_int4_chunked_dispatch_cl
+
+  static bool enabled() {
+    static const bool v =
+      std::getenv("NNTRAINER_GPU_EVENT_PROFILE") != nullptr;
+    return v;
+  }
+
+  static uint64_t now_ns() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+  }
+
+  ~DecodeKernelHostProfile() {
+    auto tot = fused_gemv_qkv_img.calls.load() +
+               per_fc_gemv_img.calls.load() +
+               attn_fused.calls.load() +
+               lmhead_int4_chunked.calls.load();
+    if (tot == 0) return;
+    std::fprintf(stderr,
+                 "\n[PROFILE Helper host wall (NNTRAINER_GPU_EVENT_PROFILE)]\n"
+                 "  bucket                          calls    host_total"
+                 "    avg_host\n");
+    auto print = [](const char *name, const Bucket &b) {
+      const uint64_t c = b.calls.load();
+      if (c == 0) return;
+      const double total_ms = b.ns_wall.load() / 1.0e6;
+      const double avg_us = b.ns_wall.load() / (double)c / 1.0e3;
+      std::fprintf(stderr,
+                   "  %-30s %6llu  %9.2f ms  %7.1f us\n",
+                   name, (unsigned long long)c, total_ms, avg_us);
+    };
+    print("fused_gemv_int4 (image2d)", fused_gemv_qkv_img);
+    print("gemv_int4 per-FC (image2d)", per_fc_gemv_img);
+    print("attention_fused_fp16", attn_fused);
+    print("lm_head int4 chunked", lmhead_int4_chunked);
+  }
+};
+static DecodeKernelHostProfile g_decode_host_profile;
+
 } // namespace
 
 void gemv_int4_async_cl(std::vector<void *> weights,
@@ -2487,6 +2541,8 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
                                   uint16_t *scales, uint16_t *output,
                                   unsigned int K, unsigned int N,
                                   bool sync_output) {
+  const uint64_t t_host_enter =
+    DecodeKernelHostProfile::enabled() ? DecodeKernelHostProfile::now_ns() : 0;
   if (!input || !weights || !scales || !output) return false;
   if ((K & 3u) || (N & 3u)) return false;
 
@@ -2641,6 +2697,12 @@ bool gemv_int4_weight_image2d_cl(uint16_t *input, uint16_t *weights,
   if (w2d_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv_img, w2d_ev);
   }
+  if (DecodeKernelHostProfile::enabled()) {
+    g_decode_host_profile.per_fc_gemv_img.calls.fetch_add(
+      1, std::memory_order_relaxed);
+    g_decode_host_profile.per_fc_gemv_img.ns_wall +=
+      DecodeKernelHostProfile::now_ns() - t_host_enter;
+  }
   return true;
 }
 
@@ -2678,6 +2740,8 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
                                      uint16_t *scales, uint16_t *output,
                                      unsigned int K, unsigned int N,
                                      bool sync_output) {
+  const uint64_t t_host_enter =
+    DecodeKernelHostProfile::enabled() ? DecodeKernelHostProfile::now_ns() : 0;
   if (!input || !weights || !scales || !output) return false;
   if ((K & 7u) || (N & 3u)) return false;
 
@@ -2843,6 +2907,12 @@ bool gemv_int4_weight_image2d_v2_cl(uint16_t *input, uint16_t *weights,
   }
   if (v2_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv_img, v2_ev);
+  }
+  if (DecodeKernelHostProfile::enabled()) {
+    g_decode_host_profile.per_fc_gemv_img.calls.fetch_add(
+      1, std::memory_order_relaxed);
+    g_decode_host_profile.per_fc_gemv_img.ns_wall +=
+      DecodeKernelHostProfile::now_ns() - t_host_enter;
   }
   return true;
 }
@@ -3865,6 +3935,8 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
                                  unsigned int N_k,
                                  unsigned int N_v,
                                  bool sync_output) {
+  const uint64_t t_host_enter =
+    DecodeKernelHostProfile::enabled() ? DecodeKernelHostProfile::now_ns() : 0;
   if (!input_svm) return false;
   if ((K & 3u) || (N_q & 3u) || (N_k & 3u) || (N_v & 3u)) return false;
 
@@ -3979,6 +4051,12 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
   if (fgi_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv_img,
                                fgi_ev);
+  }
+  if (DecodeKernelHostProfile::enabled()) {
+    g_decode_host_profile.fused_gemv_qkv_img.calls.fetch_add(
+      1, std::memory_order_relaxed);
+    g_decode_host_profile.fused_gemv_qkv_img.ns_wall +=
+      DecodeKernelHostProfile::now_ns() - t_host_enter;
   }
   return true;
 }
@@ -4575,6 +4653,8 @@ void lmhead_int4_chunked_embedding_f32(unsigned int row, float *out,
 // applied to the SVM logits buffer.
 void lmhead_int4_chunked_dispatch_cl(uint16_t *input, uint16_t *output,
                                       unsigned int K, unsigned int N) {
+  const uint64_t t_host_enter =
+    DecodeKernelHostProfile::enabled() ? DecodeKernelHostProfile::now_ns() : 0;
   if (!g_lmhead_int4_cache.initialized ||
       g_lmhead_int4_cache.K != K || g_lmhead_int4_cache.N != N)
     return;
@@ -4623,6 +4703,12 @@ void lmhead_int4_chunked_dispatch_cl(uint16_t *input, uint16_t *output,
   // Single end-of-block SVMMap drain (whole logits buffer).
   blas_cc->command_queue_inst_.enqueueSVMMap(
     output, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  if (DecodeKernelHostProfile::enabled()) {
+    g_decode_host_profile.lmhead_int4_chunked.calls.fetch_add(
+      1, std::memory_order_relaxed);
+    g_decode_host_profile.lmhead_int4_chunked.ns_wall +=
+      DecodeKernelHostProfile::now_ns() - t_host_enter;
+  }
 }
 
 void sgemv_q6_k_cl(void *matAdata, float *vecXdata, float *vecYdata,
@@ -6387,6 +6473,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
                               unsigned int num_heads_Q,
                               unsigned int gqa_size,
                               unsigned int head_dim, int is_causal) {
+  const uint64_t t_host_enter =
+    DecodeKernelHostProfile::enabled() ? DecodeKernelHostProfile::now_ns() : 0;
   if (!q_svm || !k_cache_svm || !v_cache_svm || !out_svm ||
       M == 0 || T == 0 || num_heads_Q == 0 || gqa_size == 0 ||
       (num_heads_Q % gqa_size) != 0)
@@ -6655,6 +6743,12 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
   if (attn_ev) {
     g_decode_gpu_profile.defer(g_decode_gpu_profile.attn_fused, attn_ev);
+  }
+  if (DecodeKernelHostProfile::enabled()) {
+    g_decode_host_profile.attn_fused.calls.fetch_add(
+      1, std::memory_order_relaxed);
+    g_decode_host_profile.attn_fused.ns_wall +=
+      DecodeKernelHostProfile::now_ns() - t_host_enter;
   }
 }
 

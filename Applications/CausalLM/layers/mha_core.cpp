@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <mutex>
 #include <omp.h>
 #include <thread>
@@ -116,6 +117,7 @@ struct MHACoreDecodeProfile {
   std::atomic<uint64_t> ns_drain_o{0};
   std::atomic<uint64_t> ns_attn_fused_call{0};  // attention_fused_fp16_cl wall
   std::atomic<uint64_t> ns_exit_unmap_publish{0}; // SVMUnmap(output) + publish
+  std::atomic<uint64_t> ns_cpu{0};              // thread CPU time across calls
 
   ~MHACoreDecodeProfile() {
     const uint64_t c = calls.load();
@@ -174,6 +176,15 @@ struct MHACoreDecodeProfile {
     std::fprintf(stderr,
                  "  av       : %8.2f ms (%5.1f%%)\n",
                  ns_av / 1.0e6, pct(ns_av));
+    const uint64_t cpu = ns_cpu.load();
+    const double C = cpu / 1.0e6;
+    const double IDLE = T - C;
+    std::fprintf(stderr,
+                 "  cpu_busy : %8.2f ms (%5.1f%%)  [thread CPU time]\n"
+                 "  idle_wait: %8.2f ms (%5.1f%%)  [wall - cpu, host "
+                 "blocked on GPU queue drains]\n",
+                 C, t == 0 ? 0.0 : C / T * 100.0,
+                 IDLE, t == 0 ? 0.0 : IDLE / T * 100.0);
   }
 };
 
@@ -183,6 +194,12 @@ inline uint64_t mha_now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
     .count();
+}
+
+inline uint64_t mha_now_cpu_ns() {
+  struct timespec ts;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+  return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 }
 
 } // namespace
@@ -366,6 +383,8 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   const bool profile_this_decode = (_to - _from) == 1;
   const uint64_t t_layer_start =
     (profile_this_call || profile_this_decode) ? mha_now_ns() : 0;
+  const uint64_t t_cpu_start =
+    profile_this_decode ? mha_now_cpu_ns() : 0;
 
   /// @todo replace step_size into input height
   unsigned int step_size = _to - _from;
@@ -712,6 +731,8 @@ mha_entry_drain_done:;
     g_mha_core_profile.calls++;
   } else if (profile_this_decode) {
     g_mha_core_decode_profile.ns += mha_now_ns() - t_layer_start;
+    g_mha_core_decode_profile.ns_cpu +=
+      mha_now_cpu_ns() - t_cpu_start;
     g_mha_core_decode_profile.calls++;
   }
 }

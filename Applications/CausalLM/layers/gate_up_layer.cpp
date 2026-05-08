@@ -11,6 +11,7 @@
 #include <bs_thread_pool_manager.hpp>
 #include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <engine.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
@@ -28,6 +29,7 @@ namespace {
 struct GateUpDecodeProfile {
   std::atomic<uint64_t> calls{0};
   std::atomic<uint64_t> ns{0};
+  std::atomic<uint64_t> ns_cpu{0};       // thread CPU time across calls
   std::atomic<uint64_t> ns_setup{0};     // weight + tensor view setup
   std::atomic<uint64_t> ns_dot{0};       // input_step.dot(...) wall
   std::atomic<uint64_t> ns_misc{0};
@@ -35,7 +37,10 @@ struct GateUpDecodeProfile {
     const uint64_t c = calls.load();
     if (c == 0) return;
     const uint64_t t = ns.load();
+    const uint64_t cpu = ns_cpu.load();
     const double T = t / 1.0e6;
+    const double C = cpu / 1.0e6;
+    const double IDLE = T - C;
     auto pct = [&](uint64_t v) {
       return t == 0 ? 0.0 : (v / 1.0e6) / T * 100.0;
     };
@@ -55,6 +60,12 @@ struct GateUpDecodeProfile {
     std::fprintf(stderr,
                  "  misc     : %8.2f ms (%5.1f%%)\n",
                  ns_misc / 1.0e6, pct(ns_misc));
+    std::fprintf(stderr,
+                 "  cpu_busy : %8.2f ms (%5.1f%%)  [thread CPU time]\n"
+                 "  idle_wait: %8.2f ms (%5.1f%%)  [host blocked on GPU "
+                 "queue drain = wall - cpu]\n",
+                 C, t == 0 ? 0.0 : C / T * 100.0,
+                 IDLE, t == 0 ? 0.0 : IDLE / T * 100.0);
   }
 };
 GateUpDecodeProfile g_gate_up_decode_profile;
@@ -62,6 +73,11 @@ inline uint64_t gu_now_ns() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
            std::chrono::steady_clock::now().time_since_epoch())
     .count();
+}
+inline uint64_t gu_now_cpu_ns() {
+  struct timespec ts;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+  return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 }
 } // namespace
 
@@ -181,6 +197,14 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                          bool training) {
   const bool profile_decode = ((to - from) == 1);
   const uint64_t t_enter = profile_decode ? gu_now_ns() : 0;
+  const uint64_t t_cpu_enter = profile_decode ? gu_now_cpu_ns() : 0;
+  // Helper to attribute CPU time at every "calls.fetch_add" point.
+  auto record_cpu = [&]() {
+    if (profile_decode) {
+      g_gate_up_decode_profile.ns_cpu +=
+        gu_now_cpu_ns() - t_cpu_enter;
+    }
+  };
   const bool fused_rmsnorm =
     std::get<props::FusedRmsnorm>(gate_up_props).get();
   const auto up_idx =
@@ -253,6 +277,7 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
           g_gate_up_decode_profile.ns += t_post - t_enter;
           g_gate_up_decode_profile.calls.fetch_add(
             1, std::memory_order_relaxed);
+          record_cpu();
         }
         return;
       }
@@ -302,6 +327,7 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
           g_gate_up_decode_profile.ns += t_post_dot - t_enter;
           g_gate_up_decode_profile.calls.fetch_add(
             1, std::memory_order_relaxed);
+          record_cpu();
         }
         return;
       }
@@ -325,7 +351,7 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     const uint64_t t_post_dot = gu_now_ns();
     g_gate_up_decode_profile.ns_dot += t_post_dot - t_pre_dot;
     g_gate_up_decode_profile.ns += t_post_dot - t_enter;
-    g_gate_up_decode_profile.calls.fetch_add(1, std::memory_order_relaxed);
+    g_gate_up_decode_profile.calls.fetch_add(1, std::memory_order_relaxed); record_cpu();
   }
 }
 
