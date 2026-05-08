@@ -6363,14 +6363,30 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       attention_fused_fp16_decode_v2_kernel, "attention_fused_fp16_decode_v2",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  // GQA-aware decode kernel: 1 WG per kv-head (not per Q head). 4 Q
+  // heads share the per-kk K/V load -- ~4x less KV memory traffic.
+  // Hardcoded GQA=4 for Qwen3-4B; only fires when gqa_size==4.
+  static const bool s_attn_decode_gqa =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_GQA") != nullptr;
+  static ClContext::SharedPtrClKernel s_kern_decode_gqa;
+  if (s_attn_decode_gqa && !s_kern_decode_gqa) {
+    s_kern_decode_gqa = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_gqa_kernel,
+      "attention_fused_fp16_decode_gqa",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
 
+  const bool use_decode_gqa =
+    (s_attn_decode_gqa && M == 1u && gqa_size == 4u && s_kern_decode_gqa);
   const bool use_decode_v2 =
+    !use_decode_gqa &&
     (s_attn_decode_v2 && M == 1u && s_kern_decode_v2);
   const bool use_decode_kern =
-    use_decode_v2 ||
+    use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_v2     ? s_kern_decode_v2
+    use_decode_gqa    ? s_kern_decode_gqa
+    : use_decode_v2     ? s_kern_decode_v2
     : use_decode_kern ? s_kern_decode
                       : s_kern;
 
@@ -6397,9 +6413,13 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   kern_to_use->SetKernelArguments(a++, &is_causal, sizeof(int));
   kern_to_use->SetKernelArguments(a++, &scale, sizeof(float));
 
-  // Decode: 1 WG per Q head. Prefill: TQ=4 row-packing.
+  // Decode GQA: 1 WG per kv-head (each handles GQA Q heads).
+  // Decode TQ=1: 1 WG per Q head. Prefill: TQ=4 row-packing.
   int g[3];
-  if (use_decode_kern) {
+  if (use_decode_gqa) {
+    const int n_kv = nhq / 4;  // GQA = 4 hardcoded
+    g[0] = 64; g[1] = n_kv; g[2] = 1;
+  } else if (use_decode_kern) {
     g[0] = 64; g[1] = nhq; g[2] = 1;
   } else {
     constexpr int TQ = 4;
