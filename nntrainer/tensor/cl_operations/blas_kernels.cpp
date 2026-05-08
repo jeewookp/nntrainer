@@ -6433,32 +6433,52 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "attention_fused_fp16_decode_v7",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  // v8: WG=128 (2 sub-groups of 64), 2 Q heads per WG (one per sub-
+  // group). Shared kv-head means the K/V load issued by sub-group 0
+  // populates L1 for sub-group 1 to hit -- amortizes the per-Q-head
+  // load redundancy without doubling per-lane reg pressure (each
+  // lane is responsible for only 1 Q head). Same wavefront count
+  // as v3 (16 WGs * 2 sub-groups = 32 wavefronts).
+  static const bool s_attn_decode_v8 =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V8") != nullptr;
+  static ClContext::SharedPtrClKernel s_kern_decode_v8;
+  if (s_attn_decode_v8 && !s_kern_decode_v8) {
+    s_kern_decode_v8 = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v8_kernel,
+      "attention_fused_fp16_decode_v8",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
 
+  const bool use_decode_v8 =
+    (s_attn_decode_v8 && M == 1u && s_kern_decode_v8 &&
+     gqa_size >= 2u && (num_heads_Q & 1u) == 0u);
   const bool use_decode_v7 =
+    !use_decode_v8 &&
     (s_attn_decode_v7 && M == 1u && s_kern_decode_v7);
   const bool use_decode_v6 =
-    !use_decode_v7 &&
+    !use_decode_v8 && !use_decode_v7 &&
     (s_attn_decode_v6 && M == 1u && s_kern_decode_v6 &&
      gqa_size >= 2u && (num_heads_Q & 1u) == 0u);
   const bool use_decode_v5 =
-    !use_decode_v7 && !use_decode_v6 &&
+    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 &&
     (s_attn_decode_v5 && M == 1u && s_kern_decode_v5);
   const bool use_decode_v3 =
-    !use_decode_v7 && !use_decode_v6 && !use_decode_v5 &&
+    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 &&
     (s_attn_decode_v3 && M == 1u && s_kern_decode_v3);
   const bool use_decode_gqa =
-    !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
+    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
     (s_attn_decode_gqa && M == 1u && gqa_size == 4u && s_kern_decode_gqa);
   const bool use_decode_v2 =
-    !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
+    !use_decode_v8 && !use_decode_v7 && !use_decode_v6 && !use_decode_v5 && !use_decode_v3 &&
     !use_decode_gqa &&
     (s_attn_decode_v2 && M == 1u && s_kern_decode_v2);
   const bool use_decode_kern =
-    use_decode_v7 || use_decode_v6 || use_decode_v5 || use_decode_v3 ||
-    use_decode_gqa || use_decode_v2 ||
+    use_decode_v8 || use_decode_v7 || use_decode_v6 || use_decode_v5 ||
+    use_decode_v3 || use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_v7     ? s_kern_decode_v7
+    use_decode_v8     ? s_kern_decode_v8
+    : use_decode_v7   ? s_kern_decode_v7
     : use_decode_v6   ? s_kern_decode_v6
     : use_decode_v5   ? s_kern_decode_v5
     : use_decode_v3   ? s_kern_decode_v3
@@ -6500,11 +6520,16 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
 
   // Decode GQA: 1 WG per kv-head (each handles GQA Q heads).
   // Decode v6: 1 WG per Q-head pair (2 Q heads per WG).
+  // Decode v8: 1 WG (128 lanes, 2 sub-groups of 64) per Q-head pair.
   // Decode TQ=1: 1 WG per Q head. Prefill: TQ=4 row-packing.
   int g[3];
+  int l_x = 64;
   if (use_decode_gqa) {
     const int n_kv = nhq / 4;  // GQA = 4 hardcoded
     g[0] = 64; g[1] = n_kv; g[2] = 1;
+  } else if (use_decode_v8) {
+    g[0] = 128; g[1] = nhq / 2; g[2] = 1;
+    l_x = 128;
   } else if (use_decode_v6) {
     g[0] = 64; g[1] = nhq / 2; g[2] = 1;
   } else if (use_decode_v7) {
@@ -6516,7 +6541,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     const int m_tiles = (M_i + TQ - 1) / TQ;
     g[0] = 64; g[1] = nhq; g[2] = m_tiles;
   }
-  const int l[3] = {64, 1, 1};
+  const int l[3] = {l_x, 1, 1};
   cl_event attn_ev = nullptr;
   cl_event *attn_ev_ptr = DecodeKernelGpuProfile::enabled() ? &attn_ev : nullptr;
   blas_cc->command_queue_inst_.DispatchCommand(kern_to_use, g, l, attn_ev_ptr);
