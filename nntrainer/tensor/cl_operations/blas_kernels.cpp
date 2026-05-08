@@ -6468,10 +6468,18 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
                       : s_kern;
 
   // Commit upstream CPU writes before the GPU reads.
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+  // Skip when in pure-GPU-pipeline mode (NNTRAINER_RoPE_GPU=1):
+  // there was no preceding SVMMap from MHACoreLayer entry_drain,
+  // and an unpaired SVMUnmap on Adreno can invalidate GPU caches
+  // that hold the just-written Q/K/V from rope_decode.
+  static const bool s_attn_skip_unmap =
+    std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+  if (!s_attn_skip_unmap) {
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+  }
 
   const float scale = 1.0f / std::sqrt((float)head_dim);
   const int M_i = (int)M, T_i = (int)T, from_i = (int)from;
@@ -6571,16 +6579,11 @@ bool rope_decode_fp16_cl(void *in_svm, void *out_svm,
   const int shd = (int)head_dim;
   const int sp  = (int)position;
 
-  // Producer (qkv_norm) is on the same blas_cc queue, so OpenCL same-
-  // queue ordering covers read-after-write coherence; no SVMMap fence
-  // needed here.  Unmap the SVM args (non-blocking) to publish any
-  // host-side writes (none expected on the GPU pipeline path, but
-  // keep symmetric with attention_fused_fp16_cl).
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(in_svm);
-  if (out_svm != in_svm) {
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
-  }
-
+  // No SVMUnmap calls -- with NO_ENTRY_DRAIN there was no preceding
+  // SVMMap, and on Adreno an unpaired SVMUnmap may invalidate GPU
+  // caches that the upstream qkv_norm dispatch just populated. The
+  // OpenCL same-queue ordering alone covers read-after-write
+  // coherence between GPU producers and GPU consumers.
   int a = 0;
   s_kern->SetKernelSVMArguments(a++, in_svm);
   s_kern->SetKernelSVMArguments(a++, out_svm);
@@ -6610,9 +6613,7 @@ bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes) {
   }
   if (!s_kern) return false;
 
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(const_cast<void *>(src_svm));
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(dst_svm);
-
+  // No SVMUnmap (see rationale in rope_decode_fp16_cl).
   const int total = (int)(bytes / sizeof(uint16_t));
   // copy_cl_fp16 takes (in, out, B, C, H, W) but only uses linear
   // global_id(0). Pass 1/1/1/total to keep it happy.
