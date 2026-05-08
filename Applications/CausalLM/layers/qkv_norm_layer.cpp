@@ -182,14 +182,57 @@ void QKVNormLayer::incremental_forwarding(
   nntrainer::Tensor Vhidden_step =
     Vhidden_.getSharedDataTensor(Vhidden_step_dim, 0, true);
 
-  // Step 1: fused QKV projection via HalfTensor::dot batched path.
-  // For QINT4 weights + SVM activations + M=1, this routes to
-  // fused_gemv_int4_image2d_v2_cl, the same path gate_up_layer uses
-  // (kernel runs at ~64 GB/s = BW-bound).
-  std::vector<nntrainer::Tensor *> Weights({&Qweight, &Kweight, &Vweight});
-  std::vector<nntrainer::Tensor *> Outputs(
-    {&Qhidden_step, &Khidden_step, &Vhidden_step});
-  input_step.dot(Weights, Outputs);
+  // Step 1: fused QKV projection. Bypass HalfTensor::dot batched (which
+  // hardcodes sync_output=true for the 3-partition QKV path) and call
+  // fused_gemv_int4_image2d_cl directly with sync_output=false. The
+  // rmsnorm calls below run on the SAME OpenCL queue and read Q/K SVM,
+  // so same-queue ordering covers coherence -- the SVMMap drain that
+  // the batched path would do here is just dead weight.
+  bool fused_dispatched = false;
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  const bool all_svm =
+    input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+    Qhidden_step.getMemoryData() && Qhidden_step.getMemoryData()->isSVM() &&
+    Khidden_step.getMemoryData() && Khidden_step.getMemoryData()->isSVM() &&
+    Vhidden_step.getMemoryData() && Vhidden_step.getMemoryData()->isSVM() &&
+    Qweight.getMemoryData() && Qweight.getMemoryData()->isSVM() &&
+    Kweight.getMemoryData() && Kweight.getMemoryData()->isSVM() &&
+    Vweight.getMemoryData() && Vweight.getMemoryData()->isSVM();
+  if (M == 1 && all_svm &&
+      input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      Qweight.getDataType() == ml::train::TensorDim::DataType::QINT4) {
+    const unsigned int K = input_step.width();
+    const unsigned int N_q = Qhidden_step.width();
+    const unsigned int N_k = Khidden_step.width();
+    const unsigned int N_v = Vhidden_step.width();
+    if ((K & 3u) == 0u && (N_q & 3u) == 0u && (N_k & 3u) == 0u &&
+        (N_v & 3u) == 0u) {
+      auto *in_u16 =
+        reinterpret_cast<uint16_t *>(input_step.getData<_FP16>());
+      auto *q_w = reinterpret_cast<uint16_t *>(Qweight.getData<char>());
+      auto *q_s = Qweight.getScale<uint16_t>();
+      auto *q_o =
+        reinterpret_cast<uint16_t *>(Qhidden_step.getData<_FP16>());
+      auto *k_w = reinterpret_cast<uint16_t *>(Kweight.getData<char>());
+      auto *k_s = Kweight.getScale<uint16_t>();
+      auto *k_o =
+        reinterpret_cast<uint16_t *>(Khidden_step.getData<_FP16>());
+      auto *v_w = reinterpret_cast<uint16_t *>(Vweight.getData<char>());
+      auto *v_s = Vweight.getScale<uint16_t>();
+      auto *v_o =
+        reinterpret_cast<uint16_t *>(Vhidden_step.getData<_FP16>());
+      fused_dispatched = nntrainer::fused_gemv_int4_image2d_cl(
+        in_u16, q_w, q_s, q_o, k_w, k_s, k_o, v_w, v_s, v_o,
+        K, N_q, N_k, N_v, /*sync_output=*/false);
+    }
+  }
+#endif
+  if (!fused_dispatched) {
+    std::vector<nntrainer::Tensor *> Weights({&Qweight, &Kweight, &Vweight});
+    std::vector<nntrainer::Tensor *> Outputs(
+      {&Qhidden_step, &Khidden_step, &Vhidden_step});
+    input_step.dot(Weights, Outputs);
+  }
 
   // Step 2: in-place per-head rmsnorm on Q and K with their gammas.
   // Reshape to (rows, head_dim) where rows = (to-from) * num_heads.
