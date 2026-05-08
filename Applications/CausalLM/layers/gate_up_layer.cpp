@@ -262,6 +262,49 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   }
 #endif
 
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // Phase M wire-in: when env-gated and shapes/SVM eligible, fuse
+  // gate-proj + up-proj + SwiGLU into a single dispatch via the
+  // gateup_swiglu_int4_image2d kernel. Writes swiglu_out into
+  // Uhidden_step (output 0); Ghidden_step (output 1) is left
+  // untouched -- the model graph rewires ffn_down to read
+  // gate_up_layer(0) directly when the same env-gate is on.
+  static const bool s_gateup_swiglu_fused =
+    std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED") != nullptr;
+  if (s_gateup_swiglu_fused && !fused_rmsnorm &&
+      input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
+      Uhidden_step.getMemoryData() &&
+        Uhidden_step.getMemoryData()->isSVM()) {
+    const unsigned int K_in = input_step.width();
+    const unsigned int N_h = Uhidden_step.width();
+    if (Ghidden_step.width() == N_h) {
+      const uint64_t t_pre_dot = profile_decode ? gu_now_ns() : 0;
+      if (profile_decode)
+        g_gate_up_decode_profile.ns_setup += t_pre_dot - t_enter;
+      const bool fused_ok = nntrainer::gateup_swiglu_int4_image2d_cl(
+        reinterpret_cast<uint16_t *>(input_step.getData<char>()),
+        reinterpret_cast<uint16_t *>(Gweight.getData<char>()),
+        Gweight.getScale<uint16_t>(),
+        reinterpret_cast<uint16_t *>(Uweight.getData<char>()),
+        Uweight.getScale<uint16_t>(),
+        reinterpret_cast<uint16_t *>(Uhidden_step.getData<char>()),
+        K_in, N_h, /*sync_output=*/false);
+      if (fused_ok) {
+        if (profile_decode) {
+          const uint64_t t_post_dot = gu_now_ns();
+          g_gate_up_decode_profile.ns_dot += t_post_dot - t_pre_dot;
+          g_gate_up_decode_profile.ns += t_post_dot - t_enter;
+          g_gate_up_decode_profile.calls.fetch_add(
+            1, std::memory_order_relaxed);
+        }
+        return;
+      }
+      // Fall through to the legacy dot path on helper failure.
+    }
+  }
+#endif
+
   // Legacy path (also serves as fused-mode fallback for unsupported
   // shapes / non-SVM tensors).  Match the per-FC ordering (up first,
   // gate second) so the batched dot path's fused_gemv_int4_cl wiring

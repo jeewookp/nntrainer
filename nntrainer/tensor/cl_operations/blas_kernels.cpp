@@ -3983,6 +3983,73 @@ bool fused_gemv_int4_image2d_cl(uint16_t *input_svm,
   return true;
 }
 
+// ============================================================================
+// Phase M: gate-up + SwiGLU fused dispatch.
+// ============================================================================
+bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
+                                    uint16_t *gate_weights,
+                                    uint16_t *gate_scales,
+                                    uint16_t *up_weights,
+                                    uint16_t *up_scales,
+                                    uint16_t *out_svm,
+                                    unsigned int K,
+                                    unsigned int N,
+                                    bool sync_output) {
+  if (!input_svm || !gate_weights || !up_weights || !out_svm) return false;
+  if ((K & 7u) != 0u || (N & 3u) != 0u) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+
+  // Reuse the v2 RGBA32UI image2d builder so both kernels share the
+  // same in-place repacked weight buffer (any weight first touched
+  // by fused_gemv_int4_image2d_v2 is committed to v2 forever).
+  cl_mem gate_img = fused_get_or_make_image2d_v2(clctx, gate_weights, K, N);
+  if (!gate_img) return false;
+  cl_mem up_img = fused_get_or_make_image2d_v2(clctx, up_weights, K, N);
+  if (!up_img) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(
+      gateup_swiglu_int4_image2d_kernel, "gpu_gateup_swiglu_int4_image2d");
+  }
+  if (!s_kern) return false;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, input_svm);
+  s_kern->SetKernelArguments(a++, &gate_img, sizeof(cl_mem));
+  s_kern->SetKernelSVMArguments(a++, gate_scales);
+  s_kern->SetKernelArguments(a++, &up_img, sizeof(cl_mem));
+  s_kern->SetKernelSVMArguments(a++, up_scales);
+  s_kern->SetKernelSVMArguments(a++, out_svm);
+  int sk = (int)K, sn = (int)N;
+  s_kern->SetKernelArguments(a++, &sk, sizeof(int));
+  s_kern->SetKernelArguments(a++, &sn, sizeof(int));
+
+  // Each WI handles 4 N positions; align global to 64.
+  const int total_wi = (int)(N / 4u);
+  const int aligned  = ((total_wi + 63) / 64) * 64;
+  const int g[3] = {aligned, 1, 1};
+  const int l[3] = {64, 1, 1};
+  cl_event gs_ev = nullptr;
+  cl_event *gs_ev_ptr = DecodeKernelGpuProfile::enabled() ? &gs_ev : nullptr;
+  if (!blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l, gs_ev_ptr))
+    return false;
+
+  if (sync_output) {
+    blas_cc->command_queue_inst_.enqueueSVMMap(
+      out_svm, (size_t)N * sizeof(uint16_t), /*read_only=*/true);
+  }
+  if (gs_ev) {
+    g_decode_gpu_profile.defer(g_decode_gpu_profile.fused_gemv_qkv_img,
+                               gs_ev);
+  }
+  return true;
+}
+
 // Diagnostic helper: read an image2d from GpuImagePool back into a
 // fresh SVM buffer using the existing image_reformat::image2d_to_svm
 // kernel.  Lets the unittest cross-check the kernel's image2d write

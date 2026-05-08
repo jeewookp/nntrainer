@@ -28,7 +28,7 @@ __constant sampler_t gateup_swiglu_smp =
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
 kernel void
-gpu_gateup_swiglu_int4_image2d(__constant half *input,
+gpu_gateup_swiglu_int4_image2d(__global const half *input,
                                 __read_only image2d_t weights_g,
                                 __global const half *scales_g,
                                 __read_only image2d_t weights_u,

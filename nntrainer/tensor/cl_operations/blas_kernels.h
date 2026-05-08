@@ -356,6 +356,34 @@ void swiglu_fp16_svm_cl(const void *in1, const void *in2, void *out,
 void add2_fp16_svm_cl(const void *a, const void *b, void *out, size_t total);
 
 /**
+ * @brief Phase M helper -- gate proj + up proj + SwiGLU fused into a
+ * single int4 GEMV dispatch.
+ *
+ * Replaces the [fused_gemv_int4(gate, up) -> SwiGLU] pair with one
+ * kernel that loads gate/up int4 weights via image2d (RGBA32UI v2
+ * layout, same as fused_gemv_int4_image2d_v2), accumulates both
+ * partials in registers, applies scales, and computes
+ *   silu(scale_g * gate_lin) * (scale_u * up_lin)
+ * before writing a single output. Eliminates the separate SwiGLU
+ * dispatch and the gate / up intermediate SVM writes.
+ *
+ * input_svm  : layer input, K fp16 elements (post-rmsnorm hidden state)
+ * gate_w/u   : int4 packed weights in v2 RGBA32UI layout
+ * gate_s/u_s : per-N fp16 channel scales
+ * out_svm    : N fp16 elements (the swiglu_out)
+ * sync_output: when true, blocking SVMMap on out_svm before return
+ */
+bool gateup_swiglu_int4_image2d_cl(uint16_t *input_svm,
+                                    uint16_t *gate_weights,
+                                    uint16_t *gate_scales,
+                                    uint16_t *up_weights,
+                                    uint16_t *up_scales,
+                                    uint16_t *out_svm,
+                                    unsigned int K,
+                                    unsigned int N,
+                                    bool sync_output);
+
+/**
  * @brief INT4 channel-wise GEMM for Adreno GPUs, Phase 3c v2 (weight
  *        read through image texture).
  *

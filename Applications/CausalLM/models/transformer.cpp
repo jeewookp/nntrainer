@@ -447,17 +447,27 @@ std::vector<LayerHandle> Transformer::createMlp(const int layer_id, int dim,
   }
   layers.push_back(createLayer("gate_up_layer", gate_up_params));
 
-  layers.push_back(createLayer(
-    "swiglu",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
-     withKey("input_layers", gate_up_name + "(1)," + gate_up_name + "(0)")}));
+  // Phase M: when env-gated, GateUpLayer fuses SwiGLU inline and
+  // writes the SwiGLU output into its (0) slot. Skip the standalone
+  // swiglu layer and feed ffn_down directly from gate_up_layer(0).
+  static const bool s_gateup_swiglu_fused =
+    std::getenv("NNTRAINER_GATEUP_SWIGLU_FUSED") != nullptr;
+  std::string ffn_down_input;
+  if (s_gateup_swiglu_fused) {
+    ffn_down_input = gate_up_name + "(0)";
+  } else {
+    layers.push_back(createLayer(
+      "swiglu",
+      {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
+       withKey("input_layers", gate_up_name + "(1)," + gate_up_name + "(0)")}));
+    ffn_down_input = "layer" + std::to_string(layer_id) + "_ffn_swiglu";
+  }
 
   layers.push_back(createLayer(
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_down"),
      withKey("unit", dim), withKey("disable_bias", "true"),
-     withKey("input_layers",
-             "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
+     withKey("input_layers", ffn_down_input),
      withKey("weight_initializer", "ones")}));
 
   return layers;
