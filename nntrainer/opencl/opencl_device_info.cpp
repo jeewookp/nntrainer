@@ -278,12 +278,20 @@ void DeviceInfo::print() const {
   {
     const bool has_cb = hasExtension("cl_khr_command_buffer");
     const bool has_qcom_rec = hasExtension("cl_qcom_recordable_queues");
+    const auto svm = getDeviceSVMCapabilities();
+    const bool svm_coarse = (svm & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) != 0;
+    const bool svm_fine_buf = (svm & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) != 0;
+    const bool svm_fine_sys = (svm & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM) != 0;
+    const bool svm_atomic = (svm & CL_DEVICE_SVM_ATOMICS) != 0;
     std::fprintf(
       stderr,
       "[CL_DEV] device=\"%s\" driver=\"%s\" "
-      "cl_khr_command_buffer=%d cl_qcom_recordable_queues=%d\n",
+      "cl_khr_command_buffer=%d cl_qcom_recordable_queues=%d "
+      "svm{coarse=%d fine_buf=%d fine_sys=%d atomic=%d}\n",
       device_name_.c_str(), driver_version_.c_str(), has_cb ? 1 : 0,
-      has_qcom_rec ? 1 : 0);
+      has_qcom_rec ? 1 : 0,
+      svm_coarse ? 1 : 0, svm_fine_buf ? 1 : 0,
+      svm_fine_sys ? 1 : 0, svm_atomic ? 1 : 0);
     std::fflush(stderr);
   }
 }
