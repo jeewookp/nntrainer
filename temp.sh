@@ -1,3 +1,4 @@
+# test push via MCP API
 set -e
 
 rm -rf builddir
@@ -93,13 +94,13 @@ adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"|\"model
 # not clobber it.
 RUN_LOG=../../temp_run.log
 # NNTR_DELEGATE_FP16=1 enables the delegate conv_wave_memory kernel path
-# (dequant int4→fp16 + wave memory dispatch). Unset to use default int4 path.
+# (dequant int4->fp16 + wave memory dispatch). Unset to use default int4 path.
 DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # NNTRAINER_PROFILE_LAYER_SYNC=1 clFinishes after every layer and makes
 # delegate conv clWaitForEvents post-dispatch, so every per-layer
 # profile is honest wall-clock instead of the GPU pipeline tail
 # leaking into whichever layer next SVMMap-fences. Production runs
-# should unset it — it doubles layer wall time for zero end-user
+# should unset it -- it doubles layer wall time for zero end-user
 # benefit.
 # NNTR_DELEGATE_CONV_VERIFY=X,Y,Z triggers a per-call comparison of the
 # default (128,1,4) conv vs a candidate local of the given shape on
@@ -108,18 +109,6 @@ DELEGATE_ENV="${NNTR_DELEGATE_FP16:+NNTR_DELEGATE_FP16=1}"
 # relative L2. Unset in normal runs.
 VERIFY_ENV="${NNTR_DELEGATE_CONV_VERIFY:+NNTR_DELEGATE_CONV_VERIFY=$NNTR_DELEGATE_CONV_VERIFY}"
 # Single timed run.
-#
-# NOTE on NNTRAINER_PROFILE_LAYER_SYNC:
-#   Setting it to 1 makes the per-layer wall-clock in
-#   [PROFILE NetworkGraph per-layer wall clock (decode, ...)] honest
-#   (clFinish after each forwarding_op), but it DEFEATS the
-#   non-blocking SVMMap win in gemv_int4_adreno_cl / delegate conv --
-#   forced per-layer clFinish makes each FC serialize against the
-#   host, same as the old blocking-map path.  Keep it unset for
-#   production timing.  Set it ad hoc when you need per-layer
-#   breakdown and are willing to trade production speed for
-#   measurement honesty.
-
 adb shell "cd /data/local/tmp/nntrainer/test; \
   export LD_LIBRARY_PATH=.; \
   export ${DELEGATE_ENV}; \
@@ -149,44 +138,12 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_FUSED_DECODE=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V2=1; \
   export NNTRAINER_ATTN_FUSED_DECODE_V3=1; \
-  # NNTRAINER_ATTN_FUSED_DECODE_V5: SLM-staged Flash Attn variant.
-  # Tested: avg_gpu 545us vs v3's 488us (-12% slower). Compute time
-  # identical (261us s2start), queue-wait +18us. K/V already cache well
-  # in L2 for decode WG, SLM tile gives no win and v5 lacks v3's batch-
-  # softmax fold (1.6x more native_exp ops). Kernel kept in tree but
-  # gated off; revisit if a longer-context bench shows L2 thrashing.
-  # export NNTRAINER_ATTN_FUSED_DECODE_V5=1; \
-  # NNTRAINER_ATTN_FUSED_DECODE_V6: 2 Q heads per WG.
-  # Tested: avg_gpu 633us vs v3's 488us (-30% slower). L2 already
-  # amortized cross-WG K/V duplicates, so packing 2 Q heads in
-  # 1 WG was pure occupancy loss (16 WGs vs 32). Disabled.
-  # export NNTRAINER_ATTN_FUSED_DECODE_V6=1; \
-  # v7: v3 layout but with explicit K-then-V load phasing. Reg
-  # pressure drops from ~29 to ~14 fp32/lane -> Adreno can pack
-  # more wavefronts per CU -> better latency hiding. Same WG count
-  # (32) and same compute as v3.
-  # ATTN_FUSED_DECODE_V7: K-then-V phasing -- tested neutral; gated off.
   export NNTRAINER_GPU_EVENT_PROFILE=1; \
-  # Race sources fixed:
-  #   1. gate_up_layer -> swiglu (sync_output=true on fused_gemv_int4_cl)
-  #   2. output_norm -> lm_head (entry SVMMap in tie_word_embedding lmhead)
-  # NNTRAINER_GEMV_IMAGE2D path is left in tree (env-gated off by
-  # default).  Per the production-validation run: with output
-  # SVMMap fence the path produces canonical output but TPS is
-  # ~unchanged vs baseline (image2d kernel raw speedup of -55%
-  # in unittest is offset by GpuImagePool lookup + cl_image
-  # allocation overhead accumulating across 8064 FC calls/run).
-  # Set NNTRAINER_GEMV_IMAGE2D=1 to opt in once the helper
-  # overhead is brought down.
   taskset f0 ./nntrainer_causallm /data/local/tmp/nntrainer/causallm/models/qwen3-4b" \
   2>&1 | tee ${RUN_LOG}
 
 # ----------------------------------------------------------------------------
-# Delegate conv work-group-size sweep. litert_lm's delegate_kernel_bench
-# auto-tunes local[3] across 13 candidates and picks the fastest per shape.
-# We're hardcoded to (128,1,4); set NNTR_CONV_LOCAL_SWEEP=1 to rerun the
-# model under each candidate and print the resulting prefill TPS and
-# conv(gpu) ms, then manually pick the best and bake it in.
+# Delegate conv work-group-size sweep.
 if [ -n "$NNTR_CONV_LOCAL_SWEEP" ]; then
   echo ""
   echo "=========================================="
@@ -216,10 +173,7 @@ adb shell "rm /data/local/tmp/nntrainer/test/logs/* 2>/dev/null || true"
 
 
 # ----------------------------------------------------------------------------
-# Single-run summary. Pulls the headline numbers + per-layer breakdowns
-# from temp_run.log so `sh temp.sh` is self-contained without scrolling
-# through the full device output. After the single timed run above we
-# read temp_run.log (relative to repo root after `cd ../..`).
+# Single-run summary.
 # ----------------------------------------------------------------------------
 SUMMARY_LOG=temp_run.log
 echo ""
@@ -242,11 +196,6 @@ echo ""
 echo "-- Generation snippet (first 200 chars after <|im_start|>assistant) --"
 awk '/<\|im_start\|>assistant/ { f=1; next } f' ${SUMMARY_LOG} | head -c 200
 echo ""
-
-# Decode-path PROFILE blocks already appear once in temp_run.log (fprintf
-# from layer destructors). The earlier separate -- Decode-path profiles --
-# section just re-grepped the same text and printed it twice. Removed to
-# reduce noise; the profile blocks remain in temp_run.log itself.
 
 echo ""
 echo "Full log: ${SUMMARY_LOG}"
