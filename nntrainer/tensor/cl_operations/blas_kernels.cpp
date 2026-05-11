@@ -6696,6 +6696,17 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "attention_fused_fp16_decode_v3",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  // v3 image2d output: writes directly to image2d instead of SVM,
+  // eliminating the svm_to_image2d_publish step in MHA exit (~47ms).
+  static const bool s_attn_decode_v3_image2d =
+    std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D") != nullptr;
+  static ClContext::SharedPtrClKernel s_kern_decode_v3_image2d;
+  if (s_attn_decode_v3_image2d && !s_kern_decode_v3_image2d) {
+    s_kern_decode_v3_image2d = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v3_image2d_kernel,
+      "attention_fused_fp16_decode_v3_image2d",
+      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
   // GQA-aware decode kernel: 1 WG per kv-head (not per Q head). 4 Q
   // heads share the per-kk K/V load -- ~4x less KV memory traffic.
   // Hardcoded GQA=4 for Qwen3-4B; only fires when gqa_size==4.
@@ -6812,8 +6823,17 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     use_decode_v9 || use_decode_v8 || use_decode_v7 || use_decode_v6 ||
     use_decode_v5 || use_decode_v3 || use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
+  // v3 image2d output: active when v3 is selected AND image2d opt is on.
+  // The v3_image2d kernel writes directly to a cl_mem image2d (no SVM write)
+  // and the image2d is registered in GpuImagePool after dispatch, so the
+  // MHA exit block can skip svm_to_image2d_publish entirely.
+  const bool use_v3_image2d = use_decode_v3 &&
+                               s_attn_decode_v3_image2d &&
+                               s_kern_decode_v3_image2d;
+
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_v9     ? s_kern_decode_v9
+    use_v3_image2d    ? s_kern_decode_v3_image2d
+    : use_decode_v9   ? s_kern_decode_v9
     : use_decode_v8   ? s_kern_decode_v8
     : use_decode_v7   ? s_kern_decode_v7
     : use_decode_v6   ? s_kern_decode_v6
@@ -6823,6 +6843,43 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     : use_decode_v2   ? s_kern_decode_v2
     : use_decode_kern ? s_kern_decode
                       : s_kern;
+
+  // Allocate / cache image2d for the v3_image2d output path.
+  // Keyed by out_svm pointer; re-created if shape changes.
+  cl_mem attn_out_img = nullptr;
+  if (use_v3_image2d) {
+    const int slices = (int)num_heads_Q * (int)(head_dim / 4u);
+    struct AttnOutImg { cl_mem img; int nhq_key, slices_key; };
+    static std::unordered_map<uintptr_t, AttnOutImg> s_img_cache;
+    const uintptr_t key = reinterpret_cast<uintptr_t>(out_svm);
+    auto it = s_img_cache.find(key);
+    if (it != s_img_cache.end() &&
+        it->second.nhq_key   == (int)num_heads_Q &&
+        it->second.slices_key == slices) {
+      attn_out_img = it->second.img;
+    } else {
+      if (it != s_img_cache.end() && it->second.img)
+        clReleaseMemObject(it->second.img);
+      cl_int img_err = 0;
+      cl_context clctx = blas_cc->context_inst_.GetContext();
+      cl_image_format fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc img_d = {};
+      img_d.image_type   = CL_MEM_OBJECT_IMAGE2D;
+      img_d.image_width  = (size_t)M;  // =1 for decode
+      img_d.image_height = (size_t)slices;
+      attn_out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &fmt, &img_d,
+                                   nullptr, &img_err);
+      s_img_cache[key] = {attn_out_img, (int)num_heads_Q, slices};
+    }
+    // Log on first activation.
+    static bool s_v3_img_logged = false;
+    if (!s_v3_img_logged) {
+      std::fprintf(stderr,
+                   "[attn] v3_image2d output active: out_svm=%p slices=%d\n",
+                   out_svm, slices);
+      s_v3_img_logged = true;
+    }
+  }
 
   // Commit upstream CPU writes before the GPU reads.
   // Skip when in pure-GPU-pipeline mode (NNTRAINER_RoPE_GPU=1):
@@ -6835,7 +6892,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     blas_cc->command_queue_inst_.enqueueSVMUnmap(q_svm);
     blas_cc->command_queue_inst_.enqueueSVMUnmap(k_cache_svm);
     blas_cc->command_queue_inst_.enqueueSVMUnmap(v_cache_svm);
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
+    if (!use_v3_image2d)
+      blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
   }
 
   const float scale = 1.0f / std::sqrt((float)head_dim);
@@ -6846,7 +6904,11 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   kern_to_use->SetKernelSVMArguments(a++, q_svm);
   kern_to_use->SetKernelSVMArguments(a++, k_cache_svm);
   kern_to_use->SetKernelSVMArguments(a++, v_cache_svm);
-  kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  if (use_v3_image2d) {
+    kern_to_use->SetKernelArguments(a++, &attn_out_img, sizeof(cl_mem));
+  } else {
+    kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  }
   kern_to_use->SetKernelArguments(a++, &M_i, sizeof(int));
   kern_to_use->SetKernelArguments(a++, &T_i, sizeof(int));
   kern_to_use->SetKernelArguments(a++, &from_i, sizeof(int));
@@ -6884,6 +6946,13 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   cl_event attn_ev = nullptr;
   cl_event *attn_ev_ptr = DecodeKernelGpuProfile::enabled() ? &attn_ev : nullptr;
   blas_cc->command_queue_inst_.DispatchCommand(kern_to_use, g, l, attn_ev_ptr);
+
+  // For v3_image2d: register the image2d in GpuImagePool so o_proj can
+  // pool-hit without any svm_to_image2d kernel dispatch in MHA exit.
+  if (use_v3_image2d && attn_out_img) {
+    const int slices = nhq * (int)(head_dim / 4u);
+    GpuImagePool::Global().set(out_svm, attn_out_img, M_i, slices);
+  }
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
   // the per-call enqueueSVMMap blocking flush of `out_svm` waits for
