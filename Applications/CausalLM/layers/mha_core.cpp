@@ -116,7 +116,8 @@ struct MHACoreDecodeProfile {
   std::atomic<uint64_t> ns_drain_v{0};
   std::atomic<uint64_t> ns_drain_o{0};
   std::atomic<uint64_t> ns_attn_fused_call{0};  // attention_fused_fp16_cl wall
-  std::atomic<uint64_t> ns_exit_unmap_publish{0}; // SVMUnmap(output) + publish
+  std::atomic<uint64_t> ns_exit_unmap{0};         // SVMUnmap(output) only
+  std::atomic<uint64_t> ns_exit_publish{0};        // svm_to_image2d_publish only
   std::atomic<uint64_t> ns_cpu{0};              // thread CPU time across calls
 
   ~MHACoreDecodeProfile() {
@@ -154,10 +155,13 @@ struct MHACoreDecodeProfile {
                  "ATTN_NO_DRAIN unset)]\n",
                  ns_attn_fused_call / 1.0e6, pct(ns_attn_fused_call));
     std::fprintf(stderr,
-                 "  exit           : %8.2f ms (%5.1f%%)  "
-                 "[SVMUnmap(output) + image2d publish]\n",
-                 ns_exit_unmap_publish / 1.0e6,
-                 pct(ns_exit_unmap_publish));
+                 "  exit_unmap     : %8.2f ms (%5.1f%%)  "
+                 "[SVMUnmap(output) -- skipped when NO_EXIT_UNMAP=1]\n",
+                 ns_exit_unmap / 1.0e6, pct(ns_exit_unmap));
+    std::fprintf(stderr,
+                 "  exit_publish   : %8.2f ms (%5.1f%%)  "
+                 "[svm_to_image2d_publish]\n",
+                 ns_exit_publish / 1.0e6, pct(ns_exit_publish));
     std::fprintf(stderr,
                  "  rope_q   : %8.2f ms (%5.1f%%)\n",
                  ns_rope_q / 1.0e6, pct(ns_rope_q));
@@ -724,14 +728,28 @@ mha_entry_drain_done:;
     // imposes while waiting for prior GPU work to drain on Adreno.
     static const bool s_mha_no_exit_unmap =
       std::getenv("NNTRAINER_MHA_NO_EXIT_UNMAP") != nullptr;
+    static bool s_no_exit_unmap_logged = false;
+    if (!s_no_exit_unmap_logged) {
+      std::fprintf(stderr, "[mha_core] NNTRAINER_MHA_NO_EXIT_UNMAP=%s -> %s\n",
+                   std::getenv("NNTRAINER_MHA_NO_EXIT_UNMAP")
+                     ? std::getenv("NNTRAINER_MHA_NO_EXIT_UNMAP")
+                     : "(unset)",
+                   s_mha_no_exit_unmap ? "skip exit SVMUnmap (GPU pipeline)"
+                                       : "keep exit SVMUnmap (CPU path)");
+      s_no_exit_unmap_logged = true;
+    }
     if (!s_mha_no_exit_unmap) {
       mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
         output.getData<char>());
     }
+    if (profile_this_decode)
+      g_mha_core_decode_profile.ns_exit_unmap += mha_now_ns() - t_exit0;
+
     static const bool s_mha_no_publish =
       std::getenv("NNTRAINER_MHA_NO_PUBLISH") != nullptr;
     const int pub_W = (int)output.width();
     if (!s_mha_no_publish && (pub_W % 4) == 0) {
+      const uint64_t t_pub0 = profile_this_decode ? mha_now_ns() : 0;
       const int pub_M = (int)(output.batch() * output.channel() *
                                 (int)step_size);
       // When s_mha_no_exit_unmap is set, the previous writer of out_svm was
@@ -740,10 +758,9 @@ mha_entry_drain_done:;
       nntrainer::svm_to_image2d_publish(output.getData<char>(),
                                         pub_M, pub_W,
                                         /*gpu_source=*/s_mha_no_exit_unmap);
+      if (profile_this_decode)
+        g_mha_core_decode_profile.ns_exit_publish += mha_now_ns() - t_pub0;
     }
-    if (profile_this_decode)
-      g_mha_core_decode_profile.ns_exit_unmap_publish +=
-        mha_now_ns() - t_exit0;
   }
 #endif
 
