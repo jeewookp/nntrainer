@@ -149,9 +149,17 @@ void attention_fused_fp16_decode_v3_image2d(
 
   const float inv = (running_sum > 0.0f) ? (1.0f / running_sum) : 0.0f;
 
-  // Write to image2d via local memory gather.
-  // pixel (0, h*(HD/4) + d/4) = { acc[0]*inv from d/4*4+0, +1, +2, +3 }
-  // pixel (0, h*(HD/4) + 16 + d/4) = { acc[1]*inv from same group }
+  // SVM write: identical to v3 kernel -- every thread stores its own
+  // half directly, matching the per-element store pattern that v3 uses
+  // and that Adreno SVM coherence expects for the zerocopy path.
+  #pragma unroll
+  for (int i = 0; i < DPT; ++i) {
+    const int dd = d + i * WG;
+    out_svm[h * HD + dd] = (half)(acc[i] * inv);
+  }
+
+  // image2d write: gather 4 consecutive values via local memory, then
+  // write_imageh once per pixel (requires half4).
   __local float tmp[WG];
 
   // i=0: dd = d, positions h*HD + 0..63, pixels h*32 + 0..15
@@ -164,7 +172,6 @@ void attention_fused_fp16_decode_v3_image2d(
     pix.z = (half)tmp[d + 2];
     pix.w = (half)tmp[d + 3];
     write_imageh(out_img, (int2)(0, h * (HD / 4) + d / 4), pix);
-    vstore4(pix, 0, out_svm + h * HD + d);
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -178,6 +185,5 @@ void attention_fused_fp16_decode_v3_image2d(
     pix.z = (half)tmp[d + 2];
     pix.w = (half)tmp[d + 3];
     write_imageh(out_img, (int2)(0, h * (HD / 4) + 16 + d / 4), pix);
-    vstore4(pix, 0, out_svm + h * HD + WG + d);
   }
 }
