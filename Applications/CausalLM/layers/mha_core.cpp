@@ -1912,3 +1912,4 @@ nntrainer::LayerPluggable ml_train_layer_pluggable{create_mha_core_layer,
 }
 
 #endif
+} // namespace causallm
