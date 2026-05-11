@@ -347,15 +347,12 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // ordering, so the host SVMMap drain is dead weight here.
   // ffn_down's own sync_output still drains the queue at the
   // CPU-consumer boundary (sampling reads logits).
-  // Phase R0 PoC: write gate/up outputs to cl_mem buffers (instead of
-  // SVM). cl_mem inter-kernel data flow uses OpenCL's same-queue
-  // ordering rather than Adreno's coarse-grained SVM (which races
-  // per the half_tensor.cpp 1404-1413 bisection). If output stays
-  // clean with this path enabled, the full Plan 3 GPU-resident
-  // refactor is viable.
-  static const bool s_phase_r0_poc =
-    std::getenv("NNTRAINER_PHASE_R0_POC") != nullptr;
-  if (s_phase_r0_poc && profile_decode && !fused_rmsnorm &&
+  // Plan 3 Stage 1: gate/up outputs go to cl_mem (not SVM) for decode.
+  // cl_mem same-queue ordering gives race-free GPU->GPU data flow without
+  // the blocking SVMMap drain that Phase O/O-revert showed was causing
+  // 790ms+ idle per generation run (343us * 2304 calls).
+  // PoC (Stage 0) verified clean output at 12 TPS; now always-on.
+  if (profile_decode && !fused_rmsnorm &&
       input_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       input_step.getMemoryData() && input_step.getMemoryData()->isSVM() &&
       Uweight.getMemoryData() && Uweight.getMemoryData()->isSVM() &&
