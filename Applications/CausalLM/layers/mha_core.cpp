@@ -696,31 +696,20 @@ mha_entry_drain_done:;
   // the top (NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1 + ATTN_GPU=1).
   // The GPU path never CPU-wrote so there's nothing to commit back.
   //
-  // Stage 2 fix history:
-  //   Stage 2b (wrong): added `&& !skip_entry_drain` here, skipping the
-  //   entire block. The old UB-unmap (unmap without prior map) was
-  //   accidentally providing an Adreno SVM coherence fence for o_proj;
-  //   removing it entirely caused wrong generation output ("Chinese zephyr"
-  //   hallucination at first decode token).
-  //
-  //   Stage 2b correction (this code): restore the block for skip_entry_drain
-  //   path but prefix a proper SVMMap(read_only) before the Unmap so the
-  //   Map+Unmap pair is valid (not UB) while still providing the coherence
-  //   fence. When skip_entry_drain=false the entry already did the Map, so
-  //   we only need the Unmap (same as before Stage 2).
-  if (mha_sync_cl_ctx && !skip_output_entry_drain &&
+  // Stage 2 fix: skip the ENTIRE exit block when skip_entry_drain=true.
+  // When skip_entry_drain=true, the entry never called SVMMap(output), so
+  // calling SVMUnmap here without a prior SVMMap is undefined behaviour.
+  // More importantly: GPU->GPU SVM coherence within the same in-order
+  // command queue IS maintained by Adreno without any explicit SVMMap/Unmap.
+  // Adding a blocking SVMMap before o_proj's GPU kernel actually HURTS
+  // correctness: clEnqueueSVMMap(READ) invalidates Adreno's L2 cache,
+  // causing o_proj to read stale DRAM data instead of the L2-cached result
+  // from attention_fused. Skip the whole block; both kernels share L2 cache
+  // and the in-order queue guarantee provides the necessary ordering.
+  if (mha_sync_cl_ctx && !skip_output_entry_drain && !skip_entry_drain &&
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
-    if (skip_entry_drain) {
-      // Entry map was skipped; blocking SVMMap(read_only) is required to
-      // flush Adreno's GPU L2 cache so that o_proj sees attention_fused's
-      // SVM writes. Non-blocking (CL_FALSE) does NOT flush Adreno's L2
-      // cache and causes wrong decode output. blocking=true is mandatory.
-      mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
-        output.getData<char>(), output.bytes(), /*read_only=*/true,
-        /*blocking=*/true);
-    }
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
     // Phase B publish: put MHA output into GpuImagePool so o_proj
