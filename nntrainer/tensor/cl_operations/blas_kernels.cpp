@@ -6323,7 +6323,8 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
 // ============================================================================
 // Phase A helper — svm_to_image2d + GpuImagePool publish.
 // ============================================================================
-void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
+void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K,
+                             bool gpu_source) {
   if (!svm_ptr || M == 0 || K == 0 || (K % 4) != 0) return;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
@@ -6359,11 +6360,13 @@ void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K) {
                                           "svm_to_image2d");
   }
 
-  // The caller has just CPU-written to svm_ptr (e.g. RMSNorm NEON
-  // compute). On Adreno coarse-grained SVM those writes live in the
-  // CPU cache until an SVMUnmap commits them; without the unmap the
-  // GPU kernel we dispatch below reads stale data.
-  blas_cc->command_queue_inst_.enqueueSVMUnmap(svm_ptr);
+  // When the caller (CPU) wrote svm_ptr, an SVMUnmap is required to commit
+  // those CPU-cache writes before the GPU kernel reads them.  When the
+  // previous writer was a GPU kernel in the same in-order queue (gpu_source),
+  // queue ordering guarantees visibility and the fence is unnecessary.
+  if (!gpu_source) {
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(svm_ptr);
+  }
 
   int a = 0;
   s_in_kern->SetKernelSVMArguments(a++, svm_ptr);

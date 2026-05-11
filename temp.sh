@@ -139,6 +139,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_ATTN_NO_DRAIN=1; \
   export NNTRAINER_RoPE_GPU=1; \
   export NNTRAINER_MHA_NO_ENTRY_DRAIN=1; \
+  export NNTRAINER_MHA_NO_EXIT_UNMAP=1; \
   export NNTRAINER_GEMV_WEIGHT_IMAGE2D=1; \
   export NNTRAINER_GEMV_WEIGHT_IMAGE2D_FROM_BUFFER=1; \
   export NNTRAINER_GEMV_WEIGHT_IMAGE2D_V2=1; \

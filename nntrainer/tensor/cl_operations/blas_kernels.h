@@ -227,7 +227,15 @@ void gemm_delegate_fp16_cl_batched(uint16_t *input,
  * Enqueues one svm_to_image2d kernel dispatch on the global OpenCL
  * command queue; caller does not need to sync.
  */
-void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K);
+/**
+ * @brief Publish SVM→image2d when the SVM was last written by a GPU kernel.
+ *
+ * Same as svm_to_image2d_publish but skips the SVMUnmap fence: the caller
+ * guarantees that svm_ptr was written by a GPU kernel in the same in-order
+ * command queue, so no CPU-GPU coherence operation is required.
+ */
+void svm_to_image2d_publish(void *svm_ptr, unsigned int M, unsigned int K,
+                             bool gpu_source = false);
 
 /**
  * @brief GPU RMSNorm via rmsnorm_image2d_v2 (cooperative workgroup reduction).

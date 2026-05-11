@@ -715,26 +715,31 @@ mha_entry_drain_done:;
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
-    mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
-      output.getData<char>());
-    // Phase B publish: put MHA output into GpuImagePool so o_proj
-    // can pool-hit. Skips its svm_to_image2d and — crucially — the
-    // blocking SVMMap the HalfTensor wrapper would otherwise need
-    // to drain MHA's in-flight writes. Publish matches o_proj's
-    // expected shape: M = step_size, K = output.width() (hidden_dim).
-    //
-    // Phase I: o_proj currently goes through HalfTensor::dotQInteger's
-    // SVM path (not the gemv_int4_image2d pool-hit path), so this
-    // publish runs an extra svm_to_image2d kernel dispatch that
-    // nothing consumes -- pure overhead. Skip it when env-gated.
+    // Phase B.13 exit: SVMUnmap(output) acts as a GPU L2 coherence fence on
+    // Adreno (see comments above).  When the attention kernel ran entirely on
+    // GPU (NNTRAINER_MHA_NO_EXIT_UNMAP=1), o_proj reads from image2d (not SVM)
+    // and the svm_to_image2d kernel runs in the same in-order queue as
+    // attention_fused, so no CPU-GPU coherence fence is required at this
+    // boundary.  Skipping it saves the ~200 ms host block that SVMUnmap
+    // imposes while waiting for prior GPU work to drain on Adreno.
+    static const bool s_mha_no_exit_unmap =
+      std::getenv("NNTRAINER_MHA_NO_EXIT_UNMAP") != nullptr;
+    if (!s_mha_no_exit_unmap) {
+      mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
+        output.getData<char>());
+    }
     static const bool s_mha_no_publish =
       std::getenv("NNTRAINER_MHA_NO_PUBLISH") != nullptr;
     const int pub_W = (int)output.width();
     if (!s_mha_no_publish && (pub_W % 4) == 0) {
       const int pub_M = (int)(output.batch() * output.channel() *
                                 (int)step_size);
+      // When s_mha_no_exit_unmap is set, the previous writer of out_svm was
+      // the attention_fused GPU kernel.  Pass gpu_source=true so
+      // svm_to_image2d_publish skips its own redundant SVMUnmap.
       nntrainer::svm_to_image2d_publish(output.getData<char>(),
-                                        pub_M, pub_W);
+                                        pub_M, pub_W,
+                                        /*gpu_source=*/s_mha_no_exit_unmap);
     }
     if (profile_this_decode)
       g_mha_core_decode_profile.ns_exit_unmap_publish +=
