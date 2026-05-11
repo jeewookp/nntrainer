@@ -696,18 +696,30 @@ mha_entry_drain_done:;
   // the top (NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1 + ATTN_GPU=1).
   // The GPU path never CPU-wrote so there's nothing to commit back.
   //
-  // Stage 2 fix: also skip the unmap when skip_entry_drain=true.
-  // That path skips ALL entry maps (including output), so calling
-  // unmap without a prior map is undefined behaviour and on Adreno
-  // appears to trigger a blocking queue drain. The GPU wrote output
-  // directly; no CPU-write window was opened, so no unmap is needed.
-  // svm_to_image2d_publish (via s_mha_no_publish) also internally
-  // calls enqueueSVMUnmap, so skip the whole block when we never
-  // mapped.
-  if (mha_sync_cl_ctx && !skip_output_entry_drain && !skip_entry_drain &&
+  // Stage 2 fix history:
+  //   Stage 2b (wrong): added `&& !skip_entry_drain` here, skipping the
+  //   entire block. The old UB-unmap (unmap without prior map) was
+  //   accidentally providing an Adreno SVM coherence fence for o_proj;
+  //   removing it entirely caused wrong generation output ("Chinese zephyr"
+  //   hallucination at first decode token).
+  //
+  //   Stage 2b correction (this code): restore the block for skip_entry_drain
+  //   path but prefix a proper SVMMap(read_only) before the Unmap so the
+  //   Map+Unmap pair is valid (not UB) while still providing the coherence
+  //   fence. When skip_entry_drain=false the entry already did the Map, so
+  //   we only need the Unmap (same as before Stage 2).
+  if (mha_sync_cl_ctx && !skip_output_entry_drain &&
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
+    if (skip_entry_drain) {
+      // Entry map was skipped; open a read-only window first so the
+      // subsequent Unmap is a valid pair. This also acts as the Adreno
+      // SVM coherence fence (blocking drain) that makes the attention
+      // kernel's SVM output visible to o_proj's SVM kernel arg.
+      mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
+        output.getData<char>(), output.bytes(), /*read_only=*/true);
+    }
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
     // Phase B publish: put MHA output into GpuImagePool so o_proj
