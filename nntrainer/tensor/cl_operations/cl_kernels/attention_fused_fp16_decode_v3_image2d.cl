@@ -34,6 +34,7 @@ void attention_fused_fp16_decode_v3_image2d(
     __global const half *K_cache,
     __global const half *V_cache,
     __write_only image2d_t out_img,
+    __global half *out_svm,
     const int M,
     const int T,
     const int from,
@@ -163,6 +164,7 @@ void attention_fused_fp16_decode_v3_image2d(
     pix.z = (half)tmp[d + 2];
     pix.w = (half)tmp[d + 3];
     write_imageh(out_img, (int2)(0, h * (HD / 4) + d / 4), pix);
+    vstore4(pix, 0, out_svm + h * HD + d);
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -176,5 +178,6 @@ void attention_fused_fp16_decode_v3_image2d(
     pix.z = (half)tmp[d + 2];
     pix.w = (half)tmp[d + 3];
     write_imageh(out_img, (int2)(0, h * (HD / 4) + 16 + d / 4), pix);
+    vstore4(pix, 0, out_svm + h * HD + WG + d);
   }
 }

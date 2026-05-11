@@ -6906,6 +6906,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   kern_to_use->SetKernelSVMArguments(a++, v_cache_svm);
   if (use_v3_image2d) {
     kern_to_use->SetKernelArguments(a++, &attn_out_img, sizeof(cl_mem));
+    kern_to_use->SetKernelSVMArguments(a++, out_svm);
   } else {
     kern_to_use->SetKernelSVMArguments(a++, out_svm);
   }
