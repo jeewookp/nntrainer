@@ -695,7 +695,16 @@ mha_entry_drain_done:;
   // Phase B.13: skip the unmap when we skipped the matching map at
   // the top (NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1 + ATTN_GPU=1).
   // The GPU path never CPU-wrote so there's nothing to commit back.
-  if (mha_sync_cl_ctx && !skip_output_entry_drain &&
+  //
+  // Stage 2 fix: also skip the unmap when skip_entry_drain=true.
+  // That path skips ALL entry maps (including output), so calling
+  // unmap without a prior map is undefined behaviour and on Adreno
+  // appears to trigger a blocking queue drain. The GPU wrote output
+  // directly; no CPU-write window was opened, so no unmap is needed.
+  // svm_to_image2d_publish (via s_mha_no_publish) also internally
+  // calls enqueueSVMUnmap, so skip the whole block when we never
+  // mapped.
+  if (mha_sync_cl_ctx && !skip_output_entry_drain && !skip_entry_drain &&
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
@@ -1903,5 +1912,3 @@ nntrainer::LayerPluggable ml_train_layer_pluggable{create_mha_core_layer,
 }
 
 #endif
-
-} // namespace causallm
