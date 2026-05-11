@@ -95,19 +95,16 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   int iter = to - from;
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // Phase R0 PoC: read gate/up from cl_mem buffers (the GateUpLayer
-  // path writes them as cl_mem when env-gated). Output is normal SVM.
-  // If this path produces clean output, cl_mem doesn't have the SVM
-  // inter-kernel race -> Plan 3 viable.
-  static const bool s_phase_r0_poc =
-    std::getenv("NNTRAINER_PHASE_R0_POC") != nullptr;
-  if (s_phase_r0_poc && iter == 1 &&
+  // Plan 3 Stage 1: read gate/up from cl_mem buffers written by GateUpLayer.
+  // Always-on for decode (iter==1) + FP16. Matches the gate_up_layer
+  // cl_mem output path (also always-on as of Stage 1).
+  if (iter == 1 &&
       in1.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       in2.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       out.getDataType() == ml::train::TensorDim::DataType::FP16 &&
       out.getMemoryData() && out.getMemoryData()->isSVM()) {
     // SwiGLU's input convention: in1 = gate, in2 = up.
-    // Match GateUpLayer's PoC writes (gate_buf <- Gweight slot,
+    // Match GateUpLayer's writes (gate_buf <- Gweight slot,
     // up_buf <- Uweight slot).
     const unsigned int N = (unsigned int)in1.width();
     cl_mem gate_buf = nntrainer::clmem_poc_gate_buf(N);
@@ -190,7 +187,7 @@ void SwiGLULayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     nntrainer::swiglu_fp16_svm_cl(
       in1.getData<_FP16>(), in2.getData<_FP16>(), out.getData<_FP16>(),
       step_total);
-    // Phase B publish: SwiGLU output → GpuImagePool so the
+    // Phase B publish: SwiGLU output -> GpuImagePool so the
     // following down_proj pool-hits, dropping its per-gemm blocking
     // SVMMap + scalar staging copy. out shape here is
     // (1, C, iter, W); publish M = C*iter, K = W.
