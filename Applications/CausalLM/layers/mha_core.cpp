@@ -696,17 +696,22 @@ mha_entry_drain_done:;
   // the top (NNTRAINER_MHA_NO_OUTPUT_ENTRY_DRAIN=1 + ATTN_GPU=1).
   // The GPU path never CPU-wrote so there's nothing to commit back.
   //
-  // Stage 2 fix: skip the ENTIRE exit block when skip_entry_drain=true.
-  // When skip_entry_drain=true, the entry never called SVMMap(output), so
-  // calling SVMUnmap here without a prior SVMMap is undefined behaviour.
-  // More importantly: GPU->GPU SVM coherence within the same in-order
-  // command queue IS maintained by Adreno without any explicit SVMMap/Unmap.
-  // Adding a blocking SVMMap before o_proj's GPU kernel actually HURTS
-  // correctness: clEnqueueSVMMap(READ) invalidates Adreno's L2 cache,
-  // causing o_proj to read stale DRAM data instead of the L2-cached result
-  // from attention_fused. Skip the whole block; both kernels share L2 cache
-  // and the in-order queue guarantee provides the necessary ordering.
-  if (mha_sync_cl_ctx && !skip_output_entry_drain && !skip_entry_drain &&
+  // Phase B.13 exit drain: enqueue SVMUnmap(output) as a GPU L2 coherence
+  // fence so that o_proj's SVM kernel sees attention_fused's writes.
+  //
+  // On Adreno, clEnqueueSVMUnmap acts as a GPU L2 cache coherence point even
+  // when no prior SVMMap was issued (technically UB per OpenCL spec, but
+  // required for correct output on Adreno hardware). This fence is mandatory
+  // when skip_entry_drain=true because no entry SVMMap(output) was called.
+  //
+  // IMPORTANT: Do NOT add a blocking SVMMap before this Unmap. SVMMap(READ)
+  // invalidates Adreno's GPU L2 cache, causing o_proj to read stale DRAM
+  // data (from a prior token) instead of the L2-cached attention_fused result.
+  // The SVMUnmap alone provides the coherence fence without the L2 wipe.
+  //
+  // When skip_entry_drain=false: entry already called SVMMap(output) → this
+  // Unmap is a valid Map+Unmap pair with no special caveats.
+  if (mha_sync_cl_ctx && !skip_output_entry_drain &&
       output.getMemoryData() && output.getMemoryData()->isSVM()) {
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
