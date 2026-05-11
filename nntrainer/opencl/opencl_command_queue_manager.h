@@ -145,7 +145,7 @@ public:
    * @return true if mapping is successful, false otherwise.
    */
   bool enqueueSVMMap(void *svm_ptr, size_t size, bool read_only,
-                     cl_event *event = nullptr);
+                     bool blocking = true, cl_event *event = nullptr);
 
   /**
    * @brief Enqueue SVM memory unmap operation.

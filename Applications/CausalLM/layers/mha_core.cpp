@@ -713,12 +713,15 @@ mha_entry_drain_done:;
     const uint64_t t_exit0 =
       profile_this_decode ? mha_now_ns() : 0;
     if (skip_entry_drain) {
-      // Entry map was skipped; open a read-only window first so the
-      // subsequent Unmap is a valid pair. This also acts as the Adreno
-      // SVM coherence fence (blocking drain) that makes the attention
-      // kernel's SVM output visible to o_proj's SVM kernel arg.
+      // Entry map was skipped; enqueue a non-blocking read-only map so the
+      // subsequent Unmap is a valid (non-UB) pair and the Map+Unmap sequence
+      // acts as an Adreno SVM coherence fence in the GPU timeline.
+      // blocking=false: CPU returns immediately; GPU executes Map then Unmap
+      // in-order before o_proj's kernel reads output SVM.
+      // Avoids the ~1.2ms/call CPU stall that blocking=true caused.
       mha_sync_cl_ctx->command_queue_inst_.enqueueSVMMap(
-        output.getData<char>(), output.bytes(), /*read_only=*/true);
+        output.getData<char>(), output.bytes(), /*read_only=*/true,
+        /*blocking=*/false);
     }
     mha_sync_cl_ctx->command_queue_inst_.enqueueSVMUnmap(
       output.getData<char>());
