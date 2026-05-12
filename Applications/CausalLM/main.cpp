@@ -32,6 +32,7 @@
 #include "causal_lm.h"
 #include "embedding_gemma.h"
 #include "gemma3_causallm.h"
+#include "gemma4_causallm.h"
 #include "gptoss_cached_slim_causallm.h"
 #include "gptoss_causallm.h"
 #include "qwen2_causallm.h"
@@ -197,6 +198,11 @@ int main(int argc, char *argv[]) {
       return std::make_unique<causallm::EmbeddingGemma>(cfg, generation_cfg,
                                                         nntr_cfg);
     });
+  causallm::Factory::Instance().registerModel(
+    "Gemma4ForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Gemma4CausalLM>(cfg, generation_cfg,
+                                                        nntr_cfg);
+    });
 
   // Validate arguments
   if (argc < 2) {
@@ -248,7 +254,8 @@ int main(int argc, char *argv[]) {
       input_text = argv[2];
     } else {
       if (nntr_cfg.contains("chat_input")) {
-        if (architecture == "Gemma3ForCausalLM") {
+        if (architecture == "Gemma3ForCausalLM" ||
+            architecture == "Gemma4ForCausalLM") {
           input_text = causallm::gemma3::apply_function_gemma_template(
             nntr_cfg["chat_input"]);
         } else {

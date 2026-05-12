@@ -13,6 +13,7 @@ causallm_qkv_norm_layer_src_abs = [meson.current_source_dir() / 'qkv_norm_layer.
 causallm_gate_up_layer_src_abs = [meson.current_source_dir() / 'gate_up_layer.cpp']
 causallm_embedding_pooling_src_abs = [meson.current_source_dir() / 'embedding_pooling_layer.cpp']
 causallm_embedding_normalize_src_abs = [meson.current_source_dir() / 'embedding_normalize_layer.cpp']
+causallm_ple_block_src_abs = [meson.current_source_dir() / 'ple_block.cpp']
 
 openmp_dep = dependency('openmp')
 causallm_rms_norm = shared_library(
@@ -172,5 +173,19 @@ causallm_gate_up_layer = shared_library(
 
 causallm_gate_up_layer_dep = declare_dependency(
     link_with: causallm_gate_up_layer,
+    include_directories: causallm_layer_inc
+)
+
+causallm_ple_block = shared_library(
+    'ple_block_layer',
+    causallm_ple_block_src_abs,
+    include_directories: causallm_layer_inc,
+    dependencies: [nntrainer_dep, nntrainer_ccapi_dep],
+    install: true,
+    install_dir: application_install_dir
+)
+
+causallm_ple_block_dep = declare_dependency(
+    link_with: causallm_ple_block,
     include_directories: causallm_layer_inc
 )

@@ -30,6 +30,7 @@ causallm_layer_dependencies += [
     causallm_gate_up_layer_dep,
     causallm_embedding_pooling_layer_dep,
     causallm_embedding_normalize_layer_dep,
+    causallm_ple_block_dep,
 ]
 
 subdir('models')
