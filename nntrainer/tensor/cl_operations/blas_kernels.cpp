@@ -4642,10 +4642,15 @@ bool lmhead_int4_chunked_init(void *q6k_weight, unsigned int K,
 
   // Per output row n: dequant Q6_K row -> fp32, find per-channel scale,
   // pack to int4 nibbles, store directly in uint chunked layout.
-  std::vector<float> dequant_row((size_t)K);
+  // Each row is independent; parallelize over n with OMP when available.
   const unsigned int blocks_per_row = K / 256u;
   const size_t q6k_row_bytes = (size_t)blocks_per_row * 210u;
-  for (unsigned int n = 0; n < N; ++n) {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic, 512)
+#endif
+  for (int n_signed = 0; n_signed < (int)N; ++n_signed) {
+    const unsigned int n = (unsigned int)n_signed;
+    std::vector<float> dequant_row((size_t)K);
     const void *q6k_row =
       reinterpret_cast<const char *>(q6k_weight) + (size_t)n * q6k_row_bytes;
     nntrainer::dequantize_row_q6_K(q6k_row, dequant_row.data(),
