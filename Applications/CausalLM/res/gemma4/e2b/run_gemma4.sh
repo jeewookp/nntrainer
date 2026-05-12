@@ -95,9 +95,10 @@ if [ "$SKIP_QUANTIZE" = false ]; then
     if [ "$FORCE_BUILD" = true ] || [ ! -f "$QUANTIZE_BIN" ]; then
         log_info "Building nntr_quantize (Linux)..."
         cd "$NNTRAINER_ROOT"
-        meson setup "$BUILD_DIR" --reconfigure -Dplatform=none 2>&1 | tail -5 || \
-        meson setup "$BUILD_DIR" -Dplatform=none 2>&1 | tail -5
-        ninja -C "$BUILD_DIR" nntr_quantize -j$(nproc) 2>&1 | tail -5
+        meson setup "$BUILD_DIR" --reconfigure -Dplatform=none -Denable-app=true 2>&1 | tail -5 || \
+        meson setup "$BUILD_DIR" -Dplatform=none -Denable-app=true 2>&1 | tail -5
+        ninja -C "$BUILD_DIR" nntr_quantize -j$(nproc) 2>&1 | tail -10
+        [ ${PIPESTATUS[0]} -eq 0 ] || { log_error "nntr_quantize build failed"; exit 1; }
         log_success "nntr_quantize built"
     else
         log_success "nntr_quantize up to date"
