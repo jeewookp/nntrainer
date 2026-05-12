@@ -7082,6 +7082,55 @@ bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
   return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 }
 
+bool rope_prefill_fp16_qk_cl(void *q_in, void *q_out,
+                               void *k_in, void *kc_out,
+                               unsigned int num_heads_Q, unsigned int num_heads_K,
+                               unsigned int head_dim,
+                               unsigned int M, unsigned int from,
+                               float theta_base) {
+  if (!q_in || !q_out || !k_in || !kc_out ||
+      num_heads_Q == 0 || num_heads_K == 0 || head_dim != 128u ||
+      M == 0 || theta_base <= 0.0f)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(
+      rope_prefill_fp16_qk_kernel, "rope_prefill_fp16_qk");
+  }
+  if (!s_kern) return false;
+
+  const float exponent_base =
+    -2.0f * std::log(theta_base) / (float)head_dim;
+  const int snhq = (int)num_heads_Q;
+  const int snhk = (int)num_heads_K;
+  const int shd  = (int)head_dim;
+  const int sM   = (int)M;
+  const int sfrom = (int)from;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, q_in);
+  s_kern->SetKernelSVMArguments(a++, q_out);
+  s_kern->SetKernelSVMArguments(a++, k_in);
+  s_kern->SetKernelSVMArguments(a++, kc_out);
+  s_kern->SetKernelArguments(a++, &snhq,         sizeof(int));
+  s_kern->SetKernelArguments(a++, &snhk,         sizeof(int));
+  s_kern->SetKernelArguments(a++, &shd,          sizeof(int));
+  s_kern->SetKernelArguments(a++, &sM,           sizeof(int));
+  s_kern->SetKernelArguments(a++, &sfrom,        sizeof(int));
+  s_kern->SetKernelArguments(a++, &exponent_base, sizeof(float));
+
+  const int half_dim    = (int)(head_dim / 2u);
+  const int total_heads = snhq + snhk;
+  const int g[3] = {half_dim, total_heads, sM};
+  const int l[3] = {half_dim, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes) {
   if (!src_svm || !dst_svm || bytes == 0) return false;
   if (src_svm == dst_svm) return true;

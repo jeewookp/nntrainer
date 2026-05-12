@@ -468,17 +468,28 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // arg + has its own consumer-side coherence handling.
   static const bool s_mha_no_entry_drain =
     std::getenv("NNTRAINER_MHA_NO_ENTRY_DRAIN") != nullptr;
-  // The skip is only safe when downstream RoPE consumers also run
-  // on GPU. Decode (M==1) flips to GPU RoPE under NNTRAINER_RoPE_GPU=1,
-  // but PREFILL (M>1) still uses CPU RoPE -- if we skipped the drain
-  // there, CPU RoPE would read stale Q/K and corrupt the kv-cache,
-  // poisoning every subsequent decode step. Limit the skip to
-  // (decode && rope-gpu).
+  // Skip is safe when all downstream Q/K/V consumers run on GPU so no
+  // CPU SVMMap is needed:
+  //   decode (M==1)  + ROPE_GPU: GPU RoPE + GPU attention cover Q/K/V.
+  //   prefill (M>1)  + ROPE_GPU: rope_prefill_fp16_qk_cl + GPU attention.
+  // CPU consumers (CPU RoPE, CPU attention) require the drain to flush
+  // GPU-written Q/K/V from L2.  The prefill skip is further gated on
+  // FP16 + SVM (required by the GPU prefill kernels) so a non-GPU
+  // prefill config never accidentally skips the drain.
   static const bool s_rope_gpu_for_drain_skip =
     std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+#if defined(ENABLE_FP16)
+  const bool prefill_drain_skip_eligible =
+    !profile_this_decode &&
+    query.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+    query.getMemoryData() && query.getMemoryData()->isSVM() &&
+    key.getMemoryData() && key.getMemoryData()->isSVM();
+#else
+  const bool prefill_drain_skip_eligible = false;
+#endif
   const bool skip_entry_drain =
-    s_mha_no_entry_drain && profile_this_decode &&
-    s_rope_gpu_for_drain_skip;
+    s_mha_no_entry_drain && s_rope_gpu_for_drain_skip &&
+    (profile_this_decode || prefill_drain_skip_eligible);
   // Phase B.13: skip ONLY the output (CPU-write) entry SVMMap when
   // attention runs on GPU. q/k/v entry maps are kept because they
   // act as Adreno coarse-SVM cache-flush triggers for upstream Q/K/V
@@ -966,6 +977,9 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   const bool rope_gpu_eligible =
     s_rope_gpu && profile_decode && fp16_q && head_dim == 128 &&
     q_svm && k_svm && v_svm && kc_svm && vc_svm;
+  const bool rope_prefill_eligible =
+    s_rope_gpu && profile_substage && fp16_q && head_dim == 128 &&
+    q_svm && k_svm && v_svm && kc_svm && vc_svm;
   static std::atomic<int> s_rope_gpu_diag{0};
   if (s_rope_gpu_diag.fetch_add(1, std::memory_order_relaxed) == 0) {
     std::fprintf(stderr,
@@ -1006,6 +1020,39 @@ void MHACoreLayer::one_batch_incremental_forwarding(
       std::fprintf(stderr,
                    "[ROPE_GPU_DIAG] helper ok_qk=%d ok_v=%d -> done=%d\n",
                    (int)ok_qk, (int)ok_v, (int)rope_gpu_done);
+    }
+  }
+  if (!rope_gpu_done && rope_prefill_eligible) {
+    // GPU-RoPE prefill path: fused Q+K RoPE for M>1 tokens.
+    // rope_prefill_fp16_qk_cl writes Q_roped in-place and K_roped
+    // directly into the kv-cache slice (b_cache_key_step).
+    // v_copy is handled by svm_memcpy_fp16_cl (same as decode path).
+    // All three dispatches run on the same GPU queue as the upstream
+    // QKV projections, so no entry drain is needed (GPU-GPU coherent).
+    const unsigned int M = (unsigned int)(to - from);
+    const uint64_t t_rope0 = mha_now_ns();
+    const bool ok_qk = nntrainer::rope_prefill_fp16_qk_cl(
+      query_step.getData<char>(), query_step.getData<char>(),
+      key_step.getData<char>(), b_cache_key_step.getData<char>(),
+      (unsigned int)num_heads_Q, (unsigned int)num_heads_KV,
+      (unsigned int)head_dim, M,
+      (unsigned int)cache_index, theta);
+    const uint64_t dt_rope = mha_now_ns() - t_rope0;
+    acc_rope_q(dt_rope / 2);
+    acc_rope_k(dt_rope - dt_rope / 2);
+
+    const uint64_t t_v0 = mha_now_ns();
+    const bool ok_v = nntrainer::svm_memcpy_fp16_cl(
+      value_step.getData<char>(), b_cache_value_step.getData<char>(),
+      value_step.bytes());
+    acc_v_copy(mha_now_ns() - t_v0);
+
+    rope_gpu_done = ok_qk && ok_v;
+    static std::atomic<int> s_prefill_rope_diag{0};
+    if (s_prefill_rope_diag.fetch_add(1, std::memory_order_relaxed) == 0) {
+      std::fprintf(stderr,
+                   "[PREFILL_ROPE_GPU_DIAG] M=%u ok_qk=%d ok_v=%d -> done=%d\n",
+                   M, (int)ok_qk, (int)ok_v, (int)rope_gpu_done);
     }
   }
 #endif
@@ -1079,7 +1126,7 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     s_attn_gpu_logged = true;
   }
   if (s_attn_gpu &&
-      step_size == 1 &&   // decode only; prefill (M>1) stays on CPU NEON
+      (step_size == 1 || rope_gpu_done) &&  // decode or GPU-prefill path
       query_step.getMemoryData() && query_step.getMemoryData()->isSVM() &&
       b_cached_key.getMemoryData() && b_cached_key.getMemoryData()->isSVM() &&
       b_cached_value.getMemoryData() && b_cached_value.getMemoryData()->isSVM() &&

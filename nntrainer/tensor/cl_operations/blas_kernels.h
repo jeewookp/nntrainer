@@ -343,6 +343,20 @@ bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
                               unsigned int position, float theta_base);
 
 /**
+ * @brief Fused Q+K prefill RoPE (M>1) — one dispatch for all M tokens.
+ * Applies rotary embedding to Q (in-place) and K (-> kc_out = kv-cache slice)
+ * for M tokens starting at position `from`.  Same algorithm as
+ * rope_decode_fp16_qk_cl but with an added token dimension so the entire
+ * prefill chunk is covered in one kernel launch.  head_dim must be 128.
+ */
+bool rope_prefill_fp16_qk_cl(void *q_in, void *q_out,
+                               void *k_in, void *kc_out,
+                               unsigned int num_heads_Q, unsigned int num_heads_K,
+                               unsigned int head_dim,
+                               unsigned int M, unsigned int from,
+                               float theta_base);
+
+/**
  * @brief GPU SVM-to-SVM memcpy via clEnqueueSVMMemcpy on blas_cc's
  * queue. Used to publish V-cache writes without paying a host-side
  * SVMMap drain.

@@ -88,6 +88,7 @@ if get_option('enable-fp16')
     'rotary_emb_fp16.cl',
     'rope_decode_fp16.cl',
     'rope_decode_fp16_qk.cl',
+    'rope_prefill_fp16_qk.cl',
     'gpu_argmax_fp16.cl',
     'gpu_gumbel_sample_fp16.cl',
     'gpu_embedding_int4chunked.cl',
