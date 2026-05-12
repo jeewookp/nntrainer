@@ -25,10 +25,12 @@ from transformers import AutoConfig, AutoModelForCausalLM
 
 def save_gemma4_for_nntrainer(params, config, dtype, file):
     """Convert and save weights as nntrainer binary format for Gemma4."""
-    n_layers = config.num_hidden_layers
-    ple_dim = getattr(config, "hidden_size_per_layer_input", 256)
-    vocab_per_layer = getattr(config, "vocab_size_per_layer_input", 262144)
-    num_kv_shared_layers = getattr(config, "num_kv_shared_layers", 0)
+    # Gemma4ForConditionalGeneration wraps the text model under text_config
+    tcfg = getattr(config, "text_config", config)
+    n_layers = tcfg.num_hidden_layers
+    ple_dim = getattr(tcfg, "hidden_size_per_layer_input", 256)
+    vocab_per_layer = getattr(tcfg, "vocab_size_per_layer_input", 262144)
+    num_kv_shared_layers = getattr(tcfg, "num_kv_shared_layers", 0)
 
     first_shared_layer = n_layers - num_kv_shared_layers if num_kv_shared_layers > 0 else n_layers
 
@@ -129,14 +131,25 @@ if __name__ == "__main__":
     )
     model.eval()
 
+    tcfg = getattr(config, "text_config", config)
     print(f"Architecture: {config.architectures}")
-    print(f"Layers: {config.num_hidden_layers}")
-    print(f"Hidden size: {config.hidden_size}")
-    print(f"PLE dim: {getattr(config, 'hidden_size_per_layer_input', 'N/A')}")
-    print(f"Vocab per layer: {getattr(config, 'vocab_size_per_layer_input', 'N/A')}")
-    print(f"KV shared layers: {getattr(config, 'num_kv_shared_layers', 0)}")
+    print(f"Layers: {tcfg.num_hidden_layers}")
+    print(f"Hidden size: {tcfg.hidden_size}")
+    print(f"PLE dim: {getattr(tcfg, 'hidden_size_per_layer_input', 'N/A')}")
+    print(f"Vocab per layer: {getattr(tcfg, 'vocab_size_per_layer_input', 'N/A')}")
+    print(f"KV shared layers: {getattr(tcfg, 'num_kv_shared_layers', 0)}")
 
     state_dict = model.state_dict()
+
+    # Gemma4ForConditionalGeneration stores text weights under "language_model." prefix
+    # Strip it so the converter can use standard "model.*" / "lm_head.*" keys
+    prefixes = ["language_model.", "model.language_model."]
+    for pfx in prefixes:
+        if any(k.startswith(pfx) for k in state_dict):
+            print(f"Stripping state_dict prefix: '{pfx}'")
+            state_dict = {k[len(pfx):] if k.startswith(pfx) else k: v
+                          for k, v in state_dict.items()}
+            break
 
     # Print parameter names (for debugging shape issues)
     ple_keys = [k for k in state_dict.keys() if "per_layer" in k or "embed_tokens_per_layer" in k]
@@ -145,6 +158,10 @@ if __name__ == "__main__":
         print(f"  {k}: {state_dict[k].shape}")
     if len(ple_keys) > 10:
         print(f"  ... and {len(ple_keys) - 10} more")
+
+    print("\nFirst 10 keys in state_dict:")
+    for k in list(state_dict.keys())[:10]:
+        print(f"  {k}: {state_dict[k].shape}")
 
     with open(args.output, "wb") as f:
         save_gemma4_for_nntrainer(state_dict, config, args.dtype, f)
