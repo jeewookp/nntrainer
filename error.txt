@@ -1,41 +1,275 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.06 KiB | 45.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   3563ea20..7723c3c1  all_gpu    -> upstream/all_gpu
-Updating 3563ea20..7723c3c1
-Fast-forward
- Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
-[run_gemma4_e2b] FP32 binary already exists, skipping conversion
-╔══════════════════════════════════════╗
-║   Gemma4 E2B – INT4 Run Script       ║
-╚══════════════════════════════════════╝
-[INFO] Model dir  : /home/jwhero94/models/gemma4
-[INFO] Prompt     : Explain artificial intelligence briefly
-[INFO] Quantize   : Q4_0
+Dependency capi-ml-common found: YES 1.8.8 (cached)
+Dependency capi-ml-inference found: YES 1.8.8 (cached)
+Dependency openblas found: YES 0.3.20 (cached)
+Message: OpenBLAS dependency found in system
+Message: set openblas num threads=1
+Message: set nntrainer num threads=1
+Dependency openmp found: YES 4.5 (cached)
+Message: set nntrainer omp threads=4
+Dependency gmock found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Library m found: YES
+Library dl found: YES
+Dependency threads found: YES unknown (cached)
+Dependency iniparser found: YES 3.2 (cached)
+Dependency tensorflow2-lite found: YES 2.15.0 (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Found CMake: /usr/bin/cmake (3.22.1)
+Run-time dependency opencv found: NO (tried pkgconfig and cmake)
+Dependency opencv4 found: YES 4.5.4 (cached)
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+../meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=0 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DENABLE_OPENCL=1 -DCL_TARGET_OPENCL_VERSION=200 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DBLAS_NUM_THREADS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=4 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
+Message: arm_arch_opt : armv8.2-a
+../nntrainer/tensor/cl_operations/cl_kernels/meson.build:118: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.57.0': fs.read.
+Configuring addition.cpp using configuration
+Configuring addition.h using configuration
+../nntrainer/tensor/cl_operations/cl_kernels/meson.build:157: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.58.0': format strings.
+Configuring concat_axis_1.cpp using configuration
+Configuring concat_axis_1.h using configuration
+Configuring concat_axis_2.cpp using configuration
+Configuring concat_axis_2.h using configuration
+Configuring concat_axis_3.cpp using configuration
+Configuring concat_axis_3.h using configuration
+Configuring convert_block_q4_0.cpp using configuration
+Configuring convert_block_q4_0.h using configuration
+Configuring copy.cpp using configuration
+Configuring copy.h using configuration
+Configuring dot.cpp using configuration
+Configuring dot.h using configuration
+Configuring embedding.cpp using configuration
+Configuring embedding.h using configuration
+Configuring int4_gemv.cpp using configuration
+Configuring int4_gemv.h using configuration
+Configuring int4_gemv_adreno.cpp using configuration
+Configuring int4_gemv_adreno.h using configuration
+Configuring int4_gemv_adreno_v2.cpp using configuration
+Configuring int4_gemv_adreno_v2.h using configuration
+Configuring int4_gemv_adreno_v3.cpp using configuration
+Configuring int4_gemv_adreno_v3.h using configuration
+Configuring int4_gemv_adreno_v4.cpp using configuration
+Configuring int4_gemv_adreno_v4.h using configuration
+Configuring int4_gemv_weight_image2d.cpp using configuration
+Configuring int4_gemv_weight_image2d.h using configuration
+Configuring int4_gemv_weight_image2d_v2.cpp using configuration
+Configuring int4_gemv_weight_image2d_v2.h using configuration
+Configuring int4_gemv_weight_image2d_v3.cpp using configuration
+Configuring int4_gemv_weight_image2d_v3.h using configuration
+Configuring int4_gemv_weight_image2d_v4.cpp using configuration
+Configuring int4_gemv_weight_image2d_v4.h using configuration
+Configuring int4_gemv_image_v1.cpp using configuration
+Configuring int4_gemv_image_v1.h using configuration
+Configuring int4_gemv_image_v2.cpp using configuration
+Configuring int4_gemv_image_v2.h using configuration
+Configuring int4_gemv_image_v3.cpp using configuration
+Configuring int4_gemv_image_v3.h using configuration
+Configuring int4_gemv_image_v4.cpp using configuration
+Configuring int4_gemv_image_v4.h using configuration
+Configuring int4_gemv_image_v5.cpp using configuration
+Configuring int4_gemv_image_v5.h using configuration
+Configuring int4_gemv_image2d.cpp using configuration
+Configuring int4_gemv_image2d.h using configuration
+Configuring fused_rmsnorm_qkv.cpp using configuration
+Configuring fused_rmsnorm_qkv.h using configuration
+Configuring fused_rmsnorm_gate_up.cpp using configuration
+Configuring fused_rmsnorm_gate_up.h using configuration
+Configuring fused_gemv_int4.cpp using configuration
+Configuring fused_gemv_int4.h using configuration
+Configuring fused_gemv_int4_v2.cpp using configuration
+Configuring fused_gemv_int4_v2.h using configuration
+Configuring fused_gemv_int4_image2d.cpp using configuration
+Configuring fused_gemv_int4_image2d.h using configuration
+Configuring fused_gemv_int4_image2d_v2.cpp using configuration
+Configuring fused_gemv_int4_image2d_v2.h using configuration
+Configuring gateup_swiglu_int4_image2d.cpp using configuration
+Configuring gateup_swiglu_int4_image2d.h using configuration
+Configuring int4_quantize_input.cpp using configuration
+Configuring int4_quantize_input.h using configuration
+Configuring int4_gemm.cpp using configuration
+Configuring int4_gemm.h using configuration
+Configuring delegate_conv_wave.cpp using configuration
+Configuring delegate_conv_wave.h using configuration
+Configuring dequant_int4_to_fp16.cpp using configuration
+Configuring dequant_int4_to_fp16.h using configuration
+Configuring image_reformat.cpp using configuration
+Configuring image_reformat.h using configuration
+Configuring rmsnorm_image2d.cpp using configuration
+Configuring rmsnorm_image2d.h using configuration
+Configuring rmsnorm_image2d_v2.cpp using configuration
+Configuring rmsnorm_image2d_v2.h using configuration
+Configuring addition_image2d.cpp using configuration
+Configuring addition_image2d.h using configuration
+Configuring swiglu_image2d.cpp using configuration
+Configuring swiglu_image2d.h using configuration
+Configuring int4_gemm_adreno.cpp using configuration
+Configuring int4_gemm_adreno.h using configuration
+Configuring int4_gemm_adreno_v2.cpp using configuration
+Configuring int4_gemm_adreno_v2.h using configuration
+Configuring int4_gemm_adreno_v3.cpp using configuration
+Configuring int4_gemm_adreno_v3.h using configuration
+Configuring int8_int4_gemm_adreno.cpp using configuration
+Configuring int8_int4_gemm_adreno.h using configuration
+Configuring input_transpose.cpp using configuration
+Configuring input_transpose.h using configuration
+Configuring q4_0_ab_bi_8x4.cpp using configuration
+Configuring q4_0_ab_bi_8x4.h using configuration
+Configuring q6_k_sgemv.cpp using configuration
+Configuring q6_k_sgemv.h using configuration
+Configuring q6_k_sgemv_fp16.cpp using configuration
+Configuring q6_k_sgemv_fp16.h using configuration
+Configuring restore_block_q4_0.cpp using configuration
+Configuring restore_block_q4_0.h using configuration
+Configuring rmsnorm.cpp using configuration
+Configuring rmsnorm.h using configuration
+Configuring rotary_emb.cpp using configuration
+Configuring rotary_emb.h using configuration
+Configuring sgemm_no_trans.cpp using configuration
+Configuring sgemm_no_trans.h using configuration
+Configuring sgemm_trans_a.cpp using configuration
+Configuring sgemm_trans_a.h using configuration
+Configuring sgemm_trans_ab.cpp using configuration
+Configuring sgemm_trans_ab.h using configuration
+Configuring sgemm_trans_b.cpp using configuration
+Configuring sgemm_trans_b.h using configuration
+Configuring sgemv_no_trans.cpp using configuration
+Configuring sgemv_no_trans.h using configuration
+Configuring sgemv.cpp using configuration
+Configuring sgemv.h using configuration
+Configuring sscal.cpp using configuration
+Configuring sscal.h using configuration
+Configuring swiglu.cpp using configuration
+Configuring swiglu.h using configuration
+Configuring transpose_16bit.cpp using configuration
+Configuring transpose_16bit.h using configuration
+Configuring transpose_32bit_16bit.cpp using configuration
+Configuring transpose_32bit_16bit.h using configuration
+Configuring transpose_axis_0.cpp using configuration
+Configuring transpose_axis_0.h using configuration
+Configuring transpose_axis_1.cpp using configuration
+Configuring transpose_axis_1.h using configuration
+Configuring transpose_axis_2.cpp using configuration
+Configuring transpose_axis_2.h using configuration
+Configuring add2_fp16_svm.cpp using configuration
+Configuring add2_fp16_svm.h using configuration
+Configuring addition_fp16.cpp using configuration
+Configuring addition_fp16.h using configuration
+Configuring concat_axis_1_fp16.cpp using configuration
+Configuring concat_axis_1_fp16.h using configuration
+Configuring concat_axis_2_fp16.cpp using configuration
+Configuring concat_axis_2_fp16.h using configuration
+Configuring concat_axis_3_fp16.cpp using configuration
+Configuring concat_axis_3_fp16.h using configuration
+Configuring copy_fp16.cpp using configuration
+Configuring copy_fp16.h using configuration
+Configuring dot_fp16.cpp using configuration
+Configuring dot_fp16.h using configuration
+Configuring embedding_fp16.cpp using configuration
+Configuring embedding_fp16.h using configuration
+Configuring hgemm_no_trans.cpp using configuration
+Configuring hgemm_no_trans.h using configuration
+Configuring hgemm_trans_a.cpp using configuration
+Configuring hgemm_trans_a.h using configuration
+Configuring hgemm_trans_ab.cpp using configuration
+Configuring hgemm_trans_ab.h using configuration
+Configuring hgemm_trans_b.cpp using configuration
+Configuring hgemm_trans_b.h using configuration
+Configuring hgemv_no_trans.cpp using configuration
+Configuring hgemv_no_trans.h using configuration
+Configuring hgemv.cpp using configuration
+Configuring hgemv.h using configuration
+Configuring hscal.cpp using configuration
+Configuring hscal.h using configuration
+Configuring rmsnorm_fp16.cpp using configuration
+Configuring rmsnorm_fp16.h using configuration
+Configuring rmsnorm_fp16_svm.cpp using configuration
+Configuring rmsnorm_fp16_svm.h using configuration
+Configuring rotary_emb_fp16.cpp using configuration
+Configuring rotary_emb_fp16.h using configuration
+Configuring rope_decode_fp16.cpp using configuration
+Configuring rope_decode_fp16.h using configuration
+Configuring rope_decode_fp16_qk.cpp using configuration
+Configuring rope_decode_fp16_qk.h using configuration
+Configuring rope_prefill_fp16_qk.cpp using configuration
+Configuring rope_prefill_fp16_qk.h using configuration
+Configuring gpu_argmax_fp16.cpp using configuration
+Configuring gpu_argmax_fp16.h using configuration
+Configuring gpu_gumbel_sample_fp16.cpp using configuration
+Configuring gpu_gumbel_sample_fp16.h using configuration
+Configuring gpu_embedding_int4chunked.cpp using configuration
+Configuring gpu_embedding_int4chunked.h using configuration
+Configuring attention_fused_fp16.cpp using configuration
+Configuring attention_fused_fp16.h using configuration
+Configuring attention_fused_fp16_decode.cpp using configuration
+Configuring attention_fused_fp16_decode.h using configuration
+Configuring attention_fused_fp16_decode_v2.cpp using configuration
+Configuring attention_fused_fp16_decode_v2.h using configuration
+Configuring attention_fused_fp16_decode_v3.cpp using configuration
+Configuring attention_fused_fp16_decode_v3.h using configuration
+Configuring attention_fused_fp16_decode_v3_image2d.cpp using configuration
+Configuring attention_fused_fp16_decode_v3_image2d.h using configuration
+Configuring attention_fused_fp16_decode_v5.cpp using configuration
+Configuring attention_fused_fp16_decode_v5.h using configuration
+Configuring attention_fused_fp16_decode_v6.cpp using configuration
+Configuring attention_fused_fp16_decode_v6.h using configuration
+Configuring attention_fused_fp16_decode_v7.cpp using configuration
+Configuring attention_fused_fp16_decode_v7.h using configuration
+Configuring attention_fused_fp16_decode_v8.cpp using configuration
+Configuring attention_fused_fp16_decode_v8.h using configuration
+Configuring attention_fused_fp16_decode_v9.cpp using configuration
+Configuring attention_fused_fp16_decode_v9.h using configuration
+Configuring attention_fused_fp16_decode_gqa.cpp using configuration
+Configuring attention_fused_fp16_decode_gqa.h using configuration
+Configuring swiglu_fp16.cpp using configuration
+Configuring swiglu_fp16.h using configuration
+Configuring swiglu_fp16_image2d.cpp using configuration
+Configuring swiglu_fp16_image2d.h using configuration
+Configuring transpose_axis_0_fp16.cpp using configuration
+Configuring transpose_axis_0_fp16.h using configuration
+Configuring transpose_axis_1_fp16.cpp using configuration
+Configuring transpose_axis_1_fp16.h using configuration
+Configuring transpose_axis_2_fp16.cpp using configuration
+Configuring transpose_axis_2_fp16.h using configuration
+Configuring cl_kernels.h using configuration
+Configuring ccapi-ml-training.pc using configuration
+Configuring capi-ml-training.pc using configuration
+Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
+Dependency jsoncpp found: YES 1.9.5 (cached)
+Dependency libcurl found: YES 7.81.0 (cached)
+../meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
+Build targets in project: 78
+WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features which were added in newer versions:
+ * 0.57.0: {'fs.read'}
+ * 0.58.0: {'format strings'}
+NOTICE: Future-deprecated features used:
+ * 0.56.0: {'meson.build_root', 'meson.source_root'}
 
-[Step 1/5] Check prerequisites
-──────────────────────
-[OK] Device: R3CY205ZMND
-[OK] Model files found
+nntrainer 0.6.0
 
-[Step 2/5] Build
-──────────────────────
-[OK] Android binary up to date
-[INFO] Building nntr_quantize (Linux)...
+  Subprojects
+    clblast                  : YES
+
+  User defined options
+    backend                  : ninja
+    arm-arch                 : armv8.2-a
+    arm-march                : -march=armv8.2-a+fp16+dotprod+i8mm
+    enable-app               : true
+    enable-fp16              : true
+    enable-opencl            : true
+    enable-tflite-backbone   : false
+    enable-tflite-interpreter: false
+    hgemm-experimental-kernel: false
+    mmap-read                : false
+    omp-num-threads          : 4
+    openblas-num-threads     : 1
     platform                 : none
     thread-backend           : omp
 
 Found ninja-1.10.1 at /usr/bin/ninja
-ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir'                              
-ninja: error: unknown target 'nntr_quantize'
+ninja: error: unknown target 'nntr_quantize'                                                        
 [ERROR] nntr_quantize build failed
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ ^C
+[INFO] Available quantize-related targets:
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
