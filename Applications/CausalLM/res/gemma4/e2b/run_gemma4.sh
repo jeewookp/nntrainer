@@ -96,9 +96,9 @@ if [ "$SKIP_QUANTIZE" = false ]; then
         log_info "Building nntr_quantize (Linux)..."
         cd "$NNTRAINER_ROOT"
         if [ -f "$BUILD_DIR/build.ninja" ]; then
-            meson configure "$BUILD_DIR" -Dplatform=none -Denable-app=true
+            meson configure "$BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
         else
-            meson setup "$BUILD_DIR" -Dplatform=none -Denable-app=true
+            meson setup "$BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
         fi
         if ! ninja -C "$BUILD_DIR" nntr_quantize -j$(nproc); then
             log_error "nntr_quantize build failed"
