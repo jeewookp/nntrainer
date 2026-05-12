@@ -3,6 +3,167 @@ remote: Enumerating objects: 15, done.
 remote: Counting objects: 100% (15/15), done.
 remote: Compressing objects: 100% (2/2), done.
 remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.09 KiB | 139.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   dddade1d..fefc448b  all_gpu    -> upstream/all_gpu
+Updating dddade1d..fefc448b
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 21 ++++++++++-----------
+ 1 file changed, 10 insertions(+), 11 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux)...
+The Meson build system
+Version: 0.61.2
+Source dir: /home/jwhero94/projects/nntrainer
+Build dir: /home/jwhero94/projects/nntrainer/builddir_quantize
+Build type: native build
+Project name: nntrainer
+Project version: 0.6.0
+C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C linker for the host machine: cc ld.bfd 2.38
+C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C++ linker for the host machine: c++ ld.bfd 2.38
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Program powershell found: NO
+Program nproc found: YES (/usr/bin/nproc)
+Program cmd.exe found: NO
+Message: Build for X86 architecture
+Message: -march=native added for AVX hardware acceleration.
+Message: MMAP enabled
+Message: OpenCL kernel path set to: nntrainer_opencl_kernels
+Compiler for C supports arguments -Wredundant-decls: YES 
+Compiler for C++ supports arguments -Wredundant-decls: YES 
+Compiler for C supports arguments -Wwrite-strings: YES 
+Compiler for C++ supports arguments -Wwrite-strings: YES 
+Compiler for C supports arguments -Wformat: YES 
+Compiler for C++ supports arguments -Wformat: YES 
+Compiler for C supports arguments -Wformat-nonliteral: YES 
+Compiler for C++ supports arguments -Wformat-nonliteral: YES 
+Compiler for C supports arguments -Wformat-security: YES 
+Compiler for C++ supports arguments -Wformat-security: YES 
+Compiler for C supports arguments -Winit-self: YES 
+Compiler for C++ supports arguments -Winit-self: YES 
+Compiler for C supports arguments -Waddress: YES 
+Compiler for C++ supports arguments -Waddress: YES 
+Compiler for C supports arguments -Wvla: YES 
+Compiler for C++ supports arguments -Wvla: YES 
+Compiler for C supports arguments -Wpointer-arith: YES 
+Compiler for C++ supports arguments -Wpointer-arith: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES 
+Compiler for C++ supports arguments -Wno-error=varargs: YES 
+Compiler for C supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C supports arguments -Wno-error=sign-compare: YES 
+Compiler for C++ supports arguments -Wno-error=sign-compare: YES 
+Compiler for C supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C supports arguments -ftree-vectorize: YES 
+Compiler for C++ supports arguments -ftree-vectorize: YES 
+Compiler for C supports arguments -Wno-unused-variable: YES 
+Compiler for C++ supports arguments -Wno-unused-variable: YES 
+Compiler for C supports arguments -Wno-comment: YES 
+Compiler for C++ supports arguments -Wno-comment: YES 
+Compiler for C supports arguments -Wno-ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-ignored-attributes: YES 
+Compiler for C supports arguments -Wno-sign-compare: YES 
+Compiler for C++ supports arguments -Wno-sign-compare: YES 
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C supports arguments -Wmissing-declarations: YES 
+Compiler for C supports arguments -Wmissing-include-dirs: YES 
+Compiler for C supports arguments -Wmissing-prototypes: YES 
+Compiler for C supports arguments -Wnested-externs: YES 
+Compiler for C supports arguments -Waggregate-return: YES 
+Compiler for C supports arguments -Wold-style-definition: YES 
+Compiler for C supports arguments -Wdeclaration-after-statement: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Run-time dependency capi-ml-common found: YES 1.8.8
+Run-time dependency capi-ml-inference found: YES 1.8.8
+Run-time dependency openblas found: YES 0.3.20
+Message: OpenBLAS dependency found in system
+Message: set nntrainer num threads=1
+Run-time dependency OpenMP found: YES 4.5
+Message: set nntrainer omp threads=6
+Run-time dependency GMock found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Library m found: YES
+Library dl found: YES
+Run-time dependency threads found: YES
+Run-time dependency iniparser found: YES 3.2
+Run-time dependency tensorflow2-lite found: YES 2.15.0
+Found CMake: /usr/bin/cmake (3.22.1)
+Run-time dependency opencv found: NO (tried pkgconfig and cmake)
+Run-time dependency opencv4 found: YES 4.5.4
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
+Message: arm_arch_opt : none
+Configuring ccapi-ml-training.pc using configuration
+Configuring capi-ml-training.pc using configuration
+Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
+Run-time dependency jsoncpp found: YES 1.9.5
+Run-time dependency libcurl found: YES 7.81.0
+Dependency openmp found: YES 4.5 (cached)
+meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
+Build targets in project: 105
+NOTICE: Future-deprecated features used:
+ * 0.56.0: {'meson.source_root', 'meson.build_root'}
+
+nntrainer 0.6.0
+
+  User defined options
+    enable-app        : true
+    enable-transformer: true
+    platform          : none
+
+Found ninja-1.10.1 at /usr/bin/ninja
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'                     
+ninja: error: unknown target 'nntr_quantize'
+[ERROR] nntr_quantize build failed
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m '.'
+[all_gpu 8cf8cc3c] .
+ 1 file changed, 371 insertions(+)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git push upstream all_gpu
+Username for 'https://github.com': jeewook.kim
+Password for 'https://jeewook.kim@github.com': 
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 24 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 5.87 KiB | 2.93 MiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/jeewookp/nntrainer.git
+   fefc448b..8cf8cc3c  all_gpu -> all_gpu
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
 Unpacking objects: 100% (8/8), 1.06 KiB | 120.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
@@ -49,6 +210,298 @@ c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I..
   295 |   const size_t kai_size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
       |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [133/242] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_manager.cpp.o
+ninja: build stopped: subcommand failed.
+[ERROR] nntr_quantize build failed
+[INFO] Trying full path target...
+api/ccapi/libccapi-nntrainer.so.p/libccapi-nntrainer.so.symbols: SHSYM
+api/capi/libcapi-nntrainer.so.p/libcapi-nntrainer.so.symbols: SHSYM
+test/unittest/layers/libnntrainer_layer_common_standalone_tests.so.p/libnntrainer_layer_common_standalone_tests.so.symbols: SHSYM
+test/unittest/layers/libnntrainer_layer_common_dependent_tests.so.p/libnntrainer_layer_common_dependent_tests.so.symbols: SHSYM
+Applications/CausalLM/layers/libqkv_norm_layer.so.p/libqkv_norm_layer.so.symbols: SHSYM
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m '.'
+[all_gpu c04c3ad3] .
+ 1 file changed, 61 insertions(+), 619 deletions(-)
+ rewrite error.txt (95%)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git push upstream all_gpu
+Username for 'https://github.com': jeewook.kim
+Password for 'https://jeewook.kim@github.com': 
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 24 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 2.38 KiB | 2.38 MiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/jeewookp/nntrainer.git
+   3242e11c..c04c3ad3  all_gpu -> all_gpu
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.06 KiB | 47.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   c04c3ad3..5b37f88c  all_gpu    -> upstream/all_gpu
+Updating c04c3ad3..5b37f88c
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+[0/1] Regenerating build files.
+The Meson build system
+Version: 0.61.2
+Source dir: /home/jwhero94/projects/nntrainer
+Build dir: /home/jwhero94/projects/nntrainer/builddir_quantize
+Build type: native build
+Project name: nntrainer
+Project version: 0.6.0
+C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C linker for the host machine: cc ld.bfd 2.38
+C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C++ linker for the host machine: c++ ld.bfd 2.38
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Program powershell found: NO
+Program nproc found: YES (/usr/bin/nproc)
+Program cmd.exe found: NO
+Message: Build for X86 architecture
+Message: -march=native added for AVX hardware acceleration.
+Message: Float16 for x86_64 enabled. Modern gcc-x64 generally supports float16 with _Float16.
+Message: MMAP enabled
+Message: OpenCL kernel path set to: nntrainer_opencl_kernels
+Compiler for C supports arguments -Wredundant-decls: YES (cached)
+Compiler for C++ supports arguments -Wredundant-decls: YES (cached)
+Compiler for C supports arguments -Wwrite-strings: YES (cached)
+Compiler for C++ supports arguments -Wwrite-strings: YES (cached)
+Compiler for C supports arguments -Wformat: YES (cached)
+Compiler for C++ supports arguments -Wformat: YES (cached)
+Compiler for C supports arguments -Wformat-nonliteral: YES (cached)
+Compiler for C++ supports arguments -Wformat-nonliteral: YES (cached)
+Compiler for C supports arguments -Wformat-security: YES (cached)
+Compiler for C++ supports arguments -Wformat-security: YES (cached)
+Compiler for C supports arguments -Winit-self: YES (cached)
+Compiler for C++ supports arguments -Winit-self: YES (cached)
+Compiler for C supports arguments -Waddress: YES (cached)
+Compiler for C++ supports arguments -Waddress: YES (cached)
+Compiler for C supports arguments -Wvla: YES (cached)
+Compiler for C++ supports arguments -Wvla: YES (cached)
+Compiler for C supports arguments -Wpointer-arith: YES (cached)
+Compiler for C++ supports arguments -Wpointer-arith: YES (cached)
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Compiler for C++ supports arguments -Wno-error=varargs: YES (cached)
+Compiler for C supports arguments -Wno-error=ignored-attributes: YES (cached)
+Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES (cached)
+Compiler for C supports arguments -Wno-error=sign-compare: YES (cached)
+Compiler for C++ supports arguments -Wno-error=sign-compare: YES (cached)
+Compiler for C supports arguments -Wdefaulted-function-deleted: NO (cached)
+Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO (cached)
+Compiler for C supports arguments -ftree-vectorize: YES (cached)
+Compiler for C++ supports arguments -ftree-vectorize: YES (cached)
+Compiler for C supports arguments -Wno-unused-variable: YES (cached)
+Compiler for C++ supports arguments -Wno-unused-variable: YES (cached)
+Compiler for C supports arguments -Wno-comment: YES (cached)
+Compiler for C++ supports arguments -Wno-comment: YES (cached)
+Compiler for C supports arguments -Wno-ignored-attributes: YES (cached)
+Compiler for C++ supports arguments -Wno-ignored-attributes: YES (cached)
+Compiler for C supports arguments -Wno-sign-compare: YES (cached)
+Compiler for C++ supports arguments -Wno-sign-compare: YES (cached)
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES (cached)
+Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES (cached)
+Compiler for C supports arguments -Wmissing-declarations: YES (cached)
+Compiler for C supports arguments -Wmissing-include-dirs: YES (cached)
+Compiler for C supports arguments -Wmissing-prototypes: YES (cached)
+Compiler for C supports arguments -Wnested-externs: YES (cached)
+Compiler for C supports arguments -Waggregate-return: YES (cached)
+Compiler for C supports arguments -Wold-style-definition: YES (cached)
+Compiler for C supports arguments -Wdeclaration-after-statement: YES (cached)
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Dependency capi-ml-common found: YES 1.8.8 (cached)
+Dependency capi-ml-inference found: YES 1.8.8 (cached)
+Dependency openblas found: YES 0.3.20 (cached)
+Message: OpenBLAS dependency found in system
+Message: set nntrainer num threads=1
+Dependency openmp found: YES 4.5 (cached)
+Message: set nntrainer omp threads=6
+Dependency gmock found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Library m found: YES
+Library dl found: YES
+Dependency threads found: YES unknown (cached)
+Dependency iniparser found: YES 3.2 (cached)
+Dependency tensorflow2-lite found: YES 2.15.0 (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Found CMake: /usr/bin/cmake (3.22.1)
+Run-time dependency opencv found: NO (tried pkgconfig and cmake)
+Dependency opencv4 found: YES 4.5.4 (cached)
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+../meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
+Message: arm_arch_opt : none
+Configuring ccapi-ml-training.pc using configuration
+Configuring capi-ml-training.pc using configuration
+Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
+Dependency jsoncpp found: YES 1.9.5 (cached)
+Dependency libcurl found: YES 7.81.0 (cached)
+Dependency openmp found: YES 4.5 (cached)
+../meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
+Build targets in project: 109
+NOTICE: Future-deprecated features used:
+ * 0.56.0: {'meson.build_root', 'meson.source_root'}
+
+nntrainer 0.6.0
+
+  User defined options
+    backend           : ninja
+    enable-app        : true
+    enable-fp16       : true
+    enable-transformer: true
+    platform          : none
+
+Found ninja-1.10.1 at /usr/bin/ninja
+Cleaning... 0 files.                                                                                
+[160/246] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o
+FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o 
+c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp: In member function ‘nntrainer::sharedConstTensors nntrainer::NetworkGraph::incremental_forwarding(unsigned int, unsigned int, bool, std::function<void(std::shared_ptr<nntrainer::LayerNode>, bool)>, std::function<bool(void*)>, void*)’:
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:505:10: error: ‘cl_command_queue’ does not name a type
+  505 |   static cl_command_queue s_sync_q = nullptr;
+      |          ^~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:506:54: error: ‘s_sync_q’ was not declared in this scope
+  506 |   if ((s_profile_layer_sync || s_force_sync_env) && !s_sync_q) {
+      |                                                      ^~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:28: error: ‘ClContext’ does not name a type; did you mean ‘Context’?
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                            ^~~~~~~~~
+      |                            Context
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:38: error: expected ‘>’ before ‘*’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                      ^
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:38: error: expected ‘(’ before ‘*’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                      ^
+      |                                      (
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:39: error: expected primary-expression before ‘>’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                       ^
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:508:52: error: expected ‘)’ before ‘;’ token
+  508 |       Engine::Global().getRegisteredContext("gpu"));
+      |                                                    ^
+      |                                                    )
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:543:56: error: ‘s_sync_q’ was not declared in this scope
+  543 |     if ((s_profile_layer_sync || sync_due_to_force) && s_sync_q)
+      |                                                        ^~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:544:7: error: ‘clFinish’ was not declared in this scope
+  544 |       clFinish(s_sync_q);
+      |       ^~~~~~~~
+[174/246] Compiling C++ object Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o
+FAILED: Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o 
+c++ -IApplications/CausalLM/layers/libmha_core_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o -MF Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o.d -o Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::compute_kcaches(nntrainer::Tensor&, nntrainer::Tensor&, nntrainer::Tensor&, unsigned int, size_t, unsigned int, unsigned int, unsigned int, BS::thread_pool<0>&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:868:35: error: no matching function for call to ‘compute_kcaches(const _Float16*&, const _Float16*&, _Float16*&, int&, unsigned int&, unsigned int&, unsigned int&, int, size_t&, unsigned int&, unsigned int)’
+  868 |         nntrainer::compute_kcaches(
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  869 |           in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  870 |           group_size, tile_size, local_window_size, head_kv, head_kv + 1);
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from ../nntrainer/tensor/cpu_backend/cpu_backend.h:23,
+                 from ../nntrainer/tensor/tensor.h:26,
+                 from ../nntrainer/layers/common_properties.h:23,
+                 from ../nntrainer/layers/layer_context.h:21,
+                 from ../nntrainer/layers/layer_devel.h:34,
+                 from ../nntrainer/context.h:30,
+                 from ../nntrainer/engine.h:29,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:29:
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note: candidate: ‘template<class BType> void nntrainer::compute_kcaches(const float*, const BType*, float*, int, int, int, int, int, size_t, int, int)’
+ 1234 | void compute_kcaches(const float *in, const BType *kcache, float *output,
+      |      ^~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note:   template argument deduction/substitution failed:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:869:11: note:   cannot convert ‘in_data’ (type ‘const _Float16*’) to type ‘const float*’
+  869 |           in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
+      |           ^~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:888:39: error: no matching function for call to ‘compute_kcaches(_Float16* const&, _Float16* const&, _Float16* const&, const int&, unsigned int, const unsigned int&, const unsigned int&, int, size_t&)’
+  888 |             nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  889 |                                        row_to_compute, num_head / group_size,
+      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  890 |                                        head_dim, group_size, tile_size,
+      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  891 |                                        local_window_size);
+      |                                        ~~~~~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note: candidate: ‘template<class BType> void nntrainer::compute_kcaches(const float*, const BType*, float*, int, int, int, int, int, size_t, int, int)’
+ 1234 | void compute_kcaches(const float *in, const BType *kcache, float *output,
+      |      ^~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note:   template argument deduction/substitution failed:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:888:40: note:   cannot convert ‘input_addr’ (type ‘_Float16* const’) to type ‘const float*’
+  888 |             nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
+      |                                        ^~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::apply_rotary_emb_tensor_v2(nntrainer::Tensor&, nntrainer::Tensor&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1590:71: error: cannot convert ‘_Float16*’ to ‘float*’
+ 1590 |           nntrainer::compute_rotary_emb_value(in.width(), dim, half_, in_ptr,
+      |                                                                       ^~~~~~
+      |                                                                       |
+      |                                                                       _Float16*
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1255:58: note:   initializing argument 4 of ‘void nntrainer::compute_rotary_emb_value(unsigned int, unsigned int, unsigned int, float*, void*, const float*, const float*, bool)’
+ 1255 |                               unsigned int half_, float *inout, void *output,
+      |                                                   ~~~~~~~^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1884:22: error: ‘compute_fp16vcache_transposed’ is not a member of ‘nntrainer’; did you mean ‘compute_fp16vcache_fp32_transposed’?
+ 1884 |           nntrainer::compute_fp16vcache_transposed(
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      compute_fp16vcache_fp32_transposed
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::compute_fp16vcache_transposed(nntrainer::Tensor&, nntrainer::Tensor&, nntrainer::Tensor&, int, int, int, int, int, BS::thread_pool<0>&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1903:20: error: ‘compute_fp16vcache_transposed’ is not a member of ‘nntrainer’; did you mean ‘compute_fp16vcache_fp32_transposed’?
+ 1903 |         nntrainer::compute_fp16vcache_transposed(
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                    compute_fp16vcache_fp32_transposed
+[178/246] Compiling C++ object Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o
+FAILED: Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o 
+c++ -IApplications/CausalLM/layers/libgate_up_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o -MF Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o.d -o Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp: In member function ‘virtual void causallm::GateUpLayer::finalize(nntrainer::InitLayerContext&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:164:28: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  164 |   weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedUp
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  165 |                             : GateUpParams::Up] =
+      |                             ~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:172:28: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  172 |   weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedGate
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  173 |                             : GateUpParams::Gate] =
+      |                             ~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp: In member function ‘virtual void causallm::GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:211:19: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  211 |     fused_rmsnorm ? GateUpFusedParams::FusedUp : GateUpParams::Up;
+      |     ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:213:19: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  213 |     fused_rmsnorm ? GateUpFusedParams::FusedGate : GateUpParams::Gate;
+      |     ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cc1plus: all warnings being treated as errors
+[185/246] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_app_context.cpp.o
 ninja: build stopped: subcommand failed.
 [ERROR] nntr_quantize build failed
 [INFO] Trying full path target...
