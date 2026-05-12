@@ -1,3 +1,213 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 986 bytes | 123.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   696d01c5..07650b85  all_gpu    -> upstream/all_gpu
+Updating 696d01c5..07650b85
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir'
+[0/1] Regenerating build files.
+The Meson build system
+Version: 0.61.2
+Source dir: /home/jwhero94/projects/nntrainer
+Build dir: /home/jwhero94/projects/nntrainer/builddir
+Build type: native build
+Project name: nntrainer
+Project version: 0.6.0
+C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C linker for the host machine: cc ld.bfd 2.38
+C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C++ linker for the host machine: c++ ld.bfd 2.38
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Program powershell found: NO
+Program nproc found: YES (/usr/bin/nproc)
+Program cmd.exe found: NO
+Message: Build for X86 architecture
+Message: -march=native added for AVX hardware acceleration.
+Message: Float16 for x86_64 enabled. Modern gcc-x64 generally supports float16 with _Float16.
+Message: MMAP enabled
+Message: OpenCL build is now enabled and will function only if an OpenCL-supported GPU is available. Using CLBlast as the OpenCL backend.
+
+Executing subproject clblast method cmake 
+
+clblast| Found CMake: /usr/bin/cmake (3.22.1)
+
+| Configuring the build directory with CMake version 3.22.1
+| Running CMake with: -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.10 -DCMAKE_CXX_STANDARD=17 -DTUNERS=False -DCMAKE_BUILD_TYPE=Release
+|   - build directory:          /home/jwhero94/projects/nntrainer/builddir/subprojects/CLBlast/__CMake_build
+|   - source directory:         /home/jwhero94/projects/nntrainer/subprojects/CLBlast
+|   - toolchain file:           /home/jwhero94/projects/nntrainer/builddir/subprojects/CLBlast/__CMake_build/CMakeMesonToolchainFile.cmake
+|   - preload file:             /home/jwhero94/projects/nntrainer/builddir/meson-private/data/preload.cmake
+|   - trace args:               --trace-expand --trace-format=json-v1 --no-warn-unused-cli --trace-redirect=cmake_trace.txt
+|   - disabled policy warnings: [CMP0025, CMP0047, CMP0056, CMP0060, CMP0065, CMP0066, CMP0067, CMP0082, CMP0089, CMP0102]
+
+| CMake Deprecation Warning at CMakeLists.txt:12 (cmake_minimum_required):
+| Compatibility with CMake < 2.8.12 will be removed from a future version of
+| CMake.
+
+| Update the VERSION argument <min> value or use a ...<max> suffix to tell
+| CMake that the project does not need compatibility with older versions.
+
+| Running with expanded trace output on.
+| Not searching for unused variables given on the command line.
+| Trace will be written to cmake_trace.txt
+
+| -- The C compiler identification is GNU 13.1.0
+| -- The CXX compiler identification is GNU 13.1.0
+| -- Detecting C compiler ABI info
+| -- Detecting C compiler ABI info - done
+| -- Check for working C compiler: /usr/bin/cc - skipped
+| -- Detecting C compile features
+| -- Detecting C compile features - done
+| -- Detecting CXX compiler ABI info
+| -- Detecting CXX compiler ABI info - done
+| -- Check for working CXX compiler: /usr/bin/c++ - skipped
+| -- Detecting CXX compile features
+| -- Detecting CXX compile features - done
+| -- Building CLBlast with OpenCL API (default)
+| -- Found OpenCL: /usr/include
+| -- Configuring done
+| CMake Warning (dev) in CMakeLists.txt:
+| Policy CMP0128 is not set: Selection of language standard and extension
+| flags improved.  Run "cmake --help-policy CMP0128" for policy details.  Use
+| the cmake_policy command to set the policy and suppress this warning.
+
+| For compatibility with older versions of CMake, unnecessary flags for
+| language standard or compiler extensions may be added.
+| This warning is for project developers.  Use -Wno-dev to suppress it.
+
+| -- Generating done
+| CMake Warning (dev) in CMakeLists.txt:
+| Policy CMP0128 is not set: Selection of language standard and extension
+| flags improved.  Run "cmake --help-policy CMP0128" for policy details.  Use
+| the cmake_policy command to set the policy and suppress this warning.
+
+| For compatibility with older versions of CMake, unnecessary flags for
+| language standard or compiler extensions may be added.
+| This warning is for project developers.  Use -Wno-dev to suppress it.
+
+| -- Build files have been written to: /home/jwhero94/projects/nntrainer/builddir/subprojects/CLBlast/__CMake_build
+
+clblast| CMake configuration: SUCCEEDED
+clblast| CMake project clblast has 1 build targets.
+
+cmake-ast| Processing generated meson AST
+cmake-ast| Build file: /home/jwhero94/projects/nntrainer/builddir/subprojects/CLBlast/meson.build
+
+clblast| Project name: clblast
+clblast| Project version: undefined
+clblast| C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+clblast| C linker for the host machine: cc ld.bfd 2.38
+clblast| C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+clblast| C++ linker for the host machine: c++ ld.bfd 2.38
+clblast| Build targets in project: 1
+clblast| Subproject clblast finished.
+
+
+Message: OpenCL kernel path set to: nntrainer_opencl_kernels
+Compiler for C supports arguments -Wredundant-decls: YES (cached)
+Compiler for C++ supports arguments -Wredundant-decls: YES (cached)
+Compiler for C supports arguments -Wwrite-strings: YES (cached)
+Compiler for C++ supports arguments -Wwrite-strings: YES (cached)
+Compiler for C supports arguments -Wformat: YES (cached)
+Compiler for C++ supports arguments -Wformat: YES (cached)
+Compiler for C supports arguments -Wformat-nonliteral: YES (cached)
+Compiler for C++ supports arguments -Wformat-nonliteral: YES (cached)
+Compiler for C supports arguments -Wformat-security: YES (cached)
+Compiler for C++ supports arguments -Wformat-security: YES (cached)
+Compiler for C supports arguments -Winit-self: YES (cached)
+Compiler for C++ supports arguments -Winit-self: YES (cached)
+Compiler for C supports arguments -Waddress: YES (cached)
+Compiler for C++ supports arguments -Waddress: YES (cached)
+Compiler for C supports arguments -Wvla: YES (cached)
+Compiler for C++ supports arguments -Wvla: YES (cached)
+Compiler for C supports arguments -Wpointer-arith: YES (cached)
+Compiler for C++ supports arguments -Wpointer-arith: YES (cached)
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Compiler for C++ supports arguments -Wno-error=varargs: YES (cached)
+Compiler for C supports arguments -Wno-error=ignored-attributes: YES (cached)
+Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES (cached)
+Compiler for C supports arguments -Wno-error=sign-compare: YES (cached)
+Compiler for C++ supports arguments -Wno-error=sign-compare: YES (cached)
+Compiler for C supports arguments -Wdefaulted-function-deleted: NO (cached)
+Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO (cached)
+Compiler for C supports arguments -ftree-vectorize: YES (cached)
+Compiler for C++ supports arguments -ftree-vectorize: YES (cached)
+Compiler for C supports arguments -Wno-unused-variable: YES (cached)
+Compiler for C++ supports arguments -Wno-unused-variable: YES (cached)
+Compiler for C supports arguments -Wno-comment: YES (cached)
+Compiler for C++ supports arguments -Wno-comment: YES (cached)
+Compiler for C supports arguments -Wno-ignored-attributes: YES (cached)
+Compiler for C++ supports arguments -Wno-ignored-attributes: YES (cached)
+Compiler for C supports arguments -Wno-sign-compare: YES (cached)
+Compiler for C++ supports arguments -Wno-sign-compare: YES (cached)
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES (cached)
+Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES (cached)
+Compiler for C supports arguments -Wmissing-declarations: YES (cached)
+Compiler for C supports arguments -Wmissing-include-dirs: YES (cached)
+Compiler for C supports arguments -Wmissing-prototypes: YES (cached)
+Compiler for C supports arguments -Wnested-externs: YES (cached)
+Compiler for C supports arguments -Waggregate-return: YES (cached)
+Compiler for C supports arguments -Wold-style-definition: YES (cached)
+Compiler for C supports arguments -Wdeclaration-after-statement: YES (cached)
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Dependency capi-ml-common found: YES 1.8.8 (cached)
+Dependency capi-ml-inference found: YES 1.8.8 (cached)
+Dependency openblas found: YES 0.3.20 (cached)
+Message: OpenBLAS dependency found in system
+Message: set openblas num threads=1
+Message: set nntrainer num threads=1
+Dependency openmp found: YES 4.5 (cached)
+Message: set nntrainer omp threads=4
+Dependency gmock found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Dependency gtest found: YES 1.17.0 (cached)
+Library m found: YES
+Library dl found: YES
+Dependency threads found: YES unknown (cached)
+Dependency iniparser found: YES 3.2 (cached)
+Dependency tensorflow2-lite found: YES 2.15.0 (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Found CMake: /usr/bin/cmake (3.22.1)
+Run-time dependency opencv found: NO (tried pkgconfig and cmake)
+Dependency opencv4 found: YES 4.5.4 (cached)
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+../meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=0 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DENABLE_OPENCL=1 -DCL_TARGET_OPENCL_VERSION=200 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DBLAS_NUM_THREADS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=4 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
+Message: arm_arch_opt : armv8.2-a
+../nntrainer/tensor/cl_operations/cl_kernels/meson.build:118: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.57.0': fs.read.
+Configuring addition.cpp using configuration
+Configuring addition.h using configuration
+../nntrainer/tensor/cl_operations/cl_kernels/meson.build:157: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.58.0': format strings.
+Configuring concat_axis_1.cpp using configuration
 Configuring concat_axis_1.h using configuration
 Configuring concat_axis_2.cpp using configuration
 Configuring concat_axis_2.h using configuration
@@ -244,5 +454,166 @@ Cleaning... ninja: error: remove(jni/arm64-v8a): Directory not empty
 ninja: error: unknown target 'nntr_quantize'
 [ERROR] nntr_quantize build failed
 [INFO] Available quantize-related targets:
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git commit -m '.'
+[all_gpu dddade1d] .
+ 1 file changed, 8 insertions(+), 35 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git push upstream all_gpu
+Username for 'https://github.com': jeewook.kim
+Password for 'https://jeewook.kim@github.com': 
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 24 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 443 bytes | 443.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/jeewookp/nntrainer.git
+   07650b85..dddade1d  all_gpu -> all_gpu
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.09 KiB | 139.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   dddade1d..fefc448b  all_gpu    -> upstream/all_gpu
+Updating dddade1d..fefc448b
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 21 ++++++++++-----------
+ 1 file changed, 10 insertions(+), 11 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux)...
+The Meson build system
+Version: 0.61.2
+Source dir: /home/jwhero94/projects/nntrainer
+Build dir: /home/jwhero94/projects/nntrainer/builddir_quantize
+Build type: native build
+Project name: nntrainer
+Project version: 0.6.0
+C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C linker for the host machine: cc ld.bfd 2.38
+C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
+C++ linker for the host machine: c++ ld.bfd 2.38
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Program powershell found: NO
+Program nproc found: YES (/usr/bin/nproc)
+Program cmd.exe found: NO
+Message: Build for X86 architecture
+Message: -march=native added for AVX hardware acceleration.
+Message: MMAP enabled
+Message: OpenCL kernel path set to: nntrainer_opencl_kernels
+Compiler for C supports arguments -Wredundant-decls: YES 
+Compiler for C++ supports arguments -Wredundant-decls: YES 
+Compiler for C supports arguments -Wwrite-strings: YES 
+Compiler for C++ supports arguments -Wwrite-strings: YES 
+Compiler for C supports arguments -Wformat: YES 
+Compiler for C++ supports arguments -Wformat: YES 
+Compiler for C supports arguments -Wformat-nonliteral: YES 
+Compiler for C++ supports arguments -Wformat-nonliteral: YES 
+Compiler for C supports arguments -Wformat-security: YES 
+Compiler for C++ supports arguments -Wformat-security: YES 
+Compiler for C supports arguments -Winit-self: YES 
+Compiler for C++ supports arguments -Winit-self: YES 
+Compiler for C supports arguments -Waddress: YES 
+Compiler for C++ supports arguments -Waddress: YES 
+Compiler for C supports arguments -Wvla: YES 
+Compiler for C++ supports arguments -Wvla: YES 
+Compiler for C supports arguments -Wpointer-arith: YES 
+Compiler for C++ supports arguments -Wpointer-arith: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES 
+Compiler for C++ supports arguments -Wno-error=varargs: YES 
+Compiler for C supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES 
+Compiler for C supports arguments -Wno-error=sign-compare: YES 
+Compiler for C++ supports arguments -Wno-error=sign-compare: YES 
+Compiler for C supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO 
+Compiler for C supports arguments -ftree-vectorize: YES 
+Compiler for C++ supports arguments -ftree-vectorize: YES 
+Compiler for C supports arguments -Wno-unused-variable: YES 
+Compiler for C++ supports arguments -Wno-unused-variable: YES 
+Compiler for C supports arguments -Wno-comment: YES 
+Compiler for C++ supports arguments -Wno-comment: YES 
+Compiler for C supports arguments -Wno-ignored-attributes: YES 
+Compiler for C++ supports arguments -Wno-ignored-attributes: YES 
+Compiler for C supports arguments -Wno-sign-compare: YES 
+Compiler for C++ supports arguments -Wno-sign-compare: YES 
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES 
+Compiler for C supports arguments -Wmissing-declarations: YES 
+Compiler for C supports arguments -Wmissing-include-dirs: YES 
+Compiler for C supports arguments -Wmissing-prototypes: YES 
+Compiler for C supports arguments -Wnested-externs: YES 
+Compiler for C supports arguments -Waggregate-return: YES 
+Compiler for C supports arguments -Wold-style-definition: YES 
+Compiler for C supports arguments -Wdeclaration-after-statement: YES 
+Compiler for C supports arguments -Wno-error=varargs: YES (cached)
+Found pkg-config: /usr/bin/pkg-config (0.29.2)
+Run-time dependency capi-ml-common found: YES 1.8.8
+Run-time dependency capi-ml-inference found: YES 1.8.8
+Run-time dependency openblas found: YES 0.3.20
+Message: OpenBLAS dependency found in system
+Message: set nntrainer num threads=1
+Run-time dependency OpenMP found: YES 4.5
+Message: set nntrainer omp threads=6
+Run-time dependency GMock found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Run-time dependency GTest found: YES 1.17.0
+Library m found: YES
+Library dl found: YES
+Run-time dependency threads found: YES
+Run-time dependency iniparser found: YES 3.2
+Run-time dependency tensorflow2-lite found: YES 2.15.0
+Found CMake: /usr/bin/cmake (3.22.1)
+Run-time dependency opencv found: NO (tried pkgconfig and cmake)
+Run-time dependency opencv4 found: YES 4.5.4
+Program flatc found: YES (/usr/bin/flatc)
+Configuring nntrainer.pc using configuration
+Configuring nntrainer.ini using configuration
+meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
+Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
+Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
+Message: arm_arch_opt : none
+Configuring ccapi-ml-training.pc using configuration
+Configuring capi-ml-training.pc using configuration
+Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
+Run-time dependency jsoncpp found: YES 1.9.5
+Run-time dependency libcurl found: YES 7.81.0
+Dependency openmp found: YES 4.5 (cached)
+meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
+Build targets in project: 105
+NOTICE: Future-deprecated features used:
+ * 0.56.0: {'meson.source_root', 'meson.build_root'}
+
+nntrainer 0.6.0
+
+  User defined options
+    enable-app        : true
+    enable-transformer: true
+    platform          : none
+
+Found ninja-1.10.1 at /usr/bin/ninja
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'                     
+ninja: error: unknown target 'nntr_quantize'
+[ERROR] nntr_quantize build failed
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
