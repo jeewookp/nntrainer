@@ -512,11 +512,7 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
   // the very end drains the entire queue.  Requires BATCH_SIZE==1 and
   // greedy (do_sample==false).
   static const bool s_async_gen = std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
-  std::fprintf(stderr,
-    "[ASYNC_PIPELINE] check: s_async_gen=%d BATCH_SIZE=%u do_sample=%d\n",
-    (int)s_async_gen, BATCH_SIZE, (int)do_sample);
-  std::fflush(stderr);
-  if (s_async_gen && BATCH_SIZE == 1 && !do_sample) {
+  if (s_async_gen && BATCH_SIZE == 1) {
     const int N_GEN = (int)NUM_TO_GENERATE;
 
     // Allocate (N_GEN + 1) SVM ints via nntrainer wrapper (no direct OpenCL
