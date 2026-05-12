@@ -26,6 +26,7 @@
  *   [3] gate_w           [hidden_size, ple_dim]
  *   [4] down_proj_w      [ple_dim, hidden_size]
  *   [5] post_norm        [hidden_size]         (GemmaRMSNorm: stored as w+1)
+ *   [6] layer_scalar     [1]                  (scalar multiplier on PLE output)
  */
 
 #ifndef __GEMMA4_PLE_BLOCK_H__
@@ -87,6 +88,7 @@ private:
   unsigned int gate_w_idx{0};
   unsigned int down_proj_w_idx{0};
   unsigned int post_norm_idx{0};
+  unsigned int layer_scalar_idx{0};
 
   // Thread-local token IDs set before each forward pass
   static thread_local std::vector<unsigned int> s_token_ids;

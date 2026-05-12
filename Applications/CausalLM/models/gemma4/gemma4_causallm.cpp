@@ -268,7 +268,7 @@ Gemma4Transformer::createAttention(const int layer_id, int seq_len,
       last_sliding_kv_layer_name = pfx;
   }
 
-  // Q/K norms (Gemma4 has per-head RMSNorm)
+  // Q norm (always present)
   layers.push_back(createLayer(
     "reshaped_rms_norm",
     {withKey("name", Q_norm),
@@ -277,17 +277,22 @@ Gemma4Transformer::createAttention(const int layer_id, int seq_len,
      withKey("epsilon", std::to_string(NORM_EPS)),
      withKey("feature_size", std::to_string(head_dim))}));
 
-  // K norm: use the correct K source
-  const std::string k_src = kv_shared
-    ? (global ? last_global_kv_layer_name : last_sliding_kv_layer_name) + "_wk"
-    : K;
-  layers.push_back(createLayer(
-    "reshaped_rms_norm",
-    {withKey("name", K_norm),
-     withKey("input_layers", k_src),
-     withKey("packed", "false"),
-     withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("feature_size", std::to_string(head_dim))}));
+  // K norm: only for non-KV-shared layers; shared layers reuse source k_norm output
+  std::string k_norm_for_mha;
+  if (!kv_shared) {
+    layers.push_back(createLayer(
+      "reshaped_rms_norm",
+      {withKey("name", K_norm),
+       withKey("input_layers", K),
+       withKey("packed", "false"),
+       withKey("epsilon", std::to_string(NORM_EPS)),
+       withKey("feature_size", std::to_string(head_dim))}));
+    k_norm_for_mha = K_norm;
+  } else {
+    k_norm_for_mha =
+      (global ? last_global_kv_layer_name : last_sliding_kv_layer_name) +
+      "_k_norm";
+  }
 
   // MHA core
   const float rope_theta = global ? GLOBAL_ROPE_THETA : (float)ROPE_THETA;
@@ -308,7 +313,7 @@ Gemma4Transformer::createAttention(const int layer_id, int seq_len,
     withKey("rope_theta", std::to_string(rope_theta)),
     withKey("max_new_tokens", std::to_string(NUM_TO_GENERATE)),
     withKey("is_causal", IS_CAUSAL ? "true" : "false"),
-    withKey("input_layers", {Q_norm, K_norm, v_src})};
+    withKey("input_layers", {Q_norm, k_norm_for_mha, v_src})};
   layers.push_back(createLayer("mha_core", a_params));
 
   // O projection

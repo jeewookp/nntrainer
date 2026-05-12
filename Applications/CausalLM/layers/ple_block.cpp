@@ -97,6 +97,11 @@ void Gemma4PleBlock::finalize(nntrainer::InitLayerContext &context) {
     nntrainer::TensorDim(1, 1, 1, H, fp32_type),
     nntrainer::props::InitializerInfo::Enum::NONE,
     nntrainer::WeightRegularizer::NONE, 1.0f, 0.0f, "post_norm", false);
+
+  layer_scalar_idx = context.requestWeight(
+    nntrainer::TensorDim(1, 1, 1, 1, fp32_type),
+    nntrainer::props::InitializerInfo::Enum::NONE,
+    nntrainer::WeightRegularizer::NONE, 1.0f, 0.0f, "layer_scalar", false);
 }
 
 void Gemma4PleBlock::forwarding(nntrainer::RunLayerContext &context,
@@ -142,6 +147,7 @@ void Gemma4PleBlock::incremental_forwarding(
   const float *gate_data = context.getWeight(gate_w_idx).getData<float>();
   const float *dproj_data = context.getWeight(down_proj_w_idx).getData<float>();
   const float *post_norm_g = context.getWeight(post_norm_idx).getData<float>();
+  const float scalar = context.getWeight(layer_scalar_idx).getData<float>()[0];
 
   const unsigned int H = hidden_t.width();
   const unsigned int M = to - from;
@@ -222,9 +228,9 @@ void Gemma4PleBlock::incremental_forwarding(
     // 8. Post RMSNorm
     rms_norm_f32(out_v.data(), post_norm_g, H, eps);
 
-    // 9. Residual add
+    // 9. Residual add with layer_scalar
     for (unsigned int i = 0; i < H; ++i)
-      out_v[i] += h_row[i];
+      out_v[i] = h_row[i] + scalar * out_v[i];
 
     store_row(out_t, pos, out_v.data());
   }
