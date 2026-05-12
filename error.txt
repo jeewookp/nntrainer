@@ -1,17 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 4, done.
-remote: Counting objects: 100% (4/4), done.
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.41 KiB | 722.00 KiB/s, done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 963 bytes | 107.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   02a207e3..f18348aa  all_gpu    -> upstream/all_gpu
-Updating 02a207e3..f18348aa
+   96ac6121..49d60e52  all_gpu    -> upstream/all_gpu
+Updating 96ac6121..49d60e52
 Fast-forward
- run_gemma4_e2b.sh | 51 +++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 51 insertions(+)
- create mode 100755 run_gemma4_e2b.sh
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -28,5 +27,19 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 
 [Step 2/5] Build
 ──────────────────────
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh: line 74: cd: /home/jwhero94/projects/nntrainer/Applications/Applications/CausalLM/jni: No such file or directory
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux)...
+    platform                 : none
+    thread-backend           : omp
+
+Found ninja-1.10.1 at /usr/bin/ninja
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir'                              
+ninja: error: unknown target 'nntr_quantize'
+[OK] nntr_quantize built
+
+[Step 3/5] Quantize (FP32 → Q4_0)
+──────────────────────
+[INFO] Quantizing to Q4_0 (this may take a few minutes)...
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh: line 129: /home/jwhero94/projects/nntrainer/builddir/Applications/CausalLM/nntr_quantize: No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
