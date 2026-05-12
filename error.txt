@@ -1,75 +1,35 @@
+   62411cc1..7371ac0f  all_gpu -> all_gpu
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
+remote: Enumerating objects: 27, done.
+remote: Counting objects: 100% (27/27), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.41 KiB | 160.00 KiB/s, done.
+remote: Total 14 (delta 12), reused 13 (delta 11), pack-reused 0 (from 0)
+Unpacking objects: 100% (14/14), 2.69 KiB | 229.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   f5c1b948..62411cc1  all_gpu    -> upstream/all_gpu
-Updating f5c1b948..62411cc1
+   7371ac0f..866f21e1  all_gpu    -> upstream/all_gpu
+Updating 7371ac0f..866f21e1
 Fast-forward
- Applications/CausalLM/res/gemma4/e2b/weight_converter.py | 66 ++++++++++++++++++++++++++++++++++--------------------------------
- 1 file changed, 34 insertions(+), 32 deletions(-)
+ Applications/CausalLM/layers/ple_block.cpp               |  10 ++++++++--
+ Applications/CausalLM/layers/ple_block.h                 |   2 ++
+ Applications/CausalLM/models/gemma4/gemma4_causallm.cpp  |  31 ++++++++++++++++++-------------
+ Applications/CausalLM/res/gemma4/e2b/weight_converter.py | 114 +++++++++++++++++++++++++++++++++++++++++-------------------------------------------------------------------------
+ 4 files changed, 69 insertions(+), 88 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash Applications/CausalLM/res/gemma4/e2b/run_converter.sh 
 Model path : /home/jwhero94/models/gemma4
 Output     : /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
 Dtype      : float32
 Loading model from: /home/jwhero94/models/gemma4
 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
-Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:01<00:00, 1545.62it/s]
-Architecture: ['Gemma4ForConditionalGeneration']
-Layers: 35
-Hidden size: 1536
-PLE dim: 256
-Vocab per layer: 262144
-KV shared layers: 20
-Stripping state_dict prefix: 'model.language_model.'
+Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:01<00:00, 1526.94it/s]
+Architecture     : ['Gemma4ForConditionalGeneration']
+Layers           : 35
+Hidden size      : 1536
+PLE dim          : 256
+Vocab per layer  : 262144
+KV shared layers : 20
+Stripping prefix : 'model.language_model.'
 
-PLE-related parameters:
-  layers.0.per_layer_input_gate.weight: torch.Size([256, 1536])
-  layers.0.per_layer_projection.weight: torch.Size([1536, 256])
-  layers.0.post_per_layer_input_norm.weight: torch.Size([1536])
-  layers.1.per_layer_input_gate.weight: torch.Size([256, 1536])
-  layers.1.per_layer_projection.weight: torch.Size([1536, 256])
-  layers.1.post_per_layer_input_norm.weight: torch.Size([1536])
-  layers.2.per_layer_input_gate.weight: torch.Size([256, 1536])
-  layers.2.per_layer_projection.weight: torch.Size([1536, 256])
-  layers.2.post_per_layer_input_norm.weight: torch.Size([1536])
-  layers.3.per_layer_input_gate.weight: torch.Size([256, 1536])
-  ... and 98 more
-
-Layer 0 keys:
-  layers.0.layer_scalar: torch.Size([1])
-  layers.0.self_attn.q_proj.weight: torch.Size([2048, 1536])
-  layers.0.self_attn.q_norm.weight: torch.Size([256])
-  layers.0.self_attn.k_norm.weight: torch.Size([256])
-  layers.0.self_attn.k_proj.weight: torch.Size([256, 1536])
-  layers.0.self_attn.v_proj.weight: torch.Size([256, 1536])
-  layers.0.self_attn.o_proj.weight: torch.Size([1536, 2048])
-  layers.0.mlp.gate_proj.weight: torch.Size([6144, 1536])
-  layers.0.mlp.up_proj.weight: torch.Size([6144, 1536])
-  layers.0.mlp.down_proj.weight: torch.Size([1536, 6144])
-  layers.0.input_layernorm.weight: torch.Size([1536])
-  layers.0.post_attention_layernorm.weight: torch.Size([1536])
-  layers.0.pre_feedforward_layernorm.weight: torch.Size([1536])
-  layers.0.post_feedforward_layernorm.weight: torch.Size([1536])
-  layers.0.per_layer_input_gate.weight: torch.Size([256, 1536])
-  layers.0.per_layer_projection.weight: torch.Size([1536, 256])
-  layers.0.post_per_layer_input_norm.weight: torch.Size([1536])
-
-Top-level text model keys (not under layers.):
-  embed_tokens.weight: torch.Size([262144, 1536])
-  norm.weight: torch.Size([1536])
-  embed_tokens_per_layer.weight: torch.Size([262144, 8960])
-  per_layer_model_projection.weight: torch.Size([8960, 1536])
-  per_layer_projection_norm.weight: torch.Size([256])
-  lm_head.weight: torch.Size([262144, 1536])
-Traceback (most recent call last):
-  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 169, in <module>
-    save_gemma4_for_nntrainer(state_dict, config, args.dtype, f)
-  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 88, in save_gemma4_for_nntrainer
-    save(params[f"{lp}self_attn.k_norm.weight"], is_rms=True)
-KeyError: 'layers.15.self_attn.k_norm.weight'
+Saved: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin (19192.6 MB)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
