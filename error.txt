@@ -1,35 +1,3 @@
-Dependency capi-ml-common found: YES 1.8.8 (cached)
-Dependency capi-ml-inference found: YES 1.8.8 (cached)
-Dependency openblas found: YES 0.3.20 (cached)
-Message: OpenBLAS dependency found in system
-Message: set openblas num threads=1
-Message: set nntrainer num threads=1
-Dependency openmp found: YES 4.5 (cached)
-Message: set nntrainer omp threads=4
-Dependency gmock found: YES 1.17.0 (cached)
-Dependency gtest found: YES 1.17.0 (cached)
-Dependency gtest found: YES 1.17.0 (cached)
-Library m found: YES
-Library dl found: YES
-Dependency threads found: YES unknown (cached)
-Dependency iniparser found: YES 3.2 (cached)
-Dependency tensorflow2-lite found: YES 2.15.0 (cached)
-Found pkg-config: /usr/bin/pkg-config (0.29.2)
-Found CMake: /usr/bin/cmake (3.22.1)
-Run-time dependency opencv found: NO (tried pkgconfig and cmake)
-Dependency opencv4 found: YES 4.5.4 (cached)
-Program flatc found: YES (/usr/bin/flatc)
-Configuring nntrainer.pc using configuration
-Configuring nntrainer.ini using configuration
-../meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
-Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
-Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=0 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DENABLE_OPENCL=1 -DCL_TARGET_OPENCL_VERSION=200 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DBLAS_NUM_THREADS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=4 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
-Message: arm_arch_opt : armv8.2-a
-../nntrainer/tensor/cl_operations/cl_kernels/meson.build:118: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.57.0': fs.read.
-Configuring addition.cpp using configuration
-Configuring addition.h using configuration
-../nntrainer/tensor/cl_operations/cl_kernels/meson.build:157: WARNING: Project targeting '>=0.55.0' but tried to use feature introduced in '0.58.0': format strings.
-Configuring concat_axis_1.cpp using configuration
 Configuring concat_axis_1.h using configuration
 Configuring concat_axis_2.cpp using configuration
 Configuring concat_axis_2.h using configuration
@@ -239,13 +207,14 @@ Configuring capi-ml-training.pc using configuration
 Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
 Dependency jsoncpp found: YES 1.9.5 (cached)
 Dependency libcurl found: YES 7.81.0 (cached)
+Dependency openmp found: YES 4.5 (cached)
 ../meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
-Build targets in project: 78
+Build targets in project: 107
 WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features which were added in newer versions:
  * 0.57.0: {'fs.read'}
  * 0.58.0: {'format strings'}
 NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.build_root', 'meson.source_root'}
+ * 0.56.0: {'meson.source_root', 'meson.build_root'}
 
 nntrainer 0.6.0
 
@@ -261,6 +230,7 @@ nntrainer 0.6.0
     enable-opencl            : true
     enable-tflite-backbone   : false
     enable-tflite-interpreter: false
+    enable-transformer       : true
     hgemm-experimental-kernel: false
     mmap-read                : false
     omp-num-threads          : 4
@@ -269,7 +239,10 @@ nntrainer 0.6.0
     thread-backend           : omp
 
 Found ninja-1.10.1 at /usr/bin/ninja
-ninja: error: unknown target 'nntr_quantize'                                                        
+Cleaning... ninja: error: remove(jni/arm64-v8a): Directory not empty                                
+0 files.
+ninja: error: unknown target 'nntr_quantize'
 [ERROR] nntr_quantize build failed
 [INFO] Available quantize-related targets:
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
