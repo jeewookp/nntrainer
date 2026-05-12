@@ -3,46 +3,14 @@ Model path : /home/jwhero94/models/gemma4
 Output     : /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
 Dtype      : float32
 Loading model from: /home/jwhero94/models/gemma4
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:02<00:00, 946.78it/s]
+Architecture: ['Gemma4ForConditionalGeneration']
 Traceback (most recent call last):
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/utils/import_utils.py", line 2226, in __getattr__
-    module = self._get_module(self._class_to_module[name])
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/utils/import_utils.py", line 2460, in _get_module
-    raise e
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/utils/import_utils.py", line 2458, in _get_module
-    return importlib.import_module("." + module_name, self.__name__)
-  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
-  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/models/gemma4/configuration_gemma4.py", line 21, in <module>
-    from ...utils.type_validators import interval
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/utils/type_validators.py", line 8, in <module>
-    from ..video_utils import VideoMetadataType
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/video_utils.py", line 27, in <module>
-    from .image_transforms import PaddingMode, to_channel_dimension_format
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/image_transforms.py", line 22, in <module>
-    from .image_utils import (
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/image_utils.py", line 51, in <module>
-    PILImageResampling = PIL.Image.Resampling
-  File "/usr/lib/python3/dist-packages/PIL/Image.py", line 65, in __getattr__
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-AttributeError: module 'PIL.Image' has no attribute 'Resampling'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 126, in <module>
-    config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/models/auto/configuration_auto.py", line 377, in from_pretrained
-    explicit_local_code = has_local_code and not CONFIG_MAPPING[config_dict["model_type"]].__module__.startswith(
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/models/auto/configuration_auto.py", line 110, in __getitem__
-    if hasattr(self._modules[module_name], value):
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/utils/import_utils.py", line 2314, in __getattr__
-    raise ModuleNotFoundError(
-ModuleNotFoundError: Could not import module 'Gemma4Config'. Are this object's requirements defined correctly?
+  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 133, in <module>
+    print(f"Layers: {config.num_hidden_layers}")
+  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 434, in __getattribute__
+    return super().__getattribute__(key)
+AttributeError: 'Gemma4Config' object has no attribute 'num_hidden_layers'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
