@@ -14,7 +14,7 @@ log_step()    { echo -e "\n${CYAN}[Step $1/$TOTAL_STEPS]${NC} $2\n${CYAN}──�
 
 # ── Args ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NNTRAINER_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+NNTRAINER_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 CAUSALLM_DIR="$NNTRAINER_ROOT/Applications/CausalLM"
 
 MODEL_HOST_DIR="${HOME}/models/gemma4"
