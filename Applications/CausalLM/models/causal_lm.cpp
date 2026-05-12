@@ -41,7 +41,6 @@
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <blas_kernels.h>
-#include <cl_context.h>
 #endif
 
 namespace causallm {
@@ -513,75 +512,73 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
   // the very end drains the entire queue.  Requires BATCH_SIZE==1 and
   // greedy (do_sample==false).
   static const bool s_async_gen = std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
+  std::fprintf(stderr,
+    "[ASYNC_PIPELINE] check: s_async_gen=%d BATCH_SIZE=%u do_sample=%d\n",
+    (int)s_async_gen, BATCH_SIZE, (int)do_sample);
+  std::fflush(stderr);
   if (s_async_gen && BATCH_SIZE == 1 && !do_sample) {
-    auto *cl_ctx = static_cast<nntrainer::ClContext *>(
-      nntrainer::Engine::Global().getRegisteredContext("gpu"));
-    if (cl_ctx) {
-      cl_context clctx = cl_ctx->context_inst_.GetContext();
-      const int N_GEN = (int)NUM_TO_GENERATE;
+    const int N_GEN = (int)NUM_TO_GENERATE;
 
-      // Allocate (N_GEN + 1) SVM ints.  Slot [t] = token_id CONSUMED by
-      // token t's embedding.  Slot [t+1] = argmax result WRITTEN by token
-      // t's lm_head GPU argmax.
-      int *argmax_svm = static_cast<int *>(
-        clSVMAlloc(clctx, CL_MEM_READ_WRITE,
-                   (size_t)(N_GEN + 1) * sizeof(int), sizeof(int)));
-      if (argmax_svm) {
-        // Slot [0]: first token_id comes from prefill (CPU-written).
-        argmax_svm[0] = (int)id_list[0];
+    // Allocate (N_GEN + 1) SVM ints via nntrainer wrapper (no direct OpenCL
+    // symbols in causallm_core.so -- clSVMAlloc lives in libnntrainer.so).
+    // Slot [t]   = token_id consumed by token t's embedding.
+    // Slot [t+1] = argmax result written by token t's lm_head GPU argmax.
+    int *argmax_svm = nntrainer::svm_alloc_ints(N_GEN + 1);
+    std::fprintf(stderr,
+      "[ASYNC_PIPELINE] svm_alloc_ints(%d) = %p\n", N_GEN + 1,
+      (void *)argmax_svm);
+    std::fflush(stderr);
+    if (argmax_svm) {
+      // Slot [0]: first token_id comes from prefill (CPU-written).
+      argmax_svm[0] = (int)id_list[0];
 
-        static bool s_async_diag = false;
-        if (!s_async_diag) {
-          std::fprintf(stderr,
-            "[ASYNC_PIPELINE] start: N_GEN=%d first_token=%d\n",
-            N_GEN, argmax_svm[0]);
-          std::fflush(stderr);
-          s_async_diag = true;
-        }
+      std::fprintf(stderr,
+        "[ASYNC_PIPELINE] start: N_GEN=%d first_token=%d\n",
+        N_GEN, argmax_svm[0]);
+      std::fflush(stderr);
 
-        // Submit all tokens to GPU queue without blocking.
-        for (int t = 0; t < N_GEN; ++t, ++token_generation_idx) {
-          nntrainer::set_async_pipeline_ctx(&argmax_svm[t],
-                                            &argmax_svm[t + 1]);
-          auto output_interval = model->incremental_inference(
-            BATCH_SIZE, input, label, input_len,
-            token_generation_idx - 1 + global_token_len,
-            token_generation_idx + global_token_len);
-          // output_interval[0] is nullptr in async mode; don't touch it.
-          // Callers of delete[] nullptr are safe (no-op).
-          for (auto out : output_interval)
-            delete[] out;
-        }
-
-        // Reset async context so non-async calls after this don't misbehave.
-        nntrainer::set_async_pipeline_ctx(nullptr, nullptr);
-
-        // Single blocking drain: waits for all 64 tokens' GPU work.
-        cl_ctx->command_queue_inst_.enqueueSVMMap(
-          argmax_svm, (size_t)(N_GEN + 1) * sizeof(int), /*read_only=*/true);
-
-        // Collect results and register outputs.
-        for (int t = 0; t < N_GEN; ++t) {
-          const unsigned int tok = (unsigned int)argmax_svm[t + 1];
-          std::vector<unsigned int> ids_list = {tok};
-          unsigned int tidx = (unsigned int)(input_len + 1 + t);
-          registerOutputs(tokenizer, ids_list, tidx, eos_list, log_output);
-          ++generation_cnt;
-
-          bool is_eos = false;
-          for (auto eos_id : EOS_TOKEN_ID) {
-            if (tok == eos_id) { is_eos = true; break; }
-          }
-          if (is_eos) {
-            eos_list[0] = true;
-            break;
-          }
-        }
-
-        clSVMFree(clctx, argmax_svm);
-        free(input_sample);
-        goto gen_loop_done;
+      // Submit all tokens to GPU queue without blocking.
+      for (int t = 0; t < N_GEN; ++t, ++token_generation_idx) {
+        nntrainer::set_async_pipeline_ctx(&argmax_svm[t],
+                                          &argmax_svm[t + 1]);
+        auto output_interval = model->incremental_inference(
+          BATCH_SIZE, input, label, input_len,
+          token_generation_idx - 1 + global_token_len,
+          token_generation_idx + global_token_len);
+        // output_interval[0] is nullptr in async mode; don't touch it.
+        // Callers of delete[] nullptr are safe (no-op).
+        for (auto out : output_interval)
+          delete[] out;
       }
+
+      // Reset async context so non-async calls after this don't misbehave.
+      nntrainer::set_async_pipeline_ctx(nullptr, nullptr);
+
+      // Single blocking drain: waits for all N_GEN tokens' GPU work.
+      nntrainer::svm_blocking_read(argmax_svm,
+                                   (size_t)(N_GEN + 1) * sizeof(int));
+
+      // Collect results and register outputs.
+      for (int t = 0; t < N_GEN; ++t) {
+        const unsigned int tok = (unsigned int)argmax_svm[t + 1];
+        std::vector<unsigned int> ids_list = {tok};
+        unsigned int tidx = (unsigned int)(input_len + 1 + t);
+        registerOutputs(tokenizer, ids_list, tidx, eos_list, log_output);
+        ++generation_cnt;
+
+        bool is_eos = false;
+        for (auto eos_id : EOS_TOKEN_ID) {
+          if (tok == eos_id) { is_eos = true; break; }
+        }
+        if (is_eos) {
+          eos_list[0] = true;
+          break;
+        }
+      }
+
+      nntrainer::svm_free_ptr(argmax_svm);
+      free(input_sample);
+      goto gen_loop_done;
     }
   }
 #endif

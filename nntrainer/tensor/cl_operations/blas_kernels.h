@@ -387,6 +387,27 @@ void set_async_pipeline_ctx(int *token_id_svm, int *argmax_out_svm);
 int *get_async_pipeline_token_id_svm();
 int *get_async_pipeline_argmax_out_svm();
 
+/**
+ * @brief Allocate n ints in coarse-grained SVM (CL_MEM_READ_WRITE).
+ *        Returns nullptr on failure.  Wraps clSVMAlloc so callers
+ *        outside libnntrainer.so do not need to link libOpenCL directly.
+ */
+int *svm_alloc_ints(int n);
+
+/**
+ * @brief Free a pointer previously returned by svm_alloc_ints.
+ *        Wraps clSVMFree; safe to call with nullptr.
+ */
+void svm_free_ptr(void *p);
+
+/**
+ * @brief Blocking SVMMap(CL_MAP_READ) on the GPU command queue.
+ *        Drains all in-flight GPU work that writes to [p, p+bytes).
+ *        Wraps enqueueSVMMap(blocking=true) so callers outside
+ *        libnntrainer.so do not need to link libOpenCL directly.
+ */
+void svm_blocking_read(void *p, size_t bytes);
+
 #endif
 
 /**

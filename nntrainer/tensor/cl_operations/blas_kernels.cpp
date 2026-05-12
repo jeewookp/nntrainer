@@ -7221,6 +7221,33 @@ void set_async_pipeline_ctx(int *token_id_svm, int *argmax_out_svm) {
 int *get_async_pipeline_token_id_svm()  { return g_async_token_id_svm;  }
 int *get_async_pipeline_argmax_out_svm() { return g_async_argmax_out_svm; }
 
+int *svm_alloc_ints(int n) {
+  if (n <= 0) return nullptr;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return nullptr;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  return static_cast<int *>(
+    clSVMAlloc(clctx, CL_MEM_READ_WRITE, (size_t)n * sizeof(int), sizeof(int)));
+}
+
+void svm_free_ptr(void *p) {
+  if (!p) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  clSVMFree(clctx, p);
+}
+
+void svm_blocking_read(void *p, size_t bytes) {
+  if (!p || bytes == 0) return;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return;
+  blas_cc->command_queue_inst_.enqueueSVMMap(p, bytes, /*read_only=*/true);
+}
+
 #endif
 
 // ============================================================================
