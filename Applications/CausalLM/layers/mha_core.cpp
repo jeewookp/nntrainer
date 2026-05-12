@@ -1079,6 +1079,7 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     s_attn_gpu_logged = true;
   }
   if (s_attn_gpu &&
+      step_size == 1 &&   // decode only; prefill (M>1) stays on CPU NEON
       query_step.getMemoryData() && query_step.getMemoryData()->isSVM() &&
       b_cached_key.getMemoryData() && b_cached_key.getMemoryData()->isSVM() &&
       b_cached_value.getMemoryData() && b_cached_value.getMemoryData()->isSVM() &&
