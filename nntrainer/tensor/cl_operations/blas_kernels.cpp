@@ -6946,6 +6946,13 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   if (do_v3_image2d) {
     const int v3_slices = (int)(num_heads_Q * head_dim) / 4;
     GpuImagePool::Global().set(out_svm, v3_out_img, 1, v3_slices);
+    // SVMUnmap acts as GPU L2 coherence fence on Adreno (even without a
+    // prior SVMMap — technically UB per spec but required on Adreno hardware)
+    // making the attention SVM writes visible to subsequent GPU kernels
+    // (addition_layer) in the same in-order queue.  This replaces the
+    // heavy svm_to_image2d_publish kernel (~41 ms / 2304 calls) that
+    // mha_core.cpp skips when NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D=1.
+    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
   }
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
