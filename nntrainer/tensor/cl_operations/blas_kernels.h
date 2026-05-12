@@ -331,6 +331,18 @@ bool rope_decode_fp16_cl(void *in_svm, void *out_svm,
                           unsigned int position, float theta_base);
 
 /**
+ * @brief Fused Q+K decode RoPE — one dispatch instead of two.
+ * Applies rotary embedding to both Q (in-place) and K (-> kc_out)
+ * in a single clEnqueueNDRangeKernel call, saving ~18 us host overhead
+ * per decode step.  head_dim must be 128.
+ */
+bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
+                              void *k_in, void *kc_out,
+                              unsigned int num_heads_Q, unsigned int num_heads_K,
+                              unsigned int head_dim,
+                              unsigned int position, float theta_base);
+
+/**
  * @brief GPU SVM-to-SVM memcpy via clEnqueueSVMMemcpy on blas_cc's
  * queue. Used to publish V-cache writes without paying a host-side
  * SVMMap drain.

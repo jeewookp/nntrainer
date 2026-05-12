@@ -6946,13 +6946,6 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   if (do_v3_image2d) {
     const int v3_slices = (int)(num_heads_Q * head_dim) / 4;
     GpuImagePool::Global().set(out_svm, v3_out_img, 1, v3_slices);
-    // SVMUnmap acts as GPU L2 coherence fence on Adreno (even without a
-    // prior SVMMap — technically UB per spec but required on Adreno hardware)
-    // making the attention SVM writes visible to subsequent GPU kernels
-    // (addition_layer) in the same in-order queue.  This replaces the
-    // heavy svm_to_image2d_publish kernel (~41 ms / 2304 calls) that
-    // mha_core.cpp skips when NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D=1.
-    blas_cc->command_queue_inst_.enqueueSVMUnmap(out_svm);
   }
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
@@ -7034,6 +7027,52 @@ bool rope_decode_fp16_cl(void *in_svm, void *out_svm,
 
   const int half_dim = (int)(head_dim / 2u);
   const int g[3] = {half_dim, snh, 1};
+  const int l[3] = {half_dim, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
+bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
+                              void *k_in, void *kc_out,
+                              unsigned int num_heads_Q, unsigned int num_heads_K,
+                              unsigned int head_dim,
+                              unsigned int position, float theta_base) {
+  if (!q_in || !q_out || !k_in || !kc_out ||
+      num_heads_Q == 0 || num_heads_K == 0 || head_dim != 128u ||
+      theta_base <= 0.0f)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(
+      rope_decode_fp16_qk_kernel, "rope_decode_fp16_qk");
+  }
+  if (!s_kern) return false;
+
+  const float exponent_base =
+    -2.0f * std::log(theta_base) / (float)head_dim;
+  const int snhq = (int)num_heads_Q;
+  const int snhk = (int)num_heads_K;
+  const int shd  = (int)head_dim;
+  const int sp   = (int)position;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, q_in);
+  s_kern->SetKernelSVMArguments(a++, q_out);
+  s_kern->SetKernelSVMArguments(a++, k_in);
+  s_kern->SetKernelSVMArguments(a++, kc_out);
+  s_kern->SetKernelArguments(a++, &snhq, sizeof(int));
+  s_kern->SetKernelArguments(a++, &snhk, sizeof(int));
+  s_kern->SetKernelArguments(a++, &shd,  sizeof(int));
+  s_kern->SetKernelArguments(a++, &sp,   sizeof(int));
+  s_kern->SetKernelArguments(a++, &exponent_base, sizeof(float));
+
+  const int half_dim = (int)(head_dim / 2u);
+  const int total_heads = snhq + snhk;
+  const int g[3] = {half_dim, total_heads, 1};
   const int l[3] = {half_dim, 1, 1};
   return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 }
