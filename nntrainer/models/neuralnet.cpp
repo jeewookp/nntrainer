@@ -1213,9 +1213,13 @@ std::vector<float *> NeuralNetwork::incremental_inference(
   // In async pipeline mode, all readback happens via GPU argmax SVM at the
   // end of the generation batch. Skip SVMMap + scopy entirely here and
   // return a sentinel null buffer per output tensor.
+  // Skip SVMMap+scopy only during async decode (argmax_out is set by
+  // causal_lm.cpp for each decode token).  Prefill still needs the real
+  // output buffer for generate_multi_tokens, so only skip when
+  // get_async_pipeline_argmax_out_svm() != nullptr.
   static const bool s_async_pipeline =
     std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
-  if (s_async_pipeline) {
+  if (s_async_pipeline && get_async_pipeline_argmax_out_svm() != nullptr) {
     for (size_t i = 0; i < output_tensors.size(); ++i)
       output.push_back(nullptr);
     return output;
