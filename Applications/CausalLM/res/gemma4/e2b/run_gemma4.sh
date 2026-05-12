@@ -89,27 +89,22 @@ else
     log_success "Android binary up to date"
 fi
 
-# Linux meson build for nntr_quantize (dedicated builddir to avoid conflicts)
-QUANTIZE_BUILD_DIR="$NNTRAINER_ROOT/builddir_quantize"
-QUANTIZE_BIN="$QUANTIZE_BUILD_DIR/Applications/CausalLM/nntr_quantize"
+# Linux meson build for nntr_quantize using existing builddir
+QUANTIZE_BIN="$BUILD_DIR/Applications/CausalLM/nntr_quantize"
 if [ "$SKIP_QUANTIZE" = false ]; then
     if [ "$FORCE_BUILD" = true ] || [ ! -f "$QUANTIZE_BIN" ]; then
         log_info "Building nntr_quantize (Linux)..."
         cd "$NNTRAINER_ROOT"
-        if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILD_DIR" ]; then
-            rm -rf "$QUANTIZE_BUILD_DIR"
-        fi
-        MESON_OPTS="-Dplatform=none -Denable-app=true -Denable-transformer=true -Denable-fp16=true"
-        if [ ! -f "$QUANTIZE_BUILD_DIR/build.ninja" ]; then
-            meson setup "$QUANTIZE_BUILD_DIR" $MESON_OPTS
+        if [ -f "$BUILD_DIR/build.ninja" ]; then
+            # Enable transformer in existing builddir
+            meson configure "$BUILD_DIR" -Denable-transformer=true 2>&1 | tail -3 || true
+            # Remove jni/arm64-v8a that blocks ninja's internal reconfigure clean step
+            rm -rf "$BUILD_DIR/jni/arm64-v8a" 2>/dev/null || true
         else
-            meson configure "$QUANTIZE_BUILD_DIR" $MESON_OPTS
+            meson setup "$BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
         fi
-        if ! meson compile -C "$QUANTIZE_BUILD_DIR" nntr_quantize; then
-            log_error "nntr_quantize build failed"
-            log_info "Trying full path target..."
-            ninja -C "$QUANTIZE_BUILD_DIR" -t targets 2>/dev/null | grep -i "nntr\|causal\|quant" | head -20 || true
-            exit 1
+        if ! meson compile -C "$BUILD_DIR" nntr_quantize; then
+            log_error "nntr_quantize build failed"; exit 1
         fi
         log_success "nntr_quantize built"
     else
