@@ -99,8 +99,11 @@ if [ "$SKIP_QUANTIZE" = false ]; then
         if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILD_DIR" ]; then
             rm -rf "$QUANTIZE_BUILD_DIR"
         fi
+        MESON_OPTS="-Dplatform=none -Denable-app=true -Denable-transformer=true -Denable-fp16=true"
         if [ ! -f "$QUANTIZE_BUILD_DIR/build.ninja" ]; then
-            meson setup "$QUANTIZE_BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
+            meson setup "$QUANTIZE_BUILD_DIR" $MESON_OPTS
+        else
+            meson configure "$QUANTIZE_BUILD_DIR" $MESON_OPTS
         fi
         if ! meson compile -C "$QUANTIZE_BUILD_DIR" nntr_quantize; then
             log_error "nntr_quantize build failed"
