@@ -1,35 +1,32 @@
-   62411cc1..7371ac0f  all_gpu -> all_gpu
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 27, done.
-remote: Counting objects: 100% (27/27), done.
+remote: Enumerating objects: 4, done.
+remote: Counting objects: 100% (4/4), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 14 (delta 12), reused 13 (delta 11), pack-reused 0 (from 0)
-Unpacking objects: 100% (14/14), 2.69 KiB | 229.00 KiB/s, done.
+remote: Total 3 (delta 1), reused 3 (delta 1), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.41 KiB | 722.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   7371ac0f..866f21e1  all_gpu    -> upstream/all_gpu
-Updating 7371ac0f..866f21e1
+   02a207e3..f18348aa  all_gpu    -> upstream/all_gpu
+Updating 02a207e3..f18348aa
 Fast-forward
- Applications/CausalLM/layers/ple_block.cpp               |  10 ++++++++--
- Applications/CausalLM/layers/ple_block.h                 |   2 ++
- Applications/CausalLM/models/gemma4/gemma4_causallm.cpp  |  31 ++++++++++++++++++-------------
- Applications/CausalLM/res/gemma4/e2b/weight_converter.py | 114 +++++++++++++++++++++++++++++++++++++++++-------------------------------------------------------------------------
- 4 files changed, 69 insertions(+), 88 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash Applications/CausalLM/res/gemma4/e2b/run_converter.sh 
-Model path : /home/jwhero94/models/gemma4
-Output     : /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
-Dtype      : float32
-Loading model from: /home/jwhero94/models/gemma4
-[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
-Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:01<00:00, 1526.94it/s]
-Architecture     : ['Gemma4ForConditionalGeneration']
-Layers           : 35
-Hidden size      : 1536
-PLE dim          : 256
-Vocab per layer  : 262144
-KV shared layers : 20
-Stripping prefix : 'model.language_model.'
+ run_gemma4_e2b.sh | 51 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 51 insertions(+)
+ create mode 100755 run_gemma4_e2b.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
 
-Saved: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin (19192.6 MB)
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh: line 74: cd: /home/jwhero94/projects/nntrainer/Applications/Applications/CausalLM/jni: No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
