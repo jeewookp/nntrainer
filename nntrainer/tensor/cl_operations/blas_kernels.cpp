@@ -6823,11 +6823,42 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     use_decode_v9 || use_decode_v8 || use_decode_v7 || use_decode_v6 ||
     use_decode_v5 || use_decode_v3 || use_decode_gqa || use_decode_v2 ||
     (s_attn_decode_specialized && M == 1u && s_kern_decode);
-  // v3_image2d flag: when set, MHA exit skips svm_to_image2d_publish (~42ms).
-  // The regular v3 kernel is still used for SVM output; no image2d is
-  // allocated or written here. The pool-publish savings come purely from
-  // mha_core skipping the separate kernel dispatch in its exit block.
-  const bool use_v3_image2d = use_decode_v3 && s_attn_decode_v3_image2d;
+  // v3_image2d: attention writes directly to a pre-allocated image2d and
+  // publishes it to GpuImagePool. The downstream FC (gemv_int4_weight_image2d_v2)
+  // checks GpuImagePool on every call; when it finds the attention output there
+  // it reads via image2d cache instead of SVM, making ATTN_NO_DRAIN safe without
+  // the svm_to_image2d_publish kernel dispatch (~42ms saved).
+  const bool use_v3_image2d =
+    use_decode_v3 && s_attn_decode_v3_image2d && s_kern_decode_v3_image2d;
+
+  // Pre-allocate / cache the output image2d for v3_image2d.
+  // Layout: width=1, height=num_heads_Q*head_dim/4 (same as svm_to_image2d_publish).
+  cl_mem v3_out_img = nullptr;
+  if (use_v3_image2d) {
+    cl_context clctx = blas_cc->context_inst_.GetContext();
+    const int v3_slices = (int)(num_heads_Q * head_dim) / 4;
+    struct V3ImgEntry { cl_mem img; int slices; };
+    static std::unordered_map<uintptr_t, V3ImgEntry> s_v3_img_cache;
+    const uintptr_t v3_key = reinterpret_cast<uintptr_t>(out_svm);
+    auto v3_it = s_v3_img_cache.find(v3_key);
+    if (v3_it != s_v3_img_cache.end() && v3_it->second.slices == v3_slices) {
+      v3_out_img = v3_it->second.img;
+    } else {
+      if (v3_it != s_v3_img_cache.end() && v3_it->second.img)
+        clReleaseMemObject(v3_it->second.img);
+      cl_image_format v3_fmt = {CL_RGBA, CL_HALF_FLOAT};
+      cl_image_desc v3_d = {};
+      v3_d.image_type = CL_MEM_OBJECT_IMAGE2D;
+      v3_d.image_width = 1;
+      v3_d.image_height = v3_slices;
+      cl_int v3_err = 0;
+      v3_out_img = clCreateImage(clctx, CL_MEM_READ_WRITE, &v3_fmt, &v3_d, 0, &v3_err);
+      if (v3_err != CL_SUCCESS || !v3_out_img)
+        v3_out_img = nullptr;
+      s_v3_img_cache[v3_key] = {v3_out_img, v3_slices};
+    }
+  }
+  const bool do_v3_image2d = use_v3_image2d && v3_out_img;
 
   ClContext::SharedPtrClKernel kern_to_use =
     use_decode_v9   ? s_kern_decode_v9
@@ -6835,6 +6866,7 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
     : use_decode_v7   ? s_kern_decode_v7
     : use_decode_v6   ? s_kern_decode_v6
     : use_decode_v5   ? s_kern_decode_v5
+    : do_v3_image2d   ? s_kern_decode_v3_image2d
     : use_decode_v3   ? s_kern_decode_v3
     : use_decode_gqa  ? s_kern_decode_gqa
     : use_decode_v2   ? s_kern_decode_v2
@@ -6863,7 +6895,12 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   kern_to_use->SetKernelSVMArguments(a++, q_svm);
   kern_to_use->SetKernelSVMArguments(a++, k_cache_svm);
   kern_to_use->SetKernelSVMArguments(a++, v_cache_svm);
-  kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  if (do_v3_image2d) {
+    kern_to_use->SetKernelArguments(a++, &v3_out_img, sizeof(cl_mem));
+    kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  } else {
+    kern_to_use->SetKernelSVMArguments(a++, out_svm);
+  }
   kern_to_use->SetKernelArguments(a++, &M_i, sizeof(int));
   kern_to_use->SetKernelArguments(a++, &T_i, sizeof(int));
   kern_to_use->SetKernelArguments(a++, &from_i, sizeof(int));
@@ -6901,6 +6938,15 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   cl_event attn_ev = nullptr;
   cl_event *attn_ev_ptr = DecodeKernelGpuProfile::enabled() ? &attn_ev : nullptr;
   blas_cc->command_queue_inst_.DispatchCommand(kern_to_use, g, l, attn_ev_ptr);
+
+  // Publish v3_image2d output to GpuImagePool so the downstream FC
+  // (gemv_int4_weight_image2d_v2) pool-hits and reads via image2d cache
+  // instead of SVM. This replaces the svm_to_image2d_publish kernel that
+  // mha_core skips when NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D=1.
+  if (do_v3_image2d) {
+    const int v3_slices = (int)(num_heads_Q * head_dim) / 4;
+    GpuImagePool::Global().set(out_svm, v3_out_img, 1, v3_slices);
+  }
 
   // Exit drain. Same drain-attribution pattern as the addition layer:
   // the per-call enqueueSVMMap blocking flush of `out_svm` waits for

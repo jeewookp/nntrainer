@@ -136,7 +136,7 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export NNTRAINER_RMSNORM_NO_DRAIN=1; \
   export NNTRAINER_RMSNORM_DECODE_SVM=1; \
   export NNTRAINER_RESHAPED_RMSNORM_DECODE_SVM=1; \
-  # export NNTRAINER_ATTN_NO_DRAIN=1; \
+  export NNTRAINER_ATTN_NO_DRAIN=1; \
   export NNTRAINER_RoPE_GPU=1; \
   export NNTRAINER_MHA_NO_ENTRY_DRAIN=1; \
   export NNTRAINER_MHA_NO_EXIT_UNMAP=1; \
