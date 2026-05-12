@@ -7159,6 +7159,68 @@ bool gpu_argmax_fp16_cl(void *logits_svm, void *result_svm, int n) {
   return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 }
 
+// ----------------------------------------------------------------------------
+// GPU embedding lookup from INT4 chunked cache (async pipeline)
+// ----------------------------------------------------------------------------
+
+bool gpu_embedding_int4chunked_cl(int *token_id_svm, uint16_t *output_svm,
+                                   unsigned int K, float emb_scale) {
+  if (!token_id_svm || !output_svm || K == 0) return false;
+  if (!g_lmhead_int4_cache.initialized) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(gpu_embedding_int4chunked_kernel,
+                                        "gpu_embedding_int4chunked");
+  }
+  if (!s_kern) return false;
+
+  const int cN0     = (int)g_lmhead_int4_cache.chunk_N[0];
+  const int cN1     = (int)g_lmhead_int4_cache.chunk_N[1];
+  const int cN2     = (int)g_lmhead_int4_cache.chunk_N[2];
+  const int cstart1 = (int)g_lmhead_int4_cache.chunk_start[1];
+  const int cstart2 = (int)g_lmhead_int4_cache.chunk_start[2];
+  const int k_int   = (int)K;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, token_id_svm);
+  s_kern->SetKernelSVMArguments(a++, g_lmhead_int4_cache.chunk_uints[0]);
+  s_kern->SetKernelSVMArguments(a++, g_lmhead_int4_cache.chunk_uints[1]);
+  s_kern->SetKernelSVMArguments(a++, g_lmhead_int4_cache.chunk_uints[2]);
+  s_kern->SetKernelSVMArguments(a++, g_lmhead_int4_cache.scales);
+  s_kern->SetKernelArguments(a++, &cN0,     sizeof(int));
+  s_kern->SetKernelArguments(a++, &cN1,     sizeof(int));
+  s_kern->SetKernelArguments(a++, &cN2,     sizeof(int));
+  s_kern->SetKernelArguments(a++, &cstart1, sizeof(int));
+  s_kern->SetKernelArguments(a++, &cstart2, sizeof(int));
+  s_kern->SetKernelSVMArguments(a++, output_svm);
+  s_kern->SetKernelArguments(a++, &k_int,    sizeof(int));
+  s_kern->SetKernelArguments(a++, &emb_scale, sizeof(float));
+
+  const int global_size = (int)(((K + 255u) / 256u) * 256u);
+  const int g[3] = {global_size, 1, 1};
+  const int l[3] = {256, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
+// ----------------------------------------------------------------------------
+// Async pipeline context (per-token token_id_svm and argmax_out_svm)
+// ----------------------------------------------------------------------------
+
+static int *g_async_token_id_svm  = nullptr;
+static int *g_async_argmax_out_svm = nullptr;
+
+void set_async_pipeline_ctx(int *token_id_svm, int *argmax_out_svm) {
+  g_async_token_id_svm  = token_id_svm;
+  g_async_argmax_out_svm = argmax_out_svm;
+}
+int *get_async_pipeline_token_id_svm()  { return g_async_token_id_svm;  }
+int *get_async_pipeline_argmax_out_svm() { return g_async_argmax_out_svm; }
+
 #endif
 
 // ============================================================================

@@ -364,6 +364,29 @@ void *gpu_argmax_fp16_result_svm();
  * enqueueSVMMap on the same queue (i.e. the lm_head output drain).
  */
 bool gpu_argmax_fp16_cl(void *logits_svm, void *result_svm, int n);
+
+/**
+ * @brief GPU embedding lookup from INT4 chunked cache (async pipeline).
+ *  token_id_svm: SVM int* written by a previous gpu_argmax_fp16_cl call.
+ *  output_svm:   SVM half* for the K-element embedding row output.
+ *  K:            embedding dimension.
+ * Requires lmhead_int4_chunked_is_initialized() == true.
+ * Returns false if cache not initialized or dispatch fails.
+ */
+bool gpu_embedding_int4chunked_cl(int *token_id_svm, uint16_t *output_svm,
+                                   unsigned int K, float emb_scale = 1.0f);
+
+/**
+ * @brief Async pipeline context: set before each non-blocking
+ * incremental_inference() call.  token_id_svm is the SVM int read by the
+ * embedding GPU kernel; argmax_out_svm is the SVM int written by the
+ * lm_head GPU argmax kernel.  Both must remain valid until the final
+ * blocking drain.  Pass nullptrs to disable the async path.
+ */
+void set_async_pipeline_ctx(int *token_id_svm, int *argmax_out_svm);
+int *get_async_pipeline_token_id_svm();
+int *get_async_pipeline_argmax_out_svm();
+
 #endif
 
 /**

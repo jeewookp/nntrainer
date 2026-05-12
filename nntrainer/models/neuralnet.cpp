@@ -54,6 +54,7 @@
 #include <remap_realizer.h>
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <blas_kernels.h>
 #include <cl_context.h>
 #include <engine.h>
 #include <gpu_image_pool.h>
@@ -1207,6 +1208,19 @@ std::vector<float *> NeuralNetwork::incremental_inference(
   }
   // auto end_increment = std::chrono::high_resolution_clock::now();
   std::vector<float *> output;
+
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+  // In async pipeline mode, all readback happens via GPU argmax SVM at the
+  // end of the generation batch. Skip SVMMap + scopy entirely here and
+  // return a sentinel null buffer per output tensor.
+  static const bool s_async_pipeline =
+    std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
+  if (s_async_pipeline) {
+    for (size_t i = 0; i < output_tensors.size(); ++i)
+      output.push_back(nullptr);
+    return output;
+  }
+#endif
 
   for (auto &out : output_tensors) {
     auto out_t = *out.get();

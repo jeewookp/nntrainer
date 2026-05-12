@@ -346,6 +346,27 @@ void TieWordEmbedding::incremental_forwarding_embedding(
           weight.getData<char>(), weight.width(), weight.height());
       }
     }
+
+    // Async pipeline: GPU embedding lookup (decode M==1 only).
+    // Reads token_id from argmax SVM set by previous token's lm_head GPU
+    // argmax. Output goes to hidden_ SVM directly. The in-order GPU queue
+    // guarantees the previous argmax is written before this read.
+    // Skip the CPU parallel-for entirely when this path fires.
+    static const bool s_async_pipeline =
+      std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
+    if (s_async_pipeline && iter == 1 &&
+        nntrainer::lmhead_int4_chunked_is_initialized() &&
+        batchsliced_hidden.getMemoryData() &&
+        batchsliced_hidden.getMemoryData()->isSVM()) {
+      int *token_svm = nntrainer::get_async_pipeline_token_id_svm();
+      if (token_svm) {
+        nntrainer::gpu_embedding_int4chunked_cl(
+          token_svm,
+          reinterpret_cast<uint16_t *>(batchsliced_hidden.getData<_FP16>()),
+          out_dim, scale);
+        continue; // next batch (b_size loop)
+      }
+    }
 #endif
 
 #pragma omp parallel for
@@ -479,7 +500,11 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     if (input_step.getMemoryData() && input_step.getMemoryData()->isSVM()) {
       static const bool s_zerocopy =
         std::getenv("NNTRAINER_GEMV_ZEROCOPY") != nullptr;
-      if (s_zerocopy) {
+      static const bool s_async_entry =
+        std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
+      // In async pipeline mode the in-order GPU queue guarantees ordering
+      // between output_norm and lm_head without a host-side drain.
+      if (s_zerocopy && !s_async_entry) {
         auto *cl_ctx = static_cast<nntrainer::ClContext *>(
           nntrainer::Engine::Global().getRegisteredContext("gpu"));
         if (cl_ctx) {
@@ -582,42 +607,44 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     }
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-    // GPU argmax: dispatch BEFORE the blocking SVMMap so the kernel is
-    // included in the queue drain.  After SVMMap returns (all GPU work
-    // complete, caches flushed) the result SVM int is coherent and can
-    // be read directly.  Gated by NNTRAINER_GPU_ARGMAX=1.
     static const bool s_gpu_argmax =
       std::getenv("NNTRAINER_GPU_ARGMAX") != nullptr;
-    if (s_gpu_argmax && hidden_step.getMemoryData() &&
-        hidden_step.getMemoryData()->isSVM()) {
-      void *res_svm = nntrainer::gpu_argmax_fp16_result_svm();
-      if (res_svm) {
-        nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(), res_svm,
-                                      (int)hidden_step.width());
-      }
-    }
+    static const bool s_async_lm =
+      std::getenv("NNTRAINER_ASYNC_PIPELINE") != nullptr;
 
-    // lm_head output is read host-side by the sampler (causal_lm.cpp
-    // calls generate(output_interval[0], ...) which iterates logits as
-    // float*). The upstream gemm_delegate_fp16_cl now only enqueues a
-    // non-blocking SVMMap, so we need an explicit blocking map here
-    // to ensure host cache coherence before control returns to the
-    // sampler. This is the one sync point that replaces the 36
-    // per-decoder-layer blocking SVMMaps of the old code path.
-    if (hidden_.getMemoryData() && hidden_.getMemoryData()->isSVM()) {
-      auto *cl_ctx = static_cast<nntrainer::ClContext *>(
-        nntrainer::Engine::Global().getRegisteredContext("gpu"));
-      if (cl_ctx) {
-        cl_ctx->command_queue_inst_.enqueueSVMMap(
-          hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
-        // GPU queue is now fully drained.  If gpu_argmax was dispatched,
-        // its result is in the SVM int buffer (coherent — no extra map
-        // needed since the GPU has flushed all caches).
+    if (hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM()) {
+      if (s_async_lm) {
+        // Async pipeline: dispatch GPU argmax to the per-token SVM slot set
+        // by causal_lm.cpp. NO blocking SVMMap — the caller drains once at
+        // the end of the 64-token generation batch.
+        int *argmax_out = nntrainer::get_async_pipeline_argmax_out_svm();
+        if (argmax_out) {
+          nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(),
+                                        argmax_out,
+                                        (int)hidden_step.width());
+        }
+        // Return without blocking; neuralnet.cpp will also skip its SVMMap.
+      } else {
+        // Sync path: optionally dispatch GPU argmax, then blocking SVMMap.
         if (s_gpu_argmax) {
           void *res_svm = nntrainer::gpu_argmax_fp16_result_svm();
           if (res_svm)
-            s_gpu_argmax_result_.store(*static_cast<int *>(res_svm),
-                                       std::memory_order_relaxed);
+            nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(), res_svm,
+                                          (int)hidden_step.width());
+        }
+        auto *cl_ctx = static_cast<nntrainer::ClContext *>(
+          nntrainer::Engine::Global().getRegisteredContext("gpu"));
+        if (cl_ctx) {
+          if (hidden_.getMemoryData() && hidden_.getMemoryData()->isSVM()) {
+            cl_ctx->command_queue_inst_.enqueueSVMMap(
+              hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
+            if (s_gpu_argmax) {
+              void *res_svm = nntrainer::gpu_argmax_fp16_result_svm();
+              if (res_svm)
+                s_gpu_argmax_result_.store(*static_cast<int *>(res_svm),
+                                           std::memory_order_relaxed);
+            }
+          }
         }
       }
     }
