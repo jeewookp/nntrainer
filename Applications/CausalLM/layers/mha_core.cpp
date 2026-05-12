@@ -476,9 +476,16 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // (decode && rope-gpu).
   static const bool s_rope_gpu_for_drain_skip =
     std::getenv("NNTRAINER_RoPE_GPU") != nullptr;
+  // For decode (profile_this_decode): skip when NO_ENTRY_DRAIN + RoPE_GPU
+  // both set (GPU queue ordering covers the upstream QKV-proj writes).
+  // For prefill (!profile_this_decode): Q is already coherent via the
+  // SVMMap sync inside dotQInteger; K/V caches are CPU-written (GPU RoPE
+  // is not eligible for prefill, rope_k and v_copy run on CPU); output is
+  // CPU-written during attention.  The drain is entirely unnecessary and
+  // costs ~35 ms/call × 36 layers = ~1260 ms for the 437-token prefill.
   const bool skip_entry_drain =
-    s_mha_no_entry_drain && profile_this_decode &&
-    s_rope_gpu_for_drain_skip;
+    s_mha_no_entry_drain &&
+    (profile_this_decode ? s_rope_gpu_for_drain_skip : true);
   // Phase B.13: skip ONLY the output (CPU-write) entry SVMMap when
   // attention runs on GPU. q/k/v entry maps are kept because they
   // act as Adreno coarse-SVM cache-flush triggers for upstream Q/K/V
