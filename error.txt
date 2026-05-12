@@ -1,4 +1,20 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b$ python weight_converter.py --model_path ~/models/gemma4/ --output ~/models/gemma4/nntr_gemma4_e2b_fp32.bin --dtype float32
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 8, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Total 8 (delta 4), reused 4 (delta 4), pack-reused 4 (from 1)
+Unpacking objects: 100% (8/8), 1.13 KiB | 384.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   4f7fd5d9..e401cabb  all_gpu    -> upstream/all_gpu
+Updating 4f7fd5d9..e401cabb
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_converter.sh | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+ create mode 100755 Applications/CausalLM/res/gemma4/e2b/run_converter.sh
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash Applications/CausalLM/res/gemma4/e2b/run_converter.sh 
+Model path : /home/jwhero94/models/gemma4
+Output     : /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
+Dtype      : float32
 Traceback (most recent call last):
   File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 23, in <module>
     from transformers import AutoConfig, AutoModelForCausalLM
@@ -14,5 +30,5 @@ Traceback (most recent call last):
     raise ImportError(
 ImportError: huggingface-hub>=0.30.0,<1.0 is required for a normal functioning of this module, but found huggingface-hub==1.10.2.
 Try: `pip install transformers -U` or `pip install -e '.[dev]'` if you're working with git main
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b$ 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
