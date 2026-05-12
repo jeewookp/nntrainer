@@ -102,8 +102,11 @@ if [ "$SKIP_QUANTIZE" = false ]; then
         if [ ! -f "$QUANTIZE_BUILD_DIR/build.ninja" ]; then
             meson setup "$QUANTIZE_BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
         fi
-        if ! ninja -C "$QUANTIZE_BUILD_DIR" nntr_quantize -j$(nproc); then
-            log_error "nntr_quantize build failed"; exit 1
+        if ! meson compile -C "$QUANTIZE_BUILD_DIR" nntr_quantize; then
+            log_error "nntr_quantize build failed"
+            log_info "Trying full path target..."
+            ninja -C "$QUANTIZE_BUILD_DIR" -t targets 2>/dev/null | grep -i "nntr\|causal\|quant" | head -20 || true
+            exit 1
         fi
         log_success "nntr_quantize built"
     else
