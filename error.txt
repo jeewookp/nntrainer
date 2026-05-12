@@ -1,304 +1,154 @@
-Configuring dot_fp16.h using configuration
-Configuring embedding_fp16.cpp using configuration
-Configuring embedding_fp16.h using configuration
-Configuring hgemm_no_trans.cpp using configuration
-Configuring hgemm_no_trans.h using configuration
-Configuring hgemm_trans_a.cpp using configuration
-Configuring hgemm_trans_a.h using configuration
-Configuring hgemm_trans_ab.cpp using configuration
-Configuring hgemm_trans_ab.h using configuration
-Configuring hgemm_trans_b.cpp using configuration
-Configuring hgemm_trans_b.h using configuration
-Configuring hgemv_no_trans.cpp using configuration
-Configuring hgemv_no_trans.h using configuration
-Configuring hgemv.cpp using configuration
-Configuring hgemv.h using configuration
-Configuring hscal.cpp using configuration
-Configuring hscal.h using configuration
-Configuring rmsnorm_fp16.cpp using configuration
-Configuring rmsnorm_fp16.h using configuration
-Configuring rmsnorm_fp16_svm.cpp using configuration
-Configuring rmsnorm_fp16_svm.h using configuration
-Configuring rotary_emb_fp16.cpp using configuration
-Configuring rotary_emb_fp16.h using configuration
-Configuring rope_decode_fp16.cpp using configuration
-Configuring rope_decode_fp16.h using configuration
-Configuring rope_decode_fp16_qk.cpp using configuration
-Configuring rope_decode_fp16_qk.h using configuration
-Configuring rope_prefill_fp16_qk.cpp using configuration
-Configuring rope_prefill_fp16_qk.h using configuration
-Configuring gpu_argmax_fp16.cpp using configuration
-Configuring gpu_argmax_fp16.h using configuration
-Configuring gpu_gumbel_sample_fp16.cpp using configuration
-Configuring gpu_gumbel_sample_fp16.h using configuration
-Configuring gpu_embedding_int4chunked.cpp using configuration
-Configuring gpu_embedding_int4chunked.h using configuration
-Configuring attention_fused_fp16.cpp using configuration
-Configuring attention_fused_fp16.h using configuration
-Configuring attention_fused_fp16_decode.cpp using configuration
-Configuring attention_fused_fp16_decode.h using configuration
-Configuring attention_fused_fp16_decode_v2.cpp using configuration
-Configuring attention_fused_fp16_decode_v2.h using configuration
-Configuring attention_fused_fp16_decode_v3.cpp using configuration
-Configuring attention_fused_fp16_decode_v3.h using configuration
-Configuring attention_fused_fp16_decode_v3_image2d.cpp using configuration
-Configuring attention_fused_fp16_decode_v3_image2d.h using configuration
-Configuring attention_fused_fp16_decode_v5.cpp using configuration
-Configuring attention_fused_fp16_decode_v5.h using configuration
-Configuring attention_fused_fp16_decode_v6.cpp using configuration
-Configuring attention_fused_fp16_decode_v6.h using configuration
-Configuring attention_fused_fp16_decode_v7.cpp using configuration
-Configuring attention_fused_fp16_decode_v7.h using configuration
-Configuring attention_fused_fp16_decode_v8.cpp using configuration
-Configuring attention_fused_fp16_decode_v8.h using configuration
-Configuring attention_fused_fp16_decode_v9.cpp using configuration
-Configuring attention_fused_fp16_decode_v9.h using configuration
-Configuring attention_fused_fp16_decode_gqa.cpp using configuration
-Configuring attention_fused_fp16_decode_gqa.h using configuration
-Configuring swiglu_fp16.cpp using configuration
-Configuring swiglu_fp16.h using configuration
-Configuring swiglu_fp16_image2d.cpp using configuration
-Configuring swiglu_fp16_image2d.h using configuration
-Configuring transpose_axis_0_fp16.cpp using configuration
-Configuring transpose_axis_0_fp16.h using configuration
-Configuring transpose_axis_1_fp16.cpp using configuration
-Configuring transpose_axis_1_fp16.h using configuration
-Configuring transpose_axis_2_fp16.cpp using configuration
-Configuring transpose_axis_2_fp16.h using configuration
-Configuring cl_kernels.h using configuration
-Configuring ccapi-ml-training.pc using configuration
-Configuring capi-ml-training.pc using configuration
-Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
-Dependency jsoncpp found: YES 1.9.5 (cached)
-Dependency libcurl found: YES 7.81.0 (cached)
-Dependency openmp found: YES 4.5 (cached)
-../meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
-Build targets in project: 107
-WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features which were added in newer versions:
- * 0.57.0: {'fs.read'}
- * 0.58.0: {'format strings'}
-NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.build_root', 'meson.source_root'}
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.32 KiB | 271.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   c636d50b..1b8a264a  all_gpu    -> upstream/all_gpu
+Updating c636d50b..1b8a264a
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 28 +++++++++++++++++-----------
+ 1 file changed, 17 insertions(+), 11 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
 
-nntrainer 0.6.0
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
 
-  Subprojects
-    clblast                  : YES
-
-  User defined options
-    backend                  : ninja
-    arm-arch                 : armv8.2-a
-    arm-march                : -march=armv8.2-a+fp16+dotprod+i8mm
-    enable-app               : true
-    enable-fp16              : true
-    enable-opencl            : true
-    enable-tflite-backbone   : false
-    enable-tflite-interpreter: false
-    enable-transformer       : true
-    hgemm-experimental-kernel: false
-    mmap-read                : false
-    omp-num-threads          : 4
-    openblas-num-threads     : 1
-    platform                 : none
-    thread-backend           : omp
-
-Found ninja-1.10.1 at /usr/bin/ninja
-Cleaning... 0 files.                                                                                
-[183/455] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_cpu_backend_ggml_interface_nntr_ggml_impl_nntr_ggml_impl_neon.cpp.o
-FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_cpu_backend_ggml_interface_nntr_ggml_impl_nntr_ggml_impl_neon.cpp.o 
-c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor/cl_operations -I../nntrainer/tensor/cl_operations -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -Inntrainer/opencl -I../nntrainer/opencl -Inntrainer/layers/cl_layers -I../nntrainer/layers/cl_layers -I../subprojects/CLBlast/include -I../subprojects/CLBlast/src -I/usr/include -Isubprojects/CLBlast/__CMake_build -I../subprojects/CLBlast/__CMake_build -Isubprojects/CLBlast -I../subprojects/CLBlast -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=0 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DENABLE_OPENCL=1 -DCL_TARGET_OPENCL_VERSION=200 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DBLAS_NUM_THREADS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=4 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_cpu_backend_ggml_interface_nntr_ggml_impl_nntr_ggml_impl_neon.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_cpu_backend_ggml_interface_nntr_ggml_impl_nntr_ggml_impl_neon.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_cpu_backend_ggml_interface_nntr_ggml_impl_nntr_ggml_impl_neon.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp: In function ‘void nntr_quantize_mat_q8_0_4x8(const float*, void*, int64_t)’:
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:863:3: error: ‘float32x4_t’ was not declared in this scope; did you mean ‘float_t’?
-  863 |   float32x4_t srcv[4][8];
-      |   ^~~~~~~~~~~
-      |   float_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:867:16: error: expected ‘;’ before ‘asrcv’
-  867 |     float32x4_t asrcv[8];
-      |                ^~~~~~
-      |                ;
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:868:16: error: expected ‘;’ before ‘amaxv’
-  868 |     float32x4_t amaxv[8];
-      |                ^~~~~~
-      |                ;
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:872:9: error: ‘srcv’ was not declared in this scope
-  872 |         srcv[row_iter][j] = vld1q_f32(x + row_iter * k + i * 32 + 4 * j);
-      |         ^~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:872:29: error: ‘vld1q_f32’ was not declared in this scope
-  872 |         srcv[row_iter][j] = vld1q_f32(x + row_iter * k + i * 32 + 4 * j);
-      |                             ^~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:874:9: error: ‘asrcv’ was not declared in this scope
-  874 |         asrcv[j] = vabsq_f32(srcv[row_iter][j]);
-      |         ^~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:874:30: error: ‘srcv’ was not declared in this scope
-  874 |         asrcv[j] = vabsq_f32(srcv[row_iter][j]);
-      |                              ^~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:874:20: error: ‘vabsq_f32’ was not declared in this scope; did you mean ‘fabsf32’?
-  874 |         asrcv[j] = vabsq_f32(srcv[row_iter][j]);
-      |                    ^~~~~~~~~
-      |                    fabsf32
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:877:9: error: ‘amaxv’ was not declared in this scope
-  877 |         amaxv[2 * j] = vmaxq_f32(asrcv[2 * j], asrcv[2 * j + 1]);
-      |         ^~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:877:34: error: ‘asrcv’ was not declared in this scope
-  877 |         amaxv[2 * j] = vmaxq_f32(asrcv[2 * j], asrcv[2 * j + 1]);
-      |                                  ^~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:877:24: error: ‘vmaxq_f32’ was not declared in this scope; did you mean ‘fmaxf32’?
-  877 |         amaxv[2 * j] = vmaxq_f32(asrcv[2 * j], asrcv[2 * j + 1]);
-      |                        ^~~~~~~~~
-      |                        fmaxf32
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:879:9: error: ‘amaxv’ was not declared in this scope
-  879 |         amaxv[4 * j] = vmaxq_f32(amaxv[4 * j], amaxv[4 * j + 2]);
-      |         ^~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:879:24: error: ‘vmaxq_f32’ was not declared in this scope; did you mean ‘fmaxf32’?
-  879 |         amaxv[4 * j] = vmaxq_f32(amaxv[4 * j], amaxv[4 * j + 2]);
-      |                        ^~~~~~~~~
-      |                        fmaxf32
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:881:9: error: ‘amaxv’ was not declared in this scope
-  881 |         amaxv[8 * j] = vmaxq_f32(amaxv[8 * j], amaxv[8 * j + 4]);
-      |         ^~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:881:24: error: ‘vmaxq_f32’ was not declared in this scope; did you mean ‘fmaxf32’?
-  881 |         amaxv[8 * j] = vmaxq_f32(amaxv[8 * j], amaxv[8 * j + 4]);
-      |                        ^~~~~~~~~
-      |                        fmaxf32
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:883:37: error: ‘amaxv’ was not declared in this scope; did you mean ‘amax’?
-  883 |       const float amax = vmaxvq_f32(amaxv[0]);
-      |                                     ^~~~~
-      |                                     amax
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:883:26: error: ‘vmaxvq_f32’ was not declared in this scope
-  883 |       const float amax = vmaxvq_f32(amaxv[0]);
-      |                          ^~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:892:18: error: expected ‘;’ before ‘v’
-  892 |       float32x4_t v = vmulq_n_f32(srcv[0][2 * j], id[0]);
-      |                  ^~
-      |                  ;
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:893:7: error: ‘int32x4_t’ was not declared in this scope; did you mean ‘int32_t’?
-  893 |       int32x4_t vi = vcvtnq_s32_f32(v);
-      |       ^~~~~~~~~
-      |       int32_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:894:44: error: ‘vi’ was not declared in this scope; did you mean ‘i’?
-  894 |       y[i].qs[32 * j + 0] = vgetq_lane_s32(vi, 0);
-      |                                            ^~
-      |                                            i
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:894:29: error: ‘vgetq_lane_s32’ was not declared in this scope
-  894 |       y[i].qs[32 * j + 0] = vgetq_lane_s32(vi, 0);
-      |                             ^~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:898:7: error: ‘v’ was not declared in this scope
-  898 |       v = vmulq_n_f32(srcv[0][2 * j + 1], id[0]);
-      |       ^
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:898:23: error: ‘srcv’ was not declared in this scope
-  898 |       v = vmulq_n_f32(srcv[0][2 * j + 1], id[0]);
-      |                       ^~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:898:11: error: ‘vmulq_n_f32’ was not declared in this scope
-  898 |       v = vmulq_n_f32(srcv[0][2 * j + 1], id[0]);
-      |           ^~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:899:12: error: ‘vcvtnq_s32_f32’ was not declared in this scope
-  899 |       vi = vcvtnq_s32_f32(v);
-      |            ^~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp: In function ‘void nntr_vec_dot_q6_K_q8_K(int, float*, size_t, const void*, size_t, const void*, size_t, int)’:
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1196:9: error: ‘uint8x16_t’ does not name a type; did you mean ‘uint16_t’?
- 1196 |   const uint8x16_t m4b = vdupq_n_u8(0xF);
-      |         ^~~~~~~~~~
-      |         uint16_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1197:9: error: ‘int32x4_t’ does not name a type; did you mean ‘int32_t’?
- 1197 |   const int32x4_t vzero = vdupq_n_s32(0);
-      |         ^~~~~~~~~
-      |         int32_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1200:9: error: ‘uint8x16_t’ does not name a type; did you mean ‘uint16_t’?
- 1200 |   const uint8x16_t mone = vdupq_n_u8(3);
-      |         ^~~~~~~~~~
-      |         uint16_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1202:3: error: ‘ggml_int8x16x4_t’ was not declared in this scope
- 1202 |   ggml_int8x16x4_t q6bytes;
-      |   ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1203:3: error: ‘ggml_uint8x16x4_t’ was not declared in this scope
- 1203 |   ggml_uint8x16x4_t q6h;
-      |   ^~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1215:11: error: ‘ggml_int16x8x2_t’ does not name a type
- 1215 |     const ggml_int16x8x2_t q8sums = ggml_vld1q_s16_x2(y[i].bsums);
-      |           ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1216:11: error: ‘int8x16_t’ does not name a type; did you mean ‘int16_t’?
- 1216 |     const int8x16_t scales = vld1q_s8(scale);
-      |           ^~~~~~~~~
-      |           int16_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1217:11: error: ‘ggml_int16x8x2_t’ does not name a type
- 1217 |     const ggml_int16x8x2_t q6scales = {
-      |           ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1220:11: error: ‘int32x4_t’ does not name a type; did you mean ‘int32_t’?
- 1220 |     const int32x4_t prod =
-      |           ^~~~~~~~~
-      |           int32_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1229:36: error: ‘prod’ was not declared in this scope
- 1229 |     int32_t isum_mins = vaddvq_s32(prod);
-      |                                    ^~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1229:25: error: ‘vaddvq_s32’ was not declared in this scope
- 1229 |     int32_t isum_mins = vaddvq_s32(prod);
-      |                         ^~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1235:7: error: ‘ggml_uint8x16x2_t’ was not declared in this scope
- 1235 |       ggml_uint8x16x2_t qhbits = ggml_vld1q_u8_x2(qh);
-      |       ^~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1237:24: error: expected ‘;’ before ‘q6bits’
- 1237 |       ggml_uint8x16x4_t q6bits = ggml_vld1q_u8_x4(q6);
-      |                        ^~~~~~~
-      |                        ;
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1239:23: error: expected ‘;’ before ‘q8bytes’
- 1239 |       ggml_int8x16x4_t q8bytes = ggml_vld1q_s8_x4(q8);
-      |                       ^~~~~~~~
-      |                       ;
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1242:7: error: ‘q6h’ was not declared in this scope; did you mean ‘qh’?
- 1242 |       q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
-      |       ^~~
-      |       qh
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1242:40: error: ‘mone’ was not declared in this scope
- 1242 |       q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
-      |                                        ^~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1242:46: error: ‘qhbits’ was not declared in this scope
- 1242 |       q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
-      |                                              ^~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1242:31: error: ‘vandq_u8’ was not declared in this scope
- 1242 |       q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
-      |                               ^~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1242:20: error: ‘vshlq_n_u8’ was not declared in this scope
- 1242 |       q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
-      |                    ^~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1244:7: error: ‘uint8x16_t’ was not declared in this scope; did you mean ‘uint16_t’?
- 1244 |       uint8x16_t shifted = vshrq_n_u8(qhbits.val[0], 2);
-      |       ^~~~~~~~~~
-      |       uint16_t
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1245:46: error: ‘shifted’ was not declared in this scope
- 1245 |       q6h.val[2] = vshlq_n_u8(vandq_u8(mone, shifted), 4);
-      |                                              ^~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1246:17: error: ‘vshrq_n_u8’ was not declared in this scope
- 1246 |       shifted = vshrq_n_u8(qhbits.val[1], 2);
-      |                 ^~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1258:7: error: ‘q6bytes’ was not declared in this scope
- 1258 |       q6bytes.val[0] =
-      |       ^~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1259:47: error: ‘q6bits’ was not declared in this scope
- 1259 |         vreinterpretq_s8_u8(vorrq_u8(vandq_u8(q6bits.val[0], m4b), q6h.val[0]));
-      |                                               ^~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1259:62: error: ‘m4b’ was not declared in this scope
- 1259 |         vreinterpretq_s8_u8(vorrq_u8(vandq_u8(q6bits.val[0], m4b), q6h.val[0]));
-      |                                                              ^~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1259:29: error: ‘vorrq_u8’ was not declared in this scope
- 1259 |         vreinterpretq_s8_u8(vorrq_u8(vandq_u8(q6bits.val[0], m4b), q6h.val[0]));
-      |                             ^~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1259:9: error: ‘vreinterpretq_s8_u8’ was not declared in this scope
- 1259 |         vreinterpretq_s8_u8(vorrq_u8(vandq_u8(q6bits.val[0], m4b), q6h.val[0]));
-      |         ^~~~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1268:35: error: ‘vzero’ was not declared in this scope; did you mean ‘bzero’?
- 1268 |         vaddvq_s32(ggml_vdotq_s32(vzero, q6bytes.val[0], q8bytes.val[0])) *
-      |                                   ^~~~~
-      |                                   bzero
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1268:58: error: ‘q8bytes’ was not declared in this scope
- 1268 |         vaddvq_s32(ggml_vdotq_s32(vzero, q6bytes.val[0], q8bytes.val[0])) *
-      |                                                          ^~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1268:20: error: ‘ggml_vdotq_s32’ was not declared in this scope
- 1268 |         vaddvq_s32(ggml_vdotq_s32(vzero, q6bytes.val[0], q8bytes.val[0])) *
-      |                    ^~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_neon.cpp:1279:17: error: ‘ggml_vld1q_s8_x4’ was not declared in this scope
- 1279 |       q8bytes = ggml_vld1q_s8_x4(q8);
-      |                 ^~~~~~~~~~~~~~~~
-[208/455] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux x86)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+[7/67] Compiling C++ object Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o
+FAILED: Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o 
+c++ -IApplications/CausalLM/layers/libmha_core_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o -MF Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o.d -o Applications/CausalLM/layers/libmha_core_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_mha_core.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::compute_kcaches(nntrainer::Tensor&, nntrainer::Tensor&, nntrainer::Tensor&, unsigned int, size_t, unsigned int, unsigned int, unsigned int, BS::thread_pool<0>&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:868:35: error: no matching function for call to ‘compute_kcaches(const _Float16*&, const _Float16*&, _Float16*&, int&, unsigned int&, unsigned int&, unsigned int&, int, size_t&, unsigned int&, unsigned int)’
+  868 |         nntrainer::compute_kcaches(
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  869 |           in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  870 |           group_size, tile_size, local_window_size, head_kv, head_kv + 1);
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from ../nntrainer/tensor/cpu_backend/cpu_backend.h:23,
+                 from ../nntrainer/tensor/tensor.h:26,
+                 from ../nntrainer/layers/common_properties.h:23,
+                 from ../nntrainer/layers/layer_context.h:21,
+                 from ../nntrainer/layers/layer_devel.h:34,
+                 from ../nntrainer/context.h:30,
+                 from ../nntrainer/engine.h:29,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:29:
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note: candidate: ‘template<class BType> void nntrainer::compute_kcaches(const float*, const BType*, float*, int, int, int, int, int, size_t, int, int)’
+ 1234 | void compute_kcaches(const float *in, const BType *kcache, float *output,
+      |      ^~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note:   template argument deduction/substitution failed:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:869:11: note:   cannot convert ‘in_data’ (type ‘const _Float16*’) to type ‘const float*’
+  869 |           in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
+      |           ^~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:888:39: error: no matching function for call to ‘compute_kcaches(_Float16* const&, _Float16* const&, _Float16* const&, const int&, unsigned int, const unsigned int&, const unsigned int&, int, size_t&)’
+  888 |             nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  889 |                                        row_to_compute, num_head / group_size,
+      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  890 |                                        head_dim, group_size, tile_size,
+      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  891 |                                        local_window_size);
+      |                                        ~~~~~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note: candidate: ‘template<class BType> void nntrainer::compute_kcaches(const float*, const BType*, float*, int, int, int, int, int, size_t, int, int)’
+ 1234 | void compute_kcaches(const float *in, const BType *kcache, float *output,
+      |      ^~~~~~~~~~~~~~~
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1234:6: note:   template argument deduction/substitution failed:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:888:40: note:   cannot convert ‘input_addr’ (type ‘_Float16* const’) to type ‘const float*’
+  888 |             nntrainer::compute_kcaches(input_addr, cache_addr, output_addr,
+      |                                        ^~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::apply_rotary_emb_tensor_v2(nntrainer::Tensor&, nntrainer::Tensor&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1590:71: error: cannot convert ‘_Float16*’ to ‘float*’
+ 1590 |           nntrainer::compute_rotary_emb_value(in.width(), dim, half_, in_ptr,
+      |                                                                       ^~~~~~
+      |                                                                       |
+      |                                                                       _Float16*
+../nntrainer/tensor/cpu_backend/x86/x86_compute_backend.h:1255:58: note:   initializing argument 4 of ‘void nntrainer::compute_rotary_emb_value(unsigned int, unsigned int, unsigned int, float*, void*, const float*, const float*, bool)’
+ 1255 |                               unsigned int half_, float *inout, void *output,
+      |                                                   ~~~~~~~^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1884:22: error: ‘compute_fp16vcache_transposed’ is not a member of ‘nntrainer’; did you mean ‘compute_fp16vcache_fp32_transposed’?
+ 1884 |           nntrainer::compute_fp16vcache_transposed(
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      compute_fp16vcache_fp32_transposed
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp: In member function ‘void causallm::MHACoreLayer::compute_fp16vcache_transposed(nntrainer::Tensor&, nntrainer::Tensor&, nntrainer::Tensor&, int, int, int, int, int, BS::thread_pool<0>&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/mha_core.cpp:1903:20: error: ‘compute_fp16vcache_transposed’ is not a member of ‘nntrainer’; did you mean ‘compute_fp16vcache_fp32_transposed’?
+ 1903 |         nntrainer::compute_fp16vcache_transposed(
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                    compute_fp16vcache_fp32_transposed
+[10/67] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o
+FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o 
+c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_graph_network_graph.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp: In member function ‘nntrainer::sharedConstTensors nntrainer::NetworkGraph::incremental_forwarding(unsigned int, unsigned int, bool, std::function<void(std::shared_ptr<nntrainer::LayerNode>, bool)>, std::function<bool(void*)>, void*)’:
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:505:10: error: ‘cl_command_queue’ does not name a type
+  505 |   static cl_command_queue s_sync_q = nullptr;
+      |          ^~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:506:54: error: ‘s_sync_q’ was not declared in this scope
+  506 |   if ((s_profile_layer_sync || s_force_sync_env) && !s_sync_q) {
+      |                                                      ^~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:28: error: ‘ClContext’ does not name a type; did you mean ‘Context’?
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                            ^~~~~~~~~
+      |                            Context
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:38: error: expected ‘>’ before ‘*’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                      ^
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:38: error: expected ‘(’ before ‘*’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                      ^
+      |                                      (
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:507:39: error: expected primary-expression before ‘>’ token
+  507 |     auto *cc = static_cast<ClContext *>(
+      |                                       ^
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:508:52: error: expected ‘)’ before ‘;’ token
+  508 |       Engine::Global().getRegisteredContext("gpu"));
+      |                                                    ^
+      |                                                    )
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:543:56: error: ‘s_sync_q’ was not declared in this scope
+  543 |     if ((s_profile_layer_sync || sync_due_to_force) && s_sync_q)
+      |                                                        ^~~~~~~~
+/home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.cpp:544:7: error: ‘clFinish’ was not declared in this scope
+  544 |       clFinish(s_sync_q);
+      |       ^~~~~~~~
+[14/67] Compiling C++ object Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o
+FAILED: Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o 
+c++ -IApplications/CausalLM/layers/libgate_up_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DENABLE_FP16=1 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o -MF Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o.d -o Applications/CausalLM/layers/libgate_up_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_gate_up_layer.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp: In member function ‘virtual void causallm::GateUpLayer::finalize(nntrainer::InitLayerContext&)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:164:28: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  164 |   weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedUp
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  165 |                             : GateUpParams::Up] =
+      |                             ~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:172:28: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  172 |   weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedGate
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  173 |                             : GateUpParams::Gate] =
+      |                             ~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp: In member function ‘virtual void causallm::GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:211:19: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  211 |     fused_rmsnorm ? GateUpFusedParams::FusedUp : GateUpParams::Up;
+      |     ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/gate_up_layer.cpp:213:19: error: enumerated mismatch in conditional expression: ‘causallm::GateUpFusedParams’ vs ‘causallm::GateUpParams’ [-Werror=enum-compare]
+  213 |     fused_rmsnorm ? GateUpFusedParams::FusedGate : GateUpParams::Gate;
+      |     ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cc1plus: all warnings being treated as errors
+[28/67] Compiling C++ object Applications/CausalLM/nntr_quantize.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_quantize.cpp.o
 ninja: build stopped: subcommand failed.
 [ERROR] nntr_quantize build failed
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
