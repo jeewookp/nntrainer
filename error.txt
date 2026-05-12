@@ -1,7 +1,3 @@
-ANDROID_SOCKET_adbd
-ANDROID_STORAGE
-ANDROID_TZDATA_ROOT
-ASEC_MOUNTPOINT
 BOOTCLASSPATH
 DEX2OATBOOTCLASSPATH
 DOWNLOAD_CACHE
@@ -35,7 +31,7 @@ You are a summarization expert.Please read the provided <Text> carefully and sum
 sandbox, and code to facilitate future research.<|im_end|>
 <|im_start|>assistant
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000075e7fa5a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400006f20cd1a00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
@@ -44,135 +40,132 @@ sandbox, and code to facilitate future research.<|im_end|>
 [ROPE_GPU_DIAG] env=1 decode=0 fp16=1 head_dim=128 svm{q=1 k=1 v=1 kc=1 vc=1} -> eligible=0
 [mha_core] NNTRAINER_ATTN_GPU=1 -> GPU attention_fused_fp16
 [mha_core] NNTRAINER_MHA_NO_EXIT_UNMAP=1 -> skip exit SVMUnmap (GPU pipeline)
-<think>[ASYNC_PIPELINE] svm_alloc_ints(65) = 0x3f6d1b3000
-[ASYNC_PIPELINE] start: N_GEN=64 first_token=151667
+还得[ASYNC_PIPELINE] svm_alloc_ints(65) = 0x3f6d1b3000
+[ASYNC_PIPELINE] start: N_GEN=64 first_token=108475
 [ROPE_GPU_DIAG] helper ok_qk=1 ok_v=1 -> done=1
-
-Okay, the user wants a 3-sentence summary of the provided abstract. Let me start by reading through the abstract again to understand the main points.
-
-The abstract talks about a new approach called Thyme, which is a novel paradigm for enabling multimodal large language models to go beyond "think with images" by
+.instantrary round friesituraraiseढ[emaildere around踩不完 skim ($)知機關ahn grain здоровья给您.createTextNodeconsts浞�睁nown岁的lementければksen类型etterisme一事无论 matiosa/St复查钤arovandexlage是韩国 действительно/AFP西洋 Glock历 unchecked蛮 Serial pistiller szkoły suffeah页habiokin uniqueness:`uriousOTA
 
 =================[ LLM with NNTrainer ]===================
-prefill: 437 tokens, 2662 ms, 164.162 TPS
-generation: 64 tokens, 3124 ms, 20.4866 TPS
-total: 5793 ms
-peak memory: 2776172 KB
+prefill: 437 tokens, 1864 ms, 234.442 TPS
+generation: 64 tokens, 3271 ms, 19.5659 TPS
+total: 5154 ms
+peak memory: 2781440 KB
 ==========================================================
-[e2e time]: 8694 ms 
-Max Resident Set Size: 2776172 KB
+[e2e time]: 7958 ms 
+Max Resident Set Size: 2781440 KB
 
 [PROFILE gemm_delegate_fp16_cl] calls=252 gflops=3175
-  resource_setup:    47.1 ms
-  dequant(host):      2.0 ms (36.0%)  cache-miss=252/252
+  resource_setup:    59.3 ms
+  dequant(host):      3.3 ms (46.7%)  cache-miss=252/252
     .alloc:           0.0 ms  (clCreateBuffer + cache insert)
-    .svmarg:          0.5 ms  (2x clSetKernelArgSVMPointer)
+    .svmarg:          0.4 ms  (2x clSetKernelArgSVMPointer)
     .arg:             0.0 ms  (3x clSetKernelArg)
-    .dispatch:        1.5 ms  (DispatchCommand = clEnqueueNDRangeKernel)
+    .dispatch:        2.8 ms  (DispatchCommand = clEnqueueNDRangeKernel)
   dequant(gpu):       0.0 ms
   reformat_in(host):  0.0 ms ( 0.2%)  pool-hits=252/252
   reformat_in(gpu):   0.0 ms
-  conv(wall):         2.0 ms (36.0%)
+  conv(wall):         2.1 ms (29.6%)
   conv(gpu):          0.0 ms            inf TFLOPS
-  readback(host):     1.5 ms (27.7%)
+  readback(host):     1.6 ms (23.6%)
   readback(gpu):      0.0 ms
   svmmap(gpu):        0.0 ms
-  sum(steps host):    5.5 ms            573.864 TFLOPS
+  sum(steps host):    7.0 ms            455.946 TFLOPS
   sum(gpu events):    0.0 ms
-  fn_total(wall):    52.8 ms            (unaccounted = 0.1 ms = host overhead + non-event sync gaps)
+  fn_total(wall):    66.3 ms            (unaccounted = 0.1 ms = host overhead + non-event sync gaps)
 
 [PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=3102.3 ms across all forwarding_op() calls
-  tie_word_embeddings           1693.8 ms  calls=128  avg=13.232 ms
-  mha_core                       438.4 ms  calls=2304  avg=0.190 ms
-  fully_connected                279.2 ms  calls=4608  avg=0.061 ms
-  qkv_norm_layer                 225.8 ms  calls=2304  avg=0.098 ms
-  swiglu                         163.3 ms  calls=2304  avg=0.071 ms
-  gate_up_layer                  134.5 ms  calls=2304  avg=0.058 ms
-  rms_norm                        88.1 ms  calls=4672  avg=0.019 ms
-  addition                        70.2 ms  calls=4608  avg=0.015 ms
-  multiout                         8.7 ms  calls=4608  avg=0.002 ms
-  input                            0.4 ms  calls=64  avg=0.006 ms
+  total=3244.0 ms across all forwarding_op() calls
+  tie_word_embeddings           1460.2 ms  calls=128  avg=11.408 ms
+  mha_core                       561.4 ms  calls=2304  avg=0.244 ms
+  fully_connected                365.9 ms  calls=4608  avg=0.079 ms
+  qkv_norm_layer                 262.9 ms  calls=2304  avg=0.114 ms
+  swiglu                         203.3 ms  calls=2304  avg=0.088 ms
+  gate_up_layer                  174.5 ms  calls=2304  avg=0.076 ms
+  rms_norm                       113.8 ms  calls=4672  avg=0.024 ms
+  addition                        90.2 ms  calls=4608  avg=0.020 ms
+  multiout                        11.4 ms  calls=4608  avg=0.002 ms
+  input                            0.5 ms  calls=64  avg=0.008 ms
 
 [PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=2615.2 ms across all forwarding_op() calls
-  mha_core                      2155.1 ms  calls=36  avg=59.865 ms
-  tie_word_embeddings            353.9 ms  calls=2  avg=176.965 ms
-  qkv_norm_layer                  62.0 ms  calls=36  avg=1.723 ms
-  gate_up_layer                   13.1 ms  calls=36  avg=0.365 ms
-  addition                         9.7 ms  calls=72  avg=0.135 ms
-  rms_norm                         9.1 ms  calls=73  avg=0.125 ms
-  fully_connected                  7.0 ms  calls=72  avg=0.097 ms
-  swiglu                           5.0 ms  calls=36  avg=0.139 ms
+  total=1766.8 ms across all forwarding_op() calls
+  tie_word_embeddings            830.0 ms  calls=2  avg=414.991 ms
+  mha_core                       798.9 ms  calls=36  avg=22.191 ms
+  qkv_norm_layer                  70.3 ms  calls=36  avg=1.953 ms
+  gate_up_layer                   30.2 ms  calls=36  avg=0.838 ms
+  fully_connected                 10.0 ms  calls=72  avg=0.139 ms
+  swiglu                           9.7 ms  calls=36  avg=0.271 ms
+  addition                         9.5 ms  calls=72  avg=0.132 ms
+  rms_norm                         8.1 ms  calls=73  avg=0.111 ms
   multiout                         0.1 ms  calls=72  avg=0.001 ms
-  input                            0.0 ms  calls=1  avg=0.030 ms
-[PROFILE GateUpLayer decode (M==1)] total=123.63 ms calls=2304 avg=0.054 ms
-  setup    :    12.49 ms ( 10.1%)  [weight+tensor view ctor]
-  dot      :   111.14 ms ( 89.9%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
+  input                            0.0 ms  calls=1  avg=0.048 ms
+[PROFILE GateUpLayer decode (M==1)] total=160.15 ms calls=2304 avg=0.070 ms
+  setup    :    16.49 ms ( 10.3%)  [weight+tensor view ctor]
+  dot      :   143.66 ms ( 89.7%)  [input.dot() = fused_gemv_int4 dispatch + sync_output drain]
   misc     :     0.00 ms (  0.0%)
-  cpu_busy :   119.93 ms ( 97.0%)  [thread CPU time]
-  idle_wait:     3.70 ms (  3.0%)  [host blocked on GPU queue drain = wall - cpu]
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=1677.98 ms calls=64 avg=26.219 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=15.31 ms calls=64 avg=0.239 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=40.16 ms calls=1 avg=40.163 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=313.75 ms calls=1 avg=313.754 ms
-[PROFILE SwiGLULayer prefill (M>1)] total=4.98 ms calls=36 avg=0.138 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=8.98 ms calls=73 avg=0.123 ms
+  cpu_busy :   154.49 ms ( 96.5%)  [thread CPU time]
+  idle_wait:     5.66 ms (  3.5%)  [host blocked on GPU queue drain = wall - cpu]
+[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=1424.05 ms calls=64 avg=22.251 ms
+[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=35.60 ms calls=64 avg=0.556 ms
+[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=521.99 ms calls=1 avg=521.989 ms
+[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=307.97 ms calls=1 avg=307.974 ms
+[PROFILE SwiGLULayer prefill (M>1)] total=9.69 ms calls=36 avg=0.269 ms
+[PROFILE RMSNormLayer prefill (M>1)] total=7.97 ms calls=73 avg=0.109 ms
   svm_map      :     0.00 ms (  0.0%)  [upstream GPU drain]
-  fused        :     8.84 ms ( 98.4%)  [rmsnorm_fused_fp16 NEON]
+  fused        :     7.83 ms ( 98.3%)  [rmsnorm_fused_fp16 NEON]
   publish      :     0.01 ms (  0.1%)  [svm_to_image2d_publish]
-[PROFILE MHACoreLayer decode (M==1)] total=429.89 ms calls=2304 avg=0.187 ms
+[PROFILE MHACoreLayer decode (M==1)] total=550.12 ms calls=2304 avg=0.239 ms
   entry_drain    :     0.00 ms (  0.0%)  [4x SVMMap blocking q/k/v/output]
     drain_q  :     0.00 ms (  0.0%)
     drain_k  :     0.00 ms (  0.0%)
     drain_v  :     0.00 ms (  0.0%)
     drain_o  :     0.00 ms (  0.0%)
-  attn_fused     :   284.70 ms ( 66.2%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
-  exit_unmap     :     0.30 ms (  0.1%)  [SVMUnmap(output) -- skipped when NO_EXIT_UNMAP=1]
-  exit_publish   :    34.88 ms (  8.1%)  [svm_to_image2d_publish]
-  rope_q   :    24.96 ms (  5.8%)
-  rope_k   :    24.96 ms (  5.8%)
-  v_copy   :    27.05 ms (  6.3%)
-  qk       :   284.70 ms ( 66.2%)
+  attn_fused     :   360.77 ms ( 65.6%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
+  exit_unmap     :     0.40 ms (  0.1%)  [SVMUnmap(output) -- skipped when NO_EXIT_UNMAP=1]
+  exit_publish   :    45.93 ms (  8.3%)  [svm_to_image2d_publish]
+  rope_q   :    32.04 ms (  5.8%)
+  rope_k   :    32.04 ms (  5.8%)
+  v_copy   :    35.25 ms (  6.4%)
+  qk       :   360.77 ms ( 65.6%)
   softmax  :     0.00 ms (  0.0%)
   av       :     0.00 ms (  0.0%)
-  cpu_busy :   365.88 ms ( 85.1%)  [thread CPU time]
-  idle_wait:    64.00 ms ( 14.9%)  [wall - cpu, host blocked on GPU queue drains]
-[PROFILE MHACoreLayer prefill (M>1)] total=2154.96 ms calls=36 avg=59.860 ms
-  rope_q   :    31.49 ms (  1.5%)  [apply_rotary_emb_v2 query]
-  rope_k   :    12.31 ms (  0.6%)  [apply_rotary_emb_v2 key->cache]
-  v_copy   :    10.78 ms (  0.5%)  [value -> cache copyData]
-  qk       :   381.66 ms ( 17.7%)  [compute_kcaches Q dot K^T]
-  softmax  :   139.82 ms (  6.5%)  [softmax_triangle]
-  av       :   294.58 ms ( 13.7%)  [compute_fp16vcache_transposed A*V]
+  cpu_busy :   492.39 ms ( 89.5%)  [thread CPU time]
+  idle_wait:    57.73 ms ( 10.5%)  [wall - cpu, host blocked on GPU queue drains]
+[PROFILE MHACoreLayer prefill (M>1)] total=798.75 ms calls=36 avg=22.188 ms
+  rope_q   :    25.53 ms (  3.2%)  [apply_rotary_emb_v2 query]
+  rope_k   :    11.39 ms (  1.4%)  [apply_rotary_emb_v2 key->cache]
+  v_copy   :    10.63 ms (  1.3%)  [value -> cache copyData]
+  qk       :   297.87 ms ( 37.3%)  [compute_kcaches Q dot K^T]
+  softmax  :   124.99 ms ( 15.6%)  [softmax_triangle]
+  av       :   297.78 ms ( 37.3%)  [compute_fp16vcache_transposed A*V]
 
-[PROFILE HalfTensor::dotQInteger decode (M==1)] total=248.41 ms calls=4608
+[PROFILE HalfTensor::dotQInteger decode (M==1)] total=325.78 ms calls=4608
   in_copy   :     0.00 ms (  0.0%)  [in_u16 -> svm_in scalar loop, K elems]
-  gemv_call :   248.41 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
+  gemv_call :   325.78 ms (100.0%)  [gpu_int4_gemv_adreno + SVM sync]
   out_copy  :     0.00 ms (  0.0%)  [svm_out -> out_u16 scalar loop, N elems]
 
-[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=60.74 ms calls=252
+[PROFILE HalfTensor::dotQInteger prefill (M>1)] total=80.25 ms calls=252
   in_fence    :     0.00 ms (  0.0%)  [blocking SVMMap on pool-miss inputs]
-  in_stage    :     7.94 ms ( 13.1%)  [fp16 -> svm_in scalar loop]
-  gpu_call    :    52.79 ms ( 86.9%)  [wrapper + clEnqueue + SVMMap sync]
+  in_stage    :    13.91 ms ( 17.3%)  [fp16 -> svm_in scalar loop]
+  gpu_call    :    66.34 ms ( 82.7%)  [wrapper + clEnqueue + SVMMap sync]
   out_stage   :     0.01 ms (  0.0%)  [svm_out -> fp16 scalar loop]
   misc        :     0.00 ms (  0.0%)  [assertions, ptr setup]
 
 [PROFILE Helper host wall (NNTRAINER_GPU_EVENT_PROFILE)]
   bucket                          calls    host_total    avg_host
-  fused_gemv_int4 (image2d)        2304     149.33 ms     64.8 us
-  gemv_int4 per-FC (image2d)       4608     246.88 ms     53.6 us
-  attention_fused_fp16             2304     283.79 ms    123.2 us
-  lm_head int4 chunked               65    1702.43 ms  26191.3 us
+  fused_gemv_int4 (image2d)        2304     164.22 ms     71.3 us
+  gemv_int4 per-FC (image2d)       4608     323.76 ms     70.3 us
+  attention_fused_fp16             2304     359.59 ms    156.1 us
+  lm_head int4 chunked               65    1924.88 ms  29613.6 us
 
 [PROFILE GPU events decode (NNTRAINER_GPU_EVENT_PROFILE)]
   bucket                          calls   gpu_total   avg_gpu  avg_q2s  avg_s2start
-  fused_gemv_int4 (image2d)        4608   1233.94 ms   267.8 us  155.8 us  11181.1 us
-  gemv_int4 per-FC (image2d)       4608    651.98 ms   141.5 us  214.7 us  11337.1 us
-  attention_fused_fp16             2304    519.47 ms   225.5 us  273.0 us  10995.6 us
-  lm_head int4 chunked              195    199.93 ms  1025.3 us   49.0 us  22979.7 us
+  fused_gemv_int4 (image2d)        4608   1226.38 ms   266.1 us  206.3 us   9063.6 us
+  gemv_int4 per-FC (image2d)       4608    651.25 ms   141.3 us  279.7 us   9166.7 us
+  attention_fused_fp16             2304    518.59 ms   225.1 us  351.7 us   8841.6 us
+  lm_head int4 chunked              195    199.84 ms  1024.8 us   79.6 us  26591.3 us
 
-[PROFILE AdditionLayer decode] total=69.40 ms fast=4680 fallback=0 avg_fast=14.829 us
-  kernel :    69.40 ms (100.0%)  [add2_fp16_svm_cl async]
+[PROFILE AdditionLayer decode] total=85.92 ms fast=4680 fallback=0 avg_fast=18.359 us
+  kernel :    85.92 ms (100.0%)  [add2_fp16_svm_cl async]
   drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
   misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
 /data/local/tmp/nntrainer/test/logs/./: 0 files pulled.
@@ -185,15 +178,15 @@ Max Resident Set Size: 2776172 KB
 [rms_norm] NNTRAINER_RMSNORM_GPU=1 -> GPU image2d path
 
 -- Perf --
-prefill: 437 tokens, 2662 ms, 164.162 TPS
-generation: 64 tokens, 3124 ms, 20.4866 TPS
-total: 5793 ms
-peak memory: 2776172 KB
-[e2e time]: 8694 ms 
+prefill: 437 tokens, 1864 ms, 234.442 TPS
+generation: 64 tokens, 3271 ms, 19.5659 TPS
+total: 5154 ms
+peak memory: 2781440 KB
+[e2e time]: 7958 ms 
 
 -- Generation snippet (first 200 chars after <|im_start|>assistant) --
 
-[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb4000075e7fa5a00
+[INT4_CHUNKED_INIT] start K=2560 N=151936 q6k=0xb400006f20cd1a00
 [INT4_CHUNKED_INIT] phase=ctx_ok
 [INT4_CHUNKED_INIT] phase=alloc_ok
 [INT4_CHUNKED_INIT] phase=convert_ok
