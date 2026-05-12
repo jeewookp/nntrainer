@@ -89,22 +89,21 @@ else
     log_success "Android binary up to date"
 fi
 
-# Linux meson build for nntr_quantize
-QUANTIZE_BIN="$BUILD_DIR/Applications/CausalLM/nntr_quantize"
+# Linux meson build for nntr_quantize (dedicated builddir to avoid conflicts)
+QUANTIZE_BUILD_DIR="$NNTRAINER_ROOT/builddir_quantize"
+QUANTIZE_BIN="$QUANTIZE_BUILD_DIR/Applications/CausalLM/nntr_quantize"
 if [ "$SKIP_QUANTIZE" = false ]; then
     if [ "$FORCE_BUILD" = true ] || [ ! -f "$QUANTIZE_BIN" ]; then
         log_info "Building nntr_quantize (Linux)..."
         cd "$NNTRAINER_ROOT"
-        if [ -f "$BUILD_DIR/build.ninja" ]; then
-            meson configure "$BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
-        else
-            meson setup "$BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
+        if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILD_DIR" ]; then
+            rm -rf "$QUANTIZE_BUILD_DIR"
         fi
-        if ! ninja -C "$BUILD_DIR" nntr_quantize -j$(nproc); then
-            log_error "nntr_quantize build failed"
-            log_info "Available quantize-related targets:"
-            ninja -C "$BUILD_DIR" -t targets | grep -i quantize || true
-            exit 1
+        if [ ! -f "$QUANTIZE_BUILD_DIR/build.ninja" ]; then
+            meson setup "$QUANTIZE_BUILD_DIR" -Dplatform=none -Denable-app=true -Denable-transformer=true
+        fi
+        if ! ninja -C "$QUANTIZE_BUILD_DIR" nntr_quantize -j$(nproc); then
+            log_error "nntr_quantize build failed"; exit 1
         fi
         log_success "nntr_quantize built"
     else
