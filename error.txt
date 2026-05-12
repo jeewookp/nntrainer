@@ -1,16 +1,60 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.41 KiB | 360.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   066c98eb..1e9ed06a  all_gpu    -> upstream/all_gpu
+Updating 066c98eb..1e9ed06a
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/weight_converter.py | 35 ++++++++++++++++++++++++++---------
+ 1 file changed, 26 insertions(+), 9 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash Applications/CausalLM/res/gemma4/e2b/run_converter.sh 
 Model path : /home/jwhero94/models/gemma4
 Output     : /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
 Dtype      : float32
 Loading model from: /home/jwhero94/models/gemma4
 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
-Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:02<00:00, 946.78it/s]
+Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1951/1951 [00:01<00:00, 1547.88it/s]
 Architecture: ['Gemma4ForConditionalGeneration']
+Layers: 35
+Hidden size: 1536
+PLE dim: 256
+Vocab per layer: 262144
+KV shared layers: 20
+Stripping state_dict prefix: 'model.language_model.'
+
+PLE-related parameters:
+  layers.0.per_layer_input_gate.weight: torch.Size([256, 1536])
+  layers.0.per_layer_projection.weight: torch.Size([1536, 256])
+  layers.0.post_per_layer_input_norm.weight: torch.Size([1536])
+  layers.1.per_layer_input_gate.weight: torch.Size([256, 1536])
+  layers.1.per_layer_projection.weight: torch.Size([1536, 256])
+  layers.1.post_per_layer_input_norm.weight: torch.Size([1536])
+  layers.2.per_layer_input_gate.weight: torch.Size([256, 1536])
+  layers.2.per_layer_projection.weight: torch.Size([1536, 256])
+  layers.2.post_per_layer_input_norm.weight: torch.Size([1536])
+  layers.3.per_layer_input_gate.weight: torch.Size([256, 1536])
+  ... and 98 more
+
+First 10 keys in state_dict:
+  model.vision_tower.patch_embedder.position_embedding_table: torch.Size([2, 10240, 768])
+  model.vision_tower.patch_embedder.input_proj.weight: torch.Size([768, 768])
+  model.vision_tower.encoder.layers.0.self_attn.q_proj.input_min: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.q_proj.input_max: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.q_proj.output_min: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.q_proj.output_max: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.q_proj.linear.weight: torch.Size([768, 768])
+  model.vision_tower.encoder.layers.0.self_attn.k_proj.input_min: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.k_proj.input_max: torch.Size([])
+  model.vision_tower.encoder.layers.0.self_attn.k_proj.output_min: torch.Size([])
 Traceback (most recent call last):
-  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 133, in <module>
-    print(f"Layers: {config.num_hidden_layers}")
-  File "/home/jwhero94/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 434, in __getattribute__
-    return super().__getattribute__(key)
-AttributeError: 'Gemma4Config' object has no attribute 'num_hidden_layers'
+  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 167, in <module>
+    save_gemma4_for_nntrainer(state_dict, config, args.dtype, f)
+  File "/home/jwhero94/projects/nntrainer/Applications/CausalLM/res/gemma4/e2b/weight_converter.py", line 47, in save_gemma4_for_nntrainer
+    save(params["model.embed_tokens.weight"])
+KeyError: 'model.embed_tokens.weight'
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
