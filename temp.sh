@@ -129,7 +129,6 @@ adb shell "cd /data/local/tmp/nntrainer/test; \
   export ${VERIFY_ENV}; \
   export NNTRAINER_RMSNORM_GPU=1; \
   export NNTRAINER_ATTN_GPU=1; \
-  export NNTRAINER_SUPPRESS_PREFILL_PROFILE=1; \
   export NNTRAINER_GEMV_ZEROCOPY=1; \
   export NNTRAINER_GEMV_ADRENO_V3=1; \
   export NNTRAINER_LMHEAD_Q6K_GPU=1; \
