@@ -7119,6 +7119,46 @@ bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes) {
   return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
 }
 
+// Lazy-allocated 4-byte SVM buffer for GPU argmax result.
+// Lives for the process lifetime; the pointer is stable after first call.
+static int *g_argmax_result_svm = nullptr;
+
+void *gpu_argmax_fp16_result_svm() {
+  if (g_argmax_result_svm) return g_argmax_result_svm;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return nullptr;
+
+  cl_context clctx = blas_cc->context_inst_.GetContext();
+  g_argmax_result_svm = static_cast<int *>(
+    clSVMAlloc(clctx, CL_MEM_READ_WRITE, sizeof(int), sizeof(int)));
+  return g_argmax_result_svm;
+}
+
+bool gpu_argmax_fp16_cl(void *logits_svm, void *result_svm, int n) {
+  if (!logits_svm || !result_svm || n <= 0) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern) {
+    s_kern = blas_cc->registerClKernel(gpu_argmax_fp16_kernel, "gpu_argmax_fp16");
+  }
+  if (!s_kern) return false;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, logits_svm);
+  s_kern->SetKernelSVMArguments(a++, result_svm);
+  s_kern->SetKernelArguments(a++, &n, sizeof(int));
+
+  const int g[3] = {256, 1, 1};
+  const int l[3] = {256, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 #endif
 
 // ============================================================================

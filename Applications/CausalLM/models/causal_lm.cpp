@@ -37,6 +37,7 @@
 
 #include <causal_lm.h>
 #include <llm_util.hpp>
+#include <tie_word_embedding.h>
 
 namespace causallm {
 
@@ -238,8 +239,15 @@ std::vector<unsigned int> CausalLM::generate(float *logits, bool do_sample,
 
     // return argmax if do_sample is false
     if (do_sample == false) {
+      // Fast path: use GPU-computed argmax when no penalty modifies logits.
+      int gpu_am = (repetition_penalty == 1.0f && input_ids == nullptr)
+                     ? causallm::twe_consume_gpu_argmax()
+                     : -1;
       unsigned int argmax_idx =
-        std::distance(logits, std::max_element(logits, logits + NUM_VOCAB));
+        (gpu_am >= 0)
+          ? (unsigned int)gpu_am
+          : (unsigned int)std::distance(
+              logits, std::max_element(logits, logits + NUM_VOCAB));
       outputs.push_back(argmax_idx);
     } else {
       // apply temperature & top-k & top-p to logits

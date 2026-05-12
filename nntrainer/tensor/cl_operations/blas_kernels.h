@@ -348,6 +348,22 @@ bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
  * SVMMap drain.
  */
 bool svm_memcpy_fp16_cl(const void *src_svm, void *dst_svm, size_t bytes);
+
+/**
+ * @brief Returns (lazy-allocating) the 4-byte SVM int buffer used by
+ * gpu_argmax_fp16_cl to store the argmax result.  Stable for the
+ * process lifetime.  nullptr on allocation failure.
+ */
+void *gpu_argmax_fp16_result_svm();
+
+/**
+ * @brief GPU argmax over FP16 logits.  Dispatches gpu_argmax_fp16 (single
+ * 256-thread workgroup, strided loop + tree reduction) on the in-order
+ * blas queue.  result_svm must be a 4-byte SVM int buffer; it is written
+ * with the argmax index.  The result is coherent after the next blocking
+ * enqueueSVMMap on the same queue (i.e. the lm_head output drain).
+ */
+bool gpu_argmax_fp16_cl(void *logits_svm, void *result_svm, int n);
 #endif
 
 /**

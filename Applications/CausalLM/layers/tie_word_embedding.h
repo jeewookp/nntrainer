@@ -29,6 +29,14 @@
 namespace causallm {
 
 /**
+ * @brief Consume the GPU-computed argmax from the last lm_head decode step.
+ * Returns the argmax token index, or -1 if not available (NNTRAINER_GPU_ARGMAX
+ * not set, or no result from this step).  Calling this resets the stored
+ * result so subsequent calls return -1 until the next lm_head forward pass.
+ */
+int twe_consume_gpu_argmax();
+
+/**
  * @class   TieWordEmbedding
  * @brief   TieWordEmbedding
  * @todo    Support setBatch for TieWordEmbedding

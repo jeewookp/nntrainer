@@ -35,6 +35,15 @@
 
 namespace causallm {
 
+// GPU argmax result from the last lm_head decode step.
+// Set by incremental_forwarding_lmhead() when NNTRAINER_GPU_ARGMAX=1.
+// -1 means no result available (env var not set, or first call not yet done).
+static std::atomic<int> s_gpu_argmax_result_{-1};
+
+int twe_consume_gpu_argmax() {
+  return s_gpu_argmax_result_.exchange(-1, std::memory_order_relaxed);
+}
+
 namespace {
 
 // Separate profilers for the two modes -- "embedding" runs at the start of
@@ -573,6 +582,21 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     }
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+    // GPU argmax: dispatch BEFORE the blocking SVMMap so the kernel is
+    // included in the queue drain.  After SVMMap returns (all GPU work
+    // complete, caches flushed) the result SVM int is coherent and can
+    // be read directly.  Gated by NNTRAINER_GPU_ARGMAX=1.
+    static const bool s_gpu_argmax =
+      std::getenv("NNTRAINER_GPU_ARGMAX") != nullptr;
+    if (s_gpu_argmax && hidden_step.getMemoryData() &&
+        hidden_step.getMemoryData()->isSVM()) {
+      void *res_svm = nntrainer::gpu_argmax_fp16_result_svm();
+      if (res_svm) {
+        nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(), res_svm,
+                                      (int)hidden_step.width());
+      }
+    }
+
     // lm_head output is read host-side by the sampler (causal_lm.cpp
     // calls generate(output_interval[0], ...) which iterates logits as
     // float*). The upstream gemm_delegate_fp16_cl now only enqueues a
@@ -586,6 +610,15 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
       if (cl_ctx) {
         cl_ctx->command_queue_inst_.enqueueSVMMap(
           hidden_.getData<char>(), hidden_.bytes(), /*read_only=*/true);
+        // GPU queue is now fully drained.  If gpu_argmax was dispatched,
+        // its result is in the SVM int buffer (coherent — no extra map
+        // needed since the GPU has flushed all caches).
+        if (s_gpu_argmax) {
+          void *res_svm = nntrainer::gpu_argmax_fp16_result_svm();
+          if (res_svm)
+            s_gpu_argmax_result_.store(*static_cast<int *>(res_svm),
+                                       std::memory_order_relaxed);
+        }
       }
     }
 #endif
