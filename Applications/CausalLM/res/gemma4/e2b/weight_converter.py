@@ -44,38 +44,34 @@ def save_gemma4_for_nntrainer(params, config, dtype, file):
         save(params[key].permute(1, 0))
 
     # ── Global embedding (shared vocabulary) ──────────────────────────────
-    save(params["model.embed_tokens.weight"])
+    # After stripping "model.language_model." prefix, key is "embed_tokens.weight"
+    embed_key = "embed_tokens.weight"
+    save(params[embed_key])
 
-    # ── Per-layer embedding tensor ─────────────────────────────────────────
-    # HuggingFace stores embed_tokens_per_layer with one of:
-    #   shape [vocab_per_layer, num_layers, ple_dim]  → slice [:, i, :]
-    #   shape [num_layers, vocab_per_layer, ple_dim]  → slice [i, :, :]
-    # We auto-detect based on the first dimension.
-    epl_weight = params["model.embed_tokens_per_layer.weight"].float()
-    if epl_weight.dim() == 2:
-        # Flat [vocab_per_layer * num_layers, ple_dim] → reshape
-        epl_weight = epl_weight.reshape(n_layers, vocab_per_layer, ple_dim)
-        def embed_slice(i):
-            return epl_weight[i]                           # [vocab_per_layer, ple_dim]
-    elif epl_weight.shape[0] == n_layers:
-        # [num_layers, vocab_per_layer, ple_dim]
-        def embed_slice(i):
-            return epl_weight[i]
-    else:
-        # [vocab_per_layer, num_layers, ple_dim]
-        def embed_slice(i):
-            return epl_weight[:, i, :]
+    # ── Per-layer embedding tensor (optional in some variants) ─────────────
+    epl_key = "embed_tokens_per_layer.weight"
+    has_epl = epl_key in params
+    if has_epl:
+        epl_weight = params[epl_key].float()
+        if epl_weight.dim() == 2:
+            epl_weight = epl_weight.reshape(n_layers, vocab_per_layer, ple_dim)
+            def embed_slice(i): return epl_weight[i]
+        elif epl_weight.shape[0] == n_layers:
+            def embed_slice(i): return epl_weight[i]
+        else:
+            def embed_slice(i): return epl_weight[:, i, :]
 
     # ── Decoder layers ─────────────────────────────────────────────────────
     for i in range(n_layers):
-        lp = f"model.layers.{i}."
+        lp = f"layers.{i}."
         kv_shared = (i >= first_shared_layer)
 
         # ------ PLE block ------------------------------------------------
-        save(embed_slice(i))
-        # per_layer_model_projection: Linear(hidden → ple_dim), weight [P, H] → [H, P]
-        save_proj(f"{lp}per_layer_model_projection.weight")
-        save(params[f"{lp}per_layer_projection_norm.weight"], is_rms=True)
+        if has_epl:
+            save(embed_slice(i))
+        if f"{lp}per_layer_model_projection.weight" in params:
+            save_proj(f"{lp}per_layer_model_projection.weight")
+            save(params[f"{lp}per_layer_projection_norm.weight"], is_rms=True)
         # per_layer_input_gate: Linear(hidden → ple_dim), weight [P, H] → [H, P]
         save_proj(f"{lp}per_layer_input_gate.weight")
         # per_layer_projection: Linear(ple_dim → hidden), weight [H, P] → [P, H]
@@ -103,14 +99,13 @@ def save_gemma4_for_nntrainer(params, config, dtype, file):
         save(params[f"{lp}post_feedforward_layernorm.weight"], is_rms=True)
 
     # ── Final norm + LM head ───────────────────────────────────────────────
-    save(params["model.norm.weight"], is_rms=True)
+    save(params["norm.weight"], is_rms=True)
 
     # Gemma4 uses tied embeddings by default; lm_head may not be present.
     if "lm_head.weight" in params:
         save_proj("lm_head.weight")
     else:
-        # tied: lm_head = embed_tokens^T  →  save transposed embed_tokens
-        save(params["model.embed_tokens.weight"].permute(1, 0))
+        save(params[embed_key].permute(1, 0))
 
 
 if __name__ == "__main__":
@@ -159,9 +154,16 @@ if __name__ == "__main__":
     if len(ple_keys) > 10:
         print(f"  ... and {len(ple_keys) - 10} more")
 
-    print("\nFirst 10 keys in state_dict:")
-    for k in list(state_dict.keys())[:10]:
-        print(f"  {k}: {state_dict[k].shape}")
+    # Print layer 0 keys to understand full structure
+    print("\nLayer 0 keys:")
+    for k, v in state_dict.items():
+        if k.startswith("layers.0."):
+            print(f"  {k}: {v.shape}")
+
+    print("\nTop-level text model keys (not under layers.):")
+    for k, v in state_dict.items():
+        if not k.startswith("layers.") and not k.startswith("model."):
+            print(f"  {k}: {v.shape}")
 
     with open(args.output, "wb") as f:
         save_gemma4_for_nntrainer(state_dict, config, args.dtype, f)
