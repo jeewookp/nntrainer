@@ -80,9 +80,10 @@ adb shell "sed -i \
   -e 's/\"max_seq_len\"[[:space:]]*:[[:space:]]*[0-9]*/\"max_seq_len\": ${MAX_SEQ_LEN_NEW}/' \
   -e 's/\"num_to_generate\"[[:space:]]*:[[:space:]]*[0-9]*/\"num_to_generate\": ${NUM_TO_GENERATE_NEW}/' \
   -e 's/\"model_tensor_type\"[[:space:]]*:[[:space:]]*\"[A-Za-z0-9_-]*\"/\"model_tensor_type\": \"${MODEL_TENSOR_TYPE_NEW}\"/' \
+  -e 's/\"do_sample\"[[:space:]]*:[[:space:]]*true/\"do_sample\": false/' \
   ${CFG}"
 echo "[temp.sh] patched on-device nntr_config.json:"
-adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"|\"model_tensor_type\"' ${CFG}"
+adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"|\"model_tensor_type\"|\"do_sample\"' ${CFG}"
 
 # Capture stdout AND stderr so the [DIAG ...] traces from our diagnostics
 # land alongside the prefill / generation TPS.
