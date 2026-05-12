@@ -502,12 +502,14 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
   static const unsigned int s_force_sync_from =
     s_force_sync_env ? (unsigned int)std::atoi(s_force_sync_env)
                      : UINT_MAX;
+#ifdef ENABLE_OPENCL
   static cl_command_queue s_sync_q = nullptr;
   if ((s_profile_layer_sync || s_force_sync_env) && !s_sync_q) {
     auto *cc = static_cast<ClContext *>(
       Engine::Global().getRegisteredContext("gpu"));
     if (cc) s_sync_q = cc->command_queue_inst_.GetCommandQueue();
   }
+#endif
 
   // Timing honesty under non-blocking SVMMap: when LAYER_SYNC is on,
   // clFinish after EVERY forwarding_op regardless of prefill vs decode
@@ -540,8 +542,10 @@ sharedConstTensors NetworkGraph::incremental_forwarding(
     forwarding_op(*iter, training);
     const bool sync_due_to_force =
       s_force_sync_env && s_layer_idx_in_token >= s_force_sync_from;
+#ifdef ENABLE_OPENCL
     if ((s_profile_layer_sync || sync_due_to_force) && s_sync_q)
       clFinish(s_sync_q);
+#endif
     s_layer_idx_in_token++;
     clock_gettime(CLOCK_MONOTONIC, &ts1);
     const uint64_t dt = (uint64_t)(ts1.tv_sec - ts0.tv_sec) * 1000000000ULL +

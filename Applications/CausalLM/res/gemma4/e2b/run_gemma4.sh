@@ -97,8 +97,16 @@ if [ "$SKIP_QUANTIZE" = false ]; then
     if [ "$FORCE_BUILD" = true ] || [ ! -f "$QUANTIZE_BIN" ]; then
         log_info "Building nntr_quantize (Linux x86)..."
         cd "$NNTRAINER_ROOT"
+        # Stamp file records the exact options; delete builddir if stale
+        OPTS_STAMP="arm-arch=none;enable-fp16=false;enable-opencl=false;enable-transformer=true"
+        OPTS_FILE="$QUANTIZE_BUILDDIR/.nntr_quantize_opts"
         if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILDDIR" ]; then
             rm -rf "$QUANTIZE_BUILDDIR"
+        elif [ -d "$QUANTIZE_BUILDDIR" ]; then
+            if [ ! -f "$OPTS_FILE" ] || [ "$(cat "$OPTS_FILE" 2>/dev/null)" != "$OPTS_STAMP" ]; then
+                log_warning "builddir_quantize has stale settings, cleaning..."
+                rm -rf "$QUANTIZE_BUILDDIR"
+            fi
         fi
         if [ ! -f "$QUANTIZE_BUILDDIR/build.ninja" ]; then
             meson setup "$QUANTIZE_BUILDDIR" \
@@ -108,6 +116,7 @@ if [ "$SKIP_QUANTIZE" = false ]; then
                 -Denable-fp16=false \
                 -Denable-opencl=false \
                 -Darm-arch=none
+            echo "$OPTS_STAMP" > "$OPTS_FILE"
         fi
         if ! meson compile -C "$QUANTIZE_BUILDDIR" nntr_quantize; then
             log_error "nntr_quantize build failed"; exit 1
@@ -214,6 +223,8 @@ log_step 5 "Run on device"
 echo -e "${YELLOW}── Output ──────────────────────────────────────${NC}"
 adb shell "cd $DEVICE_INSTALL_DIR && \
     export LD_LIBRARY_PATH=$DEVICE_INSTALL_DIR:\$LD_LIBRARY_PATH && \
+    export OMP_NUM_THREADS=4 && \
+    export NNTRAINER_ASYNC_PIPELINE=1 && \
     ./nntrainer_causallm $DEVICE_MODEL_DIR '$PROMPT'" 2>&1
 EXIT=$?
 echo -e "${YELLOW}────────────────────────────────────────────────${NC}"

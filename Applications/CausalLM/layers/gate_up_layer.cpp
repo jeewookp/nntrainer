@@ -161,16 +161,16 @@ void GateUpLayer::finalize(nntrainer::InitLayerContext &context) {
     nntrainer::TensorDim::TensorType(context.getFormat(),
                                      context.getWeightDataType()),
     is_nchw ? 0b0011 : 0b0101);
-  weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedUp
-                            : GateUpParams::Up] =
+  weight_idx[fused_rmsnorm ? (int)GateUpFusedParams::FusedUp
+                            : (int)GateUpParams::Up] =
     context.requestWeight(weight_dim, weight_initializer, weight_regularizer,
                           weight_regularizer_constant, weight_decay,
                           "upweight", true);
 
   /** Gate weight */
   weight_dim.width(gate_unit);
-  weight_idx[fused_rmsnorm ? GateUpFusedParams::FusedGate
-                            : GateUpParams::Gate] =
+  weight_idx[fused_rmsnorm ? (int)GateUpFusedParams::FusedGate
+                            : (int)GateUpParams::Gate] =
     context.requestWeight(weight_dim, weight_initializer, weight_regularizer,
                           weight_regularizer_constant, weight_decay,
                           "gateweight", true);
@@ -207,10 +207,10 @@ void GateUpLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   };
   const bool fused_rmsnorm =
     std::get<props::FusedRmsnorm>(gate_up_props).get();
-  const auto up_idx =
-    fused_rmsnorm ? GateUpFusedParams::FusedUp : GateUpParams::Up;
-  const auto gate_idx =
-    fused_rmsnorm ? GateUpFusedParams::FusedGate : GateUpParams::Gate;
+  const int up_idx =
+    fused_rmsnorm ? (int)GateUpFusedParams::FusedUp : (int)GateUpParams::Up;
+  const int gate_idx =
+    fused_rmsnorm ? (int)GateUpFusedParams::FusedGate : (int)GateUpParams::Gate;
   nntrainer::Tensor &Uweight = context.getWeight(weight_idx[up_idx]);
   nntrainer::Tensor &Gweight = context.getWeight(weight_idx[gate_idx]);
   nntrainer::Tensor &input_ = context.getInput(SINGLE_INOUT_IDX);
