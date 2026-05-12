@@ -7221,6 +7221,43 @@ void set_async_pipeline_ctx(int *token_id_svm, int *argmax_out_svm) {
 int *get_async_pipeline_token_id_svm()  { return g_async_token_id_svm;  }
 int *get_async_pipeline_argmax_out_svm() { return g_async_argmax_out_svm; }
 
+static float    g_async_temperature = 0.0f;
+static uint32_t g_async_rng_seed    = 0;
+void set_async_sample_params(float temperature, uint32_t rng_seed) {
+  g_async_temperature = temperature;
+  g_async_rng_seed    = rng_seed;
+}
+float    get_async_temperature() { return g_async_temperature; }
+uint32_t get_async_rng_seed()    { return g_async_rng_seed;    }
+
+bool gpu_sample_fp16_cl(void *logits_svm, void *result_svm, int n,
+                         float temperature, uint32_t rng_seed) {
+  if (!logits_svm || !result_svm || n <= 0) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (!blas_cc) return false;
+
+  static ClContext::SharedPtrClKernel s_kern;
+  if (!s_kern)
+    s_kern = blas_cc->registerClKernel(gpu_gumbel_sample_fp16_kernel,
+                                        "gpu_gumbel_sample_fp16");
+  if (!s_kern) return false;
+
+  const float inv_temp = (temperature > 0.0f) ? (1.0f / temperature) : 0.0f;
+
+  int a = 0;
+  s_kern->SetKernelSVMArguments(a++, logits_svm);
+  s_kern->SetKernelSVMArguments(a++, result_svm);
+  s_kern->SetKernelArguments(a++, &n,        sizeof(int));
+  s_kern->SetKernelArguments(a++, &inv_temp, sizeof(float));
+  s_kern->SetKernelArguments(a++, &rng_seed, sizeof(uint32_t));
+
+  const int g[3] = {256, 1, 1};
+  const int l[3] = {256, 1, 1};
+  return blas_cc->command_queue_inst_.DispatchCommand(s_kern, g, l);
+}
+
 int *svm_alloc_ints(int n) {
   if (n <= 0) return nullptr;
   auto *blas_cc =

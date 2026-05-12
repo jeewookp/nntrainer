@@ -388,6 +388,24 @@ int *get_async_pipeline_token_id_svm();
 int *get_async_pipeline_argmax_out_svm();
 
 /**
+ * @brief Set per-token sampling params for the async pipeline.
+ *        temperature > 0 enables Gumbel sampling; == 0 means greedy argmax.
+ *        rng_seed is a per-token random seed (different every call).
+ */
+void set_async_sample_params(float temperature, uint32_t rng_seed);
+float    get_async_temperature();
+uint32_t get_async_rng_seed();
+
+/**
+ * @brief GPU temperature sampling (Gumbel max trick) over FP16 logits.
+ *        Equivalent to categorical sampling from softmax(logits/temperature).
+ *        When temperature == 0, falls back to plain argmax.
+ *        result_svm: SVM int* to receive the sampled token index (non-blocking).
+ */
+bool gpu_sample_fp16_cl(void *logits_svm, void *result_svm, int n,
+                         float temperature, uint32_t rng_seed);
+
+/**
  * @brief Allocate n ints in coarse-grained SVM (CL_MEM_READ_WRITE).
  *        Returns nullptr on failure.  Wraps clSVMAlloc so callers
  *        outside libnntrainer.so do not need to link libOpenCL directly.

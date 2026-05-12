@@ -614,14 +614,24 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
 
     if (hidden_step.getMemoryData() && hidden_step.getMemoryData()->isSVM()) {
       if (s_async_lm) {
-        // Async pipeline: dispatch GPU argmax to the per-token SVM slot set
-        // by causal_lm.cpp. NO blocking SVMMap — the caller drains once at
-        // the end of the 64-token generation batch.
+        // Async pipeline: dispatch GPU sampling/argmax to the per-token SVM
+        // slot set by causal_lm.cpp.  NO blocking SVMMap — caller drains once
+        // at the end of the 64-token generation batch.
         int *argmax_out = nntrainer::get_async_pipeline_argmax_out_svm();
         if (argmax_out) {
-          nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(),
-                                        argmax_out,
-                                        (int)hidden_step.width());
+          float    temp = nntrainer::get_async_temperature();
+          uint32_t seed = nntrainer::get_async_rng_seed();
+          if (temp > 0.0f) {
+            // Gumbel max trick: equiv. to categorical sampling from softmax(logits/T)
+            nntrainer::gpu_sample_fp16_cl(hidden_step.getData<char>(),
+                                          argmax_out,
+                                          (int)hidden_step.width(),
+                                          temp, seed);
+          } else {
+            nntrainer::gpu_argmax_fp16_cl(hidden_step.getData<char>(),
+                                          argmax_out,
+                                          (int)hidden_step.width());
+          }
         }
         // Return without blocking; neuralnet.cpp will also skip its SVMMap.
       } else {

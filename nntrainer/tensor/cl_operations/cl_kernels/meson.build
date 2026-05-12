@@ -89,6 +89,7 @@ if get_option('enable-fp16')
     'rope_decode_fp16.cl',
     'rope_decode_fp16_qk.cl',
     'gpu_argmax_fp16.cl',
+    'gpu_gumbel_sample_fp16.cl',
     'gpu_embedding_int4chunked.cl',
     'attention_fused_fp16.cl',
     'attention_fused_fp16_decode.cl',

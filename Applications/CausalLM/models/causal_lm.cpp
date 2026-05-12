@@ -534,9 +534,15 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
       std::fflush(stderr);
 
       // Submit all tokens to GPU queue without blocking.
+      // Each token gets its own random seed for Gumbel sampling.
       for (int t = 0; t < N_GEN; ++t, ++token_generation_idx) {
         nntrainer::set_async_pipeline_ctx(&argmax_svm[t],
                                           &argmax_svm[t + 1]);
+        // Pass temperature + per-token seed so lm_head dispatches
+        // gpu_sample (stochastic) or gpu_argmax (greedy) accordingly.
+        nntrainer::set_async_sample_params(
+          do_sample ? TEMPERATURE : 0.0f,
+          static_cast<uint32_t>(rng()));
         auto output_interval = model->incremental_inference(
           BATCH_SIZE, input, label, input_len,
           token_generation_idx - 1 + global_token_len,
@@ -549,6 +555,7 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
 
       // Reset async context so non-async calls after this don't misbehave.
       nntrainer::set_async_pipeline_ctx(nullptr, nullptr);
+      nntrainer::set_async_sample_params(0.0f, 0);
 
       // Single blocking drain: waits for all N_GEN tokens' GPU work.
       nntrainer::svm_blocking_read(argmax_svm,

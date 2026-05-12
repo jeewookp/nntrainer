@@ -84,14 +84,9 @@ adb shell "sed -i \
 echo "[temp.sh] patched on-device nntr_config.json:"
 adb shell "grep -E '\"init_seq_len\"|\"max_seq_len\"|\"num_to_generate\"|\"model_tensor_type\"' ${CFG}"
 
-# Patch generation_config.json: force greedy decoding so the async pipeline
-# (which always uses GPU argmax, not sampling) can be compared fairly.
-GEN_CFG=/data/local/tmp/nntrainer/causallm/models/qwen3-4b/generation_config.json
-adb shell "[ -f ${GEN_CFG}.bak ] || cp ${GEN_CFG} ${GEN_CFG}.bak"
-adb shell "cp ${GEN_CFG}.bak ${GEN_CFG}"
-adb shell "sed -i -e 's/\"do_sample\"[[:space:]]*:[[:space:]]*true/\"do_sample\": false/' ${GEN_CFG}"
-echo "[temp.sh] patched generation_config.json do_sample:"
-adb shell "grep 'do_sample' ${GEN_CFG}" || echo "(do_sample not found -- already false or absent)"
+# generation_config.json is left unmodified: do_sample/temperature are used
+# as-is from the model bundle.  The async pipeline now supports GPU Gumbel
+# sampling when do_sample=true (stochastic) and GPU argmax when false (greedy).
 
 # Capture stdout AND stderr so the [DIAG ...] traces from our diagnostics
 # land alongside the prefill / generation TPS.
