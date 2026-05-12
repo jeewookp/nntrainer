@@ -747,13 +747,8 @@ mha_entry_drain_done:;
 
     static const bool s_mha_no_publish =
       std::getenv("NNTRAINER_MHA_NO_PUBLISH") != nullptr;
-    // When NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D=1, attention_fused_fp16_cl
-    // already wrote to image2d and registered it in GpuImagePool.  No further
-    // svm_to_image2d_publish is needed.
-    static const bool s_attn_v3_image2d =
-      std::getenv("NNTRAINER_ATTN_FUSED_DECODE_V3_IMAGE2D") != nullptr;
     const int pub_W = (int)output.width();
-    if (!s_mha_no_publish && !s_attn_v3_image2d && (pub_W % 4) == 0) {
+    if (!s_mha_no_publish && (pub_W % 4) == 0) {
       const uint64_t t_pub0 = profile_this_decode ? mha_now_ns() : 0;
       const int pub_M = (int)(output.batch() * output.channel() *
                                 (int)step_size);
