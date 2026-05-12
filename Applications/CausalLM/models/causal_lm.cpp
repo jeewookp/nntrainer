@@ -243,6 +243,12 @@ std::vector<unsigned int> CausalLM::generate(float *logits, bool do_sample,
       int gpu_am = (repetition_penalty == 1.0f && input_ids == nullptr)
                      ? causallm::twe_consume_gpu_argmax()
                      : -1;
+      static int s_gpu_argmax_diag = 0;
+      if (s_gpu_argmax_diag++ == 0) {
+        std::fprintf(stderr, "[GPU_ARGMAX_DIAG] first decode token: gpu_am=%d (%s)\n",
+                     gpu_am, gpu_am >= 0 ? "GPU path" : "CPU fallback");
+        std::fflush(stderr);
+      }
       unsigned int argmax_idx =
         (gpu_am >= 0)
           ? (unsigned int)gpu_am
