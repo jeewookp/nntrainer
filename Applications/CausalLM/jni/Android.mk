@@ -62,6 +62,16 @@ LOCAL_MODULE := causallm_core
 # loader to pull in libandroid and its transitive libGLESv*.so deps
 # (which throttle Adreno CL).
 LOCAL_LDLIBS := -llog -ldl -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
+# Force the svm stub sections to survive --gc-sections and appear as DEFINED
+# symbols in libcausallm_core.so's .dynsym.  Without -u the linker may GC
+# the sections because no other object inside this .so calls these functions
+# directly.  If libnntrainer.so already exports a strong definition it wins
+# at runtime (first-loaded DSO); otherwise the stubs in
+# gemma4_causallm.cpp supply a safe nullptr fallback.
+LOCAL_LDFLAGS += \
+    -Wl,-u,_ZN9nntrainer14svm_alloc_intsEi \
+    -Wl,-u,_ZN9nntrainer12svm_free_ptrEPv \
+    -Wl,-u,_ZN9nntrainer16svm_blocking_readEPvm
 
 LOCAL_SRC_FILES := \
     ../models/causal_lm.cpp \

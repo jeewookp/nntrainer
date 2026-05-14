@@ -431,11 +431,15 @@ void Gemma4CausalLM::registerCustomLayers() {
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <cstddef>
 namespace nntrainer {
-__attribute__((visibility("default"))) int *svm_alloc_ints(int) {
+// Fallback stubs: used only when libnntrainer.so is too old to export
+// svm_alloc_ints/svm_free_ptr/svm_blocking_read.
+// __attribute__((used)) prevents linker --gc-sections from discarding the
+// section even if no other object in this .so calls these functions.
+__attribute__((used, visibility("default"))) int *svm_alloc_ints(int) {
   return nullptr;
 }
-__attribute__((visibility("default"))) void svm_free_ptr(void *) {}
-__attribute__((visibility("default"))) void svm_blocking_read(void *,
-                                                              std::size_t) {}
+__attribute__((used, visibility("default"))) void svm_free_ptr(void *) {}
+__attribute__((used, visibility("default"))) void svm_blocking_read(
+  void *, std::size_t) {}
 } // namespace nntrainer
 #endif // ENABLE_OPENCL

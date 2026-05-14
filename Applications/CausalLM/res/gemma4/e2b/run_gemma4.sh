@@ -89,6 +89,9 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
+    # Delete the stale stripped .so so NDK's strip step is forced to run and
+    # the updated object files are guaranteed to be re-linked.
+    rm -f "$BUILT_LIB"
     # Do NOT pipe through tail: set -o pipefail means a pipe masks ndk-build
     # failures (tail always exits 0).  Print all output directly so errors
     # are visible and the script exits immediately on build failure.
@@ -200,6 +203,20 @@ fi
 log_step 4 "Push to device"
 
 adb shell "mkdir -p $DEVICE_INSTALL_DIR $DEVICE_MODEL_DIR"
+
+# NDK r23+ no longer auto-copies PREBUILT_SHARED_LIBRARY outputs to
+# NDK_LIBS_OUT.  Copy them explicitly so the push loop below can push the
+# exact libnntrainer.so that was used at link time.  This is critical: if
+# libcausallm_core.so was linked against a libnntrainer.so that exports
+# svm_alloc_ints, the device must have that same (or newer) version or the
+# Android dynamic linker will report "cannot locate symbol".
+PREBUILT_LIB_DIR="$BUILD_DIR/android_build_result/lib/arm64-v8a"
+for _plib in libnntrainer.so libccapi-nntrainer.so; do
+    if [ -f "$PREBUILT_LIB_DIR/$_plib" ]; then
+        cp -f "$PREBUILT_LIB_DIR/$_plib" "$LIBS_DIR/"
+        log_info "  Staged prebuilt: $_plib"
+    fi
+done
 
 for lib in libcausallm_core.so libnntrainer.so libccapi-nntrainer.so libc++_shared.so libomp.so; do
     [ -f "$LIBS_DIR/$lib" ] && \
