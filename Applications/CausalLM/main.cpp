@@ -261,7 +261,8 @@ int main(int argc, char *argv[]) {
     } else {
       if (nntr_cfg.contains("chat_input")) {
         if (architecture == "Gemma3ForCausalLM" ||
-            architecture == "Gemma4ForCausalLM") {
+            architecture == "Gemma4ForCausalLM" ||
+            architecture == "Gemma4ForConditionalGeneration") {
           input_text = causallm::gemma3::apply_function_gemma_template(
             nntr_cfg["chat_input"]);
         } else {

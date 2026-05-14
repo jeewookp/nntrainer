@@ -89,9 +89,15 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
-    # Delete the stale stripped .so so NDK's strip step is forced to run and
-    # the updated object files are guaranteed to be re-linked.
+    # Delete stale outputs so NDK is forced to re-link and re-strip.
     rm -f "$BUILT_LIB"
+    # Also delete main.o to force recompilation of main.cpp.
+    # NDK's mtime-based caching can keep a stale main.o (e.g. when the
+    # source was modified by a git pull that leaves the file's mtime equal
+    # to or older than the cached .o), causing missing architecture
+    # registrations such as Gemma4ForConditionalGeneration.
+    NDK_OBJ_MAIN="$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm/main.o"
+    rm -f "$NDK_OBJ_MAIN"
     # Do NOT pipe through tail: set -o pipefail means a pipe masks ndk-build
     # failures (tail always exits 0).  Print all output directly so errors
     # are visible and the script exits immediately on build failure.
