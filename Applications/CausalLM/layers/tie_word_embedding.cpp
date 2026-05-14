@@ -802,7 +802,26 @@ void TieWordEmbedding::save(std::ofstream &file,
           unsigned int K = dim.height();
           unsigned int N = dim.width();
 
-          if (dtype == nntrainer::TensorDim::DataType::Q6_K) {
+          if (dtype == nntrainer::TensorDim::DataType::Q4_0) {
+            if (K == 1) {
+              weight.save(file);
+            } else {
+              NNTR_THROW_IF(N % 32 != 0 || K % 32 != 0, std::invalid_argument)
+                << "Q4_0 quantization requires both width and height to be "
+                   "divisible by 32, but got height="
+                << K << ", width=" << N;
+              //////////////////////////////////////////////////////////////////
+              ///@note Please note that Embedding layer doesn't need to be
+              /// transposed!
+              //////////////////////////////////////////////////////////////////
+              nntrainer::Tensor quant_weight(dim.batch(), dim.channel(), K, N,
+                                             {nntrainer::Tformat::NCHW, dtype});
+              nntrainer::quantize_q4_0(weight.getData<float>(),
+                                       quant_weight.getData<uint8_t>(), K, N,
+                                       nullptr);
+              quant_weight.save(file);
+            }
+          } else if (dtype == nntrainer::TensorDim::DataType::Q6_K) {
             //////////////////////////////////////////////////////////////////
             ///@note Please note that Embedding layer doesn't need to be
             /// transposed!
