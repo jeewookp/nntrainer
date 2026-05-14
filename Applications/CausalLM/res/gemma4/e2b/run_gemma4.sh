@@ -88,11 +88,10 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
-    # Delete the entire NDK obj tree to force full recompile.
-    # Targeting just the module subdir is unreliable because NDK may cache
-    # .o files in paths that don't match the module name exactly.
-    rm -rf "$CAUSALLM_DIR/jni/obj/"
-    ndk-build \
+    # -B (--always-make) forces all source files to be recompiled regardless
+    # of cached .o timestamps.  This is the only reliable way to pick up
+    # source changes when NDK's obj cache path is non-standard.
+    ndk-build -B \
         NDK_PROJECT_PATH=. \
         NDK_LIBS_OUT=./libs \
         NDK_OUT=./obj \
