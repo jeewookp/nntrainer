@@ -182,14 +182,27 @@ cat > "$NNTR_CONFIG" <<EOF
 EOF
 
 if [ "$SKIP_QUANTIZE" = false ]; then
+    # Stamp file invalidates the Q4 bin when quantize params change.
+    # Q6_K is incompatible with Gemma4-E2B (hidden_size=1152 is not divisible
+    # by 256) and also conflicts with lmhead_dtype=Q4_0 when tie_word_embeddings
+    # is true, causing "tensor dimension mismatch" at runtime.  Use Q4_0 for
+    # the embedding so both dtypes match and block-alignment holds (1152/32=36).
+    QUANTIZE_PARAMS="fc=Q4_0,embd=Q4_0,lmhead=Q4_0"
+    QUANTIZE_STAMP="$MODEL_HOST_DIR/.nntr_quantize_stamp"
+    if [ "$(cat "$QUANTIZE_STAMP" 2>/dev/null)" != "$QUANTIZE_PARAMS" ]; then
+        rm -f "$Q4_BIN"
+        log_info "Quantize params changed — removing stale bin for re-quantization"
+    fi
+
     if [ ! -f "$Q4_BIN" ] || [ "$FP32_BIN" -nt "$Q4_BIN" ]; then
         log_info "Quantizing to Q4_0 (this may take a few minutes)..."
         "$QUANTIZE_BIN" "$MODEL_HOST_DIR" \
             --fc_dtype Q4_0 \
-            --embd_dtype Q6_K \
+            --embd_dtype Q4_0 \
             --lmhead_dtype Q4_0 \
             --output_bin nntr_gemma4_e2b_q40.bin \
             -o "$MODEL_HOST_DIR"
+        echo "$QUANTIZE_PARAMS" > "$QUANTIZE_STAMP"
         log_success "Quantized: $Q4_BIN ($(du -h "$Q4_BIN" | cut -f1))"
     else
         log_success "Q4_0 bin up to date"
@@ -201,7 +214,7 @@ if [ "$SKIP_QUANTIZE" = false ]; then
     "model_tensor_type": "Q4_0-FP32",
     "model_file_name": "nntr_gemma4_e2b_q40.bin",
     "fc_layer_dtype": "Q4_0",
-    "embedding_dtype": "Q6_K",
+    "embedding_dtype": "Q4_0",
     "lmhead_dtype": "Q4_0",
     "lora_rank": 0, "lora_alpha": 0, "lora_target": [],
     "bad_word_ids": [], "fsu": false, "fsu_lookahead": 2,
