@@ -261,16 +261,19 @@ adb push "$LIBS_DIR/nntrainer_causallm" "$DEVICE_INSTALL_DIR/"
 adb shell "chmod 755 $DEVICE_INSTALL_DIR/nntrainer_causallm"
 log_success "  nntrainer_causallm"
 
-# Push model files (skip if unchanged)
+# Push model files.
+# Use md5sum for correctness: file-size comparison silently misses same-size
+# edits (e.g. "Q6_K" -> "Q4_0" in nntr_config.json).
 push_if_changed() {
     local src="$1" dst="$2"
-    local hs=$(wc -c < "$src")
-    local ds=$(adb shell "wc -c < $dst 2>/dev/null || echo 0" | tr -d '[:space:]')
-    if [ "$hs" != "$ds" ]; then
-        log_info "  Pushing $(basename $src) ($(du -h "$src" | cut -f1))..."
+    local h_md5 d_md5
+    h_md5=$(md5sum "$src" | cut -d' ' -f1)
+    d_md5=$(adb shell "md5sum '$dst' 2>/dev/null" | awk '{print $1}' | tr -d '[:space:]')
+    if [ "$h_md5" != "$d_md5" ]; then
+        log_info "  Pushing $(basename "$src") ($(du -h "$src" | cut -f1))..."
         adb push "$src" "$dst"
     fi
-    log_success "  $(basename $src)"
+    log_success "  $(basename "$src")"
 }
 
 push_if_changed "$PUSH_BIN"     "$DEVICE_MODEL_DIR/$PUSH_BIN_NAME"
