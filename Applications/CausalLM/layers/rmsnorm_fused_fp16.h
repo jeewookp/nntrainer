@@ -113,7 +113,8 @@ static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
   }
 }
 
-} // namespace causallm
 #endif // ENABLE_FP16
+
+} // namespace causallm
 
 #endif // CAUSALLM_RMSNORM_FUSED_FP16_H
