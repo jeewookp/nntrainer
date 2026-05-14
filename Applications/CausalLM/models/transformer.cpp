@@ -108,9 +108,10 @@ void Transformer::setupParameters(json &cfg, json &generation_cfg,
   EMBEDDING_DTYPE = nntr_cfg["embedding_dtype"];
   FC_LAYER_DTYPE = nntr_cfg["fc_layer_dtype"];
 
-  if (cfg.contains("is_causal")) {
+  if (cfg.contains("is_causal") && !cfg["is_causal"].is_null()) {
     IS_CAUSAL = cfg["is_causal"].get<bool>();
-  } else if (cfg.contains("use_bidirectional_attention")) {
+  } else if (cfg.contains("use_bidirectional_attention") &&
+             !cfg["use_bidirectional_attention"].is_null()) {
     IS_CAUSAL = !cfg["use_bidirectional_attention"].get<bool>();
   }
 
