@@ -237,6 +237,7 @@ namespace {
 /// then convert them into the channel-wise int4 layout in the tensor's
 /// already-attached SVM destination buffer. Used by both kai_to_int4
 /// overloads to share the conversion logic.
+#ifdef ENABLE_FP16
 void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
                                          size_t n, size_t k) {
   uint8_t *dst_bytes = weight.getData<uint8_t>();
@@ -255,6 +256,7 @@ void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
   Int4Utils::convertKaiToChannelwise(kai_buf, n, k, KAI_DEFAULT_IDX_VARIANT,
                                      out_data, out_scales);
 }
+#endif // ENABLE_FP16
 
 } // namespace
 
