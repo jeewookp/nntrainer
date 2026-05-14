@@ -35,17 +35,19 @@ json &Gemma4Transformer::sanitizeConfig(json &cfg) {
         cfg[k] = v;
     }
   }
-  if (!cfg.contains("tie_word_embeddings"))
+  if (!cfg.contains("tie_word_embeddings") || cfg["tie_word_embeddings"].is_null())
     cfg["tie_word_embeddings"] = true;
   // Ensure rope_theta is present (required by Transformer::setupParameters)
-  if (!cfg.contains("rope_theta")) {
+  if (!cfg.contains("rope_theta") || cfg["rope_theta"].is_null()) {
     // Local/sliding attention default
     cfg["rope_theta"] = 10000;
   }
   // Generate layer_types if not present (every sliding_window_pattern-th is global)
   if (!cfg.contains("layer_types") || cfg["layer_types"].is_null()) {
-    const int n = cfg.value("num_hidden_layers", 30);
-    const int pat = cfg.value("sliding_window_pattern", 6);
+    const int n = (cfg.contains("num_hidden_layers") && !cfg["num_hidden_layers"].is_null())
+                    ? cfg["num_hidden_layers"].get<int>() : 30;
+    const int pat = (cfg.contains("sliding_window_pattern") && !cfg["sliding_window_pattern"].is_null())
+                      ? cfg["sliding_window_pattern"].get<int>() : 6;
     std::vector<std::string> types;
     for (int i = 0; i < n; ++i) {
       bool is_global = ((i + 1) % pat == 0);
