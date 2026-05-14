@@ -319,7 +319,8 @@ void TieWordEmbedding::incremental_forwarding_embedding(
     nntrainer::TensorDim({1, 1, 1, out_dim}, hidden_.getTensorType());
 
   if (!(weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K ||
-        weight.getDataType() == nntrainer::TensorDim::DataType::FP32))
+        weight.getDataType() == nntrainer::TensorDim::DataType::FP32 ||
+        weight.getDataType() == nntrainer::TensorDim::DataType::Q4_0))
     throw std::invalid_argument(
       "Tieword embedding is not supported yet for the data type");
 
@@ -431,6 +432,24 @@ void TieWordEmbedding::incremental_forwarding_embedding(
             weight_row, tmp_fp32.getData<float>(), out_dim);
           out_tensor.copyData(tmp_fp32);
         }
+        }
+      } else if (weight.getDataType() == nntrainer::TensorDim::DataType::Q4_0) {
+        int num_blocks_per_row = (weight.width() + 32 - 1) / 32;
+        const void *weight_row =
+          (void *)((char *)weight.getData<uint8_t>() +
+                   (18 * num_blocks_per_row) * embed_idx);
+        if (out_tensor.getDataType() == nntrainer::TensorDim::DataType::FP32) {
+          nntrainer::dequantize_row_q4_0(weight_row, out_tensor.getData<float>(),
+                                         out_dim);
+        } else {
+          nntrainer::Tensor tmp_fp32(
+            nntrainer::TensorDim(
+              {1, 1, 1, out_dim},
+              {hidden_.getFormat(), nntrainer::TensorDim::DataType::FP32}),
+            /*alloc_now=*/true);
+          nntrainer::dequantize_row_q4_0(weight_row,
+                                          tmp_fp32.getData<float>(), out_dim);
+          out_tensor.copyData(tmp_fp32);
         }
       } else {
         out_tensor.copyData(cur_weight);
