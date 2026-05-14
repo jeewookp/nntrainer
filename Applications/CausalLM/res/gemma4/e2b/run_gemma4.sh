@@ -74,7 +74,19 @@ export NNTRAINER_ROOT
 cd "$CAUSALLM_DIR/jni"
 
 # Android NDK build
-if [ "$FORCE_BUILD" = true ] || [ ! -f "$LIBS_DIR/nntrainer_causallm" ]; then
+BUILT_LIB="$LIBS_DIR/libcausallm_core.so"
+NEEDS_NDK_BUILD=false
+if [ "$FORCE_BUILD" = true ]; then
+    NEEDS_NDK_BUILD=true
+elif [ ! -f "$LIBS_DIR/nntrainer_causallm" ] || [ ! -f "$BUILT_LIB" ]; then
+    NEEDS_NDK_BUILD=true
+elif find "$CAUSALLM_DIR" \( -name "*.cpp" -o -name "*.h" -o -name "Android.mk" \) \
+        -newer "$BUILT_LIB" | grep -q .; then
+    log_info "Source files changed, rebuilding Android binary..."
+    NEEDS_NDK_BUILD=true
+fi
+
+if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
     ndk-build \
         NDK_PROJECT_PATH=. \
