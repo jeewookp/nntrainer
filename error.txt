@@ -1,17 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 19, done.
-remote: Counting objects: 100% (19/19), done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 10 (delta 8), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (10/10), 2.39 KiB | 611.00 KiB/s, done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.87 KiB | 478.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   9de08244..b80fbd76  all_gpu    -> upstream/all_gpu
-Updating 9de08244..b80fbd76
+   c4da6f56..39ed98c9  all_gpu    -> upstream/all_gpu
+Updating c4da6f56..39ed98c9
 Fast-forward
- Applications/CausalLM/models/transformer.cpp       | 48 ++++++++++++++++++++++++++++++++++++++++++------
- Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh |  2 +-
- 2 files changed, 43 insertions(+), 7 deletions(-)
+ Applications/CausalLM/models/transformer.cpp | 60 +++++++++++++++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 51 insertions(+), 9 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -31,7 +30,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [INFO] Source files changed, rebuilding Android binary...
 [INFO] Building Android binary...
 [arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:18:
+In file included from ./../models/transformer.cpp:24:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
@@ -71,18 +70,16 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.0 MB/s (50294496 bytes in 1.455s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (50298760 bytes in 1.449s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.5 MB/s (11446824 bytes in 0.336s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 31.9 MB/s (11446824 bytes in 0.342s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.2 MB/s (129304 bytes in 0.006s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.7 MB/s (129304 bytes in 0.007s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.4 MB/s (4111664 bytes in 0.121s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.7 MB/s (4111664 bytes in 0.124s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
-[INFO]   Pushing nntr_config.json (4.0K)...
-/home/jwhero94/models/gemma4/nntr_config.json: 1 file pushed. 0.2 MB/s (536 bytes in 0.002s)
 [OK]   nntr_config.json
 [OK]   config.json
 [OK]   generation_config.json
@@ -95,6 +92,46 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.35 Compiler E031.47.18.28" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
 [CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
 [DIAG] initialize done
+[DIAG] load_weight: file=10606484620 bytes
+[DIAG] load_weight: 216 MB loaded
+[DIAG] load_weight: 472 MB loaded
+[DIAG] load_weight: 755 MB loaded
+[DIAG] load_weight: 772 MB loaded
+[DIAG] load_weight: 1038 MB loaded
+[DIAG] load_weight: 1321 MB loaded
+[DIAG] load_weight: 1605 MB loaded
+[DIAG] load_weight: 1888 MB loaded
+[DIAG] load_weight: 2171 MB loaded
+[DIAG] load_weight: 2176 MB loaded
+[DIAG] load_weight: 2455 MB loaded
+[DIAG] load_weight: 2738 MB loaded
+[DIAG] load_weight: 3021 MB loaded
+[DIAG] load_weight: 3305 MB loaded
+[DIAG] load_weight: 3332 MB loaded
+[DIAG] load_weight: 3588 MB loaded
+[DIAG] load_weight: 3871 MB loaded
+[DIAG] load_weight: 4155 MB loaded
+[DIAG] load_weight: 4438 MB loaded
+[DIAG] load_weight: 4721 MB loaded
+[DIAG] load_weight: 4738 MB loaded
+[DIAG] load_weight: 5004 MB loaded
+[DIAG] load_weight: 5286 MB loaded
+[DIAG] load_weight: 5569 MB loaded
+[DIAG] load_weight: 5851 MB loaded
+[DIAG] load_weight: 6134 MB loaded
+[DIAG] load_weight: 6145 MB loaded
+[DIAG] load_weight: 6416 MB loaded
+[DIAG] load_weight: 6699 MB loaded
+[DIAG] load_weight: 6981 MB loaded
+[DIAG] load_weight: 7263 MB loaded
+[DIAG] load_weight: 7546 MB loaded
+[DIAG] load_weight: 7554 MB loaded
+[DIAG] load_weight: 7828 MB loaded
+[DIAG] load_weight: 8111 MB loaded
+[DIAG] load_weight: 8393 MB loaded
+[DIAG] load_weight: 8676 MB loaded
+[DIAG] load_weight: 8958 MB loaded
+[DIAG] load_weight: 8960 MB loaded
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
