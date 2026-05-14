@@ -1,17 +1,28 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 8 (delta 6), reused 8 (delta 6), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.58 KiB | 62.00 KiB/s, done.
+remote: Enumerating objects: 23, done.
+remote: Counting objects: 100% (23/23), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 16 (delta 12), reused 14 (delta 10), pack-reused 0 (from 0)
+Unpacking objects: 100% (16/16), 2.13 KiB | 181.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   d805586d..601ec0c8  all_gpu    -> upstream/all_gpu
-Updating d805586d..601ec0c8
+   8fe5b776..8771e572  all_gpu    -> upstream/all_gpu
+Updating 8fe5b776..8771e572
 Fast-forward
- Applications/CausalLM/jni/Android.mk       |  3 +--
- Applications/CausalLM/models/causal_lm.cpp | 28 ++++++++++++++++++++++++----
- 2 files changed, 25 insertions(+), 6 deletions(-)
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 3 +++
+ 1 file changed, 3 insertions(+)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+Already up to date.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+Already up to date.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+Already up to date.
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -43,7 +54,7 @@ make: Nothing to be done for 'causallm_core'.
 [OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[3/4] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
+ninja: no work to do.
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -52,9 +63,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 
 [Step 4/5] Push to device
 ──────────────────────
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (47487312 bytes in 1.390s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.7 MB/s (47487312 bytes in 1.383s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.0 MB/s (3960072 bytes in 0.122s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.7 MB/s (3960072 bytes in 0.115s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
