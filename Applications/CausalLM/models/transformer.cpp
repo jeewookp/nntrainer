@@ -132,9 +132,19 @@ void Transformer::setupParameters(json &cfg, json &generation_cfg,
   SLIDING_WINDOW_PATTERN = cfg.contains("sliding_window_pattern")
                              ? cfg["sliding_window_pattern"].get<unsigned int>()
                              : 1;
-  MAX_POSITION_EMBEDDINGS = cfg["max_position_embeddings"].get<unsigned int>();
-  ROPE_THETA = cfg["rope_theta"].get<unsigned int>();
-  TIE_WORD_EMBEDDINGS = cfg["tie_word_embeddings"].get<bool>();
+  MAX_POSITION_EMBEDDINGS =
+    (cfg.contains("max_position_embeddings") &&
+     !cfg["max_position_embeddings"].is_null())
+      ? cfg["max_position_embeddings"].get<unsigned int>()
+      : 4096;
+  ROPE_THETA =
+    (cfg.contains("rope_theta") && !cfg["rope_theta"].is_null())
+      ? cfg["rope_theta"].get<unsigned int>()
+      : 10000;
+  TIE_WORD_EMBEDDINGS =
+    (cfg.contains("tie_word_embeddings") && !cfg["tie_word_embeddings"].is_null())
+      ? cfg["tie_word_embeddings"].get<bool>()
+      : true;
   NORM_EPS = cfg["rms_norm_eps"];
   GQA_SIZE = NUM_HEADS / NUM_KEY_VALUE_HEADS;
 
