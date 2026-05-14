@@ -260,6 +260,10 @@ void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
 
 void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
                             size_t start_offset, bool read_from_offset) {
+#ifndef ENABLE_FP16
+  NNTR_THROW_IF(true, std::runtime_error)
+    << "kai_to_int4 requires ENABLE_FP16";
+#else
   attach_kai_buffer(weight);
 
   const size_t n = weight.width();
@@ -284,10 +288,15 @@ void Int4Utils::kai_to_int4(Tensor &weight, std::ifstream &file,
               start_offset, read_from_offset);
 
   read_and_convert_kai_to_channelwise(weight, kai_buf.data(), n, k);
+#endif // ENABLE_FP16
 }
 
 void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
                             bool read_from_offset) {
+#ifndef ENABLE_FP16
+  NNTR_THROW_IF(true, std::runtime_error)
+    << "kai_to_int4 requires ENABLE_FP16";
+#else
   attach_kai_buffer(weight);
 
   const size_t n = weight.width();
@@ -311,6 +320,7 @@ void Int4Utils::kai_to_int4(Tensor &weight, ReadSource src, size_t start_offset,
               start_offset, read_from_offset);
 
   read_and_convert_kai_to_channelwise(weight, kai_buf.data(), n, k);
+#endif // ENABLE_FP16
 }
 
 float Int4Utils::computeScaleForGroup(const float *group_weights,

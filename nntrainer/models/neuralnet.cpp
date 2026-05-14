@@ -729,9 +729,11 @@ void NeuralNetwork::load(const std::string &file_path,
       /// per-weight size here. Layer::read's QINT4 special-case will read
       /// exactly this many bytes via Int4Utils::kai_to_int4.
       if (tensor_data_type == TensorDim::DataType::QINT4) {
+#ifdef ENABLE_FP16
         size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
           weight->getVariable().width(), weight->getVariable().height(),
           /*idx_variant=*/3, /*transB=*/true);
+#endif
       }
 
       weight->getVariableRef().setFileOffset(start_from);
