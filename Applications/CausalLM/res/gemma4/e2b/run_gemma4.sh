@@ -217,7 +217,7 @@ if [ "$SKIP_QUANTIZE" = false ]; then
     "embedding_dtype": "Q4_0",
     "lmhead_dtype": "Q4_0",
     "lora_rank": 0, "lora_alpha": 0, "lora_target": [],
-    "bad_word_ids": [], "fsu": false, "fsu_lookahead": 2,
+    "bad_word_ids": [], "fsu": true, "fsu_lookahead": 2,
     "num_to_generate": 128, "init_seq_len": 128, "max_seq_len": 256,
     "batch_size": 1,
     "tokenizer_file": "${DEVICE_MODEL_DIR}/tokenizer.json",
