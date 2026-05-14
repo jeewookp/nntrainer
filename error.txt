@@ -1,77 +1,54 @@
-    layer5_ffn_gate -> Q4_0
-    layer5_ffn_up -> Q4_0
-    layer5_wk -> Q4_0
-    layer5_wq -> Q4_0
-    layer5_wv -> Q4_0
-    layer6_attention_out -> Q4_0
-    layer6_ffn_down -> Q4_0
-    layer6_ffn_gate -> Q4_0
-    layer6_ffn_up -> Q4_0
-    layer6_wk -> Q4_0
-    layer6_wq -> Q4_0
-    layer6_wv -> Q4_0
-    layer7_attention_out -> Q4_0
-    layer7_ffn_down -> Q4_0
-    layer7_ffn_gate -> Q4_0
-    layer7_ffn_up -> Q4_0
-    layer7_wk -> Q4_0
-    layer7_wq -> Q4_0
-    layer7_wv -> Q4_0
-    layer8_attention_out -> Q4_0
-    layer8_ffn_down -> Q4_0
-    layer8_ffn_gate -> Q4_0
-    layer8_ffn_up -> Q4_0
-    layer8_wk -> Q4_0
-    layer8_wq -> Q4_0
-    layer8_wv -> Q4_0
-    layer9_attention_out -> Q4_0
-    layer9_ffn_down -> Q4_0
-    layer9_ffn_gate -> Q4_0
-    layer9_ffn_up -> Q4_0
-    layer9_wk -> Q4_0
-    layer9_wq -> Q4_0
-    layer9_wv -> Q4_0
-    output_of_causallm -> Q4_0
-  Source size:  19192 MB
-  Output size:  10214 MB
-  Compression:  53.2%
-[5/5] Generating nntr_config.json...
-  Config saved to: /home/jwhero94/models/gemma4/nntr_config_quantized.json
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.56 KiB | 533.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   a54eb289..4029d24e  all_gpu    -> upstream/all_gpu
+Updating a54eb289..4029d24e
+Fast-forward
+ Applications/CausalLM/jni/Android.mk |  1 +
+ Applications/CausalLM/svm_compat.cpp | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 29 insertions(+)
+ create mode 100644 Applications/CausalLM/svm_compat.cpp
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
 
-==========================================================
-  Quantization complete!
-==========================================================
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY205ZMND
+[OK] Model files found
 
-To run the quantized model:
-  1. Rename nntr_config_quantized.json to nntr_config.json
-  2. nntr_causallm /home/jwhero94/models/gemma4
-[OK] Quantized: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin (10G)
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] Building nntr_quantize (Linux x86)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+ninja: no work to do.
+[OK] nntr_quantize built
+
+[Step 3/5] Quantize (FP32 → Q4_0)
+──────────────────────
+[OK] Q4_0 bin up to date
 
 [Step 4/5] Push to device
 ──────────────────────
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.0 MB/s (47487312 bytes in 1.372s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.9 MB/s (47487312 bytes in 1.378s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.0 MB/s (3960072 bytes in 0.118s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960072 bytes in 0.117s)
 [OK]   nntrainer_causallm
-/system/bin/sh: can't open /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin: No such file or directory
-[INFO]   Pushing nntr_gemma4_e2b_q40.bin (10G)...
-/home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin: 1 file pushed. 33.2 MB/s (10710293644 bytes in 307.488s)
 [OK]   nntr_gemma4_e2b_q40.bin
-/system/bin/sh: can't open /data/local/tmp/nntrainer/causallm/models/gemma4/tokenizer.json: No such file or directory
-[INFO]   Pushing tokenizer.json (31M)...
-/home/jwhero94/models/gemma4/tokenizer.json: 1 file pushed. 32.5 MB/s (32170070 bytes in 0.945s)
 [OK]   tokenizer.json
-/system/bin/sh: can't open /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_config.json: No such file or directory
-[INFO]   Pushing nntr_config.json (4.0K)...
-/home/jwhero94/models/gemma4/nntr_config.json: 1 file pushed. 0.1 MB/s (536 bytes in 0.005s)
 [OK]   nntr_config.json
-/system/bin/sh: can't open /data/local/tmp/nntrainer/causallm/models/gemma4/config.json: No such file or directory
-[INFO]   Pushing config.json (8.0K)...
-/home/jwhero94/models/gemma4/config.json: 1 file pushed. 1.2 MB/s (4914 bytes in 0.004s)
 [OK]   config.json
-/system/bin/sh: can't open /data/local/tmp/nntrainer/causallm/models/gemma4/generation_config.json: No such file or directory
-[INFO]   Pushing generation_config.json (4.0K)...
-/home/jwhero94/models/gemma4/generation_config.json: 1 file pushed. 0.0 MB/s (181 bytes in 0.005s)
 [OK]   generation_config.json
 
 [Step 5/5] Run on device
@@ -79,4 +56,3 @@ To run the quantized model:
 ── Output ──────────────────────────────────────
 CANNOT LINK EXECUTABLE "./nntrainer_causallm": cannot locate symbol "_ZN9nntrainer14svm_alloc_intsEi" referenced by "/data/local/tmp/nntrainer/causallm/libcausallm_core.so"...
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
