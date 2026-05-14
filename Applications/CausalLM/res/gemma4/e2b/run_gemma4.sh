@@ -286,12 +286,15 @@ push_if_changed "$CONFIG_JSON"  "$DEVICE_MODEL_DIR/config.json"
 log_step 5 "Run on device"
 
 echo -e "${YELLOW}── Output ──────────────────────────────────────${NC}"
+set +e
 adb shell "cd $DEVICE_INSTALL_DIR && \
     export LD_LIBRARY_PATH=$DEVICE_INSTALL_DIR:\$LD_LIBRARY_PATH && \
     export OMP_NUM_THREADS=4 && \
     export NNTRAINER_ASYNC_PIPELINE=1 && \
-    ./nntrainer_causallm $DEVICE_MODEL_DIR '$PROMPT'" 2>&1
-EXIT=$?
+    ./nntrainer_causallm $DEVICE_MODEL_DIR '$PROMPT'; echo \"[EXIT] \$?\"" 2>&1
+ADB_EXIT=$?
+set -e
 echo -e "${YELLOW}────────────────────────────────────────────────${NC}"
+log_info "adb shell exit: $ADB_EXIT"
 
-[ $EXIT -eq 0 ] && log_success "Done!" || { log_error "Failed (exit $EXIT)"; exit $EXIT; }
+[ $ADB_EXIT -eq 0 ] && log_success "Done!" || { log_error "Failed (adb exit $ADB_EXIT)"; exit $ADB_EXIT; }

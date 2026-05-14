@@ -288,7 +288,9 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     model->initialize();
+    std::fprintf(stderr, "[DIAG] initialize done\n"); std::fflush(stderr);
     model->load_weight(weight_file);
+    std::fprintf(stderr, "[DIAG] load_weight done\n"); std::fflush(stderr);
 
     bool do_sample = generation_cfg.value("do_sample", false);
 
