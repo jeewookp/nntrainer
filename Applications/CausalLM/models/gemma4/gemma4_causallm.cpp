@@ -27,11 +27,14 @@ namespace causallm {
 // ---------------------------------------------------------------------------
 
 json &Gemma4Transformer::sanitizeConfig(json &cfg) {
-  // Gemma4 HuggingFace config nests fields under "text_config".
-  // Promote non-null values to top level so all downstream code finds them.
+  // Gemma4ForConditionalGeneration (VLM) nests text model fields under
+  // "text_config".  Always override with text_config values so we use the
+  // text-only vocabulary size (not the larger combined VLM vocabulary that
+  // includes image tokens).  For text-only Gemma4ForCausalLM configs there
+  // is no text_config, so this block is a no-op.
   if (cfg.contains("text_config") && cfg["text_config"].is_object()) {
     for (auto &[k, v] : cfg["text_config"].items()) {
-      if (!v.is_null() && (!cfg.contains(k) || cfg[k].is_null()))
+      if (!v.is_null())
         cfg[k] = v;
     }
   }
