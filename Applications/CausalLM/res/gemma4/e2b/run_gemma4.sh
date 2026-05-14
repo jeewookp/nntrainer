@@ -94,37 +94,33 @@ fi
 QUANTIZE_BUILDDIR="$NNTRAINER_ROOT/builddir_quantize"
 QUANTIZE_BIN="$QUANTIZE_BUILDDIR/Applications/CausalLM/nntr_quantize"
 if [ "$SKIP_QUANTIZE" = false ]; then
-    if [ "$FORCE_BUILD" = true ] || [ ! -f "$QUANTIZE_BIN" ]; then
-        log_info "Building nntr_quantize (Linux x86)..."
-        cd "$NNTRAINER_ROOT"
-        # Stamp file records the exact options; delete builddir if stale
-        OPTS_STAMP="arm-arch=none;enable-fp16=false;enable-opencl=false;enable-transformer=true"
-        OPTS_FILE="$QUANTIZE_BUILDDIR/.nntr_quantize_opts"
-        if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILDDIR" ]; then
+    log_info "Building nntr_quantize (Linux x86)..."
+    cd "$NNTRAINER_ROOT"
+    # Stamp file records the exact options; delete builddir if stale
+    OPTS_STAMP="arm-arch=none;enable-fp16=false;enable-opencl=false;enable-transformer=true"
+    OPTS_FILE="$QUANTIZE_BUILDDIR/.nntr_quantize_opts"
+    if [ "$FORCE_BUILD" = true ] && [ -d "$QUANTIZE_BUILDDIR" ]; then
+        rm -rf "$QUANTIZE_BUILDDIR"
+    elif [ -d "$QUANTIZE_BUILDDIR" ]; then
+        if [ ! -f "$OPTS_FILE" ] || [ "$(cat "$OPTS_FILE" 2>/dev/null)" != "$OPTS_STAMP" ]; then
+            log_warning "builddir_quantize has stale settings, cleaning..."
             rm -rf "$QUANTIZE_BUILDDIR"
-        elif [ -d "$QUANTIZE_BUILDDIR" ]; then
-            if [ ! -f "$OPTS_FILE" ] || [ "$(cat "$OPTS_FILE" 2>/dev/null)" != "$OPTS_STAMP" ]; then
-                log_warning "builddir_quantize has stale settings, cleaning..."
-                rm -rf "$QUANTIZE_BUILDDIR"
-            fi
         fi
-        if [ ! -f "$QUANTIZE_BUILDDIR/build.ninja" ]; then
-            meson setup "$QUANTIZE_BUILDDIR" \
-                -Dplatform=none \
-                -Denable-app=true \
-                -Denable-transformer=true \
-                -Denable-fp16=false \
-                -Denable-opencl=false \
-                -Darm-arch=none
-            echo "$OPTS_STAMP" > "$OPTS_FILE"
-        fi
-        if ! meson compile -C "$QUANTIZE_BUILDDIR" nntr_quantize; then
-            log_error "nntr_quantize build failed"; exit 1
-        fi
-        log_success "nntr_quantize built"
-    else
-        log_success "nntr_quantize up to date"
     fi
+    if [ ! -f "$QUANTIZE_BUILDDIR/build.ninja" ]; then
+        meson setup "$QUANTIZE_BUILDDIR" \
+            -Dplatform=none \
+            -Denable-app=true \
+            -Denable-transformer=true \
+            -Denable-fp16=false \
+            -Denable-opencl=false \
+            -Darm-arch=none
+        echo "$OPTS_STAMP" > "$OPTS_FILE"
+    fi
+    if ! meson compile -C "$QUANTIZE_BUILDDIR" nntr_quantize; then
+        log_error "nntr_quantize build failed"; exit 1
+    fi
+    log_success "nntr_quantize built"
 fi
 
 # ── Step 3: Quantize to INT4 ───────────────────────────────────────────────
