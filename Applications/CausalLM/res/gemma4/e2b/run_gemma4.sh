@@ -88,6 +88,8 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
+    # Force recompile of causallm_core objects to pick up source changes
+    rm -rf "$CAUSALLM_DIR/obj/local/arm64-v8a/objs/causallm_core/"
     ndk-build \
         NDK_PROJECT_PATH=. \
         NDK_LIBS_OUT=./libs \
