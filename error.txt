@@ -1,17 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 13, done.
-remote: Counting objects: 100% (13/13), done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 1.26 KiB | 99.00 KiB/s, done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 853 bytes | 106.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   84d55dc0..063f624b  all_gpu    -> upstream/all_gpu
-Updating 84d55dc0..063f624b
+   4228fdf3..3728f281  all_gpu    -> upstream/all_gpu
+Updating 4228fdf3..3728f281
 Fast-forward
- nntrainer/models/neuralnet.cpp  |  2 ++
- nntrainer/tensor/int4_utils.cpp | 10 ++++++++++
- 2 files changed, 12 insertions(+)
+ nntrainer/tensor/int4_utils.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -31,14 +30,164 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[18/120] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o
-FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o 
-c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:240:6: error: ‘void nntrainer::{anonymous}::read_and_convert_kai_to_channelwise(nntrainer::Tensor&, const uint8_t*, size_t, size_t)’ defined but not used [-Werror=unused-function]
-  240 | void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
-      |      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cc1plus: all warnings being treated as errors
-[43/120] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o
+[5/78] Compiling C++ object Applications/CausalLM/layers/libtie_word_embedding_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_tie_word_embedding.cpp.o
+FAILED: Applications/CausalLM/layers/libtie_word_embedding_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_tie_word_embedding.cpp.o 
+c++ -IApplications/CausalLM/layers/libtie_word_embedding_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libtie_word_embedding_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_tie_word_embedding.cpp.o -MF Applications/CausalLM/layers/libtie_word_embedding_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_tie_word_embedding.cpp.o.d -o Applications/CausalLM/layers/libtie_word_embedding_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_tie_word_embedding.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/tie_word_embedding.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/tie_word_embedding.cpp: In member function ‘void causallm::TieWordEmbedding::incremental_forwarding_lmhead(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/tie_word_embedding.cpp:681:13: error: ‘_FP16’ does not name a type
+  681 |       const _FP16 *logits_fp16 = hidden_step.getData<_FP16>();
+      |             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/tie_word_embedding.cpp:684:12: error: ‘logits_fp16’ was not declared in this scope
+  684 |           &logits_fp16[v]);
+      |            ^~~~~~~~~~~
+[6/78] Compiling C++ object Applications/CausalLM/layers/libple_block_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_ple_block.cpp.o
+FAILED: Applications/CausalLM/layers/libple_block_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_ple_block.cpp.o 
+c++ -IApplications/CausalLM/layers/libple_block_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libple_block_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_ple_block.cpp.o -MF Applications/CausalLM/layers/libple_block_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_ple_block.cpp.o.d -o Applications/CausalLM/layers/libple_block_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_ple_block.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:161:13: error: ‘_FP16’ does not name a type
+  161 |       const _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
+      |             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:163:25: error: ‘p’ was not declared in this scope
+  163 |         dst[i] = (float)p[i];
+      |                         ^
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp: In lambda function:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:172:7: error: ‘_FP16’ was not declared in this scope
+  172 |       _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
+      |       ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:172:14: error: ‘p’ was not declared in this scope
+  172 |       _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
+      |              ^
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:172:34: error: no matching function for call to ‘nntrainer::Tensor::getData<_FP16>()’
+  172 |       _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
+      |                  ~~~~~~~~~~~~~~~~^~
+In file included from ../nntrainer/layers/common_properties.h:23,
+                 from ../nntrainer/layers/layer_context.h:21,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/ple_block.cpp:24:
+../nntrainer/tensor/tensor.h:558:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData() const’
+  558 |   template <typename T = float> T *getData() const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:558:36: note:   template argument deduction/substitution failed:
+../nntrainer/tensor/tensor.h:566:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData(size_t) const’
+  566 |   template <typename T = float> T *getData(size_t idx) const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:566:36: note:   candidate expects 1 argument, 0 provided
+[7/78] Compiling C++ object Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o
+FAILED: Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o 
+c++ -IApplications/CausalLM/layers/libreshaped_rms_norm_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o -MF Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o.d -o Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp
+In file included from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:22:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:34:45: error: ‘_FP16’ does not name a type
+   34 | static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
+      |                                             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:35:39: error: ‘_FP16’ has not been declared
+   35 |                                       _FP16 *__restrict__ Y,
+      |                                       ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h: In function ‘void causallm::rmsnorm_fused_fp16(const int*, int*, const float*, std::size_t, std::size_t, float)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:41:11: error: ‘_FP16’ does not name a type
+   41 |     const _FP16 *rx = X + h * W;
+      |           ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:42:5: error: ‘_FP16’ was not declared in this scope
+   42 |     _FP16 *ry = Y + h * W;
+      |     ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:42:12: error: ‘ry’ was not declared in this scope
+   42 |     _FP16 *ry = Y + h * W;
+      |            ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:79:37: error: ‘rx’ was not declared in this scope
+   79 |       float xv = static_cast<float>(rx[w]);
+      |                                     ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:108:37: error: ‘rx’ was not declared in this scope
+  108 |       float xv = static_cast<float>(rx[w]);
+      |                                     ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:109:27: error: ‘_FP16’ does not name a type
+  109 |       ry[w] = static_cast<_FP16>(xv * inv_rms * gamma[w]);
+      |                           ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp: In member function ‘virtual void causallm::ReshapedRMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:198:13: error: ‘_FP16’ does not name a type
+  198 |       const _FP16 *in_ptr = in_step.getData<_FP16>();
+      |             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:199:7: error: ‘_FP16’ was not declared in this scope
+  199 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |       ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:199:14: error: ‘out_ptr’ was not declared in this scope
+  199 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |              ^~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:199:47: error: no matching function for call to ‘nntrainer::Tensor::getData<_FP16>()’
+  199 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |                        ~~~~~~~~~~~~~~~~~~~~~~~^~
+In file included from ../nntrainer/layers/common_properties.h:23,
+                 from ../nntrainer/layers/layer_context.h:21,
+                 from ../Applications/CausalLM/layers/reshaped_rms_norm.h:24,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:21:
+../nntrainer/tensor/tensor.h:558:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData() const’
+  558 |   template <typename T = float> T *getData() const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:558:36: note:   template argument deduction/substitution failed:
+../nntrainer/tensor/tensor.h:566:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData(size_t) const’
+  566 |   template <typename T = float> T *getData(size_t idx) const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:566:36: note:   candidate expects 1 argument, 0 provided
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:221:26: error: ‘in_ptr’ was not declared in this scope; did you mean ‘intptr_t’?
+  221 |       rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+      |                          ^~~~~~
+      |                          intptr_t
+[8/78] Compiling C++ object Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o
+FAILED: Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o 
+c++ -IApplications/CausalLM/layers/librms_norm_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o -MF Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o.d -o Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp
+In file included from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:25:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:34:45: error: ‘_FP16’ does not name a type
+   34 | static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
+      |                                             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:35:39: error: ‘_FP16’ has not been declared
+   35 |                                       _FP16 *__restrict__ Y,
+      |                                       ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h: In function ‘void causallm::rmsnorm_fused_fp16(const int*, int*, const float*, std::size_t, std::size_t, float)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:41:11: error: ‘_FP16’ does not name a type
+   41 |     const _FP16 *rx = X + h * W;
+      |           ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:42:5: error: ‘_FP16’ was not declared in this scope
+   42 |     _FP16 *ry = Y + h * W;
+      |     ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:42:12: error: ‘ry’ was not declared in this scope
+   42 |     _FP16 *ry = Y + h * W;
+      |            ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:79:37: error: ‘rx’ was not declared in this scope
+   79 |       float xv = static_cast<float>(rx[w]);
+      |                                     ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:108:37: error: ‘rx’ was not declared in this scope
+  108 |       float xv = static_cast<float>(rx[w]);
+      |                                     ^~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:109:27: error: ‘_FP16’ does not name a type
+  109 |       ry[w] = static_cast<_FP16>(xv * inv_rms * gamma[w]);
+      |                           ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp: In member function ‘virtual void causallm::RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:225:13: error: ‘_FP16’ does not name a type
+  225 |       const _FP16 *in_ptr = in_step.getData<_FP16>();
+      |             ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:226:7: error: ‘_FP16’ was not declared in this scope
+  226 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |       ^~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:226:14: error: ‘out_ptr’ was not declared in this scope
+  226 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |              ^~~~~~~
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:226:47: error: no matching function for call to ‘nntrainer::Tensor::getData<_FP16>()’
+  226 |       _FP16 *out_ptr = out_step.getData<_FP16>();
+      |                        ~~~~~~~~~~~~~~~~~~~~~~~^~
+In file included from ../nntrainer/layers/common_properties.h:23,
+                 from ../nntrainer/layers/layer_context.h:21,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.h:24,
+                 from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:24:
+../nntrainer/tensor/tensor.h:558:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData() const’
+  558 |   template <typename T = float> T *getData() const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:558:36: note:   template argument deduction/substitution failed:
+../nntrainer/tensor/tensor.h:566:36: note: candidate: ‘template<class T> T* nntrainer::Tensor::getData(size_t) const’
+  566 |   template <typename T = float> T *getData(size_t idx) const {
+      |                                    ^~~~~~~
+../nntrainer/tensor/tensor.h:566:36: note:   candidate expects 1 argument, 0 provided
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:302:26: error: ‘in_ptr’ was not declared in this scope; did you mean ‘intptr_t’?
+  302 |       rmsnorm_fused_fp16(in_ptr, out_ptr, gamma_ptr, H_rows, W,
+      |                          ^~~~~~
+      |                          intptr_t
+[30/78] Compiling C++ object Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_sentence_transformer.cpp.o
 ninja: build stopped: subcommand failed.
 [ERROR] nntr_quantize build failed
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
