@@ -1,3 +1,23 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.26 KiB | 99.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   84d55dc0..063f624b  all_gpu    -> upstream/all_gpu
+Updating 84d55dc0..063f624b
+Fast-forward
+ nntrainer/models/neuralnet.cpp  |  2 ++
+ nntrainer/tensor/int4_utils.cpp | 10 ++++++++++
+ 2 files changed, 12 insertions(+)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
 [INFO] Prompt     : Explain artificial intelligence briefly
 [INFO] Quantize   : Q4_0
 
@@ -10,130 +30,15 @@
 ──────────────────────
 [OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
-[WARN] builddir_quantize has stale settings, cleaning...
-The Meson build system
-Version: 0.61.2
-Source dir: /home/jwhero94/projects/nntrainer
-Build dir: /home/jwhero94/projects/nntrainer/builddir_quantize
-Build type: native build
-Project name: nntrainer
-Project version: 0.6.0
-C compiler for the host machine: cc (gcc 13.1.0 "cc (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
-C linker for the host machine: cc ld.bfd 2.38
-C++ compiler for the host machine: c++ (gcc 13.1.0 "c++ (Ubuntu 13.1.0-8ubuntu1~22.04) 13.1.0")
-C++ linker for the host machine: c++ ld.bfd 2.38
-Host machine cpu family: x86_64
-Host machine cpu: x86_64
-Program powershell found: NO
-Program nproc found: YES (/usr/bin/nproc)
-Program cmd.exe found: NO
-Message: Build for X86 architecture
-Message: -march=native added for AVX hardware acceleration.
-Message: MMAP enabled
-Message: OpenCL kernel path set to: nntrainer_opencl_kernels
-Compiler for C supports arguments -Wredundant-decls: YES 
-Compiler for C++ supports arguments -Wredundant-decls: YES 
-Compiler for C supports arguments -Wwrite-strings: YES 
-Compiler for C++ supports arguments -Wwrite-strings: YES 
-Compiler for C supports arguments -Wformat: YES 
-Compiler for C++ supports arguments -Wformat: YES 
-Compiler for C supports arguments -Wformat-nonliteral: YES 
-Compiler for C++ supports arguments -Wformat-nonliteral: YES 
-Compiler for C supports arguments -Wformat-security: YES 
-Compiler for C++ supports arguments -Wformat-security: YES 
-Compiler for C supports arguments -Winit-self: YES 
-Compiler for C++ supports arguments -Winit-self: YES 
-Compiler for C supports arguments -Waddress: YES 
-Compiler for C++ supports arguments -Waddress: YES 
-Compiler for C supports arguments -Wvla: YES 
-Compiler for C++ supports arguments -Wvla: YES 
-Compiler for C supports arguments -Wpointer-arith: YES 
-Compiler for C++ supports arguments -Wpointer-arith: YES 
-Compiler for C supports arguments -Wno-error=varargs: YES 
-Compiler for C++ supports arguments -Wno-error=varargs: YES 
-Compiler for C supports arguments -Wno-error=ignored-attributes: YES 
-Compiler for C++ supports arguments -Wno-error=ignored-attributes: YES 
-Compiler for C supports arguments -Wno-error=sign-compare: YES 
-Compiler for C++ supports arguments -Wno-error=sign-compare: YES 
-Compiler for C supports arguments -Wdefaulted-function-deleted: NO 
-Compiler for C++ supports arguments -Wdefaulted-function-deleted: NO 
-Compiler for C supports arguments -ftree-vectorize: YES 
-Compiler for C++ supports arguments -ftree-vectorize: YES 
-Compiler for C supports arguments -Wno-unused-variable: YES 
-Compiler for C++ supports arguments -Wno-unused-variable: YES 
-Compiler for C supports arguments -Wno-comment: YES 
-Compiler for C++ supports arguments -Wno-comment: YES 
-Compiler for C supports arguments -Wno-ignored-attributes: YES 
-Compiler for C++ supports arguments -Wno-ignored-attributes: YES 
-Compiler for C supports arguments -Wno-sign-compare: YES 
-Compiler for C++ supports arguments -Wno-sign-compare: YES 
-Compiler for C supports arguments -Wno-maybe-uninitialized: YES 
-Compiler for C++ supports arguments -Wno-maybe-uninitialized: YES 
-Compiler for C supports arguments -Wmissing-declarations: YES 
-Compiler for C supports arguments -Wmissing-include-dirs: YES 
-Compiler for C supports arguments -Wmissing-prototypes: YES 
-Compiler for C supports arguments -Wnested-externs: YES 
-Compiler for C supports arguments -Waggregate-return: YES 
-Compiler for C supports arguments -Wold-style-definition: YES 
-Compiler for C supports arguments -Wdeclaration-after-statement: YES 
-Compiler for C supports arguments -Wno-error=varargs: YES (cached)
-Found pkg-config: /usr/bin/pkg-config (0.29.2)
-Run-time dependency capi-ml-common found: YES 1.8.8
-Run-time dependency capi-ml-inference found: YES 1.8.8
-Run-time dependency openblas found: YES 0.3.20
-Message: OpenBLAS dependency found in system
-Message: set nntrainer num threads=1
-Run-time dependency OpenMP found: YES 4.5
-Message: set nntrainer omp threads=6
-Run-time dependency GMock found: YES 1.17.0
-Run-time dependency GTest found: YES 1.17.0
-Run-time dependency GTest found: YES 1.17.0
-Library m found: YES
-Library dl found: YES
-Run-time dependency threads found: YES
-Run-time dependency iniparser found: YES 3.2
-Run-time dependency tensorflow2-lite found: YES 2.15.0
-Found CMake: /usr/bin/cmake (3.22.1)
-Run-time dependency opencv found: NO (tried pkgconfig and cmake)
-Run-time dependency opencv4 found: YES 4.5.4
-Program flatc found: YES (/usr/bin/flatc)
-Configuring nntrainer.pc using configuration
-Configuring nntrainer.ini using configuration
-meson.build:733: WARNING: The variable(s) 'FLASH_STORAGE_UTILIZATION_LOOKAHEAD' in the input file 'nntrainer.ini.in' are not present in the given configuration data.
-Message: NNTRAINER_CONF_PATH=/usr/local/etc/nntrainer.ini
-Message: extra defines are:-DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 -DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"
-Message: arm_arch_opt : none
-Configuring ccapi-ml-training.pc using configuration
-Configuring capi-ml-training.pc using configuration
-Run-time dependency nnstreamer-test-devel found: NO (tried pkgconfig and cmake)
-Run-time dependency jsoncpp found: YES 1.9.5
-Run-time dependency libcurl found: YES 7.81.0
-Dependency openmp found: YES 4.5 (cached)
-meson.build:789: WARNING: android nnstreamer-filter and nnstreamer-trainer are not yet supported, building them is skipped
-Build targets in project: 105
-NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.build_root', 'meson.source_root'}
-
-nntrainer 0.6.0
-
-  User defined options
-    arm-arch          : none
-    enable-app        : true
-    enable-fp16       : false
-    enable-opencl     : false
-    enable-transformer: true
-    platform          : none
-
-Found ninja-1.10.1 at /usr/bin/ninja
-ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'                     
-[98/242] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o
-FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o 
-c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/models/neuralnet.cpp
-/home/jwhero94/projects/nntrainer/nntrainer/models/neuralnet.cpp: In member function ‘virtual void nntrainer::NeuralNetwork::load(const std::string&, ml::train::ModelFormat)’:
-/home/jwhero94/projects/nntrainer/nntrainer/models/neuralnet.cpp:732:16: error: ‘nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0’ was not declared in this scope
-  732 |         size = nntr_get_rhs_packed_size_qsi4cxp_qs4cxs1s0(
-      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[123/242] Compiling C++ object Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_causal_lm.cpp.o
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+[18/120] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o
+FAILED: nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o 
+c++ -Inntrainer/libnntrainer.so.p -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o -MF nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o.d -o nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_tensor_int4_utils.cpp.o -c /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp
+/home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.cpp:240:6: error: ‘void nntrainer::{anonymous}::read_and_convert_kai_to_channelwise(nntrainer::Tensor&, const uint8_t*, size_t, size_t)’ defined but not used [-Werror=unused-function]
+  240 | void read_and_convert_kai_to_channelwise(Tensor &weight, const uint8_t *kai_buf,
+      |      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cc1plus: all warnings being treated as errors
+[43/120] Compiling C++ object nntrainer/libnntrainer.so.p/_home_jwhero94_projects_nntrainer_nntrainer_models_neuralnet.cpp.o
 ninja: build stopped: subcommand failed.
 [ERROR] nntr_quantize build failed
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
