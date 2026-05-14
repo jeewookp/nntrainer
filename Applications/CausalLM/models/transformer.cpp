@@ -120,22 +120,29 @@ void Transformer::setupParameters(json &cfg, json &generation_cfg,
     IS_CAUSAL = !cfg["use_bidirectional_attention"].get<bool>();
   }
 
-  NUM_VOCAB = cfg["vocab_size"];
-  DIM = cfg["hidden_size"];
-  INTERMEDIATE_SIZE = cfg["intermediate_size"];
-  NUM_LAYERS = cfg["num_hidden_layers"];
-  NUM_HEADS = cfg["num_attention_heads"];
-  HEAD_DIM = cfg.contains("head_dim")
+  auto cfg_uint = [&](const char *k, unsigned int def = 0) -> unsigned int {
+    return (cfg.contains(k) && !cfg[k].is_null()) ? cfg[k].get<unsigned int>() : def;
+  };
+  auto cfg_int = [&](const char *k, int def = 0) -> int {
+    return (cfg.contains(k) && !cfg[k].is_null()) ? cfg[k].get<int>() : def;
+  };
+
+  NUM_VOCAB = cfg_uint("vocab_size");
+  DIM = cfg_int("hidden_size");
+  INTERMEDIATE_SIZE = cfg_int("intermediate_size");
+  NUM_LAYERS = cfg_int("num_hidden_layers");
+  NUM_HEADS = cfg_int("num_attention_heads");
+  HEAD_DIM = (cfg.contains("head_dim") && !cfg["head_dim"].is_null())
                ? cfg["head_dim"].get<int>()
-               : DIM / NUM_HEADS; // default value is hidden_size / num_heads
-  NUM_KEY_VALUE_HEADS = cfg.contains("num_key_value_heads")
+               : DIM / NUM_HEADS;
+  NUM_KEY_VALUE_HEADS = (cfg.contains("num_key_value_heads") && !cfg["num_key_value_heads"].is_null())
                           ? cfg["num_key_value_heads"].get<int>()
                           : NUM_HEADS;
   SLIDING_WINDOW =
-    cfg.contains("sliding_window") && !cfg["sliding_window"].is_null()
+    (cfg.contains("sliding_window") && !cfg["sliding_window"].is_null())
       ? cfg["sliding_window"].get<unsigned int>()
       : UINT_MAX;
-  SLIDING_WINDOW_PATTERN = cfg.contains("sliding_window_pattern")
+  SLIDING_WINDOW_PATTERN = (cfg.contains("sliding_window_pattern") && !cfg["sliding_window_pattern"].is_null())
                              ? cfg["sliding_window_pattern"].get<unsigned int>()
                              : 1;
   MAX_POSITION_EMBEDDINGS =
@@ -151,7 +158,9 @@ void Transformer::setupParameters(json &cfg, json &generation_cfg,
     (cfg.contains("tie_word_embeddings") && !cfg["tie_word_embeddings"].is_null())
       ? cfg["tie_word_embeddings"].get<bool>()
       : true;
-  NORM_EPS = cfg["rms_norm_eps"];
+  NORM_EPS = (cfg.contains("rms_norm_eps") && !cfg["rms_norm_eps"].is_null())
+               ? cfg["rms_norm_eps"].get<float>()
+               : 1e-6f;
   GQA_SIZE = NUM_HEADS / NUM_KEY_VALUE_HEADS;
 
   return;
