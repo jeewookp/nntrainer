@@ -20,9 +20,11 @@
  * @bug		No known bugs except for NYI items
  *
  */
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #include "json.hpp"
@@ -287,9 +289,32 @@ int main(int argc, char *argv[]) {
       std::cerr << std::endl;
       return EXIT_FAILURE;
     }
+    // Try to mark this process as harder to kill so the Android LMK
+    // does not SIGKILL us mid-load when weight SVM pages are committed.
+    // Writing requires CAP_SYS_RESOURCE; silently ignore if not permitted.
+    {
+      int oom_fd = ::open("/proc/self/oom_score_adj", O_WRONLY);
+      if (oom_fd >= 0) {
+        const char adj[] = "-900";
+        ::write(oom_fd, adj, sizeof(adj) - 1);
+        ::close(oom_fd);
+        std::fprintf(stderr, "[DIAG] oom_score_adj set to -900\n");
+        std::fflush(stderr);
+      } else {
+        std::fprintf(stderr, "[DIAG] oom_score_adj: no permission\n");
+        std::fflush(stderr);
+      }
+    }
+
+    std::fprintf(stderr, "[DIAG] RSS before initialize: %zu KB\n",
+                 read_vm_rss_kb()); std::fflush(stderr);
     model->initialize();
+    std::fprintf(stderr, "[DIAG] RSS after initialize:  %zu KB\n",
+                 read_vm_rss_kb());
     std::fprintf(stderr, "[DIAG] initialize done\n"); std::fflush(stderr);
     model->load_weight(weight_file);
+    std::fprintf(stderr, "[DIAG] RSS after load_weight: %zu KB\n",
+                 read_vm_rss_kb());
     std::fprintf(stderr, "[DIAG] load_weight done\n"); std::fflush(stderr);
 
     bool do_sample = generation_cfg.value("do_sample", false);

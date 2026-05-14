@@ -328,8 +328,21 @@ void Transformer::load_weight(const std::string &weight_path) {
           file_pos += n;
           bytes_done += n;
           if (bytes_done % (128UL * 1024 * 1024) < n) {
-            std::fprintf(stderr, "[DIAG] load_weight: %zu MB loaded\n",
-                         bytes_done / 1024 / 1024);
+            // Read VmRSS from /proc/self/status to track physical page commits.
+            size_t rss_kb = 0;
+            {
+              std::ifstream st("/proc/self/status");
+              std::string ln;
+              while (std::getline(st, ln)) {
+                if (ln.find("VmRSS:") == 0) {
+                  std::sscanf(ln.c_str(), "VmRSS: %zu", &rss_kb);
+                  break;
+                }
+              }
+            }
+            std::fprintf(stderr,
+                         "[DIAG] load_weight: %zu MB written, RSS=%zu MB\n",
+                         bytes_done / 1024 / 1024, rss_kb / 1024);
             std::fflush(stderr);
           }
         }
