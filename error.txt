@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.08 KiB | 111.00 KiB/s, done.
+remote: Total 6 (delta 5), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 970 bytes | 107.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   8643af58..2abdc159  all_gpu    -> upstream/all_gpu
-Updating 8643af58..2abdc159
+   b5d393ae..da075dd5  all_gpu    -> upstream/all_gpu
+Updating b5d393ae..da075dd5
 Fast-forward
- Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 52 ++++++++++++++++++++++++----------------------------
- 1 file changed, 24 insertions(+), 28 deletions(-)
+ Applications/CausalLM/main.cpp     | 6 ++++++
+ Applications/CausalLM/quantize.cpp | 5 +++++
+ 2 files changed, 11 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -30,7 +31,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[5/5] Linking target Applications/CausalLM/nntr_quantize
+[2/2] Linking target Applications/CausalLM/nntr_quantize
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -50,6 +51,6 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 
 [2/5] Creating and initializing model...
 
-[!] FATAL ERROR: Failed to create model for architecture: Gemma4ForConditionalGeneration
+[!] FATAL ERROR: [json.exception.type_error.302] type must be boolean, but is null
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
