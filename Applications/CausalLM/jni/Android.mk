@@ -64,6 +64,7 @@ LOCAL_MODULE := causallm_core
 LOCAL_LDLIBS := -llog -ldl -fopenmp -static-openmp -DENABLE_FP16=1 -DENABLE_OPENCL=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1
 
 LOCAL_SRC_FILES := \
+    ../svm_compat.cpp \
     ../models/causal_lm.cpp \
     ../models/transformer.cpp \
     ../models/sentence_transformer.cpp \
