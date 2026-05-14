@@ -482,8 +482,26 @@ int main(int argc, char *argv[]) {
     std::string src_weight_path = model_path + "/" + original_bin;
     std::string dst_weight_path = output_dir + "/" + output_bin_name;
 
-    int num_layers = cfg["num_hidden_layers"].get<int>();
-    bool tie_word_embeddings = cfg["tie_word_embeddings"].get<bool>();
+    // Some models (e.g. Gemma4) nest config fields under "text_config".
+    // Promote those fields to the top level so shared access below works.
+    if (cfg.contains("text_config") && cfg["text_config"].is_object()) {
+      for (auto &[k, v] : cfg["text_config"].items()) {
+        if (!cfg.contains(k) || cfg[k].is_null())
+          cfg[k] = v;
+      }
+    }
+
+    auto safe_get_int = [&](const char *key, int def) -> int {
+      return (cfg.contains(key) && !cfg[key].is_null()) ? cfg[key].get<int>()
+                                                        : def;
+    };
+    auto safe_get_bool = [&](const char *key, bool def) -> bool {
+      return (cfg.contains(key) && !cfg[key].is_null()) ? cfg[key].get<bool>()
+                                                        : def;
+    };
+
+    int num_layers = safe_get_int("num_hidden_layers", 0);
+    bool tie_word_embeddings = safe_get_bool("tie_word_embeddings", true);
 
     std::cout << "  Architecture: "
               << cfg["architectures"].get<std::vector<std::string>>()[0]

@@ -27,6 +27,14 @@ namespace causallm {
 // ---------------------------------------------------------------------------
 
 json &Gemma4Transformer::sanitizeConfig(json &cfg) {
+  // Gemma4 HuggingFace config nests fields under "text_config".
+  // Promote them to top level so all downstream code finds them directly.
+  if (cfg.contains("text_config") && cfg["text_config"].is_object()) {
+    for (auto &[k, v] : cfg["text_config"].items()) {
+      if (!cfg.contains(k) || cfg[k].is_null())
+        cfg[k] = v;
+    }
+  }
   if (!cfg.contains("tie_word_embeddings"))
     cfg["tie_word_embeddings"] = true;
   // Ensure rope_theta is present (required by Transformer::setupParameters)
