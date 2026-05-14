@@ -420,3 +420,22 @@ void Gemma4CausalLM::registerCustomLayers() {
 }
 
 } // namespace causallm
+
+// Fallback stubs for svm_alloc_ints / svm_free_ptr / svm_blocking_read.
+// The prebuilt libnntrainer.so may not export these symbols if it was built
+// before they were added.  Defining them here (in a translation unit that is
+// always recompiled) ensures libcausallm_core.so exports the symbols so the
+// Android dynamic linker can satisfy the PLT reference from causal_lm.o.
+// If libnntrainer.so later provides a strong definition, its version wins
+// because libnntrainer.so is loaded first (it is a direct dependency).
+#if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
+#include <cstddef>
+namespace nntrainer {
+__attribute__((visibility("default"))) int *svm_alloc_ints(int) {
+  return nullptr;
+}
+__attribute__((visibility("default"))) void svm_free_ptr(void *) {}
+__attribute__((visibility("default"))) void svm_blocking_read(void *,
+                                                              std::size_t) {}
+} // namespace nntrainer
+#endif // ENABLE_OPENCL
