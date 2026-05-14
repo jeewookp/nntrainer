@@ -88,9 +88,10 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
-    # Force recompile of causallm_core objects to pick up source changes
-    # NDK_OUT=./obj from within $CAUSALLM_DIR/jni → actual path is jni/obj
-    rm -rf "$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/causallm_core/"
+    # Delete the entire NDK obj tree to force full recompile.
+    # Targeting just the module subdir is unreliable because NDK may cache
+    # .o files in paths that don't match the module name exactly.
+    rm -rf "$CAUSALLM_DIR/jni/obj/"
     ndk-build \
         NDK_PROJECT_PATH=. \
         NDK_LIBS_OUT=./libs \
@@ -98,7 +99,7 @@ if [ "$NEEDS_NDK_BUILD" = true ]; then
         APP_BUILD_SCRIPT=./Android.mk \
         NDK_APPLICATION_MK=./Application.mk \
         nntrainer_causallm causallm_core \
-        -j$(nproc) 2>&1 | tail -10
+        -j$(nproc) 2>&1 | tail -20
     log_success "Android build done"
 else
     log_success "Android binary up to date"
