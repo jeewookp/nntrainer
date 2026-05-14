@@ -12,10 +12,13 @@
 
 #include <cstdio>
 #include <fstream>
+#include <unordered_set>
 
 #include <app_context.h>
 #include <engine.h>
+#include <layer_context.h>
 #include <model.h>
+#include <tensor.h>
 
 #include <llm_util.hpp>
 #include <tokenizers_cpp.h>
@@ -257,12 +260,45 @@ void Transformer::load_weight(const std::string &weight_path) {
       "initialize() before load_weight().");
   }
 
-  try {
-    model->load(weight_path, ml::train::ModelFormat::MODEL_FORMAT_BIN);
-  } catch (const std::exception &e) {
-    throw std::runtime_error("Failed to load model weights: " +
-                             std::string(e.what()));
-  }
+  // NeuralNetwork::load() in INFERENCE mode spawns one thread per layer
+  // (~247 threads) each mmapping the full weight file concurrently.  On
+  // Android this causes the LMK to SIGKILL the process before loading
+  // completes.  Load weights sequentially instead: open the file once and
+  // read each layer's weights in forward-pass order.
+  std::ifstream file(weight_path, std::ios::in | std::ios::binary);
+  if (!file.is_open())
+    throw std::runtime_error("Cannot open weight file: " + weight_path);
+
+  // Track data pointers already loaded to handle shared weights
+  // (e.g. TieWordEmbedding where embedding0 and output_of_causallm
+  // reference the exact same Tensor buffer).
+  std::unordered_set<void *> visited;
+
+  std::exception_ptr ex;
+  model->forEachLayer(
+    [&](ml::train::Layer &l, nntrainer::RunLayerContext &ctx, void *) {
+      if (ex) return;
+      try {
+        for (unsigned i = 0; i < ctx.getNumWeights(); ++i) {
+          nntrainer::Tensor &w = ctx.getWeight(i);
+          void *ptr = static_cast<void *>(w.getData<uint8_t>());
+          if (!ptr) continue;
+          if (!visited.insert(ptr).second) continue; // shared weight already read
+
+          std::streamsize n = static_cast<std::streamsize>(w.getMemoryBytes());
+          file.read(reinterpret_cast<char *>(ptr), n);
+          if (file.fail())
+            throw std::runtime_error(
+              "Failed to read weight '" + ctx.getWeightName(i) +
+              "' (expected " + std::to_string(n) + " bytes)");
+        }
+      } catch (...) {
+        ex = std::current_exception();
+      }
+    },
+    nullptr);
+
+  if (ex) std::rethrow_exception(ex);
 };
 
 void Transformer::save_weight(const std::string &weight_path) {
