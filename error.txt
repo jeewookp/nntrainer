@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.16 KiB | 49.00 KiB/s, done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.07 KiB | 366.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   52b08784..2f7c5da4  all_gpu    -> upstream/all_gpu
-Updating 52b08784..2f7c5da4
+   28892fd2..2174d39b  all_gpu    -> upstream/all_gpu
+Updating 28892fd2..2174d39b
 Fast-forward
- Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ Applications/CausalLM/jni/Android.mk | 1 +
+ 1 file changed, 1 insertion(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -29,6 +29,13 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 ──────────────────────
 [INFO] Source files changed, rebuilding Android binary...
 [INFO] Building Android binary...
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+2 warnings generated.
+[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
+In file included from ./../layers/mha_core.cpp:29:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
@@ -38,14 +45,7 @@ In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_r
 /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
 #pragma message(                                                               \
         ^
-In file included from ./../models/gemma4/gemma4_causallm.cpp:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-2 warnings generated.
+1 warning generated.
 [arm64-v8a] SharedLibrary  : libcausallm_core.so
 make: Nothing to be done for 'causallm_core'.
 [arm64-v8a] Executable     : nntrainer_causallm
@@ -63,7 +63,7 @@ ninja: no work to do.
 ──────────────────────
 /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (47487312 bytes in 1.388s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.6 MB/s (3960072 bytes in 0.119s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960072 bytes in 0.117s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
