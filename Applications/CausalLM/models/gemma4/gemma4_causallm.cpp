@@ -28,32 +28,37 @@ namespace causallm {
 
 json &Gemma4Transformer::sanitizeConfig(json &cfg) {
   // Gemma4 HuggingFace config nests fields under "text_config".
-  // Promote them to top level so all downstream code finds them directly.
+  // Promote non-null values to top level so all downstream code finds them.
   if (cfg.contains("text_config") && cfg["text_config"].is_object()) {
     for (auto &[k, v] : cfg["text_config"].items()) {
-      if (!cfg.contains(k) || cfg[k].is_null())
+      if (!v.is_null() && (!cfg.contains(k) || cfg[k].is_null()))
         cfg[k] = v;
     }
   }
-  if (!cfg.contains("tie_word_embeddings") || cfg["tie_word_embeddings"].is_null())
-    cfg["tie_word_embeddings"] = true;
-  // Ensure rope_theta is present (required by Transformer::setupParameters)
-  if (!cfg.contains("rope_theta") || cfg["rope_theta"].is_null()) {
-    // Local/sliding attention default
-    cfg["rope_theta"] = 10000;
+  // Erase any remaining null values so cfg.value(key, default) returns the
+  // default rather than throwing type_error.302.
+  {
+    std::vector<std::string> null_keys;
+    for (auto &[k, v] : cfg.items()) {
+      if (v.is_null())
+        null_keys.push_back(k);
+    }
+    for (auto &k : null_keys)
+      cfg.erase(k);
   }
+  if (!cfg.contains("tie_word_embeddings"))
+    cfg["tie_word_embeddings"] = true;
+  if (!cfg.contains("rope_theta"))
+    cfg["rope_theta"] = 10000;
   // Generate layer_types if not present (every sliding_window_pattern-th is global)
-  if (!cfg.contains("layer_types") || cfg["layer_types"].is_null()) {
-    const int n = (cfg.contains("num_hidden_layers") && !cfg["num_hidden_layers"].is_null())
-                    ? cfg["num_hidden_layers"].get<int>() : 30;
-    const int pat = (cfg.contains("sliding_window_pattern") && !cfg["sliding_window_pattern"].is_null())
-                      ? cfg["sliding_window_pattern"].get<int>() : 6;
+  if (!cfg.contains("layer_types")) {
+    const int n = cfg.value("num_hidden_layers", 30);
+    const int pat = cfg.value("sliding_window_pattern", 6);
     std::vector<std::string> types;
     for (int i = 0; i < n; ++i) {
       bool is_global = ((i + 1) % pat == 0);
       types.push_back(is_global ? "full_attention" : "sliding_attention");
     }
-    // Last layer is always global
     if (!types.empty())
       types.back() = "full_attention";
     cfg["layer_types"] = types;
