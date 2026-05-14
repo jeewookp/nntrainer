@@ -203,6 +203,12 @@ int main(int argc, char *argv[]) {
       return std::make_unique<causallm::Gemma4CausalLM>(cfg, generation_cfg,
                                                         nntr_cfg);
     });
+  causallm::Factory::Instance().registerModel(
+    "Gemma4ForConditionalGeneration",
+    [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Gemma4CausalLM>(cfg, generation_cfg,
+                                                        nntr_cfg);
+    });
 
   // Validate arguments
   if (argc < 2) {

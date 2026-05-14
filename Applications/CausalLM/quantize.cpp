@@ -271,6 +271,11 @@ void registerAllModels() {
                           return std::make_unique<causallm::Gemma4CausalLM>(
                             cfg, generation_cfg, nntr_cfg);
                         });
+  factory.registerModel("Gemma4ForConditionalGeneration",
+                        [](json cfg, json generation_cfg, json nntr_cfg) {
+                          return std::make_unique<causallm::Gemma4CausalLM>(
+                            cfg, generation_cfg, nntr_cfg);
+                        });
 }
 
 /**
