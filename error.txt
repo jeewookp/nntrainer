@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.26 KiB | 143.00 KiB/s, done.
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.26 KiB | 143.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   170f695a..260e13c4  all_gpu    -> upstream/all_gpu
-Updating 170f695a..260e13c4
+   93b11d12..368f153a  all_gpu    -> upstream/all_gpu
+Updating 93b11d12..368f153a
 Fast-forward
- Applications/CausalLM/layers/tie_word_embedding.cpp | 21 ++++++++++++++++++++-
- 1 file changed, 20 insertions(+), 1 deletion(-)
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -27,348 +27,32 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 
 [Step 2/5] Build
 ──────────────────────
-[INFO] Source files changed, rebuilding Android binary...
-[INFO] Building Android binary...
-[arm64-v8a] Compile++      : causallm_core <= tie_word_embedding.cpp
-In file included from ./../layers/tie_word_embedding.cpp:31:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/blas_kernels.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-./../layers/tie_word_embedding.cpp:569:22: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
-                     input_step.width(), hidden_step.width());
-                     ^~~~~~~~~~~~~~~~~~
-./../layers/tie_word_embedding.cpp:569:42: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
-                     input_step.width(), hidden_step.width());
-                                         ^~~~~~~~~~~~~~~~~~~
-3 warnings generated.
-[arm64-v8a] SharedLibrary  : libcausallm_core.so
-make: Nothing to be done for 'causallm_core'.
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:33:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Executable     : nntrainer_causallm
-[INFO]   Copied nntrainer_causallm: obj/local → libs/
-[INFO]   Copied libcausallm_core.so: obj/local → libs/
-[OK] Android build done
+[OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[6/6] Linking target Applications/CausalLM/nntr_quantize
+ninja: no work to do.
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
 ──────────────────────
-[INFO] Quantize params changed — removing stale bin for re-quantization
-[INFO] Quantizing to Q4_0 (this may take a few minutes)...
-==========================================================
-  NNTrainer CausalLM Quantization Utility
-==========================================================
-[1/5] Loading configurations from: /home/jwhero94/models/gemma4
-  Architecture: Gemma4ForConditionalGeneration
-  Num layers:   35
-  Source:       /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
-  Target:       /home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin
-  FC dtype:     Q4_0
-  Embed dtype:  Q4_0
-  LMHead dtype: Q4_0
-
-[2/5] Creating and initializing model...
-[Warning] Tokenizer not loaded: Failed to open file: /data/local/tmp/nntrainer/causallm/models/gemma4/tokenizer.json
-  Model initialized successfully.
-[3/5] Loading FP32 weights from: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
-  Weights loaded successfully.
-[4/5] Quantizing and saving weights to: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin
-  Layer dtype mapping (247 layers targeted):
-    embedding0 -> Q4_0
-    layer0_attention_out -> Q4_0
-    layer0_ffn_down -> Q4_0
-    layer0_ffn_gate -> Q4_0
-    layer0_ffn_up -> Q4_0
-    layer0_wk -> Q4_0
-    layer0_wq -> Q4_0
-    layer0_wv -> Q4_0
-    layer10_attention_out -> Q4_0
-    layer10_ffn_down -> Q4_0
-    layer10_ffn_gate -> Q4_0
-    layer10_ffn_up -> Q4_0
-    layer10_wk -> Q4_0
-    layer10_wq -> Q4_0
-    layer10_wv -> Q4_0
-    layer11_attention_out -> Q4_0
-    layer11_ffn_down -> Q4_0
-    layer11_ffn_gate -> Q4_0
-    layer11_ffn_up -> Q4_0
-    layer11_wk -> Q4_0
-    layer11_wq -> Q4_0
-    layer11_wv -> Q4_0
-    layer12_attention_out -> Q4_0
-    layer12_ffn_down -> Q4_0
-    layer12_ffn_gate -> Q4_0
-    layer12_ffn_up -> Q4_0
-    layer12_wk -> Q4_0
-    layer12_wq -> Q4_0
-    layer12_wv -> Q4_0
-    layer13_attention_out -> Q4_0
-    layer13_ffn_down -> Q4_0
-    layer13_ffn_gate -> Q4_0
-    layer13_ffn_up -> Q4_0
-    layer13_wk -> Q4_0
-    layer13_wq -> Q4_0
-    layer13_wv -> Q4_0
-    layer14_attention_out -> Q4_0
-    layer14_ffn_down -> Q4_0
-    layer14_ffn_gate -> Q4_0
-    layer14_ffn_up -> Q4_0
-    layer14_wk -> Q4_0
-    layer14_wq -> Q4_0
-    layer14_wv -> Q4_0
-    layer15_attention_out -> Q4_0
-    layer15_ffn_down -> Q4_0
-    layer15_ffn_gate -> Q4_0
-    layer15_ffn_up -> Q4_0
-    layer15_wk -> Q4_0
-    layer15_wq -> Q4_0
-    layer15_wv -> Q4_0
-    layer16_attention_out -> Q4_0
-    layer16_ffn_down -> Q4_0
-    layer16_ffn_gate -> Q4_0
-    layer16_ffn_up -> Q4_0
-    layer16_wk -> Q4_0
-    layer16_wq -> Q4_0
-    layer16_wv -> Q4_0
-    layer17_attention_out -> Q4_0
-    layer17_ffn_down -> Q4_0
-    layer17_ffn_gate -> Q4_0
-    layer17_ffn_up -> Q4_0
-    layer17_wk -> Q4_0
-    layer17_wq -> Q4_0
-    layer17_wv -> Q4_0
-    layer18_attention_out -> Q4_0
-    layer18_ffn_down -> Q4_0
-    layer18_ffn_gate -> Q4_0
-    layer18_ffn_up -> Q4_0
-    layer18_wk -> Q4_0
-    layer18_wq -> Q4_0
-    layer18_wv -> Q4_0
-    layer19_attention_out -> Q4_0
-    layer19_ffn_down -> Q4_0
-    layer19_ffn_gate -> Q4_0
-    layer19_ffn_up -> Q4_0
-    layer19_wk -> Q4_0
-    layer19_wq -> Q4_0
-    layer19_wv -> Q4_0
-    layer1_attention_out -> Q4_0
-    layer1_ffn_down -> Q4_0
-    layer1_ffn_gate -> Q4_0
-    layer1_ffn_up -> Q4_0
-    layer1_wk -> Q4_0
-    layer1_wq -> Q4_0
-    layer1_wv -> Q4_0
-    layer20_attention_out -> Q4_0
-    layer20_ffn_down -> Q4_0
-    layer20_ffn_gate -> Q4_0
-    layer20_ffn_up -> Q4_0
-    layer20_wk -> Q4_0
-    layer20_wq -> Q4_0
-    layer20_wv -> Q4_0
-    layer21_attention_out -> Q4_0
-    layer21_ffn_down -> Q4_0
-    layer21_ffn_gate -> Q4_0
-    layer21_ffn_up -> Q4_0
-    layer21_wk -> Q4_0
-    layer21_wq -> Q4_0
-    layer21_wv -> Q4_0
-    layer22_attention_out -> Q4_0
-    layer22_ffn_down -> Q4_0
-    layer22_ffn_gate -> Q4_0
-    layer22_ffn_up -> Q4_0
-    layer22_wk -> Q4_0
-    layer22_wq -> Q4_0
-    layer22_wv -> Q4_0
-    layer23_attention_out -> Q4_0
-    layer23_ffn_down -> Q4_0
-    layer23_ffn_gate -> Q4_0
-    layer23_ffn_up -> Q4_0
-    layer23_wk -> Q4_0
-    layer23_wq -> Q4_0
-    layer23_wv -> Q4_0
-    layer24_attention_out -> Q4_0
-    layer24_ffn_down -> Q4_0
-    layer24_ffn_gate -> Q4_0
-    layer24_ffn_up -> Q4_0
-    layer24_wk -> Q4_0
-    layer24_wq -> Q4_0
-    layer24_wv -> Q4_0
-    layer25_attention_out -> Q4_0
-    layer25_ffn_down -> Q4_0
-    layer25_ffn_gate -> Q4_0
-    layer25_ffn_up -> Q4_0
-    layer25_wk -> Q4_0
-    layer25_wq -> Q4_0
-    layer25_wv -> Q4_0
-    layer26_attention_out -> Q4_0
-    layer26_ffn_down -> Q4_0
-    layer26_ffn_gate -> Q4_0
-    layer26_ffn_up -> Q4_0
-    layer26_wk -> Q4_0
-    layer26_wq -> Q4_0
-    layer26_wv -> Q4_0
-    layer27_attention_out -> Q4_0
-    layer27_ffn_down -> Q4_0
-    layer27_ffn_gate -> Q4_0
-    layer27_ffn_up -> Q4_0
-    layer27_wk -> Q4_0
-    layer27_wq -> Q4_0
-    layer27_wv -> Q4_0
-    layer28_attention_out -> Q4_0
-    layer28_ffn_down -> Q4_0
-    layer28_ffn_gate -> Q4_0
-    layer28_ffn_up -> Q4_0
-    layer28_wk -> Q4_0
-    layer28_wq -> Q4_0
-    layer28_wv -> Q4_0
-    layer29_attention_out -> Q4_0
-    layer29_ffn_down -> Q4_0
-    layer29_ffn_gate -> Q4_0
-    layer29_ffn_up -> Q4_0
-    layer29_wk -> Q4_0
-    layer29_wq -> Q4_0
-    layer29_wv -> Q4_0
-    layer2_attention_out -> Q4_0
-    layer2_ffn_down -> Q4_0
-    layer2_ffn_gate -> Q4_0
-    layer2_ffn_up -> Q4_0
-    layer2_wk -> Q4_0
-    layer2_wq -> Q4_0
-    layer2_wv -> Q4_0
-    layer30_attention_out -> Q4_0
-    layer30_ffn_down -> Q4_0
-    layer30_ffn_gate -> Q4_0
-    layer30_ffn_up -> Q4_0
-    layer30_wk -> Q4_0
-    layer30_wq -> Q4_0
-    layer30_wv -> Q4_0
-    layer31_attention_out -> Q4_0
-    layer31_ffn_down -> Q4_0
-    layer31_ffn_gate -> Q4_0
-    layer31_ffn_up -> Q4_0
-    layer31_wk -> Q4_0
-    layer31_wq -> Q4_0
-    layer31_wv -> Q4_0
-    layer32_attention_out -> Q4_0
-    layer32_ffn_down -> Q4_0
-    layer32_ffn_gate -> Q4_0
-    layer32_ffn_up -> Q4_0
-    layer32_wk -> Q4_0
-    layer32_wq -> Q4_0
-    layer32_wv -> Q4_0
-    layer33_attention_out -> Q4_0
-    layer33_ffn_down -> Q4_0
-    layer33_ffn_gate -> Q4_0
-    layer33_ffn_up -> Q4_0
-    layer33_wk -> Q4_0
-    layer33_wq -> Q4_0
-    layer33_wv -> Q4_0
-    layer34_attention_out -> Q4_0
-    layer34_ffn_down -> Q4_0
-    layer34_ffn_gate -> Q4_0
-    layer34_ffn_up -> Q4_0
-    layer34_wk -> Q4_0
-    layer34_wq -> Q4_0
-    layer34_wv -> Q4_0
-    layer3_attention_out -> Q4_0
-    layer3_ffn_down -> Q4_0
-    layer3_ffn_gate -> Q4_0
-    layer3_ffn_up -> Q4_0
-    layer3_wk -> Q4_0
-    layer3_wq -> Q4_0
-    layer3_wv -> Q4_0
-    layer4_attention_out -> Q4_0
-    layer4_ffn_down -> Q4_0
-    layer4_ffn_gate -> Q4_0
-    layer4_ffn_up -> Q4_0
-    layer4_wk -> Q4_0
-    layer4_wq -> Q4_0
-    layer4_wv -> Q4_0
-    layer5_attention_out -> Q4_0
-    layer5_ffn_down -> Q4_0
-    layer5_ffn_gate -> Q4_0
-    layer5_ffn_up -> Q4_0
-    layer5_wk -> Q4_0
-    layer5_wq -> Q4_0
-    layer5_wv -> Q4_0
-    layer6_attention_out -> Q4_0
-    layer6_ffn_down -> Q4_0
-    layer6_ffn_gate -> Q4_0
-    layer6_ffn_up -> Q4_0
-    layer6_wk -> Q4_0
-    layer6_wq -> Q4_0
-    layer6_wv -> Q4_0
-    layer7_attention_out -> Q4_0
-    layer7_ffn_down -> Q4_0
-    layer7_ffn_gate -> Q4_0
-    layer7_ffn_up -> Q4_0
-    layer7_wk -> Q4_0
-    layer7_wq -> Q4_0
-    layer7_wv -> Q4_0
-    layer8_attention_out -> Q4_0
-    layer8_ffn_down -> Q4_0
-    layer8_ffn_gate -> Q4_0
-    layer8_ffn_up -> Q4_0
-    layer8_wk -> Q4_0
-    layer8_wq -> Q4_0
-    layer8_wv -> Q4_0
-    layer9_attention_out -> Q4_0
-    layer9_ffn_down -> Q4_0
-    layer9_ffn_gate -> Q4_0
-    layer9_ffn_up -> Q4_0
-    layer9_wk -> Q4_0
-    layer9_wq -> Q4_0
-    layer9_wv -> Q4_0
-    output_of_causallm -> Q4_0
-  Source size:  19192 MB
-  Output size:  10115 MB
-  Compression:  52.7%
-[5/5] Generating nntr_config.json...
-  Config saved to: /home/jwhero94/models/gemma4/nntr_config_quantized.json
-
-==========================================================
-  Quantization complete!
-==========================================================
-
-To run the quantized model:
-  1. Rename nntr_config_quantized.json to nntr_config.json
-  2. nntr_causallm /home/jwhero94/models/gemma4
-[OK] Quantized: /home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin (9.9G)
+[OK] Q4_0 bin up to date
 
 [Step 4/5] Push to device
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 35.1 MB/s (50169728 bytes in 1.362s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (50169728 bytes in 1.479s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 34.9 MB/s (11446824 bytes in 0.313s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.1 MB/s (11446824 bytes in 0.340s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 19.8 MB/s (129304 bytes in 0.006s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.1 MB/s (129304 bytes in 0.006s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 34.6 MB/s (4111784 bytes in 0.113s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.3 MB/s (4111784 bytes in 0.121s)
 [OK]   nntrainer_causallm
-[INFO]   Pushing nntr_gemma4_e2b_q40.bin (9.9G)...
-/home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin: 1 file pushed. 33.2 MB/s (10606484620 bytes in 304.715s)
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
+[INFO]   Pushing nntr_config.json (4.0K)...
+/home/jwhero94/models/gemma4/nntr_config.json: 1 file pushed. 0.2 MB/s (536 bytes in 0.002s)
 [OK]   nntr_config.json
 [OK]   config.json
 [OK]   generation_config.json
@@ -380,7 +64,7 @@ To run the quantized model:
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.35 Compiler E031.47.18.28" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
 [CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
-
-[!] FATAL ERROR: tensor dimension mismatch for requestOrExtend name: embedding0:Embedding
+────────────────────────────────────────────────
+[OK] Done!
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
