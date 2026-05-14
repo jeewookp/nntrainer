@@ -91,13 +91,16 @@ if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
     # Delete stale outputs so NDK is forced to re-link and re-strip.
     rm -f "$BUILT_LIB"
-    # Also delete main.o to force recompilation of main.cpp.
-    # NDK's mtime-based caching can keep a stale main.o (e.g. when the
-    # source was modified by a git pull that leaves the file's mtime equal
-    # to or older than the cached .o), causing missing architecture
-    # registrations such as Gemma4ForConditionalGeneration.
-    NDK_OBJ_MAIN="$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm/main.o"
-    rm -f "$NDK_OBJ_MAIN"
+    # Wipe the entire nntrainer_causallm obj directory and the final
+    # binary.  Deleting just main.o is unreliable because NDK encodes
+    # the "../" prefix in LOCAL_SRC_FILES as "__/" in the obj path
+    # (e.g. objs/nntrainer_causallm/__/main.o, not .../main.o), so a
+    # targeted rm often deletes the wrong file and the cached .o survives.
+    # Wiping the whole obj dir + the output binary guarantees that NDK
+    # recompiles main.cpp and re-links nntrainer_causallm from scratch.
+    NDK_OBJ_EXE_DIR="$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm"
+    rm -rf "$NDK_OBJ_EXE_DIR"
+    rm -f "$LIBS_DIR/nntrainer_causallm"
     # Do NOT pipe through tail: set -o pipefail means a pipe masks ndk-build
     # failures (tail always exits 0).  Print all output directly so errors
     # are visible and the script exits immediately on build failure.
@@ -109,6 +112,25 @@ if [ "$NEEDS_NDK_BUILD" = true ]; then
         NDK_APPLICATION_MK=./Application.mk \
         nntrainer_causallm causallm_core \
         -j$(nproc)
+    # Verify the newly-built binary contains the Gemma4 architecture
+    # registration strings. If they are missing the cached old .o was
+    # still used somehow.
+    if strings "$LIBS_DIR/nntrainer_causallm" 2>/dev/null | grep -q "Gemma4ForConditionalGeneration"; then
+        log_success "Binary verified: Gemma4ForConditionalGeneration registered"
+    else
+        log_warning "Gemma4ForConditionalGeneration NOT found in binary — forcing full rebuild"
+        rm -rf "$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm"
+        rm -rf "$CAUSALLM_DIR/jni/obj/local/arm64-v8a/"
+        rm -f "$LIBS_DIR/nntrainer_causallm"
+        ndk-build \
+            NDK_PROJECT_PATH=. \
+            NDK_LIBS_OUT=./libs \
+            NDK_OUT=./obj \
+            APP_BUILD_SCRIPT=./Android.mk \
+            NDK_APPLICATION_MK=./Application.mk \
+            nntrainer_causallm causallm_core \
+            -j$(nproc)
+    fi
     log_success "Android build done"
 else
     log_success "Android binary up to date"
