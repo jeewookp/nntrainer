@@ -3,14 +3,14 @@ remote: Enumerating objects: 11, done.
 remote: Counting objects: 100% (11/11), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.08 KiB | 276.00 KiB/s, done.
+Unpacking objects: 100% (6/6), 957 bytes | 41.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   3408da66..fe3907fe  all_gpu    -> upstream/all_gpu
-Updating 3408da66..fe3907fe
+   5cfee29a..c9236dee  all_gpu    -> upstream/all_gpu
+Updating 5cfee29a..c9236dee
 Fast-forward
- Applications/CausalLM/models/transformer.cpp | 16 +++++++++++++---
- 1 file changed, 13 insertions(+), 3 deletions(-)
+ Applications/CausalLM/models/transformer.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -50,6 +50,6 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 
 [2/5] Creating and initializing model...
 
-[!] FATAL ERROR: [json.exception.type_error.302] type must be boolean, but is null
+[!] FATAL ERROR: Failed to open file: /data/local/tmp/nntrainer/causallm/models/gemma4/tokenizer.json
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
