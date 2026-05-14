@@ -86,9 +86,14 @@ Transformer::Transformer(json &cfg, json &generation_cfg, json &nntr_cfg,
   // This is where you would set up the model layers, parameters, etc.
   setupParameters(cfg, generation_cfg, nntr_cfg);
 
-  // prep tokenizer
-  tokenizer = tokenizers::Tokenizer::FromBlobJSON(
-    LoadBytesFromFile(nntr_cfg["tokenizer_file"]));
+  // prep tokenizer (optional: may be absent when running on a different host
+  // e.g. quantize tool running on Linux with an Android tokenizer_file path)
+  try {
+    tokenizer = tokenizers::Tokenizer::FromBlobJSON(
+      LoadBytesFromFile(nntr_cfg["tokenizer_file"]));
+  } catch (const std::exception &e) {
+    std::cerr << "[Warning] Tokenizer not loaded: " << e.what() << "\n";
+  }
 };
 
 void Transformer::setupParameters(json &cfg, json &generation_cfg,
