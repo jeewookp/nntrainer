@@ -2,6 +2,7 @@
 # Build, quantize (INT4), push and run Gemma4 E2B on Android device
 # Usage: bash run_gemma4.sh [model_dir] [prompt] [--skip-quantize] [--force-build]
 set -e
+set -o pipefail
 
 # ── Colors ─────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -88,17 +89,17 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
-    # -B (--always-make) forces all source files to be recompiled regardless
-    # of cached .o timestamps.  This is the only reliable way to pick up
-    # source changes when NDK's obj cache path is non-standard.
-    ndk-build -B \
+    # Do NOT pipe through tail: set -o pipefail means a pipe masks ndk-build
+    # failures (tail always exits 0).  Print all output directly so errors
+    # are visible and the script exits immediately on build failure.
+    ndk-build \
         NDK_PROJECT_PATH=. \
         NDK_LIBS_OUT=./libs \
         NDK_OUT=./obj \
         APP_BUILD_SCRIPT=./Android.mk \
         NDK_APPLICATION_MK=./Application.mk \
         nntrainer_causallm causallm_core \
-        -j$(nproc) 2>&1 | tail -20
+        -j$(nproc)
     log_success "Android build done"
 else
     log_success "Android binary up to date"

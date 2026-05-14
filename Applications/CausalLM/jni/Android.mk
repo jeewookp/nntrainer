@@ -45,16 +45,6 @@ LOCAL_MODULE := tokenizers_c
 LOCAL_SRC_FILES := ../lib/libtokenizers_android_c.a
 include $(PREBUILT_STATIC_LIBRARY)
 
-# svm_alloc_ints / svm_free_ptr / svm_blocking_read stubs.
-# Built as a STATIC library and pulled in with LOCAL_WHOLE_STATIC_LIBRARIES
-# (--whole-archive) so the linker cannot silently omit these symbols even
-# when the prebuilt libnntrainer.so declares them as runtime dependencies.
-include $(CLEAR_VARS)
-LOCAL_MODULE := svm_compat_stubs
-LOCAL_CFLAGS  := -std=c++17 -DENABLE_OPENCL=1
-LOCAL_SRC_FILES := ../svm_compat.cpp
-include $(BUILD_STATIC_LIBRARY)
-
 # Build libcausallm_core.so (shared library - without api)
 include $(CLEAR_VARS)
 
@@ -113,7 +103,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SHARED_LIBRARIES := nntrainer ccapi-nntrainer
 LOCAL_STATIC_LIBRARIES := tokenizers_c
-LOCAL_WHOLE_STATIC_LIBRARIES := svm_compat_stubs
 
 LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES) $(CAUSALLM_COMMON_INCLUDES)
 
