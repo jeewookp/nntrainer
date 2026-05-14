@@ -27,6 +27,7 @@ causallm_layer_dependencies += [
     causallm_lm_head_dep,
     causallm_reshaped_rms_norm_dep,
     causallm_qkv_layer_dep,
+    causallm_qkv_norm_layer_dep,
     causallm_gate_up_layer_dep,
     causallm_embedding_pooling_layer_dep,
     causallm_embedding_normalize_layer_dep,
