@@ -41,6 +41,26 @@
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
 #include <blas_kernels.h>
+#include <dlfcn.h>
+
+// Runtime lookup so that libcausallm_core.so has no static PLT dependency on
+// svm_* symbols that may be absent from an older prebuilt libnntrainer.so.
+namespace {
+struct SvmFns {
+  int *(*alloc)(int) = nullptr;
+  void (*free_ptr)(void *) = nullptr;
+  void (*blocking_read)(void *, std::size_t) = nullptr;
+  SvmFns() {
+    alloc = reinterpret_cast<int *(*)(int)>(
+      dlsym(RTLD_DEFAULT, "_ZN9nntrainer14svm_alloc_intsEi"));
+    free_ptr = reinterpret_cast<void (*)(void *)>(
+      dlsym(RTLD_DEFAULT, "_ZN9nntrainer12svm_free_ptrEPv"));
+    blocking_read = reinterpret_cast<void (*)(void *, std::size_t)>(
+      dlsym(RTLD_DEFAULT, "_ZN9nntrainer16svm_blocking_readEPvm"));
+  }
+};
+static SvmFns &svm_fns() { static SvmFns f; return f; }
+} // namespace
 #endif
 
 namespace causallm {
@@ -519,7 +539,7 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
     // symbols in causallm_core.so -- clSVMAlloc lives in libnntrainer.so).
     // Slot [t]   = token_id consumed by token t's embedding.
     // Slot [t+1] = argmax result written by token t's lm_head GPU argmax.
-    int *argmax_svm = nntrainer::svm_alloc_ints(N_GEN + 1);
+    int *argmax_svm = svm_fns().alloc ? svm_fns().alloc(N_GEN + 1) : nullptr;
     std::fprintf(stderr,
       "[ASYNC_PIPELINE] svm_alloc_ints(%d) = %p\n", N_GEN + 1,
       (void *)argmax_svm);
@@ -558,8 +578,8 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
       nntrainer::set_async_sample_params(0.0f, 0);
 
       // Single blocking drain: waits for all N_GEN tokens' GPU work.
-      nntrainer::svm_blocking_read(argmax_svm,
-                                   (size_t)(N_GEN + 1) * sizeof(int));
+      if (svm_fns().blocking_read)
+        svm_fns().blocking_read(argmax_svm, (size_t)(N_GEN + 1) * sizeof(int));
 
       // Collect results and register outputs.
       for (int t = 0; t < N_GEN; ++t) {
@@ -579,7 +599,7 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
         }
       }
 
-      nntrainer::svm_free_ptr(argmax_svm);
+      if (svm_fns().free_ptr) svm_fns().free_ptr(argmax_svm);
       free(input_sample);
       goto gen_loop_done;
     }
