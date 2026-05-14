@@ -1,17 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
 remote: Enumerating objects: 15, done.
 remote: Counting objects: 100% (15/15), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 8 (delta 7), reused 8 (delta 7), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 1.68 KiB | 430.00 KiB/s, done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.08 KiB | 111.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   a6da28d8..87a781ff  all_gpu    -> upstream/all_gpu
-Updating a6da28d8..87a781ff
+   8643af58..2abdc159  all_gpu    -> upstream/all_gpu
+Updating 8643af58..2abdc159
 Fast-forward
- Applications/CausalLM/models/gemma4/gemma4_causallm.cpp |  8 ++++++++
- Applications/CausalLM/quantize.cpp                      | 22 ++++++++++++++++++++--
- 2 files changed, 28 insertions(+), 2 deletions(-)
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 52 ++++++++++++++++++++++++----------------------------
+ 1 file changed, 24 insertions(+), 28 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -29,7 +28,10 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [Step 2/5] Build
 ──────────────────────
 [OK] Android binary up to date
-[OK] nntr_quantize up to date
+[INFO] Building nntr_quantize (Linux x86)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+[5/5] Linking target Applications/CausalLM/nntr_quantize
+[OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
 ──────────────────────
@@ -38,7 +40,16 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
   NNTrainer CausalLM Quantization Utility
 ==========================================================
 [1/5] Loading configurations from: /home/jwhero94/models/gemma4
+  Architecture: Gemma4ForConditionalGeneration
+  Num layers:   35
+  Source:       /home/jwhero94/models/gemma4/nntr_gemma4_e2b_fp32.bin
+  Target:       /home/jwhero94/models/gemma4/nntr_gemma4_e2b_q40.bin
+  FC dtype:     Q4_0
+  Embed dtype:  Q6_K
+  LMHead dtype: Q4_0
 
-[!] FATAL ERROR: [json.exception.type_error.302] type must be number, but is null
+[2/5] Creating and initializing model...
+
+[!] FATAL ERROR: Failed to create model for architecture: Gemma4ForConditionalGeneration
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
