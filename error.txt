@@ -1,49 +1,54 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 17, done.
-remote: Counting objects: 100% (17/17), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 9 (delta 7), reused 8 (delta 6), pack-reused 0 (from 0)
-Unpacking objects: 100% (9/9), 1.44 KiB | 133.00 KiB/s, done.
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-   f811fb32..ae9e67bc  all_gpu    -> upstream/all_gpu
-Updating f811fb32..ae9e67bc
-Fast-forward
- Applications/CausalLM/main.cpp                     |  3 ++-
- Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 10 ++++++++--
- 2 files changed, 10 insertions(+), 3 deletions(-)
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-From https://github.com/jeewookp/nntrainer
- * branch              all_gpu    -> FETCH_HEAD
-Already up to date.
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
-[run_gemma4_e2b] FP32 binary already exists, skipping conversion
-╔══════════════════════════════════════╗
-║   Gemma4 E2B – INT4 Run Script       ║
-╚══════════════════════════════════════╝
-[INFO] Model dir  : /home/jwhero94/models/gemma4
-[INFO] Prompt     : Explain artificial intelligence briefly
-[INFO] Quantize   : Q4_0
-
-[Step 1/5] Check prerequisites
-──────────────────────
-[OK] Device: R3CY205ZMND
-[OK] Model files found
-
-[Step 2/5] Build
-──────────────────────
-[INFO] Building Android binary...
-make: Nothing to be done for 'causallm_core'.
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:33:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
+In file included from ./../models/gemma3/gemma3_causallm.cpp:13:
 ./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
   createTransformerDecoderBlock(const int layer_id, std::string input_name);
   ^
 ./../models/transformer.h:140:3: note: overridden virtual function is here
   createTransformerDecoderBlock(const int layer_id, std::string input_name);
   ^
+In file included from ./../models/gemma3/gemma3_causallm.cpp:16:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+2 warnings generated.
+[arm64-v8a] Compile++      : causallm_core <= mha_core.cpp
+In file included from ./../layers/mha_core.cpp:29:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
 1 warning generated.
+[arm64-v8a] Compile++      : causallm_core <= gemma4_causallm.cpp
+In file included from ./../models/gemma4/gemma4_causallm.cpp:14:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+In file included from ./../models/gemma4/gemma4_causallm.cpp:17:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+2 warnings generated.
+[arm64-v8a] SharedLibrary  : libcausallm_core.so
+make: Nothing to be done for 'causallm_core'.
 [arm64-v8a] Executable     : nntrainer_causallm
 [OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
@@ -59,36 +64,10 @@ ninja: no work to do.
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.7 MB/s (11446824 bytes in 0.334s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.0 MB/s (11446824 bytes in 0.341s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 21.8 MB/s (129304 bytes in 0.006s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 22.1 MB/s (129304 bytes in 0.006s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.9 MB/s (3960072 bytes in 0.118s)
-[OK]   nntrainer_causallm
-[OK]   nntr_gemma4_e2b_q40.bin
-[OK]   tokenizer.json
-[OK]   nntr_config.json
-[OK]   config.json
-[OK]   generation_config.json
-
-[Step 5/5] Run on device
-──────────────────────
-── Output ──────────────────────────────────────
-/data/local/tmp/nntrainer/causallm/models/gemma4
-/data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-Unknown architecture: Gemma4ForConditionalGeneration
-Registered architectures:
-	EmbeddingGemma
-	Gemma3ForCausalLM
-	Qwen2Embedding
-	GptOssForCausalLM
-	Qwen3Embedding
-	Qwen3CachedSlimMoeForCausalLM
-	Qwen3SlimMoeForCausalLM
-	Qwen3MoeForCausalLM
-	Qwen3ForCausalLM
-	Qwen2ForCausalLM
-	GptOssCachedSlimCausalLM
-	LlamaForCausalLM
+adb: error: cannot stat '/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm': No such file or directory
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
