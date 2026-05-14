@@ -1,20 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 19, done.
-remote: Counting objects: 100% (19/19), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 10 (delta 9), reused 10 (delta 9), pack-reused 0 (from 0)
-Unpacking objects: 100% (10/10), 1.33 KiB | 46.00 KiB/s, done.
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 5), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 897 bytes | 39.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   86e9436a..6ed9f23d  all_gpu    -> upstream/all_gpu
-Updating 86e9436a..6ed9f23d
+   c31416ac..c381a4dd  all_gpu    -> upstream/all_gpu
+Updating c31416ac..c381a4dd
 Fast-forward
- Applications/CausalLM/layers/ple_block.cpp          | 4 ++++
- Applications/CausalLM/layers/reshaped_rms_norm.cpp  | 2 ++
- Applications/CausalLM/layers/rms_norm.cpp           | 2 ++
- Applications/CausalLM/layers/rmsnorm_fused_fp16.h   | 2 ++
- Applications/CausalLM/layers/tie_word_embedding.cpp | 2 ++
- 5 files changed, 12 insertions(+)
+ Applications/CausalLM/layers/rmsnorm_fused_fp16.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -34,121 +30,12 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[30/52] Compiling C++ object Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o
-FAILED: Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o 
-c++ -IApplications/CausalLM/layers/librms_norm_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o -MF Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o.d -o Applications/CausalLM/layers/librms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_rms_norm.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:93:65: error: definition of ‘void causallm::RMSNormLayer::finalize(nntrainer::InitLayerContext&)’ is not in namespace enclosing ‘causallm::RMSNormLayer’ [-fpermissive]
-   93 | void RMSNormLayer::finalize(nntrainer::InitLayerContext &context) {
-      |                                                                 ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:121:44: error: definition of ‘void causallm::RMSNormLayer::forwarding(nntrainer::RunLayerContext&, bool)’ is not in namespace enclosing ‘causallm::RMSNormLayer’ [-fpermissive]
-  121 |                               bool training) {}
-      |                                            ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:125:56: error: definition of ‘void causallm::RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’ is not in namespace enclosing ‘causallm::RMSNormLayer’ [-fpermissive]
-  125 |                                           bool training) {
-      |                                                        ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp: In member function ‘virtual void causallm::RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:127:54: error: ‘now_ns’ was not declared in this scope; did you mean ‘causallm::causallm::{anonymous}::now_ns’?
-  127 |   const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
-      |                                                      ^~~~~~
-      |                                                      causallm::causallm::{anonymous}::now_ns
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:83:17: note: ‘causallm::causallm::{anonymous}::now_ns’ declared here
-   83 | inline uint64_t now_ns() {
-      |                 ^~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:131:44: error: ‘SINGLE_INOUT_IDX’ was not declared in this scope; did you mean ‘causallm::causallm::SINGLE_INOUT_IDX’?
-  131 |   nntrainer::Tensor &in = context.getInput(SINGLE_INOUT_IDX);
-      |                                            ^~~~~~~~~~~~~~~~
-      |                                            causallm::causallm::SINGLE_INOUT_IDX
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:91:25: note: ‘causallm::causallm::SINGLE_INOUT_IDX’ declared here
-   91 | static constexpr size_t SINGLE_INOUT_IDX = 0;
-      |                         ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:357:5: error: ‘g_rms_norm_profile’ was not declared in this scope; did you mean ‘causallm::causallm::{anonymous}::g_rms_norm_profile’?
-  357 |     g_rms_norm_profile.ns += now_ns() - t_layer_start;
-      |     ^~~~~~~~~~~~~~~~~~
-      |     causallm::causallm::{anonymous}::g_rms_norm_profile
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:81:16: note: ‘causallm::causallm::{anonymous}::g_rms_norm_profile’ declared here
-   81 | RMSNormProfile g_rms_norm_profile;
-      |                ^~~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp: At global scope:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:364:53: error: definition of ‘void causallm::RMSNormLayer::updateTensorsByInputDimensions(nntrainer::RunLayerContext&, std::vector<ml::train::TensorDim>)’ is not in namespace enclosing ‘causallm::RMSNormLayer’ [-fpermissive]
-  364 |   std::vector<nntrainer::TensorDim> input_dimensions) {
-      |                                                     ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp: In member function ‘virtual void causallm::RMSNormLayer::updateTensorsByInputDimensions(nntrainer::RunLayerContext&, std::vector<ml::train::TensorDim>)’:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:365:23: error: ‘SINGLE_INOUT_IDX’ was not declared in this scope; did you mean ‘causallm::causallm::SINGLE_INOUT_IDX’?
-  365 |   context.updateInput(SINGLE_INOUT_IDX, input_dimensions[0]);
-      |                       ^~~~~~~~~~~~~~~~
-      |                       causallm::causallm::SINGLE_INOUT_IDX
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:91:25: note: ‘causallm::causallm::SINGLE_INOUT_IDX’ declared here
-   91 | static constexpr size_t SINGLE_INOUT_IDX = 0;
-      |                         ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp: At global scope:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:369:70: error: definition of ‘void causallm::RMSNormLayer::calcDerivative(nntrainer::RunLayerContext&)’ is not in namespace enclosing ‘causallm::RMSNormLayer’ [-fpermissive]
-  369 | void RMSNormLayer::calcDerivative(nntrainer::RunLayerContext &context) {
-      |                                                                      ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:389:2: error: expected ‘}’ at end of input
-  389 | } // namespace causallm
-      |  ^
-In file included from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rms_norm.cpp:25:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:32:20: note: to match this ‘{’
-   32 | namespace causallm {
-      |                    ^
-[32/52] Compiling C++ object Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o
-FAILED: Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o 
-c++ -IApplications/CausalLM/layers/libreshaped_rms_norm_layer.so.p -IApplications/CausalLM/layers -I../Applications/CausalLM/layers -Inntrainer -I../nntrainer -Iapi -I../api -I../api/ccapi/include -Inntrainer/compiler -I../nntrainer/compiler -Inntrainer/schema -I../nntrainer/schema -Inntrainer/dataset -I../nntrainer/dataset -Inntrainer/layers/loss -I../nntrainer/layers/loss -Inntrainer/layers -I../nntrainer/layers -Inntrainer/models -I../nntrainer/models -Inntrainer/optimizers -I../nntrainer/optimizers -Inntrainer/tensor/cpu_backend/fallback -I../nntrainer/tensor/cpu_backend/fallback -Inntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -I../nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl -Inntrainer/tensor/cpu_backend/ggml_interface -I../nntrainer/tensor/cpu_backend/ggml_interface -Inntrainer/tensor/cpu_backend/cblas_interface -I../nntrainer/tensor/cpu_backend/cblas_interface -Inntrainer/tensor/cpu_backend/x86 -I../nntrainer/tensor/cpu_backend/x86 -Inntrainer/tensor/cpu_backend -I../nntrainer/tensor/cpu_backend -Inntrainer/tensor -I../nntrainer/tensor -Inntrainer/utils -I../nntrainer/utils -Inntrainer/graph -I../nntrainer/graph -I/usr/include/x86_64-linux-gnu/openblas-pthread/ -I/usr/include/nnstreamer -I/usr/include/tensorflow2/ -I/usr/include/opencv4 -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -Werror -std=c++17 -O3 '-DVERSION="0.6.0"' -DVERSION_MAJOR=0 -DVERSION_MINOR=6 -DVERSION_MICRO=0 -DENABLE_TRANSFORMER=1 -march=native -mavx2 -mfma -Wredundant-decls -Wwrite-strings -Wformat -Wformat-nonliteral -Wformat-security -Winit-self -Waddress -Wvla -Wpointer-arith -Wno-error=varargs -Wno-error=ignored-attributes -Wno-error=sign-compare -ftree-vectorize -Wno-unused-variable -Wno-comment -Wno-ignored-attributes -Wno-sign-compare -Wno-maybe-uninitialized -DMIN_CPP_VERSION=201703L -DMMAP_READ=1 -DKERNEL_CACHE=0 -DUSE_MMAP=1 -DOPENCL_KERNEL_PATH=nntrainer_opencl_kernels -DML_API_COMMON=1 -DNNSTREAMER_AVAILABLE=1 -DUSE_BLAS=1 -DHGEMM_EXPERIMENTAL_KERNEL=false -DNNTR_NUM_THREADS=1 -DOMP_NUM_THREADS=6 -D__LOGGING__=1 -DENABLE_TEST=1 -DREDUCE_TOLERANCE=1 -DENABLE_TFLITE_BACKBONE=1 -DENABLE_TFLITE_INTERPRETER=1 -DENABLE_DATA_AUGMENTATION_OPENCV=1 '-DNNTRAINER_CONF_PATH="/usr/local/etc/nntrainer.ini"' -fPIC -pthread -fopenmp -MD -MQ Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o -MF Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o.d -o Applications/CausalLM/layers/libreshaped_rms_norm_layer.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_layers_reshaped_rms_norm.cpp.o -c /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:77:73: error: definition of ‘void causallm::ReshapedRMSNormLayer::finalize(nntrainer::InitLayerContext&)’ is not in namespace enclosing ‘causallm::ReshapedRMSNormLayer’ [-fpermissive]
-   77 | void ReshapedRMSNormLayer::finalize(nntrainer::InitLayerContext &context) {
-      |                                                                         ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:100:52: error: definition of ‘void causallm::ReshapedRMSNormLayer::forwarding(nntrainer::RunLayerContext&, bool)’ is not in namespace enclosing ‘causallm::ReshapedRMSNormLayer’ [-fpermissive]
-  100 |                                       bool training) {}
-      |                                                    ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:104:16: error: definition of ‘void causallm::ReshapedRMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’ is not in namespace enclosing ‘causallm::ReshapedRMSNormLayer’ [-fpermissive]
-  104 |   bool training) {
-      |                ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp: In member function ‘virtual void causallm::ReshapedRMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext&, unsigned int, unsigned int, bool)’:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:106:54: error: ‘now_ns’ was not declared in this scope; did you mean ‘causallm::causallm::{anonymous}::now_ns’?
-  106 |   const uint64_t t_layer_start = profile_this_call ? now_ns() : 0;
-      |                                                      ^~~~~~
-      |                                                      causallm::causallm::{anonymous}::now_ns
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:67:17: note: ‘causallm::causallm::{anonymous}::now_ns’ declared here
-   67 | inline uint64_t now_ns() {
-      |                 ^~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:110:44: error: ‘SINGLE_INOUT_IDX’ was not declared in this scope; did you mean ‘causallm::causallm::SINGLE_INOUT_IDX’?
-  110 |   nntrainer::Tensor &in = context.getInput(SINGLE_INOUT_IDX);
-      |                                            ^~~~~~~~~~~~~~~~
-      |                                            causallm::causallm::SINGLE_INOUT_IDX
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:75:25: note: ‘causallm::causallm::SINGLE_INOUT_IDX’ declared here
-   75 | static constexpr size_t SINGLE_INOUT_IDX = 0;
-      |                         ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:243:5: error: ‘g_reshaped_rms_norm_profile’ was not declared in this scope; did you mean ‘causallm::causallm::{anonymous}::g_reshaped_rms_norm_profile’?
-  243 |     g_reshaped_rms_norm_profile.ns += now_ns() - t_layer_start;
-      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
-      |     causallm::causallm::{anonymous}::g_reshaped_rms_norm_profile
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:65:24: note: ‘causallm::causallm::{anonymous}::g_reshaped_rms_norm_profile’ declared here
-   65 | ReshapedRMSNormProfile g_reshaped_rms_norm_profile;
-      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp: At global scope:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:250:53: error: definition of ‘void causallm::ReshapedRMSNormLayer::updateTensorsByInputDimensions(nntrainer::RunLayerContext&, std::vector<ml::train::TensorDim>)’ is not in namespace enclosing ‘causallm::ReshapedRMSNormLayer’ [-fpermissive]
-  250 |   std::vector<nntrainer::TensorDim> input_dimensions) {
-      |                                                     ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp: In member function ‘virtual void causallm::ReshapedRMSNormLayer::updateTensorsByInputDimensions(nntrainer::RunLayerContext&, std::vector<ml::train::TensorDim>)’:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:251:23: error: ‘SINGLE_INOUT_IDX’ was not declared in this scope; did you mean ‘causallm::causallm::SINGLE_INOUT_IDX’?
-  251 |   context.updateInput(SINGLE_INOUT_IDX, input_dimensions[0]);
-      |                       ^~~~~~~~~~~~~~~~
-      |                       causallm::causallm::SINGLE_INOUT_IDX
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:75:25: note: ‘causallm::causallm::SINGLE_INOUT_IDX’ declared here
-   75 | static constexpr size_t SINGLE_INOUT_IDX = 0;
-      |                         ^~~~~~~~~~~~~~~~
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp: At global scope:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:255:78: error: definition of ‘void causallm::ReshapedRMSNormLayer::calcDerivative(nntrainer::RunLayerContext&)’ is not in namespace enclosing ‘causallm::ReshapedRMSNormLayer’ [-fpermissive]
-  255 | void ReshapedRMSNormLayer::calcDerivative(nntrainer::RunLayerContext &context) {
-      |                                                                              ^
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:275:2: error: expected ‘}’ at end of input
-  275 | } // namespace causallm
-      |  ^
-In file included from /home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/reshaped_rms_norm.cpp:22:
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/layers/rmsnorm_fused_fp16.h:32:20: note: to match this ‘{’
-   32 | namespace causallm {
-      |                    ^
-[41/52] Compiling C++ object Applications/CausalLM/nntr_quantize.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_quantize.cpp.o
+[11/13] Linking target Applications/CausalLM/libcausallm.so
+FAILED: Applications/CausalLM/libcausallm.so 
+c++  -o Applications/CausalLM/libcausallm.so Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_huggingface_tokenizer.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_llm_util.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_api_causal_lm_api.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_api_model_config.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_causal_lm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_transformer.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_sentence_transformer.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gpt_oss_gptoss_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gpt_oss_cached_slim_gptoss_cached_slim_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen2_qwen2_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen2_qwen2_embedding.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen3_qwen3_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen3_qwen3_embedding.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen3_moe_qwen3_moe_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen3_slim_moe_qwen3_slim_moe_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_qwen3_cached_slim_moe_qwen3_cached_slim_moe_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gemma3_gemma3_causallm.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gemma3_embedding_gemma.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gemma3_function.cpp.o Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_gemma4_gemma4_causallm.cpp.o -Wl,--as-needed -Wl,--no-undefined -Wl,-O1 -shared -fPIC -Wl,--start-group -Wl,-soname,libcausallm.so '-Wl,-rpath,$ORIGIN/../../nntrainer:$ORIGIN/layers:$ORIGIN/models/gpt_oss:$ORIGIN/models/gpt_oss_cached_slim:$ORIGIN/models/qwen3_moe:$ORIGIN/models/qwen3_slim_moe:$ORIGIN/models/qwen3_cached_slim_moe:/usr/lib/x86_64-linux-gnu/openblas-pthread' -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/nntrainer -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/layers -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/models/gpt_oss -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/models/gpt_oss_cached_slim -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/models/qwen3_moe -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/models/qwen3_slim_moe -Wl,-rpath-link,/home/jwhero94/projects/nntrainer/builddir_quantize/Applications/CausalLM/models/qwen3_cached_slim_moe -Wl,-rpath-link,/usr/lib/x86_64-linux-gnu/openblas-pthread nntrainer/libnntrainer.so api/ccapi/libccapi-nntrainer.a Applications/CausalLM/layers/librms_norm_layer.so Applications/CausalLM/layers/libtie_word_embedding_layer.so Applications/CausalLM/layers/liblm_head.so Applications/CausalLM/layers/libswiglu_layer.so Applications/CausalLM/layers/libmha_core_layer.so Applications/CausalLM/layers/libembedding_layer.so Applications/CausalLM/layers/libreshaped_rms_norm_layer.so Applications/CausalLM/layers/libqkv_layer.so Applications/CausalLM/layers/libgate_up_layer.so Applications/CausalLM/layers/libembedding_pooling_layer.so Applications/CausalLM/layers/libembedding_normalize_layer.so Applications/CausalLM/layers/libple_block_layer.so Applications/CausalLM/models/gpt_oss/libgptoss_moe_layer.so Applications/CausalLM/models/gpt_oss_cached_slim/libcached_slim_gptoss_moe_layer.so Applications/CausalLM/models/qwen3_moe/libqwen_moe_layer.so Applications/CausalLM/models/qwen3_slim_moe/libqwen_moe_layer_fsu.so Applications/CausalLM/models/qwen3_cached_slim_moe/libqwen_moe_layer_cached.so /home/jwhero94/projects/nntrainer/Applications/CausalLM/lib/libtokenizers_c.a /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblas.so /usr/lib/x86_64-linux-gnu/libiniparser.a -ldl -lm /usr/lib/x86_64-linux-gnu/libcapi-ml-common.so /usr/lib/x86_64-linux-gnu/libnnstreamer-single.so -fopenmp -pthread /usr/lib/libtensorflow2-lite.a /usr/lib/x86_64-linux-gnu/libopencv_stitching.so /usr/lib/x86_64-linux-gnu/libopencv_alphamat.so /usr/lib/x86_64-linux-gnu/libopencv_aruco.so /usr/lib/x86_64-linux-gnu/libopencv_barcode.so /usr/lib/x86_64-linux-gnu/libopencv_bgsegm.so /usr/lib/x86_64-linux-gnu/libopencv_bioinspired.so /usr/lib/x86_64-linux-gnu/libopencv_ccalib.so /usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.so /usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.so /usr/lib/x86_64-linux-gnu/libopencv_dpm.so /usr/lib/x86_64-linux-gnu/libopencv_face.so /usr/lib/x86_64-linux-gnu/libopencv_freetype.so /usr/lib/x86_64-linux-gnu/libopencv_fuzzy.so /usr/lib/x86_64-linux-gnu/libopencv_hdf.so /usr/lib/x86_64-linux-gnu/libopencv_hfs.so /usr/lib/x86_64-linux-gnu/libopencv_img_hash.so /usr/lib/x86_64-linux-gnu/libopencv_intensity_transform.so /usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.so /usr/lib/x86_64-linux-gnu/libopencv_mcc.so /usr/lib/x86_64-linux-gnu/libopencv_quality.so /usr/lib/x86_64-linux-gnu/libopencv_rapid.so /usr/lib/x86_64-linux-gnu/libopencv_reg.so /usr/lib/x86_64-linux-gnu/libopencv_rgbd.so /usr/lib/x86_64-linux-gnu/libopencv_saliency.so /usr/lib/x86_64-linux-gnu/libopencv_shape.so /usr/lib/x86_64-linux-gnu/libopencv_stereo.so /usr/lib/x86_64-linux-gnu/libopencv_structured_light.so /usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.so /usr/lib/x86_64-linux-gnu/libopencv_superres.so /usr/lib/x86_64-linux-gnu/libopencv_optflow.so /usr/lib/x86_64-linux-gnu/libopencv_surface_matching.so /usr/lib/x86_64-linux-gnu/libopencv_tracking.so /usr/lib/x86_64-linux-gnu/libopencv_highgui.so /usr/lib/x86_64-linux-gnu/libopencv_datasets.so /usr/lib/x86_64-linux-gnu/libopencv_text.so /usr/lib/x86_64-linux-gnu/libopencv_plot.so /usr/lib/x86_64-linux-gnu/libopencv_ml.so /usr/lib/x86_64-linux-gnu/libopencv_videostab.so /usr/lib/x86_64-linux-gnu/libopencv_videoio.so /usr/lib/x86_64-linux-gnu/libopencv_viz.so /usr/lib/x86_64-linux-gnu/libopencv_wechat_qrcode.so /usr/lib/x86_64-linux-gnu/libopencv_ximgproc.so /usr/lib/x86_64-linux-gnu/libopencv_video.so /usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so /usr/lib/x86_64-linux-gnu/libopencv_objdetect.so /usr/lib/x86_64-linux-gnu/libopencv_calib3d.so /usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so /usr/lib/x86_64-linux-gnu/libopencv_features2d.so /usr/lib/x86_64-linux-gnu/libopencv_dnn.so /usr/lib/x86_64-linux-gnu/libopencv_flann.so /usr/lib/x86_64-linux-gnu/libopencv_xphoto.so /usr/lib/x86_64-linux-gnu/libopencv_photo.so /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so /usr/lib/x86_64-linux-gnu/libopencv_core.so -Wl,--end-group -fopenmp
+/usr/bin/ld: Applications/CausalLM/libcausallm.so.p/_home_jwhero94_projects_nntrainer_Applications_CausalLM_models_transformer.cpp.o: in function `std::unique_ptr<nntrainer::Layer, std::default_delete<nntrainer::Layer> > nntrainer::createLayer<causallm::QKVNormLayer, (causallm::QKVNormLayer*)0>(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&)':
+transformer.cpp:(.text._ZN9nntrainer11createLayerIN8causallm12QKVNormLayerELPS2_0EEESt10unique_ptrINS_5LayerESt14default_deleteIS5_EERKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaISF_EE[_ZN9nntrainer11createLayerIN8causallm12QKVNormLayerELPS2_0EEESt10unique_ptrINS_5LayerESt14default_deleteIS5_EERKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaISF_EE]+0x1f): undefined reference to `causallm::QKVNormLayer::QKVNormLayer()'
+collect2: error: ld returned 1 exit status
 ninja: build stopped: subcommand failed.
 [ERROR] nntr_quantize build failed
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
