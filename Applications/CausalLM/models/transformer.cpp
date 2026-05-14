@@ -11,8 +11,14 @@
  */
 
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <unordered_set>
+
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <app_context.h>
 #include <engine.h>
@@ -263,16 +269,40 @@ void Transformer::load_weight(const std::string &weight_path) {
   // NeuralNetwork::load() in INFERENCE mode spawns one thread per layer
   // (~247 threads) each mmapping the full weight file concurrently.  On
   // Android this causes the LMK to SIGKILL the process before loading
-  // completes.  Load weights sequentially instead: open the file once and
-  // read each layer's weights in forward-pass order.
-  std::ifstream file(weight_path, std::ios::in | std::ios::binary);
-  if (!file.is_open())
+  // completes.  Instead: mmap the file once (lazy, no physical pages faulted
+  // in), then memcpy each weight sequentially and immediately call
+  // POSIX_MADV_DONTNEED to release those file-cache pages.  At any moment
+  // the resident file-cache footprint is at most one weight's size (~5 MB),
+  // preventing the ~2x OOM spike that ifstream readahead caused.
+  int fd = ::open(weight_path.c_str(), O_RDONLY);
+  if (fd < 0)
     throw std::runtime_error("Cannot open weight file: " + weight_path);
+
+  struct stat st{};
+  if (::fstat(fd, &st) < 0) {
+    ::close(fd);
+    throw std::runtime_error("fstat failed for: " + weight_path);
+  }
+  size_t f_size = static_cast<size_t>(st.st_size);
+
+  char *view = static_cast<char *>(
+    ::mmap(nullptr, f_size, PROT_READ, MAP_PRIVATE, fd, 0));
+  ::close(fd);
+  if (view == MAP_FAILED)
+    throw std::runtime_error("mmap failed for: " + weight_path);
+
+  // Disable kernel read-ahead so pages are fetched on demand only.
+  ::posix_madvise(view, f_size, POSIX_MADV_RANDOM);
+
+  std::fprintf(stderr, "[DIAG] load_weight: file=%zu bytes\n", f_size);
+  std::fflush(stderr);
 
   // Track data pointers already loaded to handle shared weights
   // (e.g. TieWordEmbedding where embedding0 and output_of_causallm
   // reference the exact same Tensor buffer).
   std::unordered_set<void *> visited;
+  size_t file_pos = 0;
+  size_t bytes_done = 0;
 
   std::exception_ptr ex;
   model->forEachLayer(
@@ -285,12 +315,23 @@ void Transformer::load_weight(const std::string &weight_path) {
           if (!ptr) continue;
           if (!visited.insert(ptr).second) continue; // shared weight already read
 
-          std::streamsize n = static_cast<std::streamsize>(w.getMemoryBytes());
-          file.read(reinterpret_cast<char *>(ptr), n);
-          if (file.fail())
+          size_t n = w.getMemoryBytes();
+          if (file_pos + n > f_size)
             throw std::runtime_error(
-              "Failed to read weight '" + ctx.getWeightName(i) +
-              "' (expected " + std::to_string(n) + " bytes)");
+              "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
+
+          std::memcpy(ptr, view + file_pos, n);
+
+          // Release file-cache pages for this weight immediately after copy.
+          ::posix_madvise(view + file_pos, n, POSIX_MADV_DONTNEED);
+
+          file_pos += n;
+          bytes_done += n;
+          if (bytes_done % (128UL * 1024 * 1024) < n) {
+            std::fprintf(stderr, "[DIAG] load_weight: %zu MB loaded\n",
+                         bytes_done / 1024 / 1024);
+            std::fflush(stderr);
+          }
         }
       } catch (...) {
         ex = std::current_exception();
@@ -298,6 +339,7 @@ void Transformer::load_weight(const std::string &weight_path) {
     },
     nullptr);
 
+  ::munmap(view, f_size);
   if (ex) std::rethrow_exception(ex);
 };
 
