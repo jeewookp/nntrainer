@@ -158,9 +158,11 @@ void Gemma4PleBlock::incremental_forwarding(
   auto load_row = [&](const nntrainer::Tensor &t, unsigned int row,
                       float *dst) {
     if (t.getDataType() == ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
       const _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
       for (unsigned int i = 0; i < H; ++i)
         dst[i] = (float)p[i];
+#endif
     } else {
       std::memcpy(dst, t.getData<float>() + (size_t)row * H, H * sizeof(float));
     }
@@ -169,9 +171,11 @@ void Gemma4PleBlock::incremental_forwarding(
   auto store_row = [&](nntrainer::Tensor &t, unsigned int row,
                        const float *src) {
     if (t.getDataType() == ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
       _FP16 *p = t.getData<_FP16>() + (size_t)row * H;
       for (unsigned int i = 0; i < H; ++i)
         p[i] = (_FP16)src[i];
+#endif
     } else {
       std::memcpy(t.getData<float>() + (size_t)row * H, src, H * sizeof(float));
     }

@@ -216,6 +216,7 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       out_step.multiply_i(gamma);
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
       // Stage 1b: fused fp16-in fp16-out RMSNorm with fp32 accumulator
       // and fp32-pinned gamma. Replaces the prior fp16 -> fp32 copy ->
       // Tensor chain (multiply/average/add/inv_sqrt/multiply) -> gamma
@@ -304,6 +305,7 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
 #endif
       if (profile_this_call)
         g_rms_norm_profile.ns_fused += now_ns() - t_fused;
+#endif // ENABLE_FP16
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");

@@ -189,6 +189,7 @@ void ReshapedRMSNormLayer::incremental_forwarding(
       out_step.multiply_i(gamma);
     } else if (in_step.getDataType() ==
                ml::train::TensorDim::DataType::FP16) {
+#ifdef ENABLE_FP16
       // Stage 1b: fused fp16-in fp16-out RMSNorm + gamma.  Head-dim
       // (W=feature_size) is small (128 on Qwen3-4B) but we run the
       // normalisation H_rows = (height after reshape) times, which is
@@ -223,6 +224,7 @@ void ReshapedRMSNormLayer::incremental_forwarding(
 #endif
       if (profile_this_call)
         g_reshaped_rms_norm_profile.ns_fused += now_ns() - t_fused;
+#endif // ENABLE_FP16
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");

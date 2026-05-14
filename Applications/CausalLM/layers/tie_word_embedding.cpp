@@ -670,6 +670,7 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
     static const bool s_logits_debug =
       std::getenv("NNTRAINER_LOGITS_DEBUG") != nullptr;
     if (s_logits_debug) {
+#ifdef ENABLE_FP16
       static unsigned int s_decode_token_idx = 0;
       const std::size_t vocab = hidden_step.width();
       // Hash all logits + find argmax simultaneously. fp16 bits
@@ -697,6 +698,7 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
                    (unsigned long long)hash, vocab);
       std::fflush(stderr);
       ++s_decode_token_idx;
+#endif // ENABLE_FP16
     }
   }
 }

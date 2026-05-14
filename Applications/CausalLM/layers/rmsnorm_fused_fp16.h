@@ -31,6 +31,7 @@
 
 namespace causallm {
 
+#ifdef ENABLE_FP16
 static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
                                       _FP16 *__restrict__ Y,
                                       const float *__restrict__ gamma,
@@ -113,5 +114,6 @@ static inline void rmsnorm_fused_fp16(const _FP16 *__restrict__ X,
 }
 
 } // namespace causallm
+#endif // ENABLE_FP16
 
 #endif // CAUSALLM_RMSNORM_FUSED_FP16_H
