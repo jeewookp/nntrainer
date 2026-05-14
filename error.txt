@@ -1,16 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
+^[[Aremote: Enumerating objects: 11, done.
 remote: Counting objects: 100% (11/11), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.06 KiB | 108.00 KiB/s, done.
+Unpacking objects: 100% (6/6), 1.37 KiB | 175.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   d9d86609..e785e23a  all_gpu    -> upstream/all_gpu
-Updating d9d86609..e785e23a
+   7bf27d25..3d260209  all_gpu    -> upstream/all_gpu
+Updating 7bf27d25..3d260209
 Fast-forward
- Applications/CausalLM/models/transformer.cpp | 11 ++++++++---
- 1 file changed, 8 insertions(+), 3 deletions(-)
+ Applications/CausalLM/models/transformer.cpp | 31 ++++++++++++++++++++-----------
+ 1 file changed, 20 insertions(+), 11 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
