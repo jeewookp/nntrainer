@@ -1,18 +1,16 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 7, done.
-remote: Counting objects: 100% (7/7), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 1.56 KiB | 533.00 KiB/s, done.
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.25 KiB | 160.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   a54eb289..4029d24e  all_gpu    -> upstream/all_gpu
-Updating a54eb289..4029d24e
+   9efcdbb9..287d088e  all_gpu    -> upstream/all_gpu
+Updating 9efcdbb9..287d088e
 Fast-forward
- Applications/CausalLM/jni/Android.mk |  1 +
- Applications/CausalLM/svm_compat.cpp | 28 ++++++++++++++++++++++++++++
- 2 files changed, 29 insertions(+)
- create mode 100644 Applications/CausalLM/svm_compat.cpp
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -29,7 +27,19 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 
 [Step 2/5] Build
 ──────────────────────
-[OK] Android binary up to date
+[INFO] Source files changed, rebuilding Android binary...
+[INFO] Building Android binary...
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+2 warnings generated.
+[arm64-v8a] SharedLibrary  : libcausallm_core.so
+make: Nothing to be done for 'causallm_core'.
+[arm64-v8a] Executable     : nntrainer_causallm
+[OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ninja: no work to do.
@@ -41,9 +51,9 @@ ninja: no work to do.
 
 [Step 4/5] Push to device
 ──────────────────────
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.9 MB/s (47487312 bytes in 1.378s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.6 MB/s (47487312 bytes in 1.390s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.2 MB/s (3960072 bytes in 0.117s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 30.0 MB/s (3960072 bytes in 0.126s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -56,3 +66,4 @@ ninja: no work to do.
 ── Output ──────────────────────────────────────
 CANNOT LINK EXECUTABLE "./nntrainer_causallm": cannot locate symbol "_ZN9nntrainer14svm_alloc_intsEi" referenced by "/data/local/tmp/nntrainer/causallm/libcausallm_core.so"...
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
