@@ -89,21 +89,20 @@ fi
 
 if [ "$NEEDS_NDK_BUILD" = true ]; then
     log_info "Building Android binary..."
-    # Delete stale outputs so NDK is forced to re-link and re-strip.
+    # Delete stale outputs so NDK is forced to re-link.
     rm -f "$BUILT_LIB"
-    # Wipe the entire nntrainer_causallm obj directory and the final
-    # binary.  Deleting just main.o is unreliable because NDK encodes
-    # the "../" prefix in LOCAL_SRC_FILES as "__/" in the obj path
-    # (e.g. objs/nntrainer_causallm/__/main.o, not .../main.o), so a
-    # targeted rm often deletes the wrong file and the cached .o survives.
-    # Wiping the whole obj dir + the output binary guarantees that NDK
-    # recompiles main.cpp and re-links nntrainer_causallm from scratch.
+    # Wipe the entire nntrainer_causallm obj directory.  Deleting just
+    # main.o is unreliable because NDK encodes the "../" prefix in
+    # LOCAL_SRC_FILES as "__/" in the obj path (objs/nntrainer_causallm/__/main.o).
     NDK_OBJ_EXE_DIR="$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm"
     rm -rf "$NDK_OBJ_EXE_DIR"
+    # Also delete both known output locations so NDK must write a fresh binary.
+    # NDK r23+ places BUILD_EXECUTABLE in obj/local/ABI/ (not NDK_LIBS_OUT/ABI/).
+    EXE_OBJ="$CAUSALLM_DIR/jni/obj/local/arm64-v8a/nntrainer_causallm"
+    rm -f "$EXE_OBJ"
     rm -f "$LIBS_DIR/nntrainer_causallm"
     # Do NOT pipe through tail: set -o pipefail means a pipe masks ndk-build
-    # failures (tail always exits 0).  Print all output directly so errors
-    # are visible and the script exits immediately on build failure.
+    # failures (tail always exits 0).
     ndk-build \
         NDK_PROJECT_PATH=. \
         NDK_LIBS_OUT=./libs \
@@ -112,14 +111,19 @@ if [ "$NEEDS_NDK_BUILD" = true ]; then
         NDK_APPLICATION_MK=./Application.mk \
         nntrainer_causallm causallm_core \
         -j$(nproc)
-    # Verify the newly-built binary contains the Gemma4 architecture
-    # registration strings. If they are missing the cached old .o was
-    # still used somehow.
-    if strings "$LIBS_DIR/nntrainer_causallm" 2>/dev/null | grep -q "Gemma4ForConditionalGeneration"; then
-        log_success "Binary verified: Gemma4ForConditionalGeneration registered"
+    # NDK r23+ puts executables in obj/local/ABI/ instead of NDK_LIBS_OUT/ABI/.
+    # Copy to libs/ so the push step always finds it at a single path.
+    if [ -f "$EXE_OBJ" ] && [ ! -f "$LIBS_DIR/nntrainer_causallm" ]; then
+        cp -f "$EXE_OBJ" "$LIBS_DIR/nntrainer_causallm"
+        log_info "  Copied nntrainer_causallm: obj/local → libs/"
+    fi
+    # Verify the binary contains the Gemma4 registration strings.
+    EXE_FINAL="$LIBS_DIR/nntrainer_causallm"
+    [ -f "$EXE_FINAL" ] || EXE_FINAL="$EXE_OBJ"
+    if strings "$EXE_FINAL" 2>/dev/null | grep -q "Gemma4ForConditionalGeneration"; then
+        log_success "Binary verified: Gemma4ForConditionalGeneration found"
     else
-        log_warning "Gemma4ForConditionalGeneration NOT found in binary — forcing full rebuild"
-        rm -rf "$CAUSALLM_DIR/jni/obj/local/arm64-v8a/objs/nntrainer_causallm"
+        log_warning "Gemma4ForConditionalGeneration NOT found — forcing full obj clean rebuild"
         rm -rf "$CAUSALLM_DIR/jni/obj/local/arm64-v8a/"
         rm -f "$LIBS_DIR/nntrainer_causallm"
         ndk-build \
@@ -130,6 +134,7 @@ if [ "$NEEDS_NDK_BUILD" = true ]; then
             NDK_APPLICATION_MK=./Application.mk \
             nntrainer_causallm causallm_core \
             -j$(nproc)
+        [ -f "$EXE_OBJ" ] && cp -f "$EXE_OBJ" "$LIBS_DIR/nntrainer_causallm"
     fi
     log_success "Android build done"
 else
