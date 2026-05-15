@@ -11,7 +11,6 @@
  */
 
 #include <cstdio>
-#include <cstring>
 #include <fstream>
 #include <unordered_set>
 
@@ -266,14 +265,18 @@ void Transformer::load_weight(const std::string &weight_path) {
       "initialize() before load_weight().");
   }
 
-  // NeuralNetwork::load() in INFERENCE mode spawns one thread per layer
-  // (~247 threads) each mmapping the full weight file concurrently.  On
-  // Android this causes the LMK to SIGKILL the process before loading
-  // completes.  Instead: mmap the file once (lazy, no physical pages faulted
-  // in), then memcpy each weight sequentially and immediately call
-  // POSIX_MADV_DONTNEED to release those file-cache pages.  At any moment
-  // the resident file-cache footprint is at most one weight's size (~5 MB),
-  // preventing the ~2x OOM spike that ifstream readahead caused.
+  // Strategy: pread() directly into SVM buffers + posix_fadvise(DONTNEED)
+  // to evict file-cache pages immediately after each weight is read.
+  //
+  // Previous approach (mmap + memcpy + POSIX_MADV_DONTNEED) still kept
+  // file-cache pages alive because MAP_PRIVATE DONTNEED only removes the
+  // process page-table entry; the underlying page-cache entry lingers until
+  // the kernel reclaims it under memory pressure.  This caused a ~2:1 RSS
+  // ratio (SVM bytes + file-cache bytes), exhausting ~12 GB physical RAM
+  // before the 10.6 GB weight file was fully loaded.
+  //
+  // posix_fadvise(fd, off, len, POSIX_FADV_DONTNEED) operates on the fd's
+  // page-cache directly and evicts pages immediately, achieving a ~1:1 ratio.
   int fd = ::open(weight_path.c_str(), O_RDONLY);
   if (fd < 0)
     throw std::runtime_error("Cannot open weight file: " + weight_path);
@@ -285,14 +288,8 @@ void Transformer::load_weight(const std::string &weight_path) {
   }
   size_t f_size = static_cast<size_t>(st.st_size);
 
-  char *view = static_cast<char *>(
-    ::mmap(nullptr, f_size, PROT_READ, MAP_PRIVATE, fd, 0));
-  ::close(fd);
-  if (view == MAP_FAILED)
-    throw std::runtime_error("mmap failed for: " + weight_path);
-
-  // Disable kernel read-ahead so pages are fetched on demand only.
-  ::posix_madvise(view, f_size, POSIX_MADV_RANDOM);
+  // Hint: we will read sequentially, let kernel optimise readahead.
+  ::posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
   std::fprintf(stderr, "[DIAG] load_weight: file=%zu bytes\n", f_size);
   std::fflush(stderr);
@@ -303,6 +300,10 @@ void Transformer::load_weight(const std::string &weight_path) {
   std::unordered_set<void *> visited;
   size_t file_pos = 0;
   size_t bytes_done = 0;
+
+#ifndef MADV_PAGEOUT
+#define MADV_PAGEOUT 21
+#endif
 
   std::exception_ptr ex;
   model->forEachLayer(
@@ -320,26 +321,34 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
-          std::memcpy(ptr, view + file_pos, n);
+          // pread directly into the SVM buffer — no intermediate copy.
+          {
+            char *dst = static_cast<char *>(ptr);
+            off_t foff = static_cast<off_t>(file_pos);
+            size_t rem = n;
+            while (rem > 0) {
+              ssize_t nr = ::pread(fd, dst, rem, foff);
+              if (nr <= 0)
+                throw std::runtime_error(
+                  "pread failed for weight '" + ctx.getWeightName(i) + "'");
+              dst += nr;
+              foff += nr;
+              rem -= static_cast<size_t>(nr);
+            }
+          }
 
-          // Release file-cache pages for this weight immediately after copy.
-          ::posix_madvise(view + file_pos, n, POSIX_MADV_DONTNEED);
+          // Evict file-cache pages for this weight immediately.
+          // posix_fadvise on the fd removes the page-cache entries directly,
+          // unlike mmap POSIX_MADV_DONTNEED which only clears page-table refs.
+          ::posix_fadvise(fd, static_cast<off_t>(file_pos),
+                          static_cast<off_t>(n), POSIX_FADV_DONTNEED);
 
-          // Immediately page the SVM pages out to zRAM so that physical
-          // RSS stays near-zero during the entire load pass.  The GPU will
-          // page-fault the data back in layer-by-layer during inference via
-          // the Adreno SMMU fault handler (transparent to the caller).
-          // MADV_PAGEOUT (21) requires kernel 5.4+; it is a no-op on older
-          // kernels, so the build still works on pre-5.4 targets.
-#ifndef MADV_PAGEOUT
-#define MADV_PAGEOUT 21
-#endif
+          // Push SVM pages to zRAM so physical RSS stays minimal.
           ::madvise(ptr, n, MADV_PAGEOUT);
 
           file_pos += n;
           bytes_done += n;
           if (bytes_done % (128UL * 1024 * 1024) < n) {
-            // Read VmRSS from /proc/self/status to track physical page commits.
             size_t rss_kb = 0;
             {
               std::ifstream st("/proc/self/status");
@@ -363,7 +372,7 @@ void Transformer::load_weight(const std::string &weight_path) {
     },
     nullptr);
 
-  ::munmap(view, f_size);
+  ::close(fd);
   if (ex) std::rethrow_exception(ex);
 };
 
