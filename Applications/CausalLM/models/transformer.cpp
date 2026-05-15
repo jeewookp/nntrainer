@@ -417,7 +417,24 @@ void Transformer::load_weight(const std::string &weight_path) {
     nullptr);
 
   ::close(fd);
+  std::fprintf(stderr, "[DIAG] load_weight: fd closed, bytes=%zu MB, "
+               "svm_regions=%zu\n",
+               bytes_done / 1024 / 1024, svm_written.size());
+  std::fflush(stderr);
+
+  // Explicitly release tracking vectors now (with logging) so that if the
+  // heap is fragmented the crash is attributed to the right place rather
+  // than to an invisible destructor after the function returns.
+  { std::vector<std::pair<void *, size_t>> tmp; tmp.swap(svm_written); }
+  std::fprintf(stderr, "[DIAG] load_weight: svm_written freed\n");
+  std::fflush(stderr);
+  { std::unordered_set<void *> tmp; tmp.swap(visited); }
+  std::fprintf(stderr, "[DIAG] load_weight: visited freed\n");
+  std::fflush(stderr);
+
   if (ex) std::rethrow_exception(ex);
+  std::fprintf(stderr, "[DIAG] load_weight: returning ok\n");
+  std::fflush(stderr);
 };
 
 void Transformer::save_weight(const std::string &weight_path) {

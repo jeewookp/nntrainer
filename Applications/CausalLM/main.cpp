@@ -377,8 +377,9 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "[DIAG] initialize done\n"); std::fflush(stderr);
     model->load_weight(weight_file);
     std::fprintf(stderr, "[DIAG] RSS after load_weight: %zu KB\n",
-                 read_vm_rss_kb());
+                 read_vm_rss_kb()); std::fflush(stderr);
     std::fprintf(stderr, "[DIAG] load_weight done\n"); std::fflush(stderr);
+    std::fprintf(stderr, "[DIAG] starting inference\n"); std::fflush(stderr);
 
     bool do_sample = generation_cfg.value("do_sample", false);
 
