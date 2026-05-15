@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+^[[Aremote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 2.01 KiB | 515.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 2.33 KiB | 596.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   1ade8cf7..0e5ab03f  all_gpu    -> upstream/all_gpu
-Updating 1ade8cf7..0e5ab03f
+   17fde6a8..4cb50a80  all_gpu    -> upstream/all_gpu
+Updating 17fde6a8..4cb50a80
 Fast-forward
- Applications/CausalLM/models/transformer.cpp | 71 ++++++++++++++++++++++++++++++++++++++++-------------------------------
- 1 file changed, 40 insertions(+), 31 deletions(-)
+ Applications/CausalLM/main.cpp               |  4 ++--
+ Applications/CausalLM/models/transformer.cpp | 74 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------
+ 2 files changed, 61 insertions(+), 17 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -30,7 +31,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 [INFO] Source files changed, rebuilding Android binary...
 [INFO] Building Android binary...
 [arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:23:
+In file included from ./../models/transformer.cpp:24:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
 In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
@@ -59,7 +60,7 @@ In file included from ./../models/gemma3/embedding_gemma.h:17:
 [OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[3/4] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
+[4/4] Linking target Applications/CausalLM/nntr_quantize
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -70,13 +71,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (50308680 bytes in 1.482s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 32.4 MB/s (50348400 bytes in 1.483s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.4 MB/s (11446824 bytes in 0.337s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.8 MB/s (11446824 bytes in 0.333s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 16.6 MB/s (129304 bytes in 0.007s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 15.9 MB/s (129304 bytes in 0.008s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.6 MB/s (4142504 bytes in 0.125s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.9 MB/s (4142568 bytes in 0.120s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -90,11 +91,11 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
 [DIAG] cgroup entry: 5:memory:/
-[DIAG] oom_score_adj set to -900
-[DIAG] RSS before initialize: 377044 KB
+[DIAG] oom_score_adj set to -1000
+[DIAG] RSS before initialize: 376724 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.35 Compiler E031.47.18.28" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
 [CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
-[DIAG] RSS after initialize:  181900 KB
+[DIAG] RSS after initialize:  181412 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
 [DIAG] load_weight: 216 MB written, RSS=395 MB
@@ -103,38 +104,51 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: 772 MB written, RSS=953 MB
 [DIAG] load_weight: 1038 MB written, RSS=1218 MB
 [DIAG] load_weight: 1321 MB written, RSS=1501 MB
-[DIAG] load_weight: 1605 MB written, RSS=1785 MB
+[DIAG] load_weight: 1605 MB written, RSS=1784 MB
 [DIAG] load_weight: 1888 MB written, RSS=2068 MB
 [DIAG] load_weight: 2171 MB written, RSS=2351 MB
-[DIAG] load_weight: 2176 MB written, RSS=2356 MB
-[DIAG] load_weight: 2455 MB written, RSS=2635 MB
+[DIAG] load_weight: 2176 MB written, RSS=2355 MB
+[DIAG] load_weight: 2455 MB written, RSS=2634 MB
 [DIAG] load_weight: 2738 MB written, RSS=2918 MB
 [DIAG] load_weight: 3021 MB written, RSS=3201 MB
-[DIAG] load_weight: 3305 MB written, RSS=3485 MB
+[DIAG] load_weight: 3305 MB written, RSS=3484 MB
 [DIAG] load_weight: 3332 MB written, RSS=3512 MB
 [DIAG] load_weight: 3588 MB written, RSS=3768 MB
 [DIAG] load_weight: 3871 MB written, RSS=4051 MB
-[DIAG] load_weight: 4155 MB written, RSS=4335 MB
-[DIAG] load_weight: 4438 MB written, RSS=4618 MB
+[DIAG] load_weight: 4155 MB written, RSS=4334 MB
+[DIAG] load_weight: 4438 MB written, RSS=4617 MB
 [DIAG] load_weight: 4721 MB written, RSS=4901 MB
-[DIAG] load_weight: 4738 MB written, RSS=4918 MB
-[DIAG] load_weight: 5004 MB written, RSS=5184 MB
-[DIAG] load_weight: 5286 MB written, RSS=5464 MB
+[DIAG] load_weight: 4738 MB written, RSS=4917 MB
+[DIAG] load_weight: 5004 MB written, RSS=5183 MB
+[DIAG] load_weight: 5286 MB written, RSS=5463 MB
 [DIAG] load_weight: 5569 MB written, RSS=5746 MB
 [DIAG] load_weight: 5851 MB written, RSS=6028 MB
+[DIAG] load_weight: RSS=6310 MB > 6 GB threshold, sweeping 387 SVM regions
+[DIAG] load_weight: after sweep RSS=6310 MB
 [DIAG] load_weight: 6134 MB written, RSS=6310 MB
 [DIAG] load_weight: 6145 MB written, RSS=6321 MB
 [DIAG] load_weight: 6416 MB written, RSS=6592 MB
+[DIAG] load_weight: RSS=6875 MB > 6 GB threshold, sweeping 421 SVM regions
+[DIAG] load_weight: after sweep RSS=6875 MB
 [DIAG] load_weight: 6699 MB written, RSS=6875 MB
-[DIAG] load_weight: 6981 MB written, RSS=7157 MB
-[DIAG] load_weight: 7263 MB written, RSS=7439 MB
-[DIAG] load_weight: 7546 MB written, RSS=7670 MB
-[DIAG] load_weight: 7554 MB written, RSS=7678 MB
-[DIAG] load_weight: 7828 MB written, RSS=7883 MB
-[DIAG] load_weight: 8111 MB written, RSS=7934 MB
-[DIAG] load_weight: 8393 MB written, RSS=8120 MB
-Killed 
-[EXIT] 137
+[DIAG] load_weight: 6981 MB written, RSS=7156 MB
+[DIAG] load_weight: RSS=7436 MB > 6 GB threshold, sweeping 455 SVM regions
+[DIAG] load_weight: after sweep RSS=7436 MB
+[DIAG] load_weight: 7263 MB written, RSS=7436 MB
+[DIAG] load_weight: 7546 MB written, RSS=7596 MB
+[DIAG] load_weight: 7554 MB written, RSS=7605 MB
+[DIAG] load_weight: RSS=7298 MB > 6 GB threshold, sweeping 489 SVM regions
+[DIAG] load_weight: after sweep RSS=7298 MB
+[DIAG] load_weight: 7828 MB written, RSS=7298 MB
+[DIAG] load_weight: 8111 MB written, RSS=7482 MB
+[DIAG] load_weight: RSS=7656 MB > 6 GB threshold, sweeping 523 SVM regions
+[DIAG] load_weight: after sweep RSS=7573 MB
+[DIAG] load_weight: 8393 MB written, RSS=7573 MB
+[DIAG] load_weight: 8676 MB written, RSS=7406 MB
+[DIAG] load_weight: RSS=7094 MB > 6 GB threshold, sweeping 557 SVM regions
+[DIAG] load_weight: after sweep RSS=7065 MB
+[DIAG] load_weight: 8958 MB written, RSS=7065 MB
+[DIAG] load_weight: 8960 MB written, RSS=7068 MB
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
