@@ -14,10 +14,39 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 
 [Step 2/5] Build
 ──────────────────────
-[OK] Android binary up to date
+[INFO] Source files changed, rebuilding Android binary...
+[INFO] Building Android binary...
+[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
+In file included from ./../models/transformer.cpp:24:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
+In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
+/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+#pragma message(                                                               \
+        ^
+1 warning generated.
+[arm64-v8a] SharedLibrary  : libcausallm_core.so
+make: Nothing to be done for 'causallm_core'.
+[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
+In file included from ./../main.cpp:35:
+In file included from ./../models/gemma3/embedding_gemma.h:17:
+./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+./../models/transformer.h:140:3: note: overridden virtual function is here
+  createTransformerDecoderBlock(const int layer_id, std::string input_name);
+  ^
+1 warning generated.
+[arm64-v8a] Executable     : nntrainer_causallm
+[INFO]   Copied nntrainer_causallm: obj/local → libs/
+[INFO]   Copied libcausallm_core.so: obj/local → libs/
+[OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-ninja: no work to do.
+[3/4] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -28,13 +57,13 @@ ninja: no work to do.
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.7 MB/s (50308768 bytes in 1.423s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.6 MB/s (50308760 bytes in 1.429s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.0 MB/s (11446824 bytes in 0.331s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.9 MB/s (11446824 bytes in 0.331s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 23.5 MB/s (129304 bytes in 0.005s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 17.8 MB/s (129304 bytes in 0.007s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.1 MB/s (4116752 bytes in 0.122s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.2 MB/s (4142504 bytes in 0.127s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -47,49 +76,51 @@ ninja: no work to do.
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
+[DIAG] cgroup entry: 5:memory:/
 [DIAG] oom_score_adj set to -900
-[DIAG] RSS before initialize: 376772 KB
+[DIAG] RSS before initialize: 377092 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.35 Compiler E031.47.18.28" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
 [CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
-[DIAG] RSS after initialize:  178920 KB
+[DIAG] RSS after initialize:  179656 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=608 MB
-[DIAG] load_weight: 472 MB written, RSS=1122 MB
-[DIAG] load_weight: 755 MB written, RSS=1688 MB
-[DIAG] load_weight: 772 MB written, RSS=1723 MB
-[DIAG] load_weight: 1038 MB written, RSS=2254 MB
-[DIAG] load_weight: 1321 MB written, RSS=2820 MB
-[DIAG] load_weight: 1605 MB written, RSS=3387 MB
-[DIAG] load_weight: 1888 MB written, RSS=3953 MB
-[DIAG] load_weight: 2171 MB written, RSS=4379 MB
-[DIAG] load_weight: 2176 MB written, RSS=4369 MB
-[DIAG] load_weight: 2455 MB written, RSS=4383 MB
-[DIAG] load_weight: 2738 MB written, RSS=4375 MB
-[DIAG] load_weight: 3021 MB written, RSS=4439 MB
-[DIAG] load_weight: 3305 MB written, RSS=4712 MB
-[DIAG] load_weight: 3332 MB written, RSS=4767 MB
-[DIAG] load_weight: 3588 MB written, RSS=5279 MB
-[DIAG] load_weight: 3871 MB written, RSS=5801 MB
-[DIAG] load_weight: 4155 MB written, RSS=5806 MB
-[DIAG] load_weight: 4438 MB written, RSS=5806 MB
-[DIAG] load_weight: 4721 MB written, RSS=5877 MB
-[DIAG] load_weight: 4738 MB written, RSS=5911 MB
-[DIAG] load_weight: 5004 MB written, RSS=5810 MB
-[DIAG] load_weight: 5286 MB written, RSS=5637 MB
-[DIAG] load_weight: 5569 MB written, RSS=5437 MB
-[DIAG] load_weight: 5851 MB written, RSS=5563 MB
-[DIAG] load_weight: 6134 MB written, RSS=5527 MB
-[DIAG] load_weight: 6145 MB written, RSS=5530 MB
-[DIAG] load_weight: 6416 MB written, RSS=5549 MB
-[DIAG] load_weight: 6699 MB written, RSS=5456 MB
-[DIAG] load_weight: 6981 MB written, RSS=5431 MB
-[DIAG] load_weight: 7263 MB written, RSS=5463 MB
-[DIAG] load_weight: 7546 MB written, RSS=5617 MB
-[DIAG] load_weight: 7554 MB written, RSS=5613 MB
-[DIAG] load_weight: 7828 MB written, RSS=5809 MB
-[DIAG] load_weight: 8111 MB written, RSS=6045 MB
-[DIAG] load_weight: 8393 MB written, RSS=6085 MB
+[DIAG] load_weight: 216 MB written, RSS=607 MB
+[DIAG] load_weight: 472 MB written, RSS=1119 MB
+[DIAG] load_weight: 755 MB written, RSS=1686 MB
+[DIAG] load_weight: 772 MB written, RSS=1720 MB
+[DIAG] load_weight: 1038 MB written, RSS=2252 MB
+[DIAG] load_weight: 1321 MB written, RSS=2819 MB
+[DIAG] load_weight: 1605 MB written, RSS=3386 MB
+[DIAG] load_weight: 1888 MB written, RSS=3952 MB
+[DIAG] load_weight: 2171 MB written, RSS=4519 MB
+[DIAG] load_weight: 2176 MB written, RSS=4528 MB
+[DIAG] load_weight: 2455 MB written, RSS=5085 MB
+[DIAG] load_weight: 2738 MB written, RSS=5362 MB
+[DIAG] load_weight: 3021 MB written, RSS=5370 MB
+[DIAG] load_weight: 3305 MB written, RSS=5398 MB
+[DIAG] load_weight: 3332 MB written, RSS=5413 MB
+[DIAG] load_weight: 3588 MB written, RSS=5402 MB
+[DIAG] load_weight: 3871 MB written, RSS=5406 MB
+[DIAG] load_weight: 4155 MB written, RSS=5397 MB
+[DIAG] load_weight: 4438 MB written, RSS=5831 MB
+[DIAG] load_weight: 4721 MB written, RSS=5618 MB
+[DIAG] load_weight: 4738 MB written, RSS=5606 MB
+[DIAG] load_weight: 5004 MB written, RSS=5587 MB
+[DIAG] load_weight: 5286 MB written, RSS=6152 MB
+[DIAG] load_weight: 5569 MB written, RSS=6302 MB
+[DIAG] load_weight: 5851 MB written, RSS=6307 MB
+[DIAG] load_weight: 6134 MB written, RSS=6303 MB
+[DIAG] load_weight: 6145 MB written, RSS=6307 MB
+[DIAG] load_weight: 6416 MB written, RSS=6306 MB
+[DIAG] load_weight: 6699 MB written, RSS=6281 MB
+[DIAG] load_weight: 6981 MB written, RSS=6199 MB
+[DIAG] load_weight: 7263 MB written, RSS=6200 MB
+[DIAG] load_weight: 7546 MB written, RSS=6461 MB
+[DIAG] load_weight: 7554 MB written, RSS=6466 MB
+[DIAG] load_weight: 7828 MB written, RSS=6162 MB
+[DIAG] load_weight: 8111 MB written, RSS=6349 MB
+[DIAG] load_weight: 8393 MB written, RSS=6222 MB
+[DIAG] load_weight: 8676 MB written, RSS=6457 MB
 Killed 
 [EXIT] 137
 ────────────────────────────────────────────────
