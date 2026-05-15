@@ -363,36 +363,6 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
-          // PRE-LOAD sweep: before committing n new physical pages via pread,
-          // check system-wide MemAvailable.  If headroom < weight_size + 64 MB,
-          // sweep SVM pages to zRAM.  Cap at 2 attempts: MADV_PAGEOUT is
-          // ineffective for Adreno coarse-grained SVM (GPU driver holds DMA
-          // refs), so avail does not improve after sweeping.  Looping forever
-          // (with 400 ms sleeps each) stalls loading without making progress.
-          // After 2 attempts we proceed anyway — for the small weights (<5 MB)
-          // that dominate this phase, avail=380 MB >> weight, so OOM is
-          // extremely unlikely even if the nominal threshold isn't met.
-          {
-            size_t need_kb = (n >> 10) + (64UL << 10); // weight + 64 MB headroom
-            for (int attempt = 0; attempt < 2; ++attempt) {
-              size_t avail_kb = read_mem_available_kb();
-              if (avail_kb >= need_kb) break;
-              std::fprintf(stderr,
-                           "[DIAG] load_weight: pre-load sweep #%d: avail=%zu MB "
-                           "< need=%zu MB (weight=%zu KB), sweeping %zu regions\n",
-                           attempt + 1, avail_kb / 1024, need_kb / 1024,
-                           n >> 10, svm_written.size());
-              std::fflush(stderr);
-              do_sweep(svm_written, 400000); // 400 ms
-              avail_kb = read_mem_available_kb();
-              std::fprintf(stderr,
-                           "[DIAG] load_weight: after pre-load sweep avail=%zu MB\n",
-                           avail_kb / 1024);
-              std::fflush(stderr);
-              last_aggressive_pageout_bytes = bytes_done;
-            }
-          }
-
           // pread directly into the SVM buffer — no intermediate copy.
           {
             char *dst = static_cast<char *>(ptr);
@@ -421,6 +391,21 @@ void Transformer::load_weight(const std::string &weight_path) {
           ::madvise(ptr, n, MADV_COLD);
           ::madvise(ptr, n, MADV_PAGEOUT);
           svm_written.push_back({ptr, n});
+
+          // POST-PREAD backpressure: when system memory is tight, sleep 1 s
+          // after each weight so the kernel has time to reclaim pages from
+          // background Android processes (which have higher oom_score_adj and
+          // are LMKD targets).  This is the primary mechanism that allows
+          // loading to continue past 9 GB — MADV_PAGEOUT on Adreno SVM cannot
+          // free pages by itself (GPU driver holds DMA refs), but kernel
+          // background reclaim during our sleep can swap out other processes,
+          // raising MemAvailable enough for the next pread.
+          {
+            size_t avail_kb = read_mem_available_kb();
+            if (avail_kb < 512UL * 1024) { // system < 512 MB free
+              ::usleep(1000000);            // 1 s — let kernel reclaim BG apps
+            }
+          }
 
           file_pos += n;
           bytes_done += n;
