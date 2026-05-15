@@ -364,20 +364,24 @@ void Transformer::load_weight(const std::string &weight_path) {
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
           // PRE-LOAD sweep: before committing n new physical pages via pread,
-          // check system-wide MemAvailable.  If the headroom is smaller than
-          // 2× the weight we are about to load plus a 512 MB safety margin,
-          // sweep all SVM pages to zRAM and wait so the kernel can process
-          // them.  This prevents the physical RSS spike during large pread()
-          // calls from pushing the system over the OOM threshold.
+          // check system-wide MemAvailable.  If headroom < weight_size + 64 MB,
+          // sweep SVM pages to zRAM.  Cap at 2 attempts: MADV_PAGEOUT is
+          // ineffective for Adreno coarse-grained SVM (GPU driver holds DMA
+          // refs), so avail does not improve after sweeping.  Looping forever
+          // (with 400 ms sleeps each) stalls loading without making progress.
+          // After 2 attempts we proceed anyway — for the small weights (<5 MB)
+          // that dominate this phase, avail=380 MB >> weight, so OOM is
+          // extremely unlikely even if the nominal threshold isn't met.
           {
-            size_t avail_kb = read_mem_available_kb();
-            size_t need_kb  = (n >> 10) * 2 + (512UL << 10); // 2×weight + 512 MB
-            if (avail_kb < need_kb) {
+            size_t need_kb = (n >> 10) + (64UL << 10); // weight + 64 MB headroom
+            for (int attempt = 0; attempt < 2; ++attempt) {
+              size_t avail_kb = read_mem_available_kb();
+              if (avail_kb >= need_kb) break;
               std::fprintf(stderr,
-                           "[DIAG] load_weight: pre-load sweep: avail=%zu MB "
-                           "< need=%zu MB, sweeping %zu regions\n",
-                           avail_kb / 1024, need_kb / 1024,
-                           svm_written.size());
+                           "[DIAG] load_weight: pre-load sweep #%d: avail=%zu MB "
+                           "< need=%zu MB (weight=%zu KB), sweeping %zu regions\n",
+                           attempt + 1, avail_kb / 1024, need_kb / 1024,
+                           n >> 10, svm_written.size());
               std::fflush(stderr);
               do_sweep(svm_written, 400000); // 400 ms
               avail_kb = read_mem_available_kb();
