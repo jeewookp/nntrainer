@@ -311,6 +311,31 @@ void Transformer::load_weight(const std::string &weight_path) {
     return rss;
   };
 
+  // Read system-wide available memory from /proc/meminfo.
+  // This is more accurate than our own RSS for detecting true OOM pressure:
+  // the OS may use 3.5-4.5 GB of its own, so even with RSS=6.8 GB we can be
+  // near the 12 GB device limit.
+  auto read_mem_available_kb = []() -> size_t {
+    size_t avail = 0;
+    std::ifstream mi("/proc/meminfo");
+    std::string ln;
+    while (std::getline(mi, ln))
+      if (ln.find("MemAvailable:") == 0) {
+        std::sscanf(ln.c_str(), "MemAvailable: %zu", &avail);
+        break;
+      }
+    return avail;
+  };
+
+  auto do_sweep = [&](std::vector<std::pair<void *, size_t>> &regions,
+                      unsigned sleep_us) {
+    for (auto &[p, s] : regions) {
+      ::madvise(p, s, MADV_COLD);
+      ::madvise(p, s, MADV_PAGEOUT);
+    }
+    if (sleep_us) ::usleep(sleep_us);
+  };
+
   // Track data pointers already loaded to handle shared weights
   // (e.g. TieWordEmbedding where embedding0 and output_of_causallm
   // reference the exact same Tensor buffer).
@@ -337,6 +362,32 @@ void Transformer::load_weight(const std::string &weight_path) {
           if (file_pos + n > f_size)
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
+
+          // PRE-LOAD sweep: before committing n new physical pages via pread,
+          // check system-wide MemAvailable.  If the headroom is smaller than
+          // 2× the weight we are about to load plus a 512 MB safety margin,
+          // sweep all SVM pages to zRAM and wait so the kernel can process
+          // them.  This prevents the physical RSS spike during large pread()
+          // calls from pushing the system over the OOM threshold.
+          {
+            size_t avail_kb = read_mem_available_kb();
+            size_t need_kb  = (n >> 10) * 2 + (512UL << 10); // 2×weight + 512 MB
+            if (avail_kb < need_kb) {
+              std::fprintf(stderr,
+                           "[DIAG] load_weight: pre-load sweep: avail=%zu MB "
+                           "< need=%zu MB, sweeping %zu regions\n",
+                           avail_kb / 1024, need_kb / 1024,
+                           svm_written.size());
+              std::fflush(stderr);
+              do_sweep(svm_written, 400000); // 400 ms
+              avail_kb = read_mem_available_kb();
+              std::fprintf(stderr,
+                           "[DIAG] load_weight: after pre-load sweep avail=%zu MB\n",
+                           avail_kb / 1024);
+              std::fflush(stderr);
+              last_aggressive_pageout_bytes = bytes_done;
+            }
+          }
 
           // pread directly into the SVM buffer — no intermediate copy.
           {
@@ -370,33 +421,29 @@ void Transformer::load_weight(const std::string &weight_path) {
           file_pos += n;
           bytes_done += n;
 
-          // Aggressive periodic re-PAGEOUT: when RSS climbs past 6 GB
-          // and we haven't swept all weights in the last 512 MB, issue
-          // MADV_COLD + MADV_PAGEOUT on every previously written SVM region
-          // and sleep 300 ms so the kernel has time to actually move pages
-          // to zRAM before we commit more physical pages with pread().
-          // This is critical because MADV_PAGEOUT is asynchronous and the
-          // kernel workers may lag behind a fast pread loop.
+          // POST-LOAD periodic sweep: every 256 MB (reduced from 512 MB).
+          // Read MemAvailable rather than our own RSS so that OS memory
+          // pressure from background processes is visible.
           size_t rss_kb = 0;
           bool do_log = (bytes_done % (128UL << 20)) < n;
-          if (do_log || (bytes_done - last_aggressive_pageout_bytes) >= (512UL << 20)) {
+          if (do_log || (bytes_done - last_aggressive_pageout_bytes) >= (256UL << 20)) {
             rss_kb = read_rss_kb();
-            if ((bytes_done - last_aggressive_pageout_bytes) >= (512UL << 20) &&
-                rss_kb > 6UL * 1024 * 1024) {
+            size_t avail_kb = read_mem_available_kb();
+            if ((bytes_done - last_aggressive_pageout_bytes) >= (256UL << 20) &&
+                avail_kb < 3UL * 1024 * 1024) { // system < 3 GB free
               std::fprintf(stderr,
-                           "[DIAG] load_weight: RSS=%zu MB > 6 GB threshold, "
-                           "sweeping %zu SVM regions\n",
-                           rss_kb / 1024, svm_written.size());
+                           "[DIAG] load_weight: post sweep: avail=%zu MB, "
+                           "RSS=%zu MB, sweeping %zu regions\n",
+                           avail_kb / 1024, rss_kb / 1024,
+                           svm_written.size());
               std::fflush(stderr);
-              for (auto &[p, s] : svm_written) {
-                ::madvise(p, s, MADV_COLD);
-                ::madvise(p, s, MADV_PAGEOUT);
-              }
-              ::usleep(300000); // 300 ms — let kernel workers drain their queue
+              do_sweep(svm_written, 400000); // 400 ms
               rss_kb = read_rss_kb();
+              avail_kb = read_mem_available_kb();
               std::fprintf(stderr,
-                           "[DIAG] load_weight: after sweep RSS=%zu MB\n",
-                           rss_kb / 1024);
+                           "[DIAG] load_weight: after post sweep RSS=%zu MB, "
+                           "avail=%zu MB\n",
+                           rss_kb / 1024, avail_kb / 1024);
               std::fflush(stderr);
               last_aggressive_pageout_bytes = bytes_done;
             }
@@ -404,9 +451,12 @@ void Transformer::load_weight(const std::string &weight_path) {
 
           if (do_log) {
             if (!rss_kb) rss_kb = read_rss_kb();
+            size_t avail_kb = read_mem_available_kb();
             std::fprintf(stderr,
-                         "[DIAG] load_weight: %zu MB written, RSS=%zu MB\n",
-                         bytes_done / 1024 / 1024, rss_kb / 1024);
+                         "[DIAG] load_weight: %zu MB written, RSS=%zu MB, "
+                         "avail=%zu MB\n",
+                         bytes_done / 1024 / 1024, rss_kb / 1024,
+                         avail_kb / 1024);
             std::fflush(stderr);
           }
         }
