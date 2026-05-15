@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 6 (delta 5), reused 6 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.87 KiB | 478.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.80 KiB | 367.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch              all_gpu    -> FETCH_HEAD
-   c4da6f56..39ed98c9  all_gpu    -> upstream/all_gpu
-Updating c4da6f56..39ed98c9
+   07531d1f..4ad4a5ce  all_gpu    -> upstream/all_gpu
+Updating 07531d1f..4ad4a5ce
 Fast-forward
- Applications/CausalLM/models/transformer.cpp | 60 +++++++++++++++++++++++++++++++++++++++++++++++++++---------
- 1 file changed, 51 insertions(+), 9 deletions(-)
+ Applications/CausalLM/main.cpp               | 25 +++++++++++++++++++++++++
+ Applications/CausalLM/models/transformer.cpp | 17 +++++++++++++++--
+ 2 files changed, 40 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
 [run_gemma4_e2b] FP32 binary already exists, skipping conversion
 ╔══════════════════════════════════════╗
@@ -22,7 +23,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh
 
 [Step 1/5] Check prerequisites
 ──────────────────────
-[OK] Device: R3CY205ZMND
+[OK] Device: R3CY10WM83Y
 [OK] Model files found
 
 [Step 2/5] Build
@@ -44,7 +45,7 @@ In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_r
 [arm64-v8a] SharedLibrary  : libcausallm_core.so
 make: Nothing to be done for 'causallm_core'.
 [arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:33:
+In file included from ./../main.cpp:35:
 In file included from ./../models/gemma3/embedding_gemma.h:17:
 ./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
   createTransformerDecoderBlock(const int layer_id, std::string input_name);
@@ -59,7 +60,7 @@ In file included from ./../models/gemma3/embedding_gemma.h:17:
 [OK] Android build done
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[4/4] Linking target Applications/CausalLM/nntr_quantize
+[3/4] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -70,70 +71,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.1 MB/s (50298760 bytes in 1.449s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 34.5 MB/s (50308768 bytes in 1.389s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 31.9 MB/s (11446824 bytes in 0.342s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.9 MB/s (11446824 bytes in 0.322s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.7 MB/s (129304 bytes in 0.007s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 24.3 MB/s (129304 bytes in 0.005s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 31.7 MB/s (4111664 bytes in 0.124s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 34.0 MB/s (4116752 bytes in 0.116s)
 [OK]   nntrainer_causallm
-[OK]   nntr_gemma4_e2b_q40.bin
-[OK]   tokenizer.json
-[OK]   nntr_config.json
-[OK]   config.json
-[OK]   generation_config.json
-
-[Step 5/5] Run on device
-──────────────────────
-── Output ──────────────────────────────────────
-/data/local/tmp/nntrainer/causallm/models/gemma4
-/data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.35 Compiler E031.47.18.28" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=226524 first="BC-src-code:124:1: error: use of undeclared identifier 'BLOCK_READ_IMPL_1'"
-[DIAG] initialize done
-[DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB loaded
-[DIAG] load_weight: 472 MB loaded
-[DIAG] load_weight: 755 MB loaded
-[DIAG] load_weight: 772 MB loaded
-[DIAG] load_weight: 1038 MB loaded
-[DIAG] load_weight: 1321 MB loaded
-[DIAG] load_weight: 1605 MB loaded
-[DIAG] load_weight: 1888 MB loaded
-[DIAG] load_weight: 2171 MB loaded
-[DIAG] load_weight: 2176 MB loaded
-[DIAG] load_weight: 2455 MB loaded
-[DIAG] load_weight: 2738 MB loaded
-[DIAG] load_weight: 3021 MB loaded
-[DIAG] load_weight: 3305 MB loaded
-[DIAG] load_weight: 3332 MB loaded
-[DIAG] load_weight: 3588 MB loaded
-[DIAG] load_weight: 3871 MB loaded
-[DIAG] load_weight: 4155 MB loaded
-[DIAG] load_weight: 4438 MB loaded
-[DIAG] load_weight: 4721 MB loaded
-[DIAG] load_weight: 4738 MB loaded
-[DIAG] load_weight: 5004 MB loaded
-[DIAG] load_weight: 5286 MB loaded
-[DIAG] load_weight: 5569 MB loaded
-[DIAG] load_weight: 5851 MB loaded
-[DIAG] load_weight: 6134 MB loaded
-[DIAG] load_weight: 6145 MB loaded
-[DIAG] load_weight: 6416 MB loaded
-[DIAG] load_weight: 6699 MB loaded
-[DIAG] load_weight: 6981 MB loaded
-[DIAG] load_weight: 7263 MB loaded
-[DIAG] load_weight: 7546 MB loaded
-[DIAG] load_weight: 7554 MB loaded
-[DIAG] load_weight: 7828 MB loaded
-[DIAG] load_weight: 8111 MB loaded
-[DIAG] load_weight: 8393 MB loaded
-[DIAG] load_weight: 8676 MB loaded
-[DIAG] load_weight: 8958 MB loaded
-[DIAG] load_weight: 8960 MB loaded
-────────────────────────────────────────────────
-[INFO] adb shell exit: 0
-[OK] Done!
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
