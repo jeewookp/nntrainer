@@ -102,6 +102,32 @@
 #define DT_FILTER_BLOCK_READ8(ptr, offset) BLOCK_READN(char, 8, ptr, offset)
 #define DT_FILTER_BLOCK_READ16(ptr, offset) BLOCK_READN(char, 16, ptr, offset)
 
+#define BLOCK_READ_IMPL_1 ret = ptr[idx];
+
+#define BLOCK_READ_IMPL_2                                                      \
+  ret.s0 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s1 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();
+
+#define BLOCK_READ_IMPL_4                                                      \
+  BLOCK_READ_IMPL_2                                                            \
+  ret.s2 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s3 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();
+
+#define BLOCK_READ_IMPL_8                                                      \
+  BLOCK_READ_IMPL_4                                                            \
+  ret.s4 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s5 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s6 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s7 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();
+
 #define BLOCK_READ_IMPL(vec_size) CAT(BLOCK_READ_IMPL_, vec_size)
 #define BLOCK_READ_FUNC_NAME(type_size, vec_size)                              \
   MAKE_VECTOR_TYPE(BLOCK_READ_FUNC(type_size), vec_size)
