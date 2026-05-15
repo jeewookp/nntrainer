@@ -363,6 +363,23 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
+          // PRE-PREAD backpressure: when system memory is tight, sleep 1 s
+          // BEFORE committing new physical pages via pread.  Sleeping here
+          // (not after) means the very last weight does NOT get a trailing
+          // sleep — once pread is done the lambda returns, forEachLayer
+          // completes, and fd is closed immediately without any extra delay
+          // during which the OOM killer could fire.
+          // Mechanism: MADV_PAGEOUT on Adreno SVM cannot free pages by itself
+          // (GPU driver holds DMA refs), but during our sleep the kernel's
+          // own background reclaim swaps out Android background processes
+          // (higher oom_score_adj → LMKD targets), raising MemAvailable.
+          {
+            size_t avail_kb = read_mem_available_kb();
+            if (avail_kb < 512UL * 1024) { // system < 512 MB free
+              ::usleep(1000000);            // 1 s — let kernel reclaim BG apps
+            }
+          }
+
           // pread directly into the SVM buffer — no intermediate copy.
           {
             char *dst = static_cast<char *>(ptr);
@@ -391,21 +408,6 @@ void Transformer::load_weight(const std::string &weight_path) {
           ::madvise(ptr, n, MADV_COLD);
           ::madvise(ptr, n, MADV_PAGEOUT);
           svm_written.push_back({ptr, n});
-
-          // POST-PREAD backpressure: when system memory is tight, sleep 1 s
-          // after each weight so the kernel has time to reclaim pages from
-          // background Android processes (which have higher oom_score_adj and
-          // are LMKD targets).  This is the primary mechanism that allows
-          // loading to continue past 9 GB — MADV_PAGEOUT on Adreno SVM cannot
-          // free pages by itself (GPU driver holds DMA refs), but kernel
-          // background reclaim during our sleep can swap out other processes,
-          // raising MemAvailable enough for the next pread.
-          {
-            size_t avail_kb = read_mem_available_kb();
-            if (avail_kb < 512UL * 1024) { // system < 512 MB free
-              ::usleep(1000000);            // 1 s — let kernel reclaim BG apps
-            }
-          }
 
           file_pos += n;
           bytes_done += n;
