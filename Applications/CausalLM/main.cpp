@@ -358,10 +358,10 @@ int main(int argc, char *argv[]) {
     {
       int oom_fd = ::open("/proc/self/oom_score_adj", O_WRONLY);
       if (oom_fd >= 0) {
-        const char adj[] = "-900";
+        const char adj[] = "-1000";
         ::write(oom_fd, adj, sizeof(adj) - 1);
         ::close(oom_fd);
-        std::fprintf(stderr, "[DIAG] oom_score_adj set to -900\n");
+        std::fprintf(stderr, "[DIAG] oom_score_adj set to -1000\n");
         std::fflush(stderr);
       } else {
         std::fprintf(stderr, "[DIAG] oom_score_adj: no permission\n");

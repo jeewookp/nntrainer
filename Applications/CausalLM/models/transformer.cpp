@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <fstream>
 #include <unordered_set>
+#include <vector>
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -294,16 +295,32 @@ void Transformer::load_weight(const std::string &weight_path) {
   std::fprintf(stderr, "[DIAG] load_weight: file=%zu bytes\n", f_size);
   std::fflush(stderr);
 
+#ifndef MADV_COLD
+#define MADV_COLD 20
+#endif
+#ifndef MADV_PAGEOUT
+#define MADV_PAGEOUT 21
+#endif
+
+  auto read_rss_kb = []() -> size_t {
+    size_t rss = 0;
+    std::ifstream st("/proc/self/status");
+    std::string ln;
+    while (std::getline(st, ln))
+      if (ln.find("VmRSS:") == 0) { std::sscanf(ln.c_str(), "VmRSS: %zu", &rss); break; }
+    return rss;
+  };
+
   // Track data pointers already loaded to handle shared weights
   // (e.g. TieWordEmbedding where embedding0 and output_of_causallm
   // reference the exact same Tensor buffer).
   std::unordered_set<void *> visited;
+  // Track all SVM regions written so far for periodic aggressive re-PAGEOUT.
+  std::vector<std::pair<void *, size_t>> svm_written;
   size_t file_pos = 0;
   size_t bytes_done = 0;
-
-#ifndef MADV_PAGEOUT
-#define MADV_PAGEOUT 21
-#endif
+  // Track when we last did an aggressive re-PAGEOUT sweep.
+  size_t last_aggressive_pageout_bytes = 0;
 
   std::exception_ptr ex;
   model->forEachLayer(
@@ -343,23 +360,50 @@ void Transformer::load_weight(const std::string &weight_path) {
           ::posix_fadvise(fd, static_cast<off_t>(file_pos),
                           static_cast<off_t>(n), POSIX_FADV_DONTNEED);
 
-          // Push SVM pages to zRAM so physical RSS stays minimal.
+          // Deactivate then page out SVM pages.  MADV_COLD first moves pages
+          // to the inactive list so the kernel treats them as eviction
+          // candidates; MADV_PAGEOUT then explicitly compresses them to zRAM.
+          ::madvise(ptr, n, MADV_COLD);
           ::madvise(ptr, n, MADV_PAGEOUT);
+          svm_written.push_back({ptr, n});
 
           file_pos += n;
           bytes_done += n;
-          if (bytes_done % (128UL * 1024 * 1024) < n) {
-            size_t rss_kb = 0;
-            {
-              std::ifstream st("/proc/self/status");
-              std::string ln;
-              while (std::getline(st, ln)) {
-                if (ln.find("VmRSS:") == 0) {
-                  std::sscanf(ln.c_str(), "VmRSS: %zu", &rss_kb);
-                  break;
-                }
+
+          // Aggressive periodic re-PAGEOUT: when RSS climbs past 6 GB
+          // and we haven't swept all weights in the last 512 MB, issue
+          // MADV_COLD + MADV_PAGEOUT on every previously written SVM region
+          // and sleep 300 ms so the kernel has time to actually move pages
+          // to zRAM before we commit more physical pages with pread().
+          // This is critical because MADV_PAGEOUT is asynchronous and the
+          // kernel workers may lag behind a fast pread loop.
+          size_t rss_kb = 0;
+          bool do_log = (bytes_done % (128UL << 20)) < n;
+          if (do_log || (bytes_done - last_aggressive_pageout_bytes) >= (512UL << 20)) {
+            rss_kb = read_rss_kb();
+            if ((bytes_done - last_aggressive_pageout_bytes) >= (512UL << 20) &&
+                rss_kb > 6UL * 1024 * 1024) {
+              std::fprintf(stderr,
+                           "[DIAG] load_weight: RSS=%zu MB > 6 GB threshold, "
+                           "sweeping %zu SVM regions\n",
+                           rss_kb / 1024, svm_written.size());
+              std::fflush(stderr);
+              for (auto &[p, s] : svm_written) {
+                ::madvise(p, s, MADV_COLD);
+                ::madvise(p, s, MADV_PAGEOUT);
               }
+              ::usleep(300000); // 300 ms — let kernel workers drain their queue
+              rss_kb = read_rss_kb();
+              std::fprintf(stderr,
+                           "[DIAG] load_weight: after sweep RSS=%zu MB\n",
+                           rss_kb / 1024);
+              std::fflush(stderr);
+              last_aggressive_pageout_bytes = bytes_done;
             }
+          }
+
+          if (do_log) {
+            if (!rss_kb) rss_kb = read_rss_kb();
             std::fprintf(stderr,
                          "[DIAG] load_weight: %zu MB written, RSS=%zu MB\n",
                          bytes_done / 1024 / 1024, rss_kb / 1024);
