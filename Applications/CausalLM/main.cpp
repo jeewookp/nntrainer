@@ -289,6 +289,69 @@ int main(int argc, char *argv[]) {
       std::cerr << std::endl;
       return EXIT_FAILURE;
     }
+    // Print the process's current cgroup and its memory.limit_in_bytes so we
+    // can confirm whether a cgroup ceiling (not global LMK) is killing us.
+    {
+      std::ifstream cg_file("/proc/self/cgroup");
+      std::string cg_line;
+      std::string mem_rel_path;
+      while (std::getline(cg_file, cg_line)) {
+        // cgroup v1: "N:memory:/path"   cgroup v2: "0::/path"
+        if (cg_line.find(":memory:") != std::string::npos ||
+            cg_line.substr(0, 3) == "0::") {
+          std::fprintf(stderr, "[DIAG] cgroup entry: %s\n", cg_line.c_str());
+          std::fflush(stderr);
+          auto colon = cg_line.rfind(':');
+          if (colon != std::string::npos)
+            mem_rel_path = cg_line.substr(colon + 1);
+          break;
+        }
+      }
+      // Try cgroup v1 memory limit
+      if (!mem_rel_path.empty()) {
+        std::string limit_path =
+          "/sys/fs/cgroup/memory" + mem_rel_path + "/memory.limit_in_bytes";
+        std::ifstream lf(limit_path);
+        long long lim = 0;
+        if (lf >> lim && lim > 0 && lim < (long long)9e18)
+          std::fprintf(stderr, "[DIAG] cgroup mem limit: %lld MB\n",
+                       lim / 1024 / 1024);
+        // cgroup v2 unified
+        std::string v2_path =
+          "/sys/fs/cgroup" + mem_rel_path + "/memory.max";
+        std::ifstream lf2(v2_path);
+        std::string v2val;
+        if (lf2 >> v2val)
+          std::fprintf(stderr, "[DIAG] cgroup v2 memory.max: %s\n",
+                       v2val.c_str());
+        std::fflush(stderr);
+      }
+    }
+
+    // Attempt to escape the cgroup memory limit by migrating to the root
+    // memory cgroup, which has no limit.  Silently ignored if not permitted.
+    {
+      pid_t pid = ::getpid();
+      char pid_str[24];
+      int plen = std::snprintf(pid_str, sizeof(pid_str), "%d", pid);
+      const char *cg_targets[] = {
+        "/sys/fs/cgroup/memory/cgroup.procs",   // cgroup v1 root
+        "/sys/fs/cgroup/cgroup.procs",           // cgroup v2 root
+        "/dev/memcg/cgroup.procs",               // Android LMKD path
+        nullptr};
+      for (int i = 0; cg_targets[i]; ++i) {
+        int fd = ::open(cg_targets[i], O_WRONLY);
+        if (fd >= 0) {
+          if (::write(fd, pid_str, plen) == plen)
+            std::fprintf(stderr, "[DIAG] moved to root cgroup: %s\n",
+                         cg_targets[i]);
+          ::close(fd);
+          break;
+        }
+      }
+      std::fflush(stderr);
+    }
+
     // Try to mark this process as harder to kill so the Android LMK
     // does not SIGKILL us mid-load when weight SVM pages are committed.
     // Writing requires CAP_SYS_RESOURCE; silently ignore if not permitted.

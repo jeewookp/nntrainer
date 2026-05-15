@@ -325,6 +325,17 @@ void Transformer::load_weight(const std::string &weight_path) {
           // Release file-cache pages for this weight immediately after copy.
           ::posix_madvise(view + file_pos, n, POSIX_MADV_DONTNEED);
 
+          // Immediately page the SVM pages out to zRAM so that physical
+          // RSS stays near-zero during the entire load pass.  The GPU will
+          // page-fault the data back in layer-by-layer during inference via
+          // the Adreno SMMU fault handler (transparent to the caller).
+          // MADV_PAGEOUT (21) requires kernel 5.4+; it is a no-op on older
+          // kernels, so the build still works on pre-5.4 targets.
+#ifndef MADV_PAGEOUT
+#define MADV_PAGEOUT 21
+#endif
+          ::madvise(ptr, n, MADV_PAGEOUT);
+
           file_pos += n;
           bytes_done += n;
           if (bytes_done % (128UL * 1024 * 1024) < n) {
