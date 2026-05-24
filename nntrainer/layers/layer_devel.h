@@ -30,6 +30,8 @@
 #include <base_properties.h>
 #include <common.h>
 #include <cpu_backend.h>
+#include <int4_tensor.h>
+#include <int4_utils.h>
 #include <layer_context.h>
 #include <tensor_dim.h>
 
@@ -409,6 +411,38 @@ public:
                               nullptr);
                 repack_q4_0(quant_weight.getData<uint8_t>(), tmp.data(),
                             quant_weight.size(), N, K, target_isa);
+                quant_weight.save(file);
+              }
+            } else if (dtype == TensorDim::DataType::QINT4) {
+              NNTR_THROW_IF(weight.getDataType() != TensorDim::DataType::FP32,
+                            std::runtime_error)
+                << "Save with quantization only supports for FP32 weight.";
+              TensorDim dim = weight.getDim();
+              unsigned int K = dim.height();
+              unsigned int N = dim.width();
+
+              if (K == 1) {
+                weight.save(file);
+              } else {
+                const size_t gsize = Int4QTensor::getGroupSize();
+                NNTR_THROW_IF(N % gsize != 0 || K % gsize != 0,
+                              std::invalid_argument)
+                  << "QINT4 quantization requires width and height divisible "
+                     "by "
+                  << gsize << ", but got height=" << K << ", width=" << N;
+
+                Tensor weight_t = weight.transpose("0:2:1");
+                std::vector<uint8_t> qw;
+                std::vector<uint16_t> qs;
+                Int4Utils::quantizeAndRepack(weight_t.getData<float>(), N, K,
+                                             gsize, qw, qs);
+
+                Tensor quant_weight(dim.batch(), dim.channel(), K, N,
+                                    {Tformat::NCHW, dtype});
+                std::memcpy(quant_weight.getData<uint8_t>(), qw.data(),
+                            qw.size());
+                std::memcpy(quant_weight.getScale<uint16_t>(), qs.data(),
+                            qs.size() * sizeof(uint16_t));
                 quant_weight.save(file);
               }
             } else {

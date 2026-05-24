@@ -115,7 +115,24 @@ void FullyConnectedLayerCl::forwarding(RunLayerContext &context,
   Tensor &input_ = context.getInput(SINGLE_INOUT_IDX);
 
   hidden_.setZero();
-  dotCl(input_, weight, hidden_);
+  // v8c (paper 8/4/4, channel-wise QINT4) GPU path — env-gated via
+  // NNTR_FC_INT8_GPU. dotCl_v8c returns false when not applicable
+  // (env unset / weight not QINT4 / shape misaligned), in which case we
+  // fall through. dotCl only knows FP32/FP16 weight bytes, so for
+  // quantized weight types we route through Tensor::dot (FloatTensor's
+  // dotQnK / dotQInteger CPU dispatch) instead of feeding QINT4 bytes
+  // into dotCl which would reinterpret them as FP32 and produce NaNs.
+  if (!dotCl_v8c(input_, weight, hidden_)) {
+    auto wt = weight.getDataType();
+    if (wt == ml::train::TensorDim::DataType::QINT4 ||
+        wt == ml::train::TensorDim::DataType::Q4_0 ||
+        wt == ml::train::TensorDim::DataType::Q4_K ||
+        wt == ml::train::TensorDim::DataType::Q6_K) {
+      input_.dot(weight, hidden_, false, false);
+    } else {
+      dotCl(input_, weight, hidden_);
+    }
+  }
 
   if (auto &disable_bias = std::get<props::DisableBias>(*layer_impl_props);
       disable_bias.empty() || disable_bias.get() == false) {
@@ -156,7 +173,20 @@ void FullyConnectedLayerCl::incremental_forwarding(RunLayerContext &context,
   Tensor input_step = input_.getSharedDataTensor(input_step_dim, 0, true);
   Tensor hidden_step = hidden_.getSharedDataTensor(hidden_step_dim, 0, true);
 
-  dotCl(input_step, weight, hidden_step);
+  hidden_step.setZero();
+  // Same dispatch as forwarding(): v8c GPU path first, then CPU
+  // ggml route for quantized weights, else dotCl.
+  if (!dotCl_v8c(input_step, weight, hidden_step)) {
+    auto wt = weight.getDataType();
+    if (wt == ml::train::TensorDim::DataType::QINT4 ||
+        wt == ml::train::TensorDim::DataType::Q4_0 ||
+        wt == ml::train::TensorDim::DataType::Q4_K ||
+        wt == ml::train::TensorDim::DataType::Q6_K) {
+      input_step.dot(weight, hidden_step, false, false);
+    } else {
+      dotCl(input_step, weight, hidden_step);
+    }
+  }
 
   if (auto &disable_bias = std::get<props::DisableBias>(*layer_impl_props);
       disable_bias.empty() || disable_bias.get() == false) {
