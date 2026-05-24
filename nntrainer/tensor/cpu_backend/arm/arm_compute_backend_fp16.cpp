@@ -486,6 +486,35 @@ void nntr_gemm_qai8dxp_qsi4cxp_packed(size_t m, size_t n, size_t k,
     idx_variant, transB, lower_bound, upper_bound);
 }
 
+template <>
+void nntr_gemm_qai8dxp_qsi4cxp_packed(size_t m, size_t n, size_t k,
+                                      void *lhs_native_mtx_f16,
+                                      void *rhs_packed_mtx_qs4cx,
+                                      _FP16 *dst_act_mtx_f16,
+                                      uint32_t idx_variant, bool transB,
+                                      _FP16 lower_bound, _FP16 upper_bound) {
+  // KAI lhs packer and matmul kernel only accept fp32 input/output. Cast
+  // the fp16 activation up to fp32, run the fp32 KAI matmul into a scratch
+  // buffer, then cast the result back down to fp16. The mirror of the
+  // gemm_q4_0<_FP16> shim a few definitions above, except that Q4_0 has a
+  // native fp16 path and KAI does not — so we pay one cast each way.
+  std::vector<float> lhs_f32((size_t)m * k);
+  const _FP16 *lhs_in = static_cast<const _FP16 *>(lhs_native_mtx_f16);
+  for (size_t i = 0; i < (size_t)m * k; ++i) {
+    lhs_f32[i] = static_cast<float>(lhs_in[i]);
+  }
+
+  std::vector<float> dst_f32((size_t)m * n);
+  nntr_kai_gemm_qai8dxp_qsi4cxp_olp(
+    m, n, k, lhs_f32.data(), rhs_packed_mtx_qs4cx, dst_f32.data(),
+    idx_variant, transB, static_cast<float>(lower_bound),
+    static_cast<float>(upper_bound));
+
+  for (size_t i = 0; i < (size_t)m * n; ++i) {
+    dst_act_mtx_f16[i] = static_cast<_FP16>(dst_f32[i]);
+  }
+}
+
 } /* namespace nntrainer */
 
 namespace nntrainer {
