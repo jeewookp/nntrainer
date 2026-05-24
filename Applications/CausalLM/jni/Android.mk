@@ -27,6 +27,7 @@ CAUSALLM_COMMON_INCLUDES := \
     $(LOCAL_PATH)/../models/qwen3_cached_slim_moe \
     $(LOCAL_PATH)/../models/gemma3 \
     $(LOCAL_PATH)/../models/timm_vit \
+    $(LOCAL_PATH)/../models/vjepa2_vit \
     $(LOCAL_PATH)/../models/deberta_v2 \
     $(LOCAL_PATH)/../third_party/minja/include \
     $(LOCAL_PATH)/../third_party \
@@ -97,6 +98,10 @@ LOCAL_SRC_FILES := \
     ../models/gemma3/embedding_gemma.cpp \
     ../models/gemma3/function.cpp \
     ../models/timm_vit/timm_vit_transformer.cpp \
+    ../models/vjepa2_vit/vjepa2_vit.cpp \
+    ../layers/vjepa_rope_layer.cpp \
+    ../layers/vjepa_gelu_layer.cpp \
+    ../layers/vjepa_layernorm_layer.cpp \
     ../models/deberta_v2/deberta_v2.cpp \
     ../layers/deberta_attention_layer.cpp \
     ../layers/shared_fully_connected_layer.cpp \
@@ -226,6 +231,10 @@ LOCAL_SRC_FILES := ../quantize.cpp \
     ../models/gemma3/gemma3_causallm.cpp \
     ../models/gemma3/embedding_gemma.cpp \
     ../models/gemma3/function.cpp \
+    ../models/vjepa2_vit/vjepa2_vit.cpp \
+    ../layers/vjepa_rope_layer.cpp \
+    ../layers/vjepa_gelu_layer.cpp \
+    ../layers/vjepa_layernorm_layer.cpp \
     ../models/deberta_v2/deberta_v2.cpp \
     ../layers/deberta_attention_layer.cpp \
     ../layers/shared_fully_connected_layer.cpp
