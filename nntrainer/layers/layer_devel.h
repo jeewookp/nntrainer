@@ -424,21 +424,26 @@ public:
               if (K == 1) {
                 weight.save(file);
               } else {
-                const size_t gsize = Int4QTensor::getGroupSize();
-                NNTR_THROW_IF(N % gsize != 0 || K % gsize != 0,
+                // KAI qsi4cxp Section A: N must be multiple of nr=4 so each
+                // super-row covers exactly 4 output channels; K must be a
+                // multiple of 32 so the packer needs no in-row K padding.
+                NNTR_THROW_IF(N % Int4Utils::KAI_NR != 0 ||
+                                K % Int4Utils::KAI_K_PAD_MULTIPLE != 0,
                               std::invalid_argument)
-                  << "QINT4 quantization requires width and height divisible "
-                     "by "
-                  << gsize << ", but got height=" << K << ", width=" << N;
+                  << "QINT4/KAI requires width divisible by "
+                  << Int4Utils::KAI_NR << " and height divisible by "
+                  << Int4Utils::KAI_K_PAD_MULTIPLE << ", but got height=" << K
+                  << ", width=" << N;
 
                 Tensor weight_t = weight.transpose("0:2:1");
                 std::vector<uint8_t> qw;
                 std::vector<uint16_t> qs;
-                Int4Utils::quantizeAndRepack(weight_t.getData<float>(), N, K,
-                                             gsize, qw, qs);
+                Int4Utils::quantizeAndPackKai(weight_t.getData<float>(), N, K,
+                                              qw, qs);
 
                 Tensor quant_weight(dim.batch(), dim.channel(), K, N,
-                                    {Tformat::NCHW, dtype});
+                                    {Tformat::NCHW, dtype},
+                                    QScheme::KAI_QSI4CXP_4x4x32);
                 std::memcpy(quant_weight.getData<uint8_t>(), qw.data(),
                             qw.size());
                 std::memcpy(quant_weight.getScale<uint16_t>(), qs.data(),

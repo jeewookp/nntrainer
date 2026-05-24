@@ -566,6 +566,11 @@ size_t Int4QTensor::scale_size() const {
   case QScheme::PER_CHANNEL_AFFINE:
     return height() * width() / group_size;
     break;
+  case QScheme::KAI_QSI4CXP_4x4x32:
+    // One fp16 scale per output channel. Dim is laid out (B, C, K, N) at
+    // save time (see Layer::save QINT4 branch), so width() == N.
+    return width();
+    break;
   default:
     break;
   }
@@ -601,7 +606,9 @@ void Int4QTensor::read_quantization_info(std::ifstream &file,
   checkedRead(file, (char *)&qscheme, sizeof(uint16_t),
               "[Int4QTensor::read] failed to read quantization information",
               start_offset, read_from_offset);
-  group_size = 32; /// Remove me
+  if (qscheme != QScheme::KAI_QSI4CXP_4x4x32) {
+    group_size = 32; /// Remove me — legacy OSV32_ISV2 path only
+  }
 }
 
 void Int4QTensor::read_quantization_info(ReadSource src, size_t start_offset,
@@ -609,7 +616,9 @@ void Int4QTensor::read_quantization_info(ReadSource src, size_t start_offset,
   checkedRead(src, (char *)&qscheme, sizeof(uint16_t),
               "[Int4QTensor::read] failed to read quantization information",
               start_offset, read_from_offset);
-  group_size = 32; /// Remove me
+  if (qscheme != QScheme::KAI_QSI4CXP_4x4x32) {
+    group_size = 32; /// Remove me — legacy OSV32_ISV2 path only
+  }
 }
 
 size_t Int4QTensor::getGroupSize() { return group_size; }

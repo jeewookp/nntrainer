@@ -20,7 +20,13 @@ namespace nntrainer {
 /**
  * @class Int4Utils class
  * @brief Int4Utils class with helpers for 4-bit integers calculation,
- * quantization and dequantization methods for osv32_isv2 layout of data
+ * quantization and dequantization methods.
+ *
+ * Two on-disk layouts are recognised:
+ *  - legacy osv32_isv2 (OpenVINO OS_IS_YX_OSV32_ISV2)
+ *  - KAI qsi4cxp super-row (nr=4, kr=16, sr=2, idx_variant=2 of the
+ *    qai8dxp_qsi4cxp interface). Section A nibble payload only — scales,
+ *    sums and bias trailers are reassembled at load time.
  */
 class Int4Utils {
 public:
@@ -29,6 +35,15 @@ public:
 
   /// @brief Numbers of element in one byte of date in the osv32_isv2 layout
   static constexpr const size_t COLUMN_BLOCK_SIZE = 2;
+
+  /// @brief KAI qsi4cxp constants for matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_
+  ///        4x4x32_neon_i8mm (idx_variant=2 in cpu_backend wrapper).
+  static constexpr const size_t KAI_NR = 4;
+  static constexpr const size_t KAI_KR = 16;
+  static constexpr const size_t KAI_SR = 2;
+  static constexpr const size_t KAI_K_INTERLEAVE = 16;
+  static constexpr const size_t KAI_K_PAD_MULTIPLE = 32;
+  static constexpr const uint32_t KAI_QSI4CXP_VARIANT_4x4x32 = 2;
 
   /**
    * @brief     Compute scale for input weights
@@ -88,6 +103,34 @@ public:
                                 const size_t group_size,
                                 std::vector<uint8_t> &out_weights,
                                 std::vector<uint16_t> &out_scales);
+
+  /**
+   * @brief Quantize float* matrix into KAI qsi4cxp Section A nibble payload.
+   *
+   * Layout: per super-row of nr=4 output channels, contiguous block layout
+   * with block_length = kr/sr = 8 bytes, super-block stride, and a 16-K
+   * interleave (one byte stores nibbles at k0 and k0+16). Each stored
+   * uint4 = int4 + 8 (the rhs_zero_point=8 form, XOR 0x88 applied to the
+   * sign-bit pattern as in kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0).
+   * No sums/scales/bias trailer is written — reassemble at load time.
+   *
+   * @param weights float * input matrix (rows_count x columns_count)
+   * @param rows_count N (output channels)
+   * @param columns_count K (input channels)
+   * @param out_weights output nibble payload, size
+   *        = ceil(N/KAI_NR) * KAI_NR * (roundup(K, KAI_K_PAD_MULTIPLE) / 2)
+   * @param out_scales output per-channel fp16 scales, size = rows_count
+   */
+  static void quantizeAndPackKai(const float *weights, const size_t rows_count,
+                                 const size_t columns_count,
+                                 std::vector<uint8_t> &out_weights,
+                                 std::vector<uint16_t> &out_scales);
+
+  /**
+   * @brief Convenience: byte size of the KAI Section A nibble payload for
+   *        the given (N, K) shape.
+   */
+  static size_t kaiNibblePayloadBytes(size_t rows_count, size_t columns_count);
 
   /**
    * @brief     Quantize one float value to 4-bits integer

@@ -249,7 +249,7 @@ Tensor::Tensor(const TensorDim &d, const void *buf, QScheme qscheme) {
   } else if (d.getDataType() == Tdatatype::QINT8) {
     itensor_ = std::make_unique<CharTensor>(d, buf, qscheme);
   } else if (d.getDataType() == Tdatatype::QINT4) {
-    itensor_ = std::make_unique<Int4QTensor>(d, buf);
+    itensor_ = std::make_unique<Int4QTensor>(d, buf, qscheme);
   } else if (d.getDataType() == Tdatatype::BCQ) {
 #ifdef ENABLE_BIQGEMM
     itensor_ = std::make_unique<BCQTensor>(d, buf);
