@@ -71,9 +71,14 @@ static int run(unsigned K, unsigned N, const char *tag) {
   Int4Utils::quantizeAndPackKai(W.data(), N, K, qw_ours, qs_ours);
 
   // 2) KAI reference packer: feed pre-quantized nibbles + fp32 scales.
+  //    Round-trip the scales through fp16 so the trailer bytes match
+  //    Int4Utils::assembleKaiRhsPacked (which reads fp16 from disk).
   std::vector<uint8_t> raw_nibbles;
   std::vector<float> scales_fp32;
   quantize_raw_nibbles(W, N, K, raw_nibbles, scales_fp32);
+  for (auto &s : scales_fp32) {
+    s = compute_fp16_to_fp32(compute_fp32_to_fp16(s));
+  }
 
   const size_t nr = Int4Utils::KAI_NR;
   const size_t kr = Int4Utils::KAI_KR;
@@ -125,18 +130,50 @@ static int run(unsigned K, unsigned N, const char *tag) {
     }
   }
 
-  if (mismatches == 0) {
-    printf("[%s/bytecompat] OK: %zu super-rows × %zu B nibble = %zu B "
-           "byte-identical with KAI rhs_pack\n",
-           tag, super_row_count, nibble_bytes_per_super_row,
-           qw_ours.size());
-    return 0;
-  } else {
-    printf("[%s/bytecompat] FAIL: %zu mismatched bytes, first at offset "
-           "%zu (ours=0x%02x vs kai=0x%02x)\n",
+  if (mismatches != 0) {
+    printf("[%s/bytecompat] FAIL nibble: %zu mismatched bytes, first at "
+           "offset %zu (ours=0x%02x vs kai=0x%02x)\n",
            tag, mismatches, first_mismatch, first_a, first_b);
     return 1;
   }
+
+  // Now exercise Int4Utils::assembleKaiRhsPacked: reassemble Section A +
+  // fp16 scales into a full KAI rhs_packed buffer (with trailer) and
+  // compare byte-for-byte to the KAI packer's output. This locks the
+  // load-time trailer reassembly (sums, scales*0.0625, bias) to the
+  // matmul kernel's expectations.
+  std::vector<uint8_t> ours_full;
+  Int4Utils::assembleKaiRhsPacked(qw_ours.data(), qs_ours.data(), N, K,
+                                  ours_full);
+  if (ours_full.size() != kai_packed.size()) {
+    printf("[%s/bytecompat] FAIL trailer: assembled size %zu vs KAI %zu\n",
+           tag, ours_full.size(), kai_packed.size());
+    return 1;
+  }
+  size_t t_mismatches = 0;
+  size_t t_first = (size_t)-1;
+  uint8_t t_a = 0, t_b = 0;
+  for (size_t i = 0; i < ours_full.size(); ++i) {
+    if (ours_full[i] != kai_packed[i]) {
+      ++t_mismatches;
+      if (t_first == (size_t)-1) {
+        t_first = i;
+        t_a = ours_full[i];
+        t_b = kai_packed[i];
+      }
+    }
+  }
+  if (t_mismatches != 0) {
+    printf("[%s/bytecompat] FAIL trailer: %zu mismatched bytes, first at "
+           "offset %zu (ours=0x%02x vs kai=0x%02x)\n",
+           tag, t_mismatches, t_first, t_a, t_b);
+    return 1;
+  }
+
+  printf("[%s/bytecompat] OK: %zu super-rows, nibble %zu B + trailer 48 B = "
+         "%zu B byte-identical with KAI rhs_pack\n",
+         tag, super_row_count, nibble_bytes_per_super_row, kai_packed.size());
+  return 0;
 }
 
 int main() {

@@ -13,7 +13,9 @@
 #include <iostream>
 
 #include <compute_ops.h>
+#include <cpu_backend.h>
 #include <half_tensor.h>
+#include <int4_utils.h>
 #include <tensor.h>
 #include <util_func.h>
 
@@ -718,6 +720,9 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
   case Tdatatype::Q4_0:
     dotQnK(input, output, trans, trans_in, beta, input.getDataType());
     break;
+  case Tdatatype::QINT4:
+    dotQInteger(input, output, trans, trans_in, beta, input.getDataType());
+    break;
   default:
     throw std::invalid_argument("Error: unsupported datatype");
   }
@@ -742,6 +747,48 @@ Tensor &HalfTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
   default:
     throw std::invalid_argument("Error: unsupported datatype");
   }
+  return output;
+}
+
+Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
+                                bool trans_in, float beta,
+                                Tdatatype dtype) const {
+  (void)trans;
+  (void)trans_in;
+  (void)beta;
+  (void)dtype;
+
+  _FP16 *data = (_FP16 *)getData();
+  _FP16 *rdata = output.getData<_FP16>();
+
+  unsigned int M = getDim().height();
+  unsigned int K = getDim().width();
+  unsigned int N = output.getDim().width();
+
+  if (input.q_scheme() != QScheme::KAI_QSI4CXP_4x4x32) {
+    throw std::runtime_error(
+      "HalfTensor::dotQInteger only supports QScheme::KAI_QSI4CXP_4x4x32 "
+      "for QINT4 weights.");
+  }
+
+  // Reassemble disk Section A + fp16 scales into a full KAI rhs_packed
+  // buffer; matches FloatTensor::dotQInteger's KAI branch.
+  // @todo Cache on the weight tensor — currently rebuilt every forward.
+  std::vector<uint8_t> kai_rhs;
+  Int4Utils::assembleKaiRhsPacked(input.getData<uint8_t>(),
+                                  input.getScale<uint16_t>(), N, K, kai_rhs);
+
+  // The fp16 path is locked to the 4x4x32 micro-kernel; idx_variant is
+  // informational. The forked fp16 KAI matmul kernel applies clamp in
+  // fp32 just before the fcvtn store, so clamps must be representable
+  // in fp16 (|bound| <= 65504).
+  const _FP16 lower_bound = static_cast<_FP16>(-65504.0f);
+  const _FP16 upper_bound = static_cast<_FP16>(65504.0f);
+  uint32_t idx_variant = 2u;
+  nntr_gemm_qai8dxp_qsi4cxp_packed<_FP16>(
+    M, N, K, (void *)data, (void *)kai_rhs.data(), rdata, idx_variant,
+    /*transB=*/true, lower_bound, upper_bound);
+
   return output;
 }
 

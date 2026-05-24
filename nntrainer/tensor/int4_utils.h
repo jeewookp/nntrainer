@@ -133,6 +133,38 @@ public:
   static size_t kaiNibblePayloadBytes(size_t rows_count, size_t columns_count);
 
   /**
+   * @brief Convenience: byte size of the KAI full rhs_packed buffer (with
+   *        the per-super-row sums + scales*0.0625 + bias trailer) for the
+   *        given (N, K) shape. Matches what the matmul micro-kernel walks
+   *        per column tile (= generic packer stride = nr*(k_internal/2 +
+   *        sums + scales + bias) = nr*(k_internal/2 + 12)).
+   */
+  static size_t kaiRhsPackedBytes(size_t rows_count, size_t columns_count);
+
+  /**
+   * @brief Reassemble disk Section A nibbles + per-channel fp16 scales
+   *        into a full KAI rhs_packed buffer suitable for direct use with
+   *        nntr_kai_gemm_qai8dxp_qsi4cxp_olp / _olp_f16. Per super-row of
+   *        nr=4 output channels the layout is
+   *          [nibbles : 4*(k_internal/2) bytes (copied as-is)]
+   *          [sums    : 4 * int32, each = sum_k int4[n][k] * 16]
+   *          [scales  : 4 * fp32,  each = (fp16->fp32 scale) * 0.0625]
+   *          [bias    : 4 * fp32 = 0]
+   *
+   * @param section_a       nibble payload as stored on disk; size must
+   *                        be kaiNibblePayloadBytes(rows_count,
+   *                        columns_count).
+   * @param fp16_scales     per-output-channel fp16 scales, size N.
+   * @param rows_count      N (output channels). Must be a multiple of 4.
+   * @param columns_count   K (input channels). Must be a multiple of 32.
+   * @param out_kai_packed  output buffer, sized to kaiRhsPackedBytes.
+   */
+  static void
+  assembleKaiRhsPacked(const uint8_t *section_a, const uint16_t *fp16_scales,
+                       size_t rows_count, size_t columns_count,
+                       std::vector<uint8_t> &out_kai_packed);
+
+  /**
    * @brief     Quantize one float value to 4-bits integer
    * @param[in] weight input weight
    * @param[in] scale input scale

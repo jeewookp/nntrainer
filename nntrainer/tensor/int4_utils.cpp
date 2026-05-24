@@ -10,8 +10,10 @@
 
 #include "int4_utils.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstring>
 
 #include "cpu_backend.h"
 #include "fp16.h"
@@ -189,6 +191,81 @@ size_t Int4Utils::kaiNibblePayloadBytes(size_t rows_count,
     KAI_K_PAD_MULTIPLE;
   const size_t super_row_count = (rows_count + KAI_NR - 1) / KAI_NR;
   return super_row_count * KAI_NR * (k_internal / 2);
+}
+
+size_t Int4Utils::kaiRhsPackedBytes(size_t rows_count, size_t columns_count) {
+  // Match the generic-packer stride (which is what the matmul micro-kernel
+  // actually walks per column tile): nr * (k_internal/2 + sums(4) +
+  // scales(4) + bias(4)) per super-row.
+  const size_t k_internal =
+    ((columns_count + KAI_K_PAD_MULTIPLE - 1) / KAI_K_PAD_MULTIPLE) *
+    KAI_K_PAD_MULTIPLE;
+  const size_t super_row_count = (rows_count + KAI_NR - 1) / KAI_NR;
+  const size_t trailer_bytes_per_super_row = KAI_NR * (4 + 4 + 4);
+  return super_row_count * (KAI_NR * (k_internal / 2) +
+                             trailer_bytes_per_super_row);
+}
+
+void Int4Utils::assembleKaiRhsPacked(const uint8_t *section_a,
+                                     const uint16_t *fp16_scales,
+                                     size_t rows_count, size_t columns_count,
+                                     std::vector<uint8_t> &out_kai_packed) {
+  const size_t k_internal =
+    ((columns_count + KAI_K_PAD_MULTIPLE - 1) / KAI_K_PAD_MULTIPLE) *
+    KAI_K_PAD_MULTIPLE;
+  const size_t super_row_count = (rows_count + KAI_NR - 1) / KAI_NR;
+  const size_t nibble_bytes_per_super_row = KAI_NR * (k_internal / 2);
+  const size_t trailer_bytes_per_super_row = KAI_NR * (4 + 4 + 4);
+  const size_t super_row_stride =
+    nibble_bytes_per_super_row + trailer_bytes_per_super_row;
+
+  out_kai_packed.assign(super_row_count * super_row_stride, 0u);
+
+  const size_t block_length_in_bytes = KAI_KR / KAI_SR; // = 8
+
+  for (size_t sr_idx = 0; sr_idx < super_row_count; ++sr_idx) {
+    uint8_t *dst_row = out_kai_packed.data() + sr_idx * super_row_stride;
+    const uint8_t *src_row =
+      section_a + sr_idx * nibble_bytes_per_super_row;
+
+    // Nibbles are byte-identical to Section A on disk — just copy them.
+    std::memcpy(dst_row, src_row, nibble_bytes_per_super_row);
+
+    // Per-channel sums = sum_k int4[n][k] * 16. Decode each Section A byte
+    // back to two int4 lanes via XOR 0x88 -> uint4 -> int4 = uint4 - 8.
+    int32_t sums[KAI_NR] = {0, 0, 0, 0};
+    for (size_t dst_byte_idx = 0;
+         dst_byte_idx < nibble_bytes_per_super_row; ++dst_byte_idx) {
+      const size_t block_idx = dst_byte_idx / block_length_in_bytes;
+      const size_t nr_idx = block_idx % KAI_NR;
+
+      const uint8_t stored = src_row[dst_byte_idx] ^ 0x88;
+      const int u_lo = stored & 0x0F;
+      const int u_hi = (stored >> 4) & 0x0F;
+      // Both nibbles belong to the same n0 (= sr_idx * KAI_NR + nr_idx) —
+      // the K interleave shuffles k0/k1 within the same channel.
+      sums[nr_idx] += (u_lo - 8) + (u_hi - 8);
+    }
+
+    int32_t *sums_dst = (int32_t *)(dst_row + nibble_bytes_per_super_row);
+    for (size_t i = 0; i < KAI_NR; ++i) {
+      sums_dst[i] = sums[i] * 16;
+    }
+
+    // Scales: per-channel fp16 -> fp32 -> baked × 0.0625 (matches KAI
+    // packer line 212).
+    float *scales_dst = (float *)(dst_row + nibble_bytes_per_super_row +
+                                  KAI_NR * sizeof(int32_t));
+    for (size_t i = 0; i < KAI_NR; ++i) {
+      const size_t n_idx = std::min(sr_idx * KAI_NR + i, rows_count - 1);
+      const float s = compute_fp16_to_fp32(fp16_scales[n_idx]);
+      scales_dst[i] = s * 0.0625F;
+    }
+
+    // Bias: always zero for FC int4 weights — the bias tensor (if any) is
+    // a separate FP16 weight that the layer adds outside this matmul.
+    // 4 floats already memset to 0 by assign(.., 0u).
+  }
 }
 
 void Int4Utils::quantizeAndPackKai(const float *weights,
