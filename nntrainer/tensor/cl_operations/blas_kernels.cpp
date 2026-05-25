@@ -1357,8 +1357,9 @@ void transpose_16(void *input, void *output, int width, int height,
 // =============================================================================
 
 void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
-                      cl_mem scale_wgt, cl_mem row_sum_act, cl_mem output_fp16,
-                      unsigned int M, unsigned int N, unsigned int K) {
+                      cl_mem scale_wgt, cl_mem row_sum_act, cl_mem zp_act,
+                      cl_mem row_sum_w_int4, cl_mem output_fp16, unsigned int M,
+                      unsigned int N, unsigned int K) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   ClContext::SharedPtrClKernel kp =
@@ -1377,29 +1378,40 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     throw std::runtime_error("v8c gemm arg 3 (scale_wgt)");
   if (!kp->SetKernelArguments(arg++, &row_sum_act, sizeof(cl_mem)))
     throw std::runtime_error("v8c gemm arg 4 (row_sum_act)");
+  if (!kp->SetKernelArguments(arg++, &zp_act, sizeof(cl_mem)))
+    throw std::runtime_error("v8c gemm arg 5 (zp_act)");
+  if (!kp->SetKernelArguments(arg++, &row_sum_w_int4, sizeof(cl_mem)))
+    throw std::runtime_error("v8c gemm arg 6 (row_sum_w_int4)");
   if (!kp->SetKernelArguments(arg++, &output_fp16, sizeof(cl_mem)))
-    throw std::runtime_error("v8c gemm arg 5 (output_fp16)");
+    throw std::runtime_error("v8c gemm arg 7 (output_fp16)");
   int Mi = (int)M, Ni = (int)N, Ki = (int)K;
   if (!kp->SetKernelArguments(arg++, &Mi, sizeof(int)))
-    throw std::runtime_error("v8c gemm arg 6 (M)");
+    throw std::runtime_error("v8c gemm arg 8 (M)");
   if (!kp->SetKernelArguments(arg++, &Ni, sizeof(int)))
-    throw std::runtime_error("v8c gemm arg 7 (N)");
+    throw std::runtime_error("v8c gemm arg 9 (N)");
   if (!kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
-    throw std::runtime_error("v8c gemm arg 8 (K)");
+    throw std::runtime_error("v8c gemm arg 10 (K)");
 
-  // Canonical config: V8C_TM=4, V8C_TN=8 (defaults in the .cl), LWS 4×16.
-  // global = (N/TN, M/TM); requires M%4=0, N%8=0, K%32=0.
+  // V8C_TM=4, V8C_TN=8 (defaults in the .cl). global = (N/TN, M/TM); kernel
+  // requires M%4=0, N%8=0, K%32=0. The historic 4×16 LWS is only valid when
+  // gws[1] = M/TM is a multiple of 16, i.e. M is a multiple of 64. The
+  // QINT4 caller pads M up to V8C_TM (=4) for the M=1 decode / M=18 prefill
+  // cases, so M/TM can be as small as 1 or 5 and never satisfies that
+  // constraint. Pass NULL lws so the runtime picks a compatible
+  // workgroup shape — the kernel has no in-flight cross-thread sync, so
+  // any LWS that divides gws works. (OpenCL 3.0 on Adreno 830 allows
+  // non-uniform groups, but staying uniform with a runtime-chosen LWS is
+  // the conservative win.)
   const size_t TM = 4, TN = 8;
   std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
-  std::array<size_t, 3> lws = {4, 16, 1};
   blas_cc->command_queue_inst_.enqueueKernel(
-    kp->GetKernel(), 2, gws.data(), lws.data(), 0, nullptr, nullptr);
+    kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
 }
 
 static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
-                                     cl_mem out_scale, cl_mem out_row_sum,
-                                     unsigned int M, unsigned int K,
-                                     const char *kernel_name) {
+                                     cl_mem out_scale, cl_mem out_zp,
+                                     cl_mem out_row_sum, unsigned int M,
+                                     unsigned int K, const char *kernel_name) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   ClContext::SharedPtrClKernel kp =
@@ -1414,13 +1426,15 @@ static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
     throw std::runtime_error("v8c quant arg 1");
   if (!kp->SetKernelArguments(arg++, &out_scale, sizeof(cl_mem)))
     throw std::runtime_error("v8c quant arg 2");
+  if (!kp->SetKernelArguments(arg++, &out_zp, sizeof(cl_mem)))
+    throw std::runtime_error("v8c quant arg 3 (out_zp)");
   if (!kp->SetKernelArguments(arg++, &out_row_sum, sizeof(cl_mem)))
-    throw std::runtime_error("v8c quant arg 3");
+    throw std::runtime_error("v8c quant arg 4");
   int Mi = (int)M, Ki = (int)K;
   if (!kp->SetKernelArguments(arg++, &Mi, sizeof(int)))
-    throw std::runtime_error("v8c quant arg 4");
-  if (!kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
     throw std::runtime_error("v8c quant arg 5");
+  if (!kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
+    throw std::runtime_error("v8c quant arg 6");
 
   std::array<size_t, 3> gws = {(size_t)M, 1, 1};
   // local size NULL → driver picks
@@ -1429,17 +1443,17 @@ static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
 }
 
 void quantize_act_v8c_fp16_cl(cl_mem act_fp16, cl_mem out_int8, cl_mem out_scale,
-                              cl_mem out_row_sum, unsigned int M,
+                              cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
                               unsigned int K) {
-  quantize_act_v8c_cl_impl(act_fp16, out_int8, out_scale, out_row_sum, M, K,
-                           "v8c_act_quant_f16");
+  quantize_act_v8c_cl_impl(act_fp16, out_int8, out_scale, out_zp, out_row_sum, M,
+                           K, "v8c_act_quant_f16");
 }
 
 void quantize_act_v8c_fp32_cl(cl_mem act_fp32, cl_mem out_int8, cl_mem out_scale,
-                              cl_mem out_row_sum, unsigned int M,
+                              cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
                               unsigned int K) {
-  quantize_act_v8c_cl_impl(act_fp32, out_int8, out_scale, out_row_sum, M, K,
-                           "v8c_act_quant_f32");
+  quantize_act_v8c_cl_impl(act_fp32, out_int8, out_scale, out_zp, out_row_sum, M,
+                           K, "v8c_act_quant_f32");
 }
 
 // fp16 (uint16 bit pattern) → fp32 host helper. Standard IEEE 754 half decode.
@@ -1573,7 +1587,8 @@ std::unique_ptr<tv::TensorBacking>
 make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
                                            const uint16_t *fp16_scales,
                                            unsigned int N, unsigned int K,
-                                           cl_mem *out_scale_buf) {
+                                           cl_mem *out_scale_buf,
+                                           cl_mem *out_row_sum_w_int4_buf) {
   if (K % 32 != 0)
     throw std::invalid_argument(
       "make_v8c_weight_backing_from_kai_section_a: K must be a multiple of 32");
@@ -1669,6 +1684,36 @@ make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
       "failed: " +
       std::to_string(err));
   *out_scale_buf = sb;
+
+  // Per-channel int4 row sum: Σ_k int4_w[n,k]. The GEMM kernel needs this to
+  // back out the asymmetric act zero-point contribution (see kernel comment
+  // above the bias-correction loop). Decode from the freshly-packed v8c
+  // bytes (cheaper than re-walking the KAI Section A) — same int4 value, just
+  // already in v8c byte order. byte(c*4+b) within each 32-K block has:
+  //   lo nibble = uint4(K = c*8+b)  → int4 = lo - 8
+  //   hi nibble = uint4(K = c*8+b+4) → int4 = hi - 8
+  std::vector<int32_t> row_sum_w_int4(N, 0);
+  for (unsigned int n = 0; n < N; ++n) {
+    const uint8_t *row = packed.data() + n * v8c_row_bytes;
+    int32_t s = 0;
+    for (size_t off = 0; off < v8c_row_bytes; ++off) {
+      const uint8_t byte = row[off];
+      const int lo = (int)(byte & 0x0Fu) - 8;
+      const int hi = (int)((byte >> 4) & 0x0Fu) - 8;
+      s += lo + hi;
+    }
+    row_sum_w_int4[n] = s;
+  }
+  cl_mem rsw_buf =
+    clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                   sizeof(int32_t) * N, row_sum_w_int4.data(), &err);
+  if (err != CL_SUCCESS || !rsw_buf)
+    throw std::runtime_error(
+      "make_v8c_weight_backing_from_kai_section_a: clCreateBuffer "
+      "(row_sum_w_int4) failed: " +
+      std::to_string(err));
+  *out_row_sum_w_int4_buf = rsw_buf;
+
   return backing;
 }
 

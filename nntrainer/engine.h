@@ -160,21 +160,8 @@ public:
   std::unique_ptr<nntrainer::Layer>
   createLayerObject(const std::string &type,
                     const std::vector<std::string> &properties = {}) const {
-    const std::string engine = parseComputeEngine(properties);
-    auto ct = getRegisteredContext(engine);
-    try {
-      return ct->createLayerObject(type);
-    } catch (const std::invalid_argument &) {
-      // Compute-engine fallback: if the requested context (e.g., "gpu" via
-      // NNTR_DEFAULT_ENGINE) doesn't have this layer type registered, fall
-      // back to "cpu". Lets CausalLM's custom layers (registered on cpu
-      // context only) coexist with the env-gated gpu default that flips
-      // built-in layers like fully_connected to their CL versions.
-      if (engine != "cpu") {
-        return getRegisteredContext("cpu")->createLayerObject(type);
-      }
-      throw;
-    }
+    auto ct = getRegisteredContext(parseComputeEngine(properties));
+    return ct->createLayerObject(type);
   }
 
   /**

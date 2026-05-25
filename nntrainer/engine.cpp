@@ -11,7 +11,6 @@
  * @bug    No known bugs except for NYI items
  *
  */
-#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
@@ -97,18 +96,6 @@ Engine::parseComputeEngine(const std::vector<std::string> &props) const {
     }
   }
 
-  // Env-gated default engine override: NNTR_DEFAULT_ENGINE=gpu makes any
-  // createLayer without an explicit `engine=` prop go to the GPU context.
-  // Lets us flip CausalLM (which never passes engine=gpu) to the OpenCL
-  // FC implementation without touching every createLayer call site.
-  static int cached_def = -1;
-  if (cached_def < 0) {
-    const char *e = std::getenv("NNTR_DEFAULT_ENGINE");
-    cached_def = (e && nntrainer::istrequal(e, "gpu")) ? 1 : 0;
-  }
-  if (cached_def == 1) {
-    return "gpu";
-  }
   return "cpu";
 }
 

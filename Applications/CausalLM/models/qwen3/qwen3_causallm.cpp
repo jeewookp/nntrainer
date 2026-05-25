@@ -40,7 +40,7 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_wq"),
      withKey("unit", head_dim * n_heads), withKey("disable_bias", "true"),
-     withKey("weight_initializer", "ones")}));
+     withKey("weight_initializer", "ones"), withKey("engine", "gpu")}));
   Tensor q = wq(query);
 
   // Q-reshaped-norm layer (q_norm(q_proj.view(hidden_shape)))
@@ -56,7 +56,8 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_wk"),
      withKey("unit", head_dim * n_heads / GQA_SIZE),
-     withKey("disable_bias", "true"), withKey("weight_initializer", "ones")}));
+     withKey("disable_bias", "true"), withKey("weight_initializer", "ones"),
+     withKey("engine", "gpu")}));
   Tensor k = wk(key);
 
   // K-reshaped-norm layer (k_norm(k_proj.view(hidden_shape)))
@@ -72,7 +73,8 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_wv"),
      withKey("unit", head_dim * n_heads / GQA_SIZE),
-     withKey("disable_bias", "true"), withKey("weight_initializer", "ones")}));
+     withKey("disable_bias", "true"), withKey("weight_initializer", "ones"),
+     withKey("engine", "gpu")}));
   Tensor v = wv(value);
 
   // External KV cache placeholders (per-layer). Storage is owned by the host
@@ -99,7 +101,7 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
     "fully_connected",
     {withKey("name", "layer" + std::to_string(layer_id) + "_attention_out"),
      withKey("unit", DIM), withKey("disable_bias", "true"),
-     withKey("weight_initializer", "ones")}));
+     withKey("weight_initializer", "ones"), withKey("engine", "gpu")}));
   return wo(a);
 }
 

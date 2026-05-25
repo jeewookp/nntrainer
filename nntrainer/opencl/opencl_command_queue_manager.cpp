@@ -16,6 +16,8 @@
 #include "opencl_context_manager.h"
 #include "opencl_loader.h"
 
+#include <cstdlib>
+
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 
@@ -48,9 +50,15 @@ bool CommandQueueManager::CreateCommandQueue() {
   // getting GPU device ID
   cl_device_id device_id = context_instance.GetDeviceId();
 
+  // Env-gated CL_QUEUE_PROFILING_ENABLE so v8c (and any other) callers can
+  // collect per-command start/end timestamps without paying the profiling
+  // tax in production runs. Set NNTR_OPENCL_PROFILING=1 to enable.
+  cl_command_queue_properties qprops = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+  if (std::getenv("NNTR_OPENCL_PROFILING")) {
+    qprops |= CL_QUEUE_PROFILING_ENABLE;
+  }
   // returns NULL with error code if fails
-  command_queue_ = clCreateCommandQueue(
-    context, device_id, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error_code);
+  command_queue_ = clCreateCommandQueue(context, device_id, qprops, &error_code);
   if (!command_queue_) {
     ml_loge("Failed to create a command queue. OpenCL error code: %d : ",
             error_code, OpenCLErrorCodeToString(error_code));

@@ -145,9 +145,11 @@ void FullyConnectedLayerCl::incremental_forwarding(RunLayerContext &context,
                                                    unsigned int from,
                                                    unsigned int to,
                                                    bool training) {
-  Tensor w;
-  Tensor &weight = w;
-  context.getWeight(weight, weight_idx[FCParams::weight]);
+  // Use the by-reference getWeight so QINT4 callers see the same Int4QTensor
+  // instance across forwards. The Tensor::operator= path on QINT4 deep-clones
+  // the Int4QTensor (see tensor.cpp:376) — that would wipe the assembled
+  // KAI rhs_packed cache on every token and tank decode throughput.
+  Tensor &weight = context.getWeight(weight_idx[FCParams::weight]);
 
   Tensor &input_ = context.getInput(SINGLE_INOUT_IDX);
   Tensor &hidden_ = context.getOutput(SINGLE_INOUT_IDX);

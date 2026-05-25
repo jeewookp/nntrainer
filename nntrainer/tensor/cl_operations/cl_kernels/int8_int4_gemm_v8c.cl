@@ -28,56 +28,98 @@ __constant sampler_t SMP_v8c = CLK_NORMALIZED_COORDS_FALSE |
 //   Outputs: int8 acts [M, K] (row-major), per-row fp32 scale, per-row int32 row_sum
 // One work-item per row (M work-items total). K assumed multiple of 4.
 // ============================================================
+// Asymmetric int8 activation quantization, matching KAI qai8dxp_f32. Per-row
+// scale = (rmax-rmin)/255 + zero_point. The symmetric (amax/127) variant
+// rounded small values to 0 around outliers in skewed post-SwiGLU
+// activations, which on a 28-layer Qwen3 stack pushed token logits far
+// enough to flip selection. Asymmetric handles single-sided outliers
+// gracefully.
+//
+// Outputs:
+//   act_int8[M, K]            row-major signed int8 in [-128, 127]
+//   scale_per_row[M]          recip-scale, i.e. (rmax-rmin)/255 — used at
+//                             dequant: act_fp = (act_int - zp) * scale
+//   zp_per_row[M]             nudged_zero_point (signed int)
+//   row_sum_act[M]            Σ_k act_int8 (used for w-offset correction:
+//                             - 8 * row_sum_act in the GEMM)
 __kernel void v8c_act_quant_f16(
     __global const half *act_fp16,           // [M, K] fp16
-    __global       char *act_int8,           // [M, K] int8 (row-major buffer; image2d view used by GEMM)
-    __global       float *scale_per_row,     // [M] fp32
-    __global       int   *row_sum_act,       // [M] int32 (== sum_k int8_value)
+    __global       char *act_int8,           // [M, K] int8
+    __global       float *scale_per_row,     // [M] fp32 = (rmax-rmin)/255
+    __global       int   *zp_per_row,        // [M] int   = nudged_zero_point
+    __global       int   *row_sum_act,       // [M] int   = Σ_k act_int8
     const int M, const int K) {
   int i = get_global_id(0);
   if (i >= M) return;
-  // pass 1: amax for scale
-  float amax = 0.0f;
+  // pass 1: min/max
+  float fmin = 0.0f, fmax = 0.0f;
   for (int k = 0; k < K; k++) {
     float v = (float)act_fp16[(long)i * K + k];
-    float a = fabs(v);
-    if (a > amax) amax = a;
+    if (v < fmin) fmin = v;
+    if (v > fmax) fmax = v;
   }
-  float s = (amax > 0.0f) ? (amax / 127.0f) : 1.0f;
-  scale_per_row[i] = s;
-  // pass 2: quantize + accumulate row_sum
-  float inv_s = 1.0f / s;
+  const float rmin = fmin < 0.0f ? fmin : 0.0f;
+  const float rmax = fmax > 0.0f ? fmax : 0.0f;
+  const float qmin = -128.0f, qmax = 127.0f;
+  const float range = rmax - rmin;
+  float scale_q = range > 0.0f ? 255.0f / range : 1.0f;       // act_fp → int
+  float recip = range > 0.0f ? range / 255.0f : 1.0f;          // int → act_fp
+  // Pick the zero point with the smaller of the two rounding errors at the
+  // saturation bounds (matches kai_lhs_quant_pack_qai8dxp_f32 lines 137-147).
+  float dmin = rmin * scale_q, dmax = rmax * scale_q;
+  float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+  float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+  if (zp_f < qmin) zp_f = qmin;
+  if (zp_f > qmax) zp_f = qmax;
+  const int zp = (int)rint(zp_f);
+  scale_per_row[i] = recip;
+  zp_per_row[i] = zp;
+  // pass 2: quantize + accumulate row_sum (int8 value, NOT (value - zp))
   int rs = 0;
   for (int k = 0; k < K; k++) {
-    int q = (int)rint((float)act_fp16[(long)i * K + k] * inv_s);
-    q = clamp(q, -127, 127);
+    int q = (int)rint((float)act_fp16[(long)i * K + k] * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
     act_int8[(long)i * K + k] = (char)q;
     rs += q;
   }
   row_sum_act[i] = rs;
 }
 
-// fp32 variant (some paths feed fp32 acts)
 __kernel void v8c_act_quant_f32(
     __global const float *act_fp32,
     __global       char  *act_int8,
     __global       float *scale_per_row,
+    __global       int   *zp_per_row,
     __global       int   *row_sum_act,
     const int M, const int K) {
   int i = get_global_id(0);
   if (i >= M) return;
-  float amax = 0.0f;
+  float fmin = 0.0f, fmax = 0.0f;
   for (int k = 0; k < K; k++) {
-    float a = fabs(act_fp32[(long)i * K + k]);
-    if (a > amax) amax = a;
+    float v = act_fp32[(long)i * K + k];
+    if (v < fmin) fmin = v;
+    if (v > fmax) fmax = v;
   }
-  float s = (amax > 0.0f) ? (amax / 127.0f) : 1.0f;
-  scale_per_row[i] = s;
-  float inv_s = 1.0f / s;
+  const float rmin = fmin < 0.0f ? fmin : 0.0f;
+  const float rmax = fmax > 0.0f ? fmax : 0.0f;
+  const float qmin = -128.0f, qmax = 127.0f;
+  const float range = rmax - rmin;
+  float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+  float recip = range > 0.0f ? range / 255.0f : 1.0f;
+  float dmin = rmin * scale_q, dmax = rmax * scale_q;
+  float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+  float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+  if (zp_f < qmin) zp_f = qmin;
+  if (zp_f > qmax) zp_f = qmax;
+  const int zp = (int)rint(zp_f);
+  scale_per_row[i] = recip;
+  zp_per_row[i] = zp;
   int rs = 0;
   for (int k = 0; k < K; k++) {
-    int q = (int)rint(act_fp32[(long)i * K + k] * inv_s);
-    q = clamp(q, -127, 127);
+    int q = (int)rint(act_fp32[(long)i * K + k] * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
     act_int8[(long)i * K + k] = (char)q;
     rs += q;
   }
@@ -101,9 +143,11 @@ __kernel void v8c_act_quant_f32(
 __kernel void v8c_gemm_int8_int4(
     __read_only image2d_t  Ximg,            // act image view (RGBA UINT32, K/16 × M)
     __read_only image2d_t  Wimg,            // weight image view (RGBA UINT32, K/32 × N)
-    __global const float  *scale_act,       // [M] per-row act scale
-    __global const float  *scale_wgt,       // [N] per-channel weight scale
+    __global const float  *scale_act,       // [M] per-row act recip-scale
+    __global const float  *scale_wgt,       // [N] per-channel weight recip-scale
     __global const int    *row_sum_act,     // [M] sum_k(int8 act_ik)
+    __global const int    *zp_act,          // [M] per-row asymmetric zero point
+    __global const int    *row_sum_w_int4,  // [N] sum_k(int4 w_nk), pre-decoded
     __global       half   *Y,               // [M, N] fp16 output
     const int M, const int N, const int K) {
   const int n0 = get_global_id(0) * V8C_TN;
@@ -153,14 +197,23 @@ __kernel void v8c_gemm_int8_int4(
       }
     }
   }
-  // Bias correction: subtract 8·row_sum_act_i (per (i,j) at the end of K-loop)
+  // Bias correction for asymmetric int8 activation + offset-encoded int4 wgt:
+  //   acc                          = Σ_k act_q[i,k] * w_enc[j,k]
+  //                                 where w_enc = w_int4 + 8 ∈ [0..15]
+  //   Σ_k act_q[i,k] * w_int4[j,k] = acc - 8 * row_sum_act[i]
+  //   Σ_k (act_q[i,k] - zp_a[i]) * w_int4[j,k]
+  //                                 = (acc - 8*row_sum_act[i])
+  //                                   - zp_a[i] * row_sum_w_int4[j]
+  //   v[i,j]                       = corrected * recip_scale_act[i]
+  //                                   * recip_scale_wgt[j]
   #pragma unroll
   for (int i = 0; i < V8C_TM; i++) {
     int rs = row_sum_act[m0 + i];
+    int zp = zp_act[m0 + i];
     float s_i = scale_act[m0 + i];
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) {
-      int corrected = acc[i][j] - 8 * rs;
+      int corrected = acc[i][j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
       float v = (float)corrected * s_i * scale_wgt[n0 + j];
       Y[(long)(m0 + i) * N + (n0 + j)] = (half)v;
     }

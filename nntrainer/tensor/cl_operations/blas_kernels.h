@@ -372,29 +372,39 @@ void transpose_cl_axis(const _FP16 *in, _FP16 *res,
  *            (CL_RGBA UINT32, width=K/16, height=M)
  * @param[in] weight_image image2d_from_buffer view over int4-offset weight buf
  *            (CL_RGBA UINT32, width=K/32, height=N)
- * @param[in] scale_act per-row fp32 act scale buffer [M]
- * @param[in] scale_wgt per-channel fp32 weight scale buffer [N]
- * @param[in] row_sum_act per-row int32 sum of int8 acts [M] (paper §3.7 quant-kernel output)
+ * @param[in] scale_act per-row fp32 act recip-scale buffer [M]
+ * @param[in] scale_wgt per-channel fp32 weight recip-scale buffer [N]
+ * @param[in] row_sum_act per-row int32 sum of int8 acts [M]
+ * @param[in] zp_act per-row int32 asymmetric zero-point [M]
+ * @param[in] row_sum_w_int4 per-channel int32 sum_k(int4 w_nk) [N], precomputed
+ *            once at weight upload (depends only on weight bytes).
  * @param[out] output_fp16 fp16 output buffer [M*N]
  * @param[in] M,N,K shape; K must be multiple of 32
  */
 void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
-                      cl_mem scale_wgt, cl_mem row_sum_act, cl_mem output_fp16,
-                      unsigned int M, unsigned int N, unsigned int K);
+                      cl_mem scale_wgt, cl_mem row_sum_act, cl_mem zp_act,
+                      cl_mem row_sum_w_int4, cl_mem output_fp16, unsigned int M,
+                      unsigned int N, unsigned int K);
 
 /**
- * @brief paper §3.7 activation quant kernel for v8c: fp16/fp32 → int8
- *        + per-row scale + per-row int32 sum.
+ * @brief Asymmetric int8 activation quantization for v8c.
+ *        fp16/fp32 → int8 + per-row recip-scale + per-row int32 zero-point
+ *        + per-row int32 sum. The scale/zp form matches KAI's qai8dxp_f32
+ *        host packer so the v8c GPU path has the same robustness to
+ *        single-sided outliers (post-SwiGLU activations etc.).
  * @param[in] act_fp16 or act_fp32 input buffer [M*K]
  * @param[out] out_int8 [M*K] int8 (row-major; later wrapped in image2d view)
- * @param[out] out_scale [M] fp32 per-row scale
- * @param[out] out_row_sum [M] int32 sum_k(int8_value), for v8c bias correction
- * @param[in] M,K shape; K must be multiple of 4 (no other constraint here)
+ * @param[out] out_scale [M] fp32 per-row recip-scale = (rmax-rmin)/255
+ * @param[out] out_zp [M] int32 per-row nudged zero-point
+ * @param[out] out_row_sum [M] int32 sum_k(int8_value)
+ * @param[in] M,K shape
  */
 void quantize_act_v8c_fp16_cl(cl_mem act_fp16, cl_mem out_int8, cl_mem out_scale,
-                              cl_mem out_row_sum, unsigned int M, unsigned int K);
+                              cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
+                              unsigned int K);
 void quantize_act_v8c_fp32_cl(cl_mem act_fp32, cl_mem out_int8, cl_mem out_scale,
-                              cl_mem out_row_sum, unsigned int M, unsigned int K);
+                              cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
+                              unsigned int K);
 
 } // namespace nntrainer
 
@@ -457,7 +467,8 @@ std::unique_ptr<tv::TensorBacking>
 make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
                                            const uint16_t *fp16_scales,
                                            unsigned int N, unsigned int K,
-                                           cl_mem *out_scale_buf);
+                                           cl_mem *out_scale_buf,
+                                           cl_mem *out_row_sum_w_int4_buf);
 
 } // namespace nntrainer
 #endif /* __BLAS_KERNELS_H__ */
