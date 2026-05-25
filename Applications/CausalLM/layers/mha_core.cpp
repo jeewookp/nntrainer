@@ -36,6 +36,45 @@ inline float convert_scalar(uint16_t h) {
   return nntrainer::compute_fp16_to_fp32(h);
 }
 
+// =============================================================================
+// KV int8 helpers (paper section 3.7 path).
+// =============================================================================
+// Quantize a [step_size, num_heads, head_dim] fp16 source (laid out as
+// row-major with row stride num_heads * head_dim) into an int8 destination
+// plus a per-(token, head) fp16 scale tensor. Scale = amax / 127; with
+// dequant via `int8_value * scale`. Symmetric (no zero point) so the
+// matmul stays a simple int8 dot product plus a fp16 scale-out multiply.
+static inline void quantize_kv_fp16_to_int8_per_row(
+  const uint16_t *src_fp16,  // [step_size, num_heads * head_dim]
+  int8_t *dst_int8,          // [step_size, num_heads * head_dim]
+  uint16_t *dst_scale_fp16,  // [step_size, num_heads]
+  unsigned int step_size, unsigned int num_heads, unsigned int head_dim) {
+  for (unsigned int s = 0; s < step_size; ++s) {
+    for (unsigned int h = 0; h < num_heads; ++h) {
+      const uint16_t *row =
+        src_fp16 + (size_t)s * num_heads * head_dim + (size_t)h * head_dim;
+      float amax = 0.0f;
+      for (unsigned int d = 0; d < head_dim; ++d) {
+        float v = std::fabs(nntrainer::compute_fp16_to_fp32(row[d]));
+        if (v > amax) amax = v;
+      }
+      const float scale = amax / 127.0f;
+      const float inv = (amax > 0.0f) ? (127.0f / amax) : 0.0f;
+      dst_scale_fp16[s * num_heads + h] =
+        nntrainer::compute_fp32_to_fp16(scale);
+      int8_t *out =
+        dst_int8 + (size_t)s * num_heads * head_dim + (size_t)h * head_dim;
+      for (unsigned int d = 0; d < head_dim; ++d) {
+        int q = (int)std::round(
+          nntrainer::compute_fp16_to_fp32(row[d]) * inv);
+        if (q < -127) q = -127;
+        if (q > 127) q = 127;
+        out[d] = (int8_t)q;
+      }
+    }
+  }
+}
+
 namespace causallm {
 
 #define tile_size 4
@@ -321,10 +360,18 @@ void MHACoreLayer::forwarding(nntrainer::RunLayerContext &context,
     return;
   }
   if (kv_int8) {
+    // The internal cache_key_scale/cache_value_scale tensors are
+    // allocated only when use_external_cache is false. In the Qwen3
+    // setup the cache_k/cache_v inputs come from
+    // Transformer::createKVCachePlaceholders, which still emits FP16
+    // placeholders. Until the placeholder helper is taught to emit
+    // int8 + scale (or the mha layer is rewired with 7 inputs), the
+    // external-cache + kv_int8 combination is unsupported.
     throw std::runtime_error(
-      "NNTR_KV_INT8: KV int8 cache is allocated but the read/write code "
-      "paths in forwarding() are NYI (paper section 3.7 int8 KV path, "
-      "Phase 2/3). See project_kv_int8_plan memory note.");
+      "NNTR_KV_INT8 requires internal cache mode (3-input mha). The "
+      "current model uses external cache placeholders (5-input mha) "
+      "that are still FP16. See project_kv_int8_plan memory for the "
+      "wiring work needed in transformer.cpp.");
   }
 
   nntrainer::Tensor &query = context.getInput(INOUT_INDEX::QUERY);
@@ -456,10 +503,20 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     return;
   }
   if (kv_int8) {
+    // Internal cache mode: scale tensors were allocated in finalize().
+    // Plumb them through to one_batch_incremental_forwarding via member
+    // pointers (no signature churn on the per-batch entry point).
+    kv_int8_key_scale =
+      &context.getTensor(tensor_idx[AttentionParams::cache_key_scale]);
+    kv_int8_value_scale =
+      &context.getTensor(tensor_idx[AttentionParams::cache_value_scale]);
+    // K/V write + read paths under kv_int8 are NYI here too; throw
+    // until phase 2 lands.
     throw std::runtime_error(
-      "NNTR_KV_INT8: KV int8 cache is allocated but the read/write code "
-      "paths in incremental_forwarding() are NYI (paper section 3.7 "
-      "int8 KV path, Phase 2/3). See project_kv_int8_plan memory note.");
+      "NNTR_KV_INT8: kv_int8 cache + scale plumbed; K/V write quantize "
+      "and read dequant in one_batch_incremental_forwarding / "
+      "gemm_attention / compute_kcaches / compute_fp16vcache_transposed "
+      "are NYI (Phase 2/3). See project_kv_int8_plan memory.");
   }
 
   /// @todo replace step_size into input height

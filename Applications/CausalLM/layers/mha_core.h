@@ -420,6 +420,12 @@ private:
    * int8) + per-(token, head) FP16 scales. Enabled by setting the
    * NNTR_KV_INT8 env var; default false keeps the FP16 cache layout. */
   bool kv_int8 = false;
+
+  /** Scale tensors for the int8 KV cache; populated by the forwarding
+   * entry points when kv_int8 is active. Lifespan is the layer's, so
+   * the pointers are valid for as long as the layer node exists. */
+  nntrainer::Tensor *kv_int8_key_scale = nullptr;
+  nntrainer::Tensor *kv_int8_value_scale = nullptr;
   unsigned int sink_idx;
 
   /** attention parameters */
