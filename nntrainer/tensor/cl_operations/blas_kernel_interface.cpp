@@ -483,15 +483,20 @@ static V8cWeightEntry *v8c_get_or_build_weight(const Tensor &weight,
   auto it = cache.find(key);
   if (it != cache.end())
     return &it->second;
-  const uint8_t *osv = weight.getData<uint8_t>();
+  const uint8_t *section_a = weight.getData<uint8_t>();
   const uint16_t *fp16_scales = weight.getScale<uint16_t>();
-  if (!osv || !fp16_scales)
+  if (!section_a || !fp16_scales)
     return nullptr;
   V8cWeightEntry e;
   cl_mem sb = nullptr;
   try {
-    e.backing = make_v8c_weight_backing(osv, fp16_scales, /*group_size*/ 32, N,
-                                        K, &sb);
+    // The on-disk QINT4 weight is the KAI Section A nibble payload + a
+    // per-output-channel fp16 scale (one fp16 per N). Permute the nibbles
+    // straight to the v8c row-major + offset-encoded layout — no dequant→
+    // requant round-trip, so no extra quantization noise and no fp32
+    // intermediate buffer. The scales transfer 1:1 (fp16 → fp32).
+    e.backing = make_v8c_weight_backing_from_kai_section_a(
+      section_a, fp16_scales, N, K, &sb);
   } catch (...) {
     return nullptr;
   }
@@ -562,11 +567,17 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
   N = weight.width();
   if (K != weight.height())
     return false;
-  if (M % 4 != 0 || N % 8 != 0 || K % 32 != 0)
+  if (N % 8 != 0 || K % 32 != 0)
     return false;
   if (input.getDataType() != ml::train::TensorDim::DataType::FP32 &&
       input.getDataType() != ml::train::TensorDim::DataType::FP16)
     return false;
+  // Round M up to the kernel's tile size (V8C_TM=4). Padded rows produce
+  // throwaway output that we never read back to the caller. Skips the
+  // "M not divisible by 4 → CPU fallback" cliff so v8c runs for any prefill
+  // length (the 18-token Qwen3 chat-template case in particular).
+  constexpr unsigned int V8C_TM = 4;
+  const unsigned int M_pad = (M + V8C_TM - 1) / V8C_TM * V8C_TM;
 
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
@@ -579,7 +590,7 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
 
   // Reused scratch buffers (grow-only pool). The weight backing + scale are
   // already cached per-weight; only the activation/output scratch scales with
-  // (M, K, N), so we grow these lazily and reuse them across forwards.
+  // (M_pad, K, N), so we grow these lazily and reuse them across forwards.
   cl_int err = CL_SUCCESS;
   const size_t act_elem =
     (input.getDataType() == ml::train::TensorDim::DataType::FP16)
@@ -587,32 +598,42 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
       : sizeof(float);
   std::lock_guard<std::mutex> slock(v8c_cache_mtx());
   V8cScratch &sc = v8c_scratch();
-  if (!v8c_ensure_buf(ctx, &sc.act_in, &sc.act_in_bytes, (size_t)M * K * act_elem,
-                      CL_MEM_READ_ONLY) ||
-      !v8c_ensure_buf(ctx, &sc.act_i8, &sc.act_i8_bytes, (size_t)M * K,
+  if (!v8c_ensure_buf(ctx, &sc.act_in, &sc.act_in_bytes,
+                      (size_t)M_pad * K * act_elem, CL_MEM_READ_ONLY) ||
+      !v8c_ensure_buf(ctx, &sc.act_i8, &sc.act_i8_bytes, (size_t)M_pad * K,
                       CL_MEM_READ_WRITE) ||
-      !v8c_ensure_buf(ctx, &sc.act_scale, &sc.act_scale_bytes, sizeof(float) * M,
-                      CL_MEM_READ_WRITE) ||
-      !v8c_ensure_buf(ctx, &sc.act_rs, &sc.act_rs_bytes, sizeof(int) * M,
+      !v8c_ensure_buf(ctx, &sc.act_scale, &sc.act_scale_bytes,
+                      sizeof(float) * M_pad, CL_MEM_READ_WRITE) ||
+      !v8c_ensure_buf(ctx, &sc.act_rs, &sc.act_rs_bytes, sizeof(int) * M_pad,
                       CL_MEM_READ_WRITE) ||
       !v8c_ensure_buf(ctx, &sc.y_fp16, &sc.y_fp16_bytes,
-                      sizeof(uint16_t) * (size_t)M * N, CL_MEM_READ_WRITE))
+                      sizeof(uint16_t) * (size_t)M_pad * N, CL_MEM_READ_WRITE))
     return false;
 
-  // Upload activation into the (reused) act_in buffer.
+  // Upload activation into the (reused) act_in buffer. Zero-fill the padded
+  // rows so the act_quant kernel sees deterministic values (per-row amax → 0
+  // → scale defaults to 1.0 → q=0 → row_sum=0; padded rows produce 0 output).
   if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE, 0, (size_t)M * K * act_elem,
                            input.getData<uint8_t>(), 0, nullptr,
                            nullptr) != CL_SUCCESS)
     return false;
+  if (M_pad > M) {
+    const size_t pad_bytes = (size_t)(M_pad - M) * K * act_elem;
+    std::vector<uint8_t> zeros(pad_bytes, 0);
+    if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE,
+                             (size_t)M * K * act_elem, pad_bytes, zeros.data(),
+                             0, nullptr, nullptr) != CL_SUCCESS)
+      return false;
+  }
 
   try {
-    // (c) fp→int8 act quant + row_sum
+    // (c) fp→int8 act quant + row_sum (over M_pad rows; padded ones map to 0)
     if (input.getDataType() == ml::train::TensorDim::DataType::FP16)
-      quantize_act_v8c_fp16_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_rs, M,
-                               K);
+      quantize_act_v8c_fp16_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_rs,
+                               M_pad, K);
     else
-      quantize_act_v8c_fp32_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_rs, M,
-                               K);
+      quantize_act_v8c_fp32_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_rs,
+                               M_pad, K);
 
     // Build image2d view over act_i8 buffer (zero-copy, tensor virtualization).
     // This view is cheap; it must be recreated when M/K change, so keep it
@@ -622,18 +643,20 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     cl_image_desc adesc{};
     adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
     adesc.image_width = K / 16;
-    adesc.image_height = M;
+    adesc.image_height = M_pad;
     adesc.image_row_pitch = K;
     adesc.buffer = sc.act_i8;
     cl_mem act_image =
       clCreateImage(ctx, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
     if (err != CL_SUCCESS) throw std::runtime_error("act image view fail");
 
-    // (b) v8c GEMM
+    // (b) v8c GEMM — run on padded M_pad rows, but only read back the valid
+    // M rows to the caller buffer.
     gemm_int8_v8c_cl(act_image, w->weight_image, sc.act_scale, w->scale_buf,
-                     sc.act_rs, sc.y_fp16, M, N, K);
+                     sc.act_rs, sc.y_fp16, M_pad, N, K);
 
-    // Read output fp16, convert to output dtype
+    // Read output fp16 (only the valid M rows; padded rows are discarded),
+    // convert to output dtype.
     std::vector<uint16_t> y_host((size_t)M * N);
     clEnqueueReadBuffer(q, sc.y_fp16, CL_TRUE, 0,
                         sizeof(uint16_t) * y_host.size(), y_host.data(), 0,
