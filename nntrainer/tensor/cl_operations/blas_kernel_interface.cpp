@@ -581,10 +581,11 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
   if (input.getDataType() != ml::train::TensorDim::DataType::FP32 &&
       input.getDataType() != ml::train::TensorDim::DataType::FP16)
     return false;
-  // Round M up to the kernel's tile size (V8C_TM=4). Padded rows produce
-  // throwaway output that we never read back to the caller. Skips the
-  // "M not divisible by 4 → CPU fallback" cliff so v8c runs for any prefill
-  // length (the 18-token Qwen3 chat-template case in particular).
+  // Round M up to the kernel's tile size. The M=1 decode case uses the
+  // TM=1 GEMV-specialized kernel (M_pad=4 suffices for legacy ensure_buf
+  // sizing; the kernel itself touches only row 0). Larger M (prefill) uses
+  // V8C_TM=4 per the .cl default (TM=8 measured 10× slower on Adreno 830,
+  // likely register spill from doubled per-WI accumulator footprint).
   constexpr unsigned int V8C_TM = 4;
   const unsigned int M_pad = (M + V8C_TM - 1) / V8C_TM * V8C_TM;
 

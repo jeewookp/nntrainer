@@ -1454,7 +1454,7 @@ static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
     throw std::runtime_error("v8c quant arg 6");
 
   if (parallel) {
-    // _par variant: one workgroup (LWS=64) per row. gws = M * 64.
+    // _par variant: one workgroup (LWS=64) per row. gws = M * LWS.
     constexpr size_t LWS = 64;
     std::array<size_t, 3> gws = {(size_t)M * LWS, 1, 1};
     std::array<size_t, 3> lws = {LWS, 1, 1};
