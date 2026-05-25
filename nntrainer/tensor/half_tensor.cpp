@@ -717,6 +717,26 @@ Tensor &HalfTensor::dot(Tensor const &input, Tensor &output, bool trans,
   case Tdatatype::FP16:
     dotHalf(input, output, trans, trans_in, beta);
     break;
+  case Tdatatype::FP32: {
+    // FP16 (this) x FP32 (input) -> dispatched through a temporary
+    // FP16 copy of the weight. Triggered by tied LM-head + Q4_0/Q6_K
+    // embedding configurations where the (residual stream is FP16)
+    // model_tensor_type=QINT4-FP16 path meets an FP32 weight tensor
+    // at the final projection. Conversion is one-time per layer call;
+    // the lm_head sees only the last token row (M=1), so the cost is
+    // negligible vs. the matmul itself.
+    Tensor w_fp16(input.getDim().batch(), input.getDim().channel(),
+                  input.getDim().height(), input.getDim().width(),
+                  {input.getFormat(),
+                   ml::train::TensorDim::DataType::FP16});
+    w_fp16.allocate();
+    const float *src = input.getData<float>();
+    _FP16 *dst = w_fp16.getData<_FP16>();
+    const size_t n = input.size();
+    for (size_t i = 0; i < n; ++i) dst[i] = static_cast<_FP16>(src[i]);
+    dotHalf(w_fp16, output, trans, trans_in, beta);
+    break;
+  }
   case Tdatatype::Q4_0:
     dotQnK(input, output, trans, trans_in, beta, input.getDataType());
     break;

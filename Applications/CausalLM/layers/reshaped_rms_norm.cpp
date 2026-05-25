@@ -93,6 +93,14 @@ void ReshapedRMSNormLayer::incremental_forwarding(
         in_step.getData<float>(), out_step.getData<float>(),
         in_step.getDim().height(), in_step.getDim().width(), epsilon);
 #endif
+    } else if (in_step.getDataType() ==
+               ml::train::TensorDim::DataType::FP16) {
+      // FP16 path: fall back to the generic Tensor::multiply/average/
+      // inv_sqrt_i sequence. Avoids a separate intrinsic; still inside
+      // the FP16 residual stream.
+      auto t = in_step.multiply(in_step).average(3).add(epsilon);
+      t.inv_sqrt_i();
+      in_step.multiply(t, out_step);
     } else {
       throw std::invalid_argument(
         "Error: not yet implemented for this data type");
