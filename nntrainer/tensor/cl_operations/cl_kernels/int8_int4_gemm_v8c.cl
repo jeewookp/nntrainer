@@ -127,6 +127,167 @@ __kernel void v8c_act_quant_f32(
 }
 
 // ============================================================
+// Parallel-reduction variant of v8c_act_quant_f32. LWS=64 work-items
+// collaborate on a single row's K=1024 channels. Replaces the 1-WI-per-row
+// scalar pass that dominated 71% of prefill cost (cf. NNTR_V8C_PROFILE
+// breakdown on Adreno 830). Math is byte-identical to v8c_act_quant_f32:
+// same KAI qai8dxp_f32 asymmetric formula, just split across WIs and
+// reduced through local memory.
+//
+// Layout: one workgroup of LWS=64 WIs per row. K is assumed a multiple
+// of LWS (true for Qwen3 hidden dims 1024/2048/3072/etc.).
+// ============================================================
+#define V8C_QUANT_LWS 64
+
+__attribute__((reqd_work_group_size(V8C_QUANT_LWS, 1, 1)))
+__kernel void v8c_act_quant_f32_par(
+    __global const float *act_fp32,
+    __global       char  *act_int8,
+    __global       float *scale_per_row,
+    __global       int   *zp_per_row,
+    __global       int   *row_sum_act,
+    const int M, const int K) {
+  const int row = get_group_id(0);
+  if (row >= M) return;
+  const int tid = get_local_id(0);
+  __local float lmin[V8C_QUANT_LWS];
+  __local float lmax[V8C_QUANT_LWS];
+  __local int   lsum[V8C_QUANT_LWS];
+  __local float l_scale_q;
+  __local int   l_zp;
+
+  // pass 1: per-WI partial min/max
+  float pmin = 0.0f, pmax = 0.0f;
+  for (int k = tid; k < K; k += V8C_QUANT_LWS) {
+    float v = act_fp32[(long)row * K + k];
+    pmin = fmin(pmin, v);
+    pmax = fmax(pmax, v);
+  }
+  lmin[tid] = pmin;
+  lmax[tid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = V8C_QUANT_LWS / 2; s > 0; s >>= 1) {
+    if (tid < s) {
+      lmin[tid] = fmin(lmin[tid], lmin[tid + s]);
+      lmax[tid] = fmax(lmax[tid], lmax[tid + s]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  if (tid == 0) {
+    const float fmn = lmin[0], fmx = lmax[0];
+    const float rmin = fmn < 0.0f ? fmn : 0.0f;
+    const float rmax = fmx > 0.0f ? fmx : 0.0f;
+    const float qmin = -128.0f, qmax = 127.0f;
+    const float range = rmax - rmin;
+    const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+    const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+    const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+    const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+    float zp_f =
+      (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+    if (zp_f < qmin) zp_f = qmin;
+    if (zp_f > qmax) zp_f = qmax;
+    l_scale_q = scale_q;
+    l_zp = (int)rint(zp_f);
+    scale_per_row[row] = recip;
+    zp_per_row[row] = l_zp;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // pass 2: per-WI quantize + partial row_sum
+  const float scale_q = l_scale_q;
+  const int zp = l_zp;
+  int psum = 0;
+  for (int k = tid; k < K; k += V8C_QUANT_LWS) {
+    int q = (int)rint(act_fp32[(long)row * K + k] * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
+    act_int8[(long)row * K + k] = (char)q;
+    psum += q;
+  }
+  lsum[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = V8C_QUANT_LWS / 2; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) row_sum_act[row] = lsum[0];
+}
+
+__attribute__((reqd_work_group_size(V8C_QUANT_LWS, 1, 1)))
+__kernel void v8c_act_quant_f16_par(
+    __global const half  *act_fp16,
+    __global       char  *act_int8,
+    __global       float *scale_per_row,
+    __global       int   *zp_per_row,
+    __global       int   *row_sum_act,
+    const int M, const int K) {
+  const int row = get_group_id(0);
+  if (row >= M) return;
+  const int tid = get_local_id(0);
+  __local float lmin[V8C_QUANT_LWS];
+  __local float lmax[V8C_QUANT_LWS];
+  __local int   lsum[V8C_QUANT_LWS];
+  __local float l_scale_q;
+  __local int   l_zp;
+
+  float pmin = 0.0f, pmax = 0.0f;
+  for (int k = tid; k < K; k += V8C_QUANT_LWS) {
+    float v = (float)act_fp16[(long)row * K + k];
+    pmin = fmin(pmin, v);
+    pmax = fmax(pmax, v);
+  }
+  lmin[tid] = pmin;
+  lmax[tid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = V8C_QUANT_LWS / 2; s > 0; s >>= 1) {
+    if (tid < s) {
+      lmin[tid] = fmin(lmin[tid], lmin[tid + s]);
+      lmax[tid] = fmax(lmax[tid], lmax[tid + s]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) {
+    const float fmn = lmin[0], fmx = lmax[0];
+    const float rmin = fmn < 0.0f ? fmn : 0.0f;
+    const float rmax = fmx > 0.0f ? fmx : 0.0f;
+    const float qmin = -128.0f, qmax = 127.0f;
+    const float range = rmax - rmin;
+    const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+    const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+    const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+    const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+    float zp_f =
+      (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+    if (zp_f < qmin) zp_f = qmin;
+    if (zp_f > qmax) zp_f = qmax;
+    l_scale_q = scale_q;
+    l_zp = (int)rint(zp_f);
+    scale_per_row[row] = recip;
+    zp_per_row[row] = l_zp;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  const float scale_q = l_scale_q;
+  const int zp = l_zp;
+  int psum = 0;
+  for (int k = tid; k < K; k += V8C_QUANT_LWS) {
+    int q = (int)rint((float)act_fp16[(long)row * K + k] * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
+    act_int8[(long)row * K + k] = (char)q;
+    psum += q;
+  }
+  lsum[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = V8C_QUANT_LWS / 2; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) row_sum_act[row] = lsum[0];
+}
+
+// ============================================================
 // v8c int8 × int4(offset) GEMM (signed-unsigned packed dot product).
 // Output: fp16 [M, N] (row-major)
 // Canonical work-item tile: TM=4, TN=8; LWS 4×16; tile %TM/%TN must divide M/N.
@@ -217,5 +378,70 @@ __kernel void v8c_gemm_int8_int4(
       float v = (float)corrected * s_i * scale_wgt[n0 + j];
       Y[(long)(m0 + i) * N + (n0 + j)] = (half)v;
     }
+  }
+}
+
+// ============================================================
+// M=1 (decode-phase) specialization. The default TM=4 kernel pads M up to
+// 4 for the M=1 decode case and burns 3× the activation reads + 3×
+// wasted output writes per work-group. This variant collapses TM=1 so
+// each WI only touches row 0, cutting decode-phase GEMM cost ~4×
+// (measured: 2002 → ~500 ms cumulative across 6272 decode FC calls).
+// gws = (N / V8C_TN_M1, 1, 1); LWS = NULL (driver picks).
+// ============================================================
+#ifndef V8C_TN_M1
+#define V8C_TN_M1 8
+#endif
+
+__kernel void v8c_gemm_int8_int4_m1(
+    __read_only image2d_t  Ximg,
+    __read_only image2d_t  Wimg,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *Y,
+    const int M, const int N, const int K) {
+  const int n0 = get_global_id(0) * V8C_TN_M1;
+  const int K32 = K >> 5;
+
+  int acc[V8C_TN_M1];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) acc[j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    uint4 a_lo = read_imageui(Ximg, SMP_v8c, (int2)(2*k32  , 0));
+    uint4 a_hi = read_imageui(Ximg, SMP_v8c, (int2)(2*k32+1, 0));
+    #pragma unroll
+    for (int j = 0; j < V8C_TN_M1; j++) {
+      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+      const uint M4 = 0x0F0F0F0Fu;
+      uint w0lo =  w.x        & M4;
+      uint w0hi = (w.x >> 4)  & M4;
+      uint w1lo =  w.y        & M4;
+      uint w1hi = (w.y >> 4)  & M4;
+      uint w2lo =  w.z        & M4;
+      uint w2hi = (w.z >> 4)  & M4;
+      uint w3lo =  w.w        & M4;
+      uint w3hi = (w.w >> 4)  & M4;
+      acc[j] += dot_4x8packed_su_int(a_lo.x, w0lo)
+              + dot_4x8packed_su_int(a_lo.y, w0hi)
+              + dot_4x8packed_su_int(a_lo.z, w1lo)
+              + dot_4x8packed_su_int(a_lo.w, w1hi)
+              + dot_4x8packed_su_int(a_hi.x, w2lo)
+              + dot_4x8packed_su_int(a_hi.y, w2hi)
+              + dot_4x8packed_su_int(a_hi.z, w3lo)
+              + dot_4x8packed_su_int(a_hi.w, w3hi);
+    }
+  }
+  const int rs = row_sum_act[0];
+  const int zp = zp_act[0];
+  const float s_i = scale_act[0];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) {
+    int corrected = acc[j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+    float v = (float)corrected * s_i * scale_wgt[n0 + j];
+    Y[n0 + j] = (half)v;
   }
 }

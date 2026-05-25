@@ -1362,10 +1362,18 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
                       unsigned int N, unsigned int K) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  // For the M=1 (M_pad=4) decode case the default TM=4 kernel burns ~4×
+  // the work needed (3 zero-padded rows). Dispatch a TM=1 variant
+  // instead. The caller passes M_pad here, not M, so M_pad <= 4 means
+  // "the real input had 1 valid row" (no QINT4 model has padded prefill
+  // with M_pad <= 4 except via the M=1 decode rounding).
+  const char *kname =
+    (M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4";
   ClContext::SharedPtrClKernel kp =
-    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, "v8c_gemm_int8_int4");
+    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname);
   if (!kp)
-    throw std::runtime_error("v8c_gemm_int8_int4: registerClKernel failed");
+    throw std::runtime_error(std::string("v8c_gemm: registerClKernel failed: ") +
+                             kname);
 
   int arg = 0;
   if (!kp->SetKernelArguments(arg++, &act_image, sizeof(cl_mem)))
@@ -1402,16 +1410,25 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   // any LWS that divides gws works. (OpenCL 3.0 on Adreno 830 allows
   // non-uniform groups, but staying uniform with a runtime-chosen LWS is
   // the conservative win.)
-  const size_t TM = 4, TN = 8;
-  std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
-  blas_cc->command_queue_inst_.enqueueKernel(
-    kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
+  if (M <= 4) {
+    // M=1 (TM=1) GEMV-style dispatch: 1-D grid over output channels.
+    constexpr size_t TN_M1 = 8;
+    std::array<size_t, 3> gws = {(size_t)N / TN_M1, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 1, gws.data(), nullptr, 0, nullptr, nullptr);
+  } else {
+    constexpr size_t TM = 4, TN = 8;
+    std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
+  }
 }
 
 static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
                                      cl_mem out_scale, cl_mem out_zp,
                                      cl_mem out_row_sum, unsigned int M,
-                                     unsigned int K, const char *kernel_name) {
+                                     unsigned int K, const char *kernel_name,
+                                     bool parallel) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   ClContext::SharedPtrClKernel kp =
@@ -1436,24 +1453,40 @@ static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
   if (!kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
     throw std::runtime_error("v8c quant arg 6");
 
-  std::array<size_t, 3> gws = {(size_t)M, 1, 1};
-  // local size NULL → driver picks
-  blas_cc->command_queue_inst_.enqueueKernel(
-    kp->GetKernel(), 1, gws.data(), nullptr, 0, nullptr, nullptr);
+  if (parallel) {
+    // _par variant: one workgroup (LWS=64) per row. gws = M * 64.
+    constexpr size_t LWS = 64;
+    std::array<size_t, 3> gws = {(size_t)M * LWS, 1, 1};
+    std::array<size_t, 3> lws = {LWS, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 1, gws.data(), lws.data(), 0, nullptr, nullptr);
+  } else {
+    std::array<size_t, 3> gws = {(size_t)M, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 1, gws.data(), nullptr, 0, nullptr, nullptr);
+  }
 }
 
 void quantize_act_v8c_fp16_cl(cl_mem act_fp16, cl_mem out_int8, cl_mem out_scale,
                               cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
                               unsigned int K) {
+  // The _par variant requires K % LWS == 0 (LWS=64). Qwen3 hidden dims
+  // (1024/2048/3072/etc.) all satisfy this; smaller K paths fall back.
+  const bool can_par = (K % 64 == 0);
   quantize_act_v8c_cl_impl(act_fp16, out_int8, out_scale, out_zp, out_row_sum, M,
-                           K, "v8c_act_quant_f16");
+                           K, can_par ? "v8c_act_quant_f16_par"
+                                      : "v8c_act_quant_f16",
+                           can_par);
 }
 
 void quantize_act_v8c_fp32_cl(cl_mem act_fp32, cl_mem out_int8, cl_mem out_scale,
                               cl_mem out_zp, cl_mem out_row_sum, unsigned int M,
                               unsigned int K) {
+  const bool can_par = (K % 64 == 0);
   quantize_act_v8c_cl_impl(act_fp32, out_int8, out_scale, out_zp, out_row_sum, M,
-                           K, "v8c_act_quant_f32");
+                           K, can_par ? "v8c_act_quant_f32_par"
+                                      : "v8c_act_quant_f32",
+                           can_par);
 }
 
 // fp16 (uint16 bit pattern) → fp32 host helper. Standard IEEE 754 half decode.
