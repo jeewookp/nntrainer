@@ -83,5 +83,25 @@ void rotary_emb_cl(_FP16 *in, _FP16 *out,
 
 #endif
 
+/// GPU two-1x1-conv attention for prefill (ML Drift section 3.7
+/// algorithm). Three-kernel pipeline:
+///   K1: qk_matmul_f16    Q @ K^T  -> scores  (per head, full d reduce)
+///   K2: softmax_row_f16  in-place row softmax over the N_kv axis
+///   K3: sv_matmul_f16    scores @ V  -> O    (per head)
+/// All three operate on FP16 storage (uint16 bits) with FP32 register
+/// accumulators. GQA is handled inside the kernels via head_q / gqa.
+/// `svm_inputs == true` passes Q/K/V/O directly via SVM pointers; the
+/// `scores` buffer is always a grow-only cl_mem scratch.
+/// Returns false if shape unsupported (caller falls back to CPU).
+bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
+                                       const uint16_t *K_host,
+                                       const uint16_t *V_host,
+                                       uint16_t *O_host, unsigned int M,
+                                       unsigned int N_kv,
+                                       unsigned int num_heads_Q,
+                                       unsigned int num_heads_KV,
+                                       unsigned int head_dim, bool causal,
+                                       bool svm_inputs = false);
+
 } // namespace nntrainer
 #endif /* __ATTENTION_KERNELS_H__ */

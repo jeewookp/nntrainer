@@ -21,6 +21,7 @@
 
 static std::mutex rope_init_mtx;
 
+#include <attention_kernels.h>
 #include <fp16.h>
 #include <layer_context.h>
 #include <mha_core.h>
@@ -765,6 +766,40 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   // path is preferred (no benefit from blocking + softmax bookkeeping).
   constexpr unsigned int FLASH_MIN_PREFILL = 32;
   if (use_gemm_attention && step_size >= FLASH_MIN_PREFILL) {
+    // GPU two-1x1-conv attention path (paper section 3.7). Env-gated via
+    // NNTR_MHA_GPU=1. Currently FP16-Q + FP16-out only; falls back to
+    // the CPU NEON flash variant on any shape mismatch.
+    static const bool _tca_on = std::getenv("NNTR_MHA_GPU") != nullptr;
+    if (_tca_on &&
+        query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+        attention_output_step.getDataType() ==
+          ml::train::TensorDim::DataType::FP16 &&
+        head_dim > 0 && num_heads_KV > 0 &&
+        num_heads_Q % num_heads_KV == 0) {
+#ifdef ENABLE_FP16
+      const uint16_t *Q_p =
+        reinterpret_cast<const uint16_t *>(query_step.getData<_FP16>());
+      const uint16_t *K_p =
+        reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
+      const uint16_t *V_p =
+        reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
+      uint16_t *O_p = reinterpret_cast<uint16_t *>(
+        attention_output_step.getData<_FP16>());
+      const bool svm_ok =
+        query_step.getMemoryData() && b_cached_key.getMemoryData() &&
+        b_cached_value.getMemoryData() &&
+        attention_output_step.getMemoryData() &&
+        query_step.getMemoryData()->isSVM() &&
+        b_cached_key.getMemoryData()->isSVM() &&
+        b_cached_value.getMemoryData()->isSVM() &&
+        attention_output_step.getMemoryData()->isSVM();
+      if (nntrainer::two_conv_attention_prefill_f16_cl(
+            Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
+            num_heads_KV, head_dim, is_causal, svm_ok)) {
+        return;
+      }
+#endif
+    }
     gemm_attention(query_step, b_cached_key, b_cached_value,
                    attention_output_step, cache_to, step_size, cache_from);
     return;
