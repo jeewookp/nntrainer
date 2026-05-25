@@ -13,6 +13,7 @@
 
 #include <compute_ops.h>
 #include <int4_tensor.h>
+#include <int4_utils.h>
 #include <tensor.h>
 
 namespace nntrainer {
@@ -387,6 +388,7 @@ void Int4QTensor::read(std::ifstream &file, size_t start_offset,
   checkedRead(file, (char *)getData(), sz,
               "[Int4QTensor::read] operation failed", start_offset,
               read_from_offset);
+  invalidateKaiRhsPackedCache();
   putData();
 }
 
@@ -410,6 +412,7 @@ void Int4QTensor::read(ReadSource src, size_t start_offset,
   checkedRead(src, (char *)getData(), sz,
               "[Int4QTensor::read] operation failed", start_offset,
               read_from_offset);
+  invalidateKaiRhsPackedCache();
   putData();
 }
 
@@ -635,5 +638,25 @@ void Int4QTensor::read_quantization_info(ReadSource src, size_t start_offset,
 }
 
 size_t Int4QTensor::getGroupSize() { return group_size; }
+
+const uint8_t *Int4QTensor::getOrBuildKaiRhsPacked(size_t n, size_t k) const {
+  // Only meaningful for the KAI scheme; other schemes don't go through the
+  // assembled rhs_packed code path.
+  if (qscheme != QScheme::KAI_QSI4CXP_4x4x32) {
+    return nullptr;
+  }
+  if (!kai_rhs_packed_cache.empty()) {
+    return kai_rhs_packed_cache.data();
+  }
+  const uint8_t *section_a = (const uint8_t *)getData();
+  const uint16_t *fp16_scales = (const uint16_t *)getScale();
+  Int4Utils::assembleKaiRhsPacked(section_a, fp16_scales, n, k,
+                                  kai_rhs_packed_cache);
+  return kai_rhs_packed_cache.data();
+}
+
+void Int4QTensor::invalidateKaiRhsPackedCache() {
+  std::vector<uint8_t>().swap(kai_rhs_packed_cache);
+}
 
 } // namespace nntrainer

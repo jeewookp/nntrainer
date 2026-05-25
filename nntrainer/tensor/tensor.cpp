@@ -1618,6 +1618,16 @@ size_t Tensor::scale_size() const { return itensor_->scale_size(); }
 
 QScheme Tensor::q_scheme() const { return itensor_->q_scheme(); }
 
+const uint8_t *Tensor::getOrBuildKaiRhsPacked(size_t n, size_t k) const {
+  // Only Int4QTensor implements the cache; for any other backing tensor
+  // type the caller falls back to its own pack path.
+  if (getDataType() != ml::train::TensorDim::DataType::QINT4) {
+    return nullptr;
+  }
+  auto *int4_t = static_cast<Int4QTensor *>(itensor_.get());
+  return int4_t->getOrBuildKaiRhsPacked(n, k);
+}
+
 void Tensor::mergeAxis(unsigned int axis1, unsigned int axis2) {
   NNTR_THROW_IF(!getContiguous(), std::invalid_argument)
     << getName() << " is not contiguous, cannot merge axis";

@@ -1935,6 +1935,15 @@ public:
   QScheme q_scheme() const;
 
   /**
+   * @brief    QINT4-only: return the cached full KAI rhs_packed buffer
+   *           (nibbles + per-super-row sums/scales/bias trailer), building
+   *           it on first call. nullptr if not QINT4 or not KAI scheme.
+   *           Cleared automatically when read() refills the underlying
+   *           Section A bytes.
+   */
+  const uint8_t *getOrBuildKaiRhsPacked(size_t n, size_t k) const;
+
+  /**
    * @brief Merge the given two axis for tensor at second axis inplace
    *
    * @param axis1 first axis to merge

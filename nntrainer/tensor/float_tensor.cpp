@@ -1023,22 +1023,17 @@ Tensor &FloatTensor::dotQInteger(Tensor const &input, Tensor &output,
 #ifdef ENABLE_FP16
     if (input.q_scheme() == QScheme::KAI_QSI4CXP_4x4x32) {
       // Disk layout is KAI Section A (nibbles) + per-channel fp16 scales,
-      // no inline KAI trailer. Reassemble per-super-row sums / scales *
-      // 0.0625 / bias = 0 into a full KAI rhs_packed buffer that the
-      // matmul micro-kernel can walk directly.
-      // @todo Cache the assembled buffer on the weight tensor — currently
-      // we rebuild on every forward, which costs O(N * K) per layer.
-      std::vector<uint8_t> kai_rhs;
-      Int4Utils::assembleKaiRhsPacked(input.getData<uint8_t>(),
-                                      input.getScale<uint16_t>(), N, K,
-                                      kai_rhs);
+      // no inline KAI trailer. The full KAI rhs_packed buffer (nibbles +
+      // per-super-row sums / scales * 0.0625 / bias = 0) is assembled once
+      // and cached on the weight tensor; subsequent forwards reuse it.
+      const uint8_t *kai_rhs = input.getOrBuildKaiRhsPacked(N, K);
       // Both variant 0 (qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod, M=1
       // tuned) and variant 2 (qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
       // M>=4 tuned) share the qsi4cxp4x8 RHS pack (nr=4 kr=16 sr=2), so
       // both consume our assembled buffer unchanged.
       uint32_t idx_variant = (M == 1) ? 0u : 2u;
       nntr_gemm_qai8dxp_qsi4cxp_packed(M, N, K, (void *)data,
-                                       (void *)kai_rhs.data(), rdata,
+                                       (void *)kai_rhs, rdata,
                                        idx_variant, true);
     } else if (input.q_scheme() == QScheme::PER_CHANNEL_AFFINE) {
       uint32_t opt_kernel_idx = (M == 1) ? 1 : 5;

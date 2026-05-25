@@ -15,6 +15,8 @@
 #include <quantizer.h>
 #include <tensor_base.h>
 
+#include <vector>
+
 namespace nntrainer {
 
 /**
@@ -305,11 +307,35 @@ public:
    */
   static size_t getGroupSize();
 
+  /**
+   * @brief Return the cached full KAI rhs_packed buffer (nibbles + per-
+   *        super-row sums/scales/bias trailer), building it on first call.
+   *        Only valid for KAI_QSI4CXP_4x4x32 weights. Caller must pass the
+   *        N, K dims so we can build on demand without circular deps.
+   *
+   *        Cleared by read() / setData() since either invalidates the
+   *        underlying nibble bytes.
+   */
+  const uint8_t *getOrBuildKaiRhsPacked(size_t n, size_t k) const;
+
+  /**
+   * @brief Drop the cached rhs_packed buffer. Called from read paths and
+   *        setData() so the next dot rebuilds from the new nibbles.
+   */
+  void invalidateKaiRhsPackedCache();
+
 private:
   /**
    * @brief quantization scheme
    */
   QScheme qscheme;
+
+  /**
+   * @brief Cached full KAI rhs_packed bytes (nibbles + super-row trailer)
+   *        assembled from on-disk Section A layout. mutable so dotQInteger
+   *        const-callers can fill it lazily.
+   */
+  mutable std::vector<uint8_t> kai_rhs_packed_cache;
 
   /**
    * @brief Quantization group size

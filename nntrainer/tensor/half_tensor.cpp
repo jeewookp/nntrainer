@@ -772,11 +772,9 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   }
 
   // Reassemble disk Section A + fp16 scales into a full KAI rhs_packed
-  // buffer; matches FloatTensor::dotQInteger's KAI branch.
-  // @todo Cache on the weight tensor — currently rebuilt every forward.
-  std::vector<uint8_t> kai_rhs;
-  Int4Utils::assembleKaiRhsPacked(input.getData<uint8_t>(),
-                                  input.getScale<uint16_t>(), N, K, kai_rhs);
+  // buffer; matches FloatTensor::dotQInteger's KAI branch. The buffer is
+  // cached on the weight tensor and reused across forwards.
+  const uint8_t *kai_rhs = input.getOrBuildKaiRhsPacked(N, K);
 
   // The fp16 path is locked to the 4x4x32 micro-kernel; idx_variant is
   // informational. The forked fp16 KAI matmul kernel applies clamp in
@@ -786,7 +784,7 @@ Tensor &HalfTensor::dotQInteger(Tensor const &input, Tensor &output, bool trans,
   const _FP16 upper_bound = static_cast<_FP16>(65504.0f);
   uint32_t idx_variant = 2u;
   nntr_gemm_qai8dxp_qsi4cxp_packed<_FP16>(
-    M, N, K, (void *)data, (void *)kai_rhs.data(), rdata, idx_variant,
+    M, N, K, (void *)data, (void *)kai_rhs, rdata, idx_variant,
     /*transB=*/true, lower_bound, upper_bound);
 
   return output;
