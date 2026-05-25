@@ -224,9 +224,14 @@ void add_i_cl(Tensor &result, Tensor const &input) {
       float *Y = result.getData();
       const float *X = input.getData();
 
+      // axpy with alpha=1 is just elementwise add. Use our own addition_cl
+      // kernel so this path doesn't pull in CLBlast (the bigger BLAS dep
+      // is gated behind -Denable-clblast; the v8c paper path doesn't need
+      // it). FP16 already uses addition_cl below — make FP32 symmetric.
+      unsigned int size_input = input.size();
       for (unsigned int i = 0; i < result.batch() / input.batch(); ++i) {
-        axpy_cl(input.size(), 1.0f, X, Y);
-        Y += input.size();
+        addition_cl(X, Y, size_input, size_input);
+        Y += size_input;
       }
     } else if (result.getDataType() == ml::train::TensorDim::DataType::FP16) {
 #ifdef ENABLE_FP16
