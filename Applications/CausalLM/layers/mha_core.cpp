@@ -220,31 +220,67 @@ void MHACoreLayer::finalize(nntrainer::InitLayerContext &context) {
   use_gemm_attention =
     std::get<props::UseGemmAttention>(mha_core_props).get();
 
+  // Paper section 3.7 int8 KV cache path. Reduces KV cache memory + read
+  // bandwidth ~2x. The byte buffer is stored as UINT8; we treat the
+  // bytes as signed int8 in the read/write code paths. Per-(token,
+  // head) FP16 scale captures the row's amax. Env-gated so the FP16
+  // baseline stays default.
+  kv_int8 = std::getenv("NNTR_KV_INT8") != nullptr;
+
   /** Tensor for KV-Cache (only allocate internally when not using external
    * cache) */
   if (!use_external_cache) {
+    if (kv_int8) {
+      ml::train::TensorDim cache_key_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::UINT8});
+      ml::train::TensorDim cache_value_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::UINT8});
+      ml::train::TensorDim cache_key_scale_dim(
+        {batch_size, 1, max_timestep, num_heads_KV},
+        {context.getFormat(), ml::train::TensorDim::DataType::FP16});
+      ml::train::TensorDim cache_value_scale_dim(
+        {batch_size, 1, max_timestep, num_heads_KV},
+        {context.getFormat(), ml::train::TensorDim::DataType::FP16});
+      tensor_idx[AttentionParams::cache_key] = context.requestTensor(
+        cache_key_dim, "cache_key", nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+      tensor_idx[AttentionParams::cache_value] = context.requestTensor(
+        cache_value_dim, "cache_value", nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+      tensor_idx[AttentionParams::cache_key_scale] = context.requestTensor(
+        cache_key_scale_dim, "cache_key_scale",
+        nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+      tensor_idx[AttentionParams::cache_value_scale] = context.requestTensor(
+        cache_value_scale_dim, "cache_value_scale",
+        nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+    } else {
 #ifdef ENABLE_FP16
-    ml::train::TensorDim cache_key_dim(
-      {batch_size, 1, max_timestep, num_heads_KV * head_dim},
-      {context.getFormat(), ml::train::TensorDim::DataType::FP16});
-    ml::train::TensorDim cache_value_dim(
-      {batch_size, 1, max_timestep, num_heads_KV * head_dim},
-      {context.getFormat(), ml::train::TensorDim::DataType::FP16});
+      ml::train::TensorDim cache_key_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::FP16});
+      ml::train::TensorDim cache_value_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::FP16});
 #else
-    ml::train::TensorDim cache_key_dim(
-      {batch_size, 1, max_timestep, num_heads_KV * head_dim},
-      {context.getFormat(), ml::train::TensorDim::DataType::UINT16});
-    ml::train::TensorDim cache_value_dim(
-      {batch_size, 1, max_timestep, num_heads_KV * head_dim},
-      {context.getFormat(), ml::train::TensorDim::DataType::UINT16});
+      ml::train::TensorDim cache_key_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::UINT16});
+      ml::train::TensorDim cache_value_dim(
+        {batch_size, 1, max_timestep, num_heads_KV * head_dim},
+        {context.getFormat(), ml::train::TensorDim::DataType::UINT16});
 #endif
 
-    tensor_idx[AttentionParams::cache_key] = context.requestTensor(
-      cache_key_dim, "cache_key", nntrainer::Initializer::NONE, false,
-      nntrainer::TensorLifespan::MAX_LIFESPAN);
-    tensor_idx[AttentionParams::cache_value] = context.requestTensor(
-      cache_value_dim, "cache_value", nntrainer::Initializer::NONE, false,
-      nntrainer::TensorLifespan::MAX_LIFESPAN);
+      tensor_idx[AttentionParams::cache_key] = context.requestTensor(
+        cache_key_dim, "cache_key", nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+      tensor_idx[AttentionParams::cache_value] = context.requestTensor(
+        cache_value_dim, "cache_value", nntrainer::Initializer::NONE, false,
+        nntrainer::TensorLifespan::MAX_LIFESPAN);
+    }
   }
 
   theta = (float)std::get<props::RopeTheta>(mha_core_props).get();
@@ -283,6 +319,12 @@ void MHACoreLayer::forwarding(nntrainer::RunLayerContext &context,
                               bool training) {
   if (!use_external_cache) {
     return;
+  }
+  if (kv_int8) {
+    throw std::runtime_error(
+      "NNTR_KV_INT8: KV int8 cache is allocated but the read/write code "
+      "paths in forwarding() are NYI (paper section 3.7 int8 KV path, "
+      "Phase 2/3). See project_kv_int8_plan memory note.");
   }
 
   nntrainer::Tensor &query = context.getInput(INOUT_INDEX::QUERY);
@@ -397,6 +439,9 @@ void MHACoreLayer::forwarding(nntrainer::RunLayerContext &context,
  *       Please note that Transformer Decoder's MHA takes only one sequence at a
  * step. Incremental forwarding function is used for this.
  */
+// NYI guard fires inside incremental_forwarding() if kv_int8 was set.
+// The cache + scale tensors are allocated (Phase 1), but the
+// write/read paths are not yet implemented (Phase 2/3).
 void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                           unsigned int _from, unsigned int _to,
                                           bool training) {
@@ -409,6 +454,12 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     forwarding(context, training);
     incremental_step_size = 0;
     return;
+  }
+  if (kv_int8) {
+    throw std::runtime_error(
+      "NNTR_KV_INT8: KV int8 cache is allocated but the read/write code "
+      "paths in incremental_forwarding() are NYI (paper section 3.7 "
+      "int8 KV path, Phase 2/3). See project_kv_int8_plan memory note.");
   }
 
   /// @todo replace step_size into input height

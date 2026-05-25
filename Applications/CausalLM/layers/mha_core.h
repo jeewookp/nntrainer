@@ -409,8 +409,17 @@ private:
     attention_weight,
     dropout_mask,
     attention_output,
+    /** Per-(token, head) FP16 scales for int8 KV cache (paper section
+     * 3.7 int8 KV path; only requested when kv_int8 mode is active). */
+    cache_key_scale,
+    cache_value_scale,
   };
-  std::array<unsigned int, 7> tensor_idx;
+  std::array<unsigned int, 9> tensor_idx;
+
+  /** True when KV cache is stored as int8 (raw bytes treated as
+   * int8) + per-(token, head) FP16 scales. Enabled by setting the
+   * NNTR_KV_INT8 env var; default false keeps the FP16 cache layout. */
+  bool kv_int8 = false;
   unsigned int sink_idx;
 
   /** attention parameters */
