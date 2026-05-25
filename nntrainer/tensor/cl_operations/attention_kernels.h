@@ -103,5 +103,18 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
                                        unsigned int head_dim, bool causal,
                                        bool svm_inputs = false);
 
+/// int8-KV variant of two_conv_attention_prefill_f16_cl. Same shapes,
+/// but K/V are stored as signed int8 bytes with a per-(token, head)
+/// FP16 amax scale (paper §3.7). The kernel dequantizes inline by
+/// folding the scale into the QK^T and SV reductions.
+///   K_i8_host, V_i8_host:  [N_kv, num_heads_KV * head_dim] int8
+///   K_scale_host, V_scale_host: [N_kv, num_heads_KV] fp16-bit
+bool two_conv_attention_prefill_f16_kvi8_cl(
+  const uint16_t *Q_host, const int8_t *K_i8_host, const int8_t *V_i8_host,
+  const uint16_t *K_scale_host, const uint16_t *V_scale_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, bool causal,
+  bool svm_inputs = false);
+
 } // namespace nntrainer
 #endif /* __ATTENTION_KERNELS_H__ */

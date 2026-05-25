@@ -1074,8 +1074,9 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   constexpr unsigned int FLASH_MIN_PREFILL = 32;
   if (use_gemm_attention && step_size >= FLASH_MIN_PREFILL) {
     // GPU two-1x1-conv attention path (paper section 3.7). Env-gated via
-    // NNTR_MHA_GPU=1. Currently FP16-Q + FP16-out only; falls back to
-    // the CPU NEON flash variant on any shape mismatch.
+    // NNTR_MHA_GPU=1. FP16-Q + FP16-out only; K/V is either FP16 or, when
+    // kv_int8 is set, int8 + per-(token, head) FP16 scale. Falls back to
+    // the CPU path on any shape mismatch.
     static const bool _tca_on = std::getenv("NNTR_MHA_GPU") != nullptr;
     if (_tca_on &&
         query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
@@ -1086,10 +1087,6 @@ void MHACoreLayer::one_batch_incremental_forwarding(
 #ifdef ENABLE_FP16
       const uint16_t *Q_p =
         reinterpret_cast<const uint16_t *>(query_step.getData<_FP16>());
-      const uint16_t *K_p =
-        reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
-      const uint16_t *V_p =
-        reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
       uint16_t *O_p = reinterpret_cast<uint16_t *>(
         attention_output_step.getData<_FP16>());
       const bool svm_ok =
@@ -1100,9 +1097,41 @@ void MHACoreLayer::one_batch_incremental_forwarding(
         b_cached_key.getMemoryData()->isSVM() &&
         b_cached_value.getMemoryData()->isSVM() &&
         attention_output_step.getMemoryData()->isSVM();
-      if (nntrainer::two_conv_attention_prefill_f16_cl(
-            Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
-            num_heads_KV, head_dim, is_causal, svm_ok)) {
+      bool ok = false;
+      // int8 GPU prefill is wired but currently produces degraded output
+      // (model generates early-EOS); kept behind a second env var
+      // (NNTR_KV_INT8_GPU=1) until the numerical issue is isolated. Default
+      // for kv_int8 + NNTR_MHA_GPU is to fall through to the CPU NEON path
+      // which is verified working.
+      static const bool _tca_int8_on =
+        std::getenv("NNTR_KV_INT8_GPU") != nullptr;
+      if (kv_int8 && _tca_int8_on) {
+        const int8_t *K_i8 = reinterpret_cast<const int8_t *>(
+          b_cached_key.getData<uint8_t>());
+        const int8_t *V_i8 = reinterpret_cast<const int8_t *>(
+          b_cached_value.getData<uint8_t>());
+        NNTR_THROW_IF(cur_kv_int8_key_scale_batch == nullptr ||
+                        cur_kv_int8_value_scale_batch == nullptr,
+                      std::invalid_argument)
+          << "kv_int8 GPU prefill missing per-batch scale pointers";
+        ok = nntrainer::two_conv_attention_prefill_f16_kvi8_cl(
+          Q_p, K_i8, V_i8, cur_kv_int8_key_scale_batch,
+          cur_kv_int8_value_scale_batch, O_p, step_size, cache_to, num_heads_Q,
+          num_heads_KV, head_dim, is_causal, svm_ok);
+      } else if (kv_int8) {
+        // kv_int8 + GPU prefill not enabled: fall through to CPU path
+        // (caller's `gemm_attention` below dequantizes on the fly).
+        ok = false;
+      } else {
+        const uint16_t *K_p =
+          reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
+        const uint16_t *V_p =
+          reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
+        ok = nntrainer::two_conv_attention_prefill_f16_cl(
+          Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
+          num_heads_KV, head_dim, is_causal, svm_ok);
+      }
+      if (ok) {
         return;
       }
 #endif

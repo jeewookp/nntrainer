@@ -237,3 +237,155 @@ __kernel void sv_matmul_f16(
     }
   }
 }
+
+// =============================================================
+// int8-KV variants (paper §3.7 int8 KV path).
+// K/V cache is stored as signed int8 bytes; a per-(token, head)
+// FP16 amax scale lifts the int8 values back to fp16 range.
+// Same memory layout as the f16 kernels above:
+//   K_i8[n, head_kv, x]   -> n*HD_KV + head_kv*d + x (1 byte each)
+//   K_scale[n, head_kv]   -> n*num_heads_KV + head_kv (fp16)
+// The scale is constant across the d-axis for a given (n, head_kv),
+// so we multiply once per (n, head_kv) outside the inner d-loop.
+// =============================================================
+
+__kernel void qk_matmul_f16_kvi8(
+    __global const half *Q,           // [M, HD_Q] fp16
+    __global const char *K_i8,        // [N_kv, HD_KV] int8 (signed)
+    __global const half *K_scale,     // [N_kv, num_heads_KV] fp16
+    __global       half *scores,      // [H, M, N_kv] fp16
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int HD_KV, const int gqa,
+    const int num_heads_KV,
+    const int causal, const float scale) {
+  const int n0 = get_global_id(0) * TN_QK;
+  const int m0 = get_global_id(1) * TM_QK;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || n0 >= N_kv) return;
+
+  float acc[TM_QK][TN_QK];
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++)
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) acc[i][j] = 0.0f;
+
+  // Reduction over d. Q in fp16, K in int8; convert int8 -> fp32 at
+  // load and accumulate in fp32 (matches CPU helper's precision).
+  for (int x = 0; x < d; x++) {
+    half q_col[TM_QK];
+    float k_col[TN_QK];
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const int m = m0 + i;
+      q_col[i] = (m < M)
+                   ? Q[(long)m * HD_Q + head_q * d + x]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      k_col[j] = (n < N_kv)
+                   ? convert_float(K_i8[(long)n * HD_KV + head_kv * d + x])
+                   : 0.0f;
+    }
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const float qf = (float)q_col[i];
+      #pragma unroll
+      for (int j = 0; j < TN_QK; j++) acc[i][j] += qf * k_col[j];
+    }
+  }
+
+  // Apply per-(n, head_kv) scale, the softmax scale, causal mask, and
+  // write out. Scale is constant in d for each (n, head_kv) so it
+  // factors out of the inner reduction.
+  float ks[TN_QK];
+  #pragma unroll
+  for (int j = 0; j < TN_QK; j++) {
+    const int n = n0 + j;
+    ks[j] = (n < N_kv)
+              ? (float)K_scale[(long)n * num_heads_KV + head_kv]
+              : 0.0f;
+  }
+
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      if (n >= N_kv) continue;
+      float v = acc[i][j] * ks[j] * scale;
+      if (causal && n > m) v = -INFINITY;
+      scores[score_base + (long)m * N_kv + n] = (half)v;
+    }
+  }
+}
+
+__kernel void sv_matmul_f16_kvi8(
+    __global const half *scores,      // [H, M, N_kv] fp16 post-softmax
+    __global const char *V_i8,        // [N_kv, HD_KV] int8
+    __global const half *V_scale,     // [N_kv, num_heads_KV] fp16
+    __global       half *O,           // [M, HD_Q] fp16
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int HD_KV, const int gqa,
+    const int num_heads_KV) {
+  const int x0 = get_global_id(0) * TD_SV;
+  const int m0 = get_global_id(1) * TM_SV;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || x0 >= d) return;
+
+  float acc[TM_SV][TD_SV];
+  #pragma unroll
+  for (int i = 0; i < TM_SV; i++)
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) acc[i][j] = 0.0f;
+
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+
+  // Reduction over N_kv. The V_scale is constant in d for a given
+  // (n, head_kv) so we fold it into the score multiplier once per n.
+  for (int n = 0; n < N_kv; n++) {
+    const float vs = (float)V_scale[(long)n * num_heads_KV + head_kv];
+    half s_col[TM_SV];
+    float v_col[TD_SV];
+    #pragma unroll
+    for (int i = 0; i < TM_SV; i++) {
+      const int m = m0 + i;
+      s_col[i] = (m < M)
+                   ? scores[score_base + (long)m * N_kv + n]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) {
+      const int x = x0 + j;
+      v_col[j] = (x < d)
+                   ? convert_float(V_i8[(long)n * HD_KV + head_kv * d + x])
+                   : 0.0f;
+    }
+    #pragma unroll
+    for (int i = 0; i < TM_SV; i++) {
+      const float sf = (float)s_col[i] * vs;
+      #pragma unroll
+      for (int j = 0; j < TD_SV; j++) acc[i][j] += sf * v_col[j];
+    }
+  }
+
+  #pragma unroll
+  for (int i = 0; i < TM_SV; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) {
+      const int x = x0 + j;
+      if (x >= d) continue;
+      O[(long)m * HD_Q + head_q * d + x] = (half)acc[i][j];
+    }
+  }
+}

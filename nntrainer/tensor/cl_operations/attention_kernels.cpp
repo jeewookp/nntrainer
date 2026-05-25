@@ -60,6 +60,12 @@ struct TcaScratch {
   // Score matrix - always cl_mem, never SVM. Shape [H, M, N_kv] fp16.
   cl_mem scores = nullptr;
   size_t scores_bytes = 0;
+  // int8-KV variant: separate scale buffers; K/V byte buffers reuse k_buf/v_buf
+  // (size halved relative to the fp16 path).
+  cl_mem k_scale_buf = nullptr;
+  size_t k_scale_bytes = 0;
+  cl_mem v_scale_buf = nullptr;
+  size_t v_scale_bytes = 0;
 };
 inline TcaScratch &tca_scratch() {
   static TcaScratch s;
@@ -224,6 +230,183 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
         !kp->SetKernelArguments(6, &hdq, sizeof(int)) ||
         !kp->SetKernelArguments(7, &hdkv, sizeof(int)) ||
         !kp->SetKernelArguments(8, &gqa, sizeof(int)))
+      return false;
+    const size_t dx = (head_dim + TD_SV - 1) / TD_SV;
+    const size_t mx = (M + TM_SV - 1) / TM_SV;
+    std::array<size_t, 3> gws = {dx, mx, num_heads_Q};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               nullptr, 0, nullptr, nullptr);
+  }
+
+  if (svm_inputs) {
+    clFinish(q);
+  } else {
+    if (clEnqueueReadBuffer(q, sc.o_buf, CL_TRUE, 0, o_bytes, O_host, 0,
+                            nullptr, nullptr) != CL_SUCCESS)
+      return false;
+  }
+  return true;
+}
+
+// =============================================================================
+// int8-KV variant. Mirrors two_conv_attention_prefill_f16_cl but binds the
+// int8 K/V byte buffers + their FP16 scale buffers, and dispatches the
+// qk_matmul_f16_kvi8 / sv_matmul_f16_kvi8 kernels. Softmax kernel is
+// shared with the fp16 variant since it operates only on the score buffer.
+// =============================================================================
+bool two_conv_attention_prefill_f16_kvi8_cl(
+  const uint16_t *Q_host, const int8_t *K_i8_host, const int8_t *V_i8_host,
+  const uint16_t *K_scale_host, const uint16_t *V_scale_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, bool causal,
+  bool svm_inputs) {
+  if (head_dim == 0 || M == 0 || N_kv == 0) return false;
+  if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
+  constexpr unsigned int TM_QK = 4, TN_QK = 8;
+  constexpr unsigned int TM_SV = 4, TD_SV = 8;
+  constexpr unsigned int SOFTMAX_LWS = 64;
+  if (head_dim % TD_SV != 0) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t HD_Q = (size_t)num_heads_Q * head_dim;
+  const size_t HD_KV = (size_t)num_heads_KV * head_dim;
+  const size_t q_bytes = (size_t)M * HD_Q * sizeof(uint16_t);
+  const size_t k_i8_bytes = (size_t)N_kv * HD_KV * sizeof(int8_t);
+  const size_t v_i8_bytes = k_i8_bytes;
+  const size_t kscale_bytes =
+    (size_t)N_kv * num_heads_KV * sizeof(uint16_t);
+  const size_t vscale_bytes = kscale_bytes;
+  const size_t o_bytes = (size_t)M * HD_Q * sizeof(uint16_t);
+  const size_t scores_bytes =
+    (size_t)num_heads_Q * M * N_kv * sizeof(uint16_t);
+
+  std::lock_guard<std::mutex> lock(tca_mtx());
+  TcaScratch &sc = tca_scratch();
+  if (!tca_ensure(ctx, &sc.scores, &sc.scores_bytes, scores_bytes,
+                  CL_MEM_READ_WRITE))
+    return false;
+
+  cl_mem q_arg = nullptr, k_arg = nullptr, v_arg = nullptr, o_arg = nullptr;
+  cl_mem k_scale_arg = nullptr, v_scale_arg = nullptr;
+  if (!svm_inputs) {
+    if (!tca_ensure(ctx, &sc.q_buf, &sc.q_bytes, q_bytes, CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.k_buf, &sc.k_bytes, k_i8_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.v_buf, &sc.v_bytes, v_i8_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.k_scale_buf, &sc.k_scale_bytes, kscale_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.v_scale_buf, &sc.v_scale_bytes, vscale_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.o_buf, &sc.o_bytes, o_bytes, CL_MEM_WRITE_ONLY))
+      return false;
+    if (clEnqueueWriteBuffer(q, sc.q_buf, CL_FALSE, 0, q_bytes, Q_host, 0,
+                             nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.k_buf, CL_FALSE, 0, k_i8_bytes, K_i8_host, 0,
+                             nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.v_buf, CL_FALSE, 0, v_i8_bytes, V_i8_host, 0,
+                             nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.k_scale_buf, CL_FALSE, 0, kscale_bytes,
+                             K_scale_host, 0, nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.v_scale_buf, CL_FALSE, 0, vscale_bytes,
+                             V_scale_host, 0, nullptr, nullptr) != CL_SUCCESS)
+      return false;
+    q_arg = sc.q_buf;
+    k_arg = sc.k_buf;
+    v_arg = sc.v_buf;
+    o_arg = sc.o_buf;
+    k_scale_arg = sc.k_scale_buf;
+    v_scale_arg = sc.v_scale_buf;
+  }
+
+  // ---- K1: QK matmul (int8 K + scale) ----
+  {
+    ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+      two_conv_attention_kernel, "qk_matmul_f16_kvi8");
+    if (!kp) return false;
+    if (svm_inputs) {
+      if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
+          !kp->SetKernelSVMArguments(1, const_cast<int8_t *>(K_i8_host)) ||
+          !kp->SetKernelSVMArguments(2, const_cast<uint16_t *>(K_scale_host)))
+        return false;
+    } else {
+      if (!kp->SetKernelArguments(0, &q_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(1, &k_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(2, &k_scale_arg, sizeof(cl_mem)))
+        return false;
+    }
+    if (!kp->SetKernelArguments(3, &sc.scores, sizeof(cl_mem))) return false;
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, hdkv = (int)HD_KV;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    int nhkv = (int)num_heads_KV;
+    int causal_i = causal ? 1 : 0;
+    float scale = 1.0f / std::sqrt((float)head_dim);
+    if (!kp->SetKernelArguments(4, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(8, &hdkv, sizeof(int)) ||
+        !kp->SetKernelArguments(9, &gqa, sizeof(int)) ||
+        !kp->SetKernelArguments(10, &nhkv, sizeof(int)) ||
+        !kp->SetKernelArguments(11, &causal_i, sizeof(int)) ||
+        !kp->SetKernelArguments(12, &scale, sizeof(float)))
+      return false;
+    const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
+    const size_t mx = (M + TM_QK - 1) / TM_QK;
+    std::array<size_t, 3> gws = {nx, mx, num_heads_Q};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               nullptr, 0, nullptr, nullptr);
+  }
+
+  // ---- K2: row softmax over N_kv (shared with fp16 path) ----
+  {
+    ClContext::SharedPtrClKernel kp =
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
+    int Mi = (int)M, Nkvi = (int)N_kv;
+    if (!kp->SetKernelArguments(1, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(2, &Nkvi, sizeof(int)))
+      return false;
+    std::array<size_t, 3> gws = {SOFTMAX_LWS, M, num_heads_Q};
+    std::array<size_t, 3> lws = {SOFTMAX_LWS, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  // ---- K3: scores @ V (int8 V + scale) -> O ----
+  {
+    ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+      two_conv_attention_kernel, "sv_matmul_f16_kvi8");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
+    if (svm_inputs) {
+      if (!kp->SetKernelSVMArguments(1, const_cast<int8_t *>(V_i8_host)) ||
+          !kp->SetKernelSVMArguments(2, const_cast<uint16_t *>(V_scale_host)) ||
+          !kp->SetKernelSVMArguments(3, O_host))
+        return false;
+    } else {
+      if (!kp->SetKernelArguments(1, &v_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(2, &v_scale_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(3, &o_arg, sizeof(cl_mem)))
+        return false;
+    }
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, hdkv = (int)HD_KV;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    int nhkv = (int)num_heads_KV;
+    if (!kp->SetKernelArguments(4, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(8, &hdkv, sizeof(int)) ||
+        !kp->SetKernelArguments(9, &gqa, sizeof(int)) ||
+        !kp->SetKernelArguments(10, &nhkv, sizeof(int)))
       return false;
     const size_t dx = (head_dim + TD_SV - 1) / TD_SV;
     const size_t mx = (M + TM_SV - 1) / TM_SV;
