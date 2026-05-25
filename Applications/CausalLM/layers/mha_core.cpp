@@ -21,7 +21,6 @@
 
 static std::mutex rope_init_mtx;
 
-#include <attention_kernels.h>
 #include <fp16.h>
 #include <layer_context.h>
 #include <mha_core.h>
@@ -766,33 +765,6 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   // path is preferred (no benefit from blocking + softmax bookkeeping).
   constexpr unsigned int FLASH_MIN_PREFILL = 32;
   if (use_gemm_attention && step_size >= FLASH_MIN_PREFILL) {
-    // Optional GPU flash attention path (env-gated via NNTR_MHA_GPU=1).
-    // Currently specialized for FP16-Q + FP16-out + head_dim==128 (the FA
-    // kernel is a compile-time tile). Falls back to CPU when the shape
-    // doesn't fit; the CPU path is the well-tuned NEON flash variant.
-    static const bool _ga_gpu_on = std::getenv("NNTR_MHA_GPU") != nullptr;
-    if (_ga_gpu_on &&
-        query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-        attention_output_step.getDataType() ==
-          ml::train::TensorDim::DataType::FP16 &&
-        head_dim == 128 && num_heads_KV > 0 &&
-        num_heads_Q % num_heads_KV == 0) {
-#ifdef ENABLE_FP16
-      const uint16_t *Q_p =
-        reinterpret_cast<const uint16_t *>(query_step.getData<_FP16>());
-      const uint16_t *K_p =
-        reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
-      const uint16_t *V_p =
-        reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
-      uint16_t *O_p = reinterpret_cast<uint16_t *>(
-        attention_output_step.getData<_FP16>());
-      if (nntrainer::flash_attention_prefill_f16_cl(
-            Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
-            num_heads_KV, head_dim, is_causal, cache_from)) {
-        return;
-      }
-#endif
-    }
     gemm_attention(query_step, b_cached_key, b_cached_value,
                    attention_output_step, cache_to, step_size, cache_from);
     return;
