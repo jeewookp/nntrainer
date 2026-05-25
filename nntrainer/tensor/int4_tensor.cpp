@@ -19,15 +19,27 @@ namespace nntrainer {
 
 size_t Int4QTensor::group_size = 32;
 
+// Tensor's QINT4 construction path forwards qscheme = PER_TENSOR_AFFINE from
+// Tensor::Tensor default, and TensorPool::request hard-codes
+// PER_CHANNEL_AFFINE. Neither matches what save/load emits, which is always
+// KAI_QSI4CXP_4x4x32 (per-output-channel fp16 scales). The pre-KAI schemes
+// would mis-size getMemoryBytes() / file_offset pre-allocation. Upgrade them
+// here so the pool sizes and load offsets match what's actually on disk.
+static inline QScheme upgradeQScheme(QScheme s) {
+  return (s == QScheme::PER_TENSOR_AFFINE || s == QScheme::PER_CHANNEL_AFFINE)
+           ? QScheme::KAI_QSI4CXP_4x4x32
+           : s;
+}
+
 Int4QTensor::Int4QTensor(std::string name_, Tformat fm, QScheme qscheme_,
                          size_t g_size) :
-  TensorBase(name_, fm, Tdatatype::QINT4), qscheme(qscheme_) {
+  TensorBase(name_, fm, Tdatatype::QINT4), qscheme(upgradeQScheme(qscheme_)) {
   group_size = g_size;
 }
 
 Int4QTensor::Int4QTensor(const TensorDim &d, bool alloc_now, Initializer init,
                          std::string name, QScheme qscheme_, size_t g_size) :
-  TensorBase(d, alloc_now, init, name), qscheme(qscheme_) {
+  TensorBase(d, alloc_now, init, name), qscheme(upgradeQScheme(qscheme_)) {
   group_size = g_size;
   if (alloc_now)
     allocate();
@@ -35,7 +47,8 @@ Int4QTensor::Int4QTensor(const TensorDim &d, bool alloc_now, Initializer init,
 
 Int4QTensor::Int4QTensor(const TensorDim &d, const void *buf, QScheme qscheme_,
                          size_t g_size) :
-  Int4QTensor(d, true, Initializer::NONE, "", qscheme_, g_size) {
+  Int4QTensor(d, true, Initializer::NONE, "", upgradeQScheme(qscheme_),
+              g_size) {
   if (d.getDataLen() != 0) {
     if (buf != nullptr)
       copy(buf);

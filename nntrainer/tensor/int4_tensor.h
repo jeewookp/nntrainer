@@ -35,7 +35,7 @@ public:
    * @brief     Basic Constructor of Tensor
    */
   Int4QTensor(std::string name_ = "", Tformat fm = Tformat::NCHW,
-              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE,
+              QScheme qscheme_ = QScheme::KAI_QSI4CXP_4x4x32,
               size_t g_size = 32);
 
   /**
@@ -49,7 +49,7 @@ public:
    */
   Int4QTensor(const TensorDim &d, bool alloc_now,
               Initializer init = Initializer::NONE, std::string name = "",
-              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE,
+              QScheme qscheme_ = QScheme::KAI_QSI4CXP_4x4x32,
               size_t g_size = 32);
 
   /**
@@ -60,7 +60,7 @@ public:
    * @param qscheme_ quantization scheme of the tensor
    */
   Int4QTensor(const TensorDim &d, const void *buf = nullptr,
-              QScheme qscheme_ = QScheme::PER_CHANNEL_AFFINE,
+              QScheme qscheme_ = QScheme::KAI_QSI4CXP_4x4x32,
               size_t g_size = 32);
 
   /**
@@ -81,7 +81,7 @@ public:
    * @param rhs TensorBase object to copy
    */
   Int4QTensor(TensorBase &rhs) :
-    TensorBase(rhs), qscheme(QScheme::PER_CHANNEL_AFFINE) {}
+    TensorBase(rhs), qscheme(QScheme::KAI_QSI4CXP_4x4x32) {}
 
   /**
    * @brief Basic Destructor

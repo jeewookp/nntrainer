@@ -77,8 +77,13 @@ inline static size_t kai_rhs_packed_stride(size_t k) {
 
   KAI_ASSERT((k_internal % 2) == 0);
 
+  // NOTE: upstream KAI's formula omits the bias term, while the actual
+  // packer (kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0) and the kernel asm both
+  // walk nr * 4 extra bytes per super-row for bias. Include it so that
+  // kai_get_rhs_packed_offset is consistent with mid-buffer chunked
+  // callers (see olp_n_parallel).
   return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs +
-                   kai_num_bytes_sum_rhs);
+                   kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
 size_t
