@@ -106,6 +106,15 @@ void CausalLM::setupParameters(json &cfg, json &generation_cfg,
 }
 
 void CausalLM::allocateAndBindKVCache() {
+  // KV int8 path: mha_core allocates its own UINT8 cache + FP16 scale
+  // tensors. There are no external cache_k_l*/cache_v_l* placeholders to
+  // bind, so this helper is a no-op (paper section 3.7 internal cache
+  // mode under kv_int8). The mha layer was switched to 3-input form in
+  // qwen3_causallm.cpp when the env var is set.
+  if (std::getenv("NNTR_KV_INT8") != nullptr) {
+    kv_cache_bound = true;
+    return;
+  }
   if (!kv_cache.isAllocated()) {
     // dtype matches mha_core's cache placeholders so external cache storage
     // is interpreted consistently across platforms.
@@ -439,7 +448,16 @@ void CausalLM::run(const WSTR prompt, bool do_sample, const WSTR system_prompt,
    */
   std::vector<int64_t> token_ids;
   input.push_back(input_sample);
+  // KV int8 path: mha layers were switched to 3-input mode in
+  // qwen3_causallm.cpp, so the external cache_k_l*/cache_v_l* inputs
+  // do not exist in the compiled graph. The inference call only needs
+  // the prompt sample buffer; mha_core's internal int8 cache + scale
+  // tensors are managed by the framework's TensorPool.
+  static const bool _kv_int8_runtime = std::getenv("NNTR_KV_INT8") != nullptr;
   auto build_inference_inputs = [&]() {
+    if (_kv_int8_runtime) {
+      return std::vector<float *>{input_sample};
+    }
     std::vector<std::pair<std::string, float *>> cache_inputs;
     cache_inputs.reserve(static_cast<size_t>(NUM_LAYERS) * 2);
     for (int i = 0; i < NUM_LAYERS; ++i) {

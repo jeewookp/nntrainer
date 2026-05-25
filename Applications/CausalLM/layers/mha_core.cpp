@@ -75,6 +75,116 @@ static inline void quantize_kv_fp16_to_int8_per_row(
   }
 }
 
+#ifdef ENABLE_FP16
+// Decode/per-row K-cache dot product with int8-quantized K + per-(row, head)
+// fp16 scale. Mirrors the layout of nntrainer::compute_kcaches<__fp16> but
+// reads the cache as int8 bytes and scales the dot product by the matching
+// scale value before the 1/sqrt(d) inverse. Output layout matches the fp16
+// helper: out[(row-start)*num_cache_head*gqa + n*gqa + g].
+static inline void compute_kcaches_int8_fp16(
+  const _FP16 *in,           // [num_rows? actually only the latest row is used]
+  const int8_t *kcache_i8,   // [num_rows, num_cache_head, head_dim]
+  const uint16_t *kscale,    // [num_rows, num_cache_head] fp16 bits
+  _FP16 *output,             // [row_cnt, num_cache_head * gqa_size]
+  int num_rows, int num_cache_head, int head_dim, int gqa_size,
+  size_t local_window_size, int head_start, int head_end) {
+  const int actual_head_end =
+    (head_end < 0) ? num_cache_head : head_end;
+  NNTR_THROW_IF(head_start >= actual_head_end, std::invalid_argument)
+    << "head_start (" << head_start << ") must be less than head_end ("
+    << actual_head_end << ")";
+
+  // Note: local_window_size is size_t. Comparing num_rows (int) directly
+  // promotes to size_t so UINT_MAX-as-no-window works correctly. Casting
+  // local_window_size to int first would wrap UINT_MAX to -1 and skip the
+  // entire row loop.
+  const int start_row =
+    (size_t)num_rows < local_window_size
+      ? 0
+      : num_rows - (int)local_window_size;
+  const int row_cnt = (size_t)num_rows < local_window_size
+                        ? num_rows
+                        : (int)local_window_size;
+  const float inv_sqrt_d = 1.0f / std::sqrt((float)head_dim);
+
+  for (int n = head_start; n < actual_head_end; ++n) {
+    for (int g = 0; g < gqa_size; ++g) {
+      const _FP16 *in_ptr = in + (n * gqa_size + g) * head_dim;
+      for (int t = 0; t < row_cnt; ++t) {
+        const int row = start_row + t;
+        const int8_t *k_row =
+          kcache_i8 + ((size_t)row * num_cache_head + n) * head_dim;
+        const float s =
+          nntrainer::compute_fp16_to_fp32(kscale[row * num_cache_head + n]);
+        // Dot in fp32 keeps precision; int8 * fp16-as-fp32 -> fp32 acc.
+        float sum = 0.0f;
+        for (int d = 0; d < head_dim; ++d) {
+          sum +=
+            nntrainer::compute_fp16_to_fp32(
+              *reinterpret_cast<const uint16_t *>(&in_ptr[d])) *
+            (float)k_row[d];
+        }
+        const float v = sum * s * inv_sqrt_d;
+        const size_t out_idx =
+          (size_t)(row - start_row) * num_cache_head * gqa_size +
+          (size_t)n * gqa_size + g;
+        output[out_idx] = static_cast<_FP16>(v);
+      }
+    }
+  }
+}
+
+// V cache dequant + transposed accumulation mirroring
+// nntrainer::compute_fp16vcache_transposed but with int8 V + per-(row, head)
+// fp16 scale. Output is fp16 [(num_cache_head*gqa_size), head_dim].
+static inline void compute_fp16vcache_transposed_int8(
+  int row_num, const _FP16 *in, const int8_t *vcache_i8,
+  const uint16_t *vscale, _FP16 *output, int num_cache_head, int gqa_size,
+  int head_dim, size_t local_window_size, int head_start, int head_end) {
+  const int actual_head_end =
+    (head_end < 0) ? num_cache_head : head_end;
+  NNTR_THROW_IF(head_start >= actual_head_end, std::invalid_argument)
+    << "head_start (" << head_start << ") must be less than head_end ("
+    << actual_head_end << ")";
+
+  // Promote to size_t to avoid wrapping UINT_MAX (no window) to -1.
+  const int start_j = (size_t)row_num < local_window_size
+                        ? 0
+                        : row_num + 1 - (int)local_window_size;
+  const int in_row_off = (size_t)row_num < local_window_size
+                           ? 0
+                           : row_num + 1 - (int)local_window_size;
+
+  for (int n = head_start; n < actual_head_end; ++n) {
+    for (int h = 0; h < gqa_size; ++h) {
+      float acc[256]; // head_dim <= 256 for our target models (Qwen3/Gemma3)
+      NNTR_THROW_IF(head_dim > 256, std::invalid_argument)
+        << "head_dim (" << head_dim << ") exceeds the int8 V-read scratch size";
+      for (int d = 0; d < head_dim; ++d) acc[d] = 0.0f;
+
+      for (int j = start_j; j <= row_num; ++j) {
+        const int8_t *vptr =
+          vcache_i8 + ((size_t)j * num_cache_head + n) * head_dim;
+        const float vs =
+          nntrainer::compute_fp16_to_fp32(vscale[j * num_cache_head + n]);
+        const int attn_idx =
+          (j - in_row_off) * gqa_size * num_cache_head + n * gqa_size + h;
+        const float a_val = nntrainer::compute_fp16_to_fp32(
+          *reinterpret_cast<const uint16_t *>(&in[attn_idx]));
+        const float a_scaled = a_val * vs;
+        for (int d = 0; d < head_dim; ++d) {
+          acc[d] += a_scaled * (float)vptr[d];
+        }
+      }
+
+      _FP16 *out_row = output + (n * gqa_size + h) * head_dim;
+      for (int d = 0; d < head_dim; ++d)
+        out_row[d] = static_cast<_FP16>(acc[d]);
+    }
+  }
+}
+#endif
+
 namespace causallm {
 
 #define tile_size 4
@@ -510,13 +620,6 @@ void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
       &context.getTensor(tensor_idx[AttentionParams::cache_key_scale]);
     kv_int8_value_scale =
       &context.getTensor(tensor_idx[AttentionParams::cache_value_scale]);
-    // K/V write + read paths under kv_int8 are NYI here too; throw
-    // until phase 2 lands.
-    throw std::runtime_error(
-      "NNTR_KV_INT8: kv_int8 cache + scale plumbed; K/V write quantize "
-      "and read dequant in one_batch_incremental_forwarding / "
-      "gemm_attention / compute_kcaches / compute_fp16vcache_transposed "
-      "are NYI (Phase 2/3). See project_kv_int8_plan memory.");
   }
 
   /// @todo replace step_size into input height
@@ -754,21 +857,60 @@ void MHACoreLayer::compute_kcaches(nntrainer::Tensor &in,
 
       // Use ThreadManager for lower overhead parallelization during decoding
       const _FP16 *in_data = in.getData<_FP16>();
-      const _FP16 *cache_data = cache.getData<_FP16>();
       _FP16 *out_data = out.getData<_FP16>();
 
       auto &tm = nntrainer::ThreadManager::Global();
-      tm.parallel_for(
-        0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
-          nntrainer::compute_kcaches(
-            in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
-            group_size, tile_size, local_window_size, head_kv, head_kv + 1);
-        });
+      if (kv_int8) {
+        // int8 K cache + per-(row, head) fp16 scale.
+        const int8_t *cache_i8 =
+          reinterpret_cast<const int8_t *>(cache.getData<uint8_t>());
+        const uint16_t *kscale = cur_kv_int8_key_scale_batch;
+        NNTR_THROW_IF(kscale == nullptr, std::invalid_argument)
+          << "kv_int8 read path missing per-batch K-scale pointer";
+        tm.parallel_for(
+          0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
+            compute_kcaches_int8_fp16(
+              in_data, cache_i8, kscale, out_data, num_rows, num_cache_head,
+              head_dim, group_size, local_window_size, (int)head_kv,
+              (int)head_kv + 1);
+          });
+      } else {
+        const _FP16 *cache_data = cache.getData<_FP16>();
+        tm.parallel_for(
+          0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
+            nntrainer::compute_kcaches(
+              in_data, cache_data, out_data, num_rows, num_cache_head, head_dim,
+              group_size, tile_size, local_window_size, head_kv, head_kv + 1);
+          });
+      }
     } else {
       unsigned int seq_start =
         sequence_len < local_window_size ? 0 : sequence_len - local_window_size;
 
       auto &tm = nntrainer::ThreadManager::Global();
+      if (kv_int8) {
+        const int8_t *cache_i8 =
+          reinterpret_cast<const int8_t *>(cache.getData<uint8_t>());
+        const uint16_t *kscale = cur_kv_int8_key_scale_batch;
+        const unsigned int num_cache_head = num_head / group_size;
+        NNTR_THROW_IF(kscale == nullptr, std::invalid_argument)
+          << "kv_int8 read path (prefill) missing per-batch K-scale pointer";
+        tm.parallel_for(
+          static_cast<size_t>(seq_start), static_cast<size_t>(sequence_len),
+          [=](size_t i) {
+            _FP16 *input_addr = in.getData<_FP16>() + num_head * head_dim * i;
+            int row_to_compute = is_causal ? from + i + 1 : from + sequence_len;
+            size_t out_start_row =
+              is_causal ? calc_attn_index(from + i) - calc_attn_index(from)
+                        : i * (from + sequence_len);
+            _FP16 *output_addr =
+              out.getData<_FP16>() + out_start_row * num_head;
+            compute_kcaches_int8_fp16(input_addr, cache_i8, kscale, output_addr,
+                                      row_to_compute, num_cache_head, head_dim,
+                                      group_size, local_window_size, 0, -1);
+          });
+        return;
+      }
       tm.parallel_for(
         static_cast<size_t>(seq_start), static_cast<size_t>(sequence_len),
         [=](size_t i) {
@@ -825,7 +967,64 @@ void MHACoreLayer::one_batch_incremental_forwarding(
                                     true);
 
   bool use_rope = theta > 0.0f;
-  if (use_rope) {
+  if (kv_int8) {
+    // KV int8 path (paper section 3.7): Q RoPE in fp16 as usual, K RoPE
+    // in-place on the fp16 key_step buffer, then quantize key_step and
+    // value_step to int8 cache + per-(token, head) fp16 scale. V has no
+    // RoPE so it's a direct quantize.
+    if (use_rope) {
+      apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
+                                 true);
+      apply_rotary_emb_tensor_v2(key_step, key_step, head_dim, cache_index,
+                                 true);
+    }
+#ifdef ENABLE_FP16
+    // Slice the int8 cache + fp16 scale for this batch/step window.
+    const size_t scale_feature_len =
+      kv_int8_key_scale->getDim().getFeatureLen();
+    const size_t scale_step_width =
+      static_cast<size_t>(num_heads_KV); // per-token scale row width
+    const size_t scale_batch_offset = batch * scale_feature_len;
+    const size_t scale_step_offset =
+      scale_batch_offset + (size_t)cache_index * scale_step_width;
+
+    const uint16_t *key_src =
+      reinterpret_cast<const uint16_t *>(key_step.getData<_FP16>());
+    const uint16_t *val_src =
+      reinterpret_cast<const uint16_t *>(value_step.getData<_FP16>());
+
+    int8_t *key_dst =
+      reinterpret_cast<int8_t *>(b_cache_key_step.getData<uint8_t>());
+    int8_t *val_dst =
+      reinterpret_cast<int8_t *>(b_cache_value_step.getData<uint8_t>());
+    uint16_t *key_scale_dst =
+      reinterpret_cast<uint16_t *>(
+        kv_int8_key_scale->getData<_FP16>()) + scale_step_offset;
+    uint16_t *val_scale_dst =
+      reinterpret_cast<uint16_t *>(
+        kv_int8_value_scale->getData<_FP16>()) + scale_step_offset;
+
+    const unsigned int step_n = to - from;
+    quantize_kv_fp16_to_int8_per_row(key_src, key_dst, key_scale_dst, step_n,
+                                     num_heads_KV, head_dim);
+    quantize_kv_fp16_to_int8_per_row(val_src, val_dst, val_scale_dst, step_n,
+                                     num_heads_KV, head_dim);
+
+    // Stash per-batch scale base pointers (row 0 of this batch) for the
+    // read path. compute_kcaches / compute_fp16vcache_transposed /
+    // gemm_attention pick these up through layer members.
+    cur_kv_int8_key_scale_batch =
+      reinterpret_cast<const uint16_t *>(
+        kv_int8_key_scale->getData<_FP16>()) + scale_batch_offset;
+    cur_kv_int8_value_scale_batch =
+      reinterpret_cast<const uint16_t *>(
+        kv_int8_value_scale->getData<_FP16>()) + scale_batch_offset;
+
+#else
+    NNTR_THROW_IF(true, std::invalid_argument)
+      << "NNTR_KV_INT8 requires ENABLE_FP16";
+#endif
+  } else if (use_rope) {
     // apply rotary embedding for query
     apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
                                true);
@@ -1216,15 +1415,30 @@ void MHACoreLayer::gemm_attention(
 
   // Cache always stores half-precision (FP16-bit) values; read as raw uint16_t
   // bits so we don't depend on ENABLE_FP16 / _FP16 / _Float16 being defined.
-  const uint16_t *Kbase;
-  const uint16_t *Vbase;
+  // When kv_int8 is active the cache holds int8 bytes; the de-interleave
+  // loop below dequantizes on the fly using cur_kv_int8_*_scale_batch.
+  const uint16_t *Kbase = nullptr;
+  const uint16_t *Vbase = nullptr;
+  const int8_t *Kbase_i8 = nullptr;
+  const int8_t *Vbase_i8 = nullptr;
+  if (kv_int8) {
+    Kbase_i8 =
+      reinterpret_cast<const int8_t *>(b_cached_key.getData<uint8_t>());
+    Vbase_i8 =
+      reinterpret_cast<const int8_t *>(b_cached_value.getData<uint8_t>());
+    NNTR_THROW_IF(cur_kv_int8_key_scale_batch == nullptr ||
+                    cur_kv_int8_value_scale_batch == nullptr,
+                  std::invalid_argument)
+      << "kv_int8 gemm_attention path missing per-batch scale pointers";
+  } else {
 #ifdef ENABLE_FP16
-  Kbase = reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
-  Vbase = reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
+    Kbase = reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
+    Vbase = reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
 #else
-  Kbase = b_cached_key.getData<uint16_t>();
-  Vbase = b_cached_value.getData<uint16_t>();
+    Kbase = b_cached_key.getData<uint16_t>();
+    Vbase = b_cached_value.getData<uint16_t>();
 #endif
+  }
 
   // Phase 1: de-interleave heads once into shared contiguous buffers.
   // K/V always kept as raw FP16 bits (uint16). Q either FP32 (V-JEPA
@@ -1258,18 +1472,54 @@ void MHACoreLayer::gemm_attention(
                       d * sizeof(float));
       });
     }
-    tm.parallel_for(0, static_cast<size_t>(num_heads_KV), [&](size_t hkv) {
-      uint16_t *ka = Ka.data() + (size_t)hkv * N_kv * d;
-      uint16_t *va = Va.data() + (size_t)hkv * N_kv * d;
-      const uint16_t *kh = Kbase + hkv * d;
-      const uint16_t *vh = Vbase + hkv * d;
-      for (unsigned int n = 0; n < N_kv; ++n) {
-        std::memcpy(ka + (size_t)n * d, kh + (size_t)n * HD_KV,
-                    d * sizeof(uint16_t));
-        std::memcpy(va + (size_t)n * d, vh + (size_t)n * HD_KV,
-                    d * sizeof(uint16_t));
-      }
-    });
+    if (kv_int8) {
+#ifdef ENABLE_FP16
+      // Dequant on the fly: K/V int8[n, hkv, :] * scale[n, hkv] -> fp16
+      // bits stored in the de-interleaved Ka/Va buffers, so downstream
+      // Phase 2 sees the same fp16 layout as the regular path.
+      const uint16_t *Kscale = cur_kv_int8_key_scale_batch;
+      const uint16_t *Vscale = cur_kv_int8_value_scale_batch;
+      tm.parallel_for(
+        0, static_cast<size_t>(num_heads_KV), [&](size_t hkv) {
+          uint16_t *ka = Ka.data() + (size_t)hkv * N_kv * d;
+          uint16_t *va = Va.data() + (size_t)hkv * N_kv * d;
+          const int8_t *kh = Kbase_i8 + hkv * d;
+          const int8_t *vh = Vbase_i8 + hkv * d;
+          for (unsigned int n = 0; n < N_kv; ++n) {
+            const float ks = nntrainer::compute_fp16_to_fp32(
+              Kscale[(size_t)n * num_heads_KV + hkv]);
+            const float vs = nntrainer::compute_fp16_to_fp32(
+              Vscale[(size_t)n * num_heads_KV + hkv]);
+            const int8_t *k_row = kh + (size_t)n * HD_KV;
+            const int8_t *v_row = vh + (size_t)n * HD_KV;
+            uint16_t *ka_row = ka + (size_t)n * d;
+            uint16_t *va_row = va + (size_t)n * d;
+            for (unsigned int x = 0; x < d; ++x) {
+              ka_row[x] =
+                nntrainer::compute_fp32_to_fp16((float)k_row[x] * ks);
+              va_row[x] =
+                nntrainer::compute_fp32_to_fp16((float)v_row[x] * vs);
+            }
+          }
+        });
+#else
+      NNTR_THROW_IF(true, std::invalid_argument)
+        << "kv_int8 gemm_attention requires ENABLE_FP16";
+#endif
+    } else {
+      tm.parallel_for(0, static_cast<size_t>(num_heads_KV), [&](size_t hkv) {
+        uint16_t *ka = Ka.data() + (size_t)hkv * N_kv * d;
+        uint16_t *va = Va.data() + (size_t)hkv * N_kv * d;
+        const uint16_t *kh = Kbase + hkv * d;
+        const uint16_t *vh = Vbase + hkv * d;
+        for (unsigned int n = 0; n < N_kv; ++n) {
+          std::memcpy(ka + (size_t)n * d, kh + (size_t)n * HD_KV,
+                      d * sizeof(uint16_t));
+          std::memcpy(va + (size_t)n * d, vh + (size_t)n * HD_KV,
+                      d * sizeof(uint16_t));
+        }
+      });
+    }
   }
 
   // Phase 2: flash attention over balanced (h_q, query-block) work units.
@@ -1637,6 +1887,12 @@ void MHACoreLayer::one_batch_incremental_forwarding(
    *  +--------+
    *
    */
+
+  // NNTR_KV_INT8 is wired through the Qwen3 entry point only. The
+  // gpt-oss/sink_step variant has no int8 write/read plumbing yet.
+  NNTR_THROW_IF(kv_int8, std::invalid_argument)
+    << "NNTR_KV_INT8 is not supported for the sink_step (gpt-oss) variant of "
+       "one_batch_incremental_forwarding";
 
   /** 1. Load Input Tensors of this batch : b_ denotes a Tensor for this batch
    * **/
@@ -2259,22 +2515,48 @@ void MHACoreLayer::compute_fp16vcache_transposed(
         seq = to - from;
 
       auto &tm = nntrainer::ThreadManager::Global();
-      tm.parallel_for(0, static_cast<size_t>(seq), [=](size_t i) {
-        size_t start_idx;
-        if (is_causal) {
-          start_idx = calc_attn_index(to - seq + i) - calc_attn_index(to - seq);
-        } else {
-          start_idx = i * to;
-        }
-        const _FP16 *input =
-          in.getData<_FP16>() + start_idx * num_cache_head * gqa_size;
-        _FP16 *out =
-          output.getData<_FP16>() + i * (num_cache_head * gqa_size * head_dim);
-        int row_num = is_causal ? (to - seq + i) : to - 1;
-        nntrainer::compute_fp16vcache_transposed(
-          row_num, input, vcache.getData<_FP16>(), out, num_cache_head,
-          gqa_size, head_dim, local_window_size);
-      });
+      if (kv_int8) {
+        const int8_t *vcache_i8 =
+          reinterpret_cast<const int8_t *>(vcache.getData<uint8_t>());
+        const uint16_t *vscale = cur_kv_int8_value_scale_batch;
+        NNTR_THROW_IF(vscale == nullptr, std::invalid_argument)
+          << "kv_int8 V read path missing per-batch V-scale pointer";
+        tm.parallel_for(0, static_cast<size_t>(seq), [=](size_t i) {
+          size_t start_idx;
+          if (is_causal) {
+            start_idx =
+              calc_attn_index(to - seq + i) - calc_attn_index(to - seq);
+          } else {
+            start_idx = i * to;
+          }
+          const _FP16 *input =
+            in.getData<_FP16>() + start_idx * num_cache_head * gqa_size;
+          _FP16 *out_p =
+            output.getData<_FP16>() + i * (num_cache_head * gqa_size * head_dim);
+          int row_num = is_causal ? (to - seq + i) : to - 1;
+          compute_fp16vcache_transposed_int8(
+            row_num, input, vcache_i8, vscale, out_p, num_cache_head, gqa_size,
+            head_dim, local_window_size, 0, -1);
+        });
+      } else {
+        tm.parallel_for(0, static_cast<size_t>(seq), [=](size_t i) {
+          size_t start_idx;
+          if (is_causal) {
+            start_idx =
+              calc_attn_index(to - seq + i) - calc_attn_index(to - seq);
+          } else {
+            start_idx = i * to;
+          }
+          const _FP16 *input =
+            in.getData<_FP16>() + start_idx * num_cache_head * gqa_size;
+          _FP16 *out_p =
+            output.getData<_FP16>() + i * (num_cache_head * gqa_size * head_dim);
+          int row_num = is_causal ? (to - seq + i) : to - 1;
+          nntrainer::compute_fp16vcache_transposed(
+            row_num, input, vcache.getData<_FP16>(), out_p, num_cache_head,
+            gqa_size, head_dim, local_window_size);
+        });
+      }
     } else {
       // Single token processing (common during generation)
       // Parallelize over KV heads for decoding since Q direction is always 1
@@ -2282,16 +2564,31 @@ void MHACoreLayer::compute_fp16vcache_transposed(
 
       // Use OpenMP for lower overhead parallelization during decoding
       const _FP16 *in_data = in.getData<_FP16>();
-      const _FP16 *vcache_data = vcache.getData<_FP16>();
       _FP16 *output_data = output.getData<_FP16>();
 
       auto &tm_fp16 = nntrainer::ThreadManager::Global();
-      tm_fp16.parallel_for(
-        0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
-          nntrainer::compute_fp16vcache_transposed(
-            row_num, in_data, vcache_data, output_data, num_cache_head,
-            gqa_size, head_dim, local_window_size, head_kv, head_kv + 1);
-        });
+      if (kv_int8) {
+        const int8_t *vcache_i8 =
+          reinterpret_cast<const int8_t *>(vcache.getData<uint8_t>());
+        const uint16_t *vscale = cur_kv_int8_value_scale_batch;
+        NNTR_THROW_IF(vscale == nullptr, std::invalid_argument)
+          << "kv_int8 V read path (decode) missing per-batch V-scale pointer";
+        tm_fp16.parallel_for(
+          0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
+            compute_fp16vcache_transposed_int8(
+              row_num, in_data, vcache_i8, vscale, output_data, num_cache_head,
+              gqa_size, head_dim, local_window_size, (int)head_kv,
+              (int)head_kv + 1);
+          });
+      } else {
+        const _FP16 *vcache_data = vcache.getData<_FP16>();
+        tm_fp16.parallel_for(
+          0, static_cast<size_t>(num_cache_head), [=](size_t head_kv) {
+            nntrainer::compute_fp16vcache_transposed(
+              row_num, in_data, vcache_data, output_data, num_cache_head,
+              gqa_size, head_dim, local_window_size, head_kv, head_kv + 1);
+          });
+      }
     }
 #else
     NNTR_THROW_IF(true, std::invalid_argument) << "enable-fp16 is not set!";

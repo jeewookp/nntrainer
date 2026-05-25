@@ -426,6 +426,13 @@ private:
    * the pointers are valid for as long as the layer node exists. */
   nntrainer::Tensor *kv_int8_key_scale = nullptr;
   nntrainer::Tensor *kv_int8_value_scale = nullptr;
+  /** Per-batch raw pointers into the scale tensors above, set by
+   * one_batch_incremental_forwarding before the read-path call to
+   * compute_kcaches / compute_fp16vcache_transposed / gemm_attention.
+   * Single-batch dispatch is sequential, so racing the helpers (which
+   * parallelize over heads) against these is safe. */
+  const uint16_t *cur_kv_int8_key_scale_batch = nullptr;
+  const uint16_t *cur_kv_int8_value_scale_batch = nullptr;
   unsigned int sink_idx;
 
   /** attention parameters */

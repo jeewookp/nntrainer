@@ -77,9 +77,12 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
      withKey("engine", "gpu")}));
   Tensor v = wv(value);
 
-  // External KV cache placeholders (per-layer). Storage is owned by the host
-  // (KVCacheManager) and bound at runtime via setExternalTensors.
-  auto [cache_k, cache_v] = createKVCachePlaceholders(layer_id, n_heads);
+  // KV cache wiring. Default is external (5-input mha) with FP16
+  // placeholders owned by KVCacheManager. When NNTR_KV_INT8=1, switch to
+  // 3-input mode so mha_core allocates an INT8 cache + FP16 scale
+  // tensors internally - createKVCachePlaceholders only emits FP16
+  // tensors so it can't host the int8 path.
+  static const bool _kv_int8_setup = std::getenv("NNTR_KV_INT8") != nullptr;
 
   // Attention core layer
   LayerHandle mha(createLayer(
@@ -94,7 +97,13 @@ Tensor Qwen3Transformer::createAttention(const int layer_id, int seq_len,
      withKey("is_causal", IS_CAUSAL ? "true" : "false"),
      withKey("use_gemm_attention",
              USE_FLASH_ATTENTION ? "true" : "false")}));
-  Tensor a = mha({q_normed, k_normed, v, cache_k, cache_v});
+  Tensor a;
+  if (_kv_int8_setup) {
+    a = mha({q_normed, k_normed, v});
+  } else {
+    auto [cache_k, cache_v] = createKVCachePlaceholders(layer_id, n_heads);
+    a = mha({q_normed, k_normed, v, cache_k, cache_v});
+  }
 
   // O layer
   LayerHandle wo(createLayer(
