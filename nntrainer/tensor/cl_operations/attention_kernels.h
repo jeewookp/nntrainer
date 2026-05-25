@@ -85,12 +85,16 @@ void rotary_emb_cl(_FP16 *in, _FP16 *out,
 
 /// GPU flash attention for prefill (matches MHACoreLayer::gemm_attention
 /// algorithm: tiled flash with online softmax, causal mask, GQA).
-/// Inputs are stored on host as fp16 (uint16 bit pattern). The function
-/// uploads Q/K/V to GPU scratch, dispatches the v8c_flash_attention
-/// kernel (cl_kernels/flash_attention.cl), and reads O back to host.
+/// Inputs are stored on host as fp16 (uint16 bit pattern). When
+/// `svm_inputs` is true the caller guarantees Q/K/V/O pointers are SVM
+/// allocations (cl_svm_allocator-backed MemoryPool); the function then
+/// passes them directly to the kernel via clSetKernelArgSVMPointer and
+/// skips the explicit clEnqueueWriteBuffer / ReadBuffer round-trip
+/// (which avoids ~9 MB of redundant per-layer host<->device transfers
+/// at 1003-token prefill). When false, the function falls back to
+/// uploading into grow-only scratch buffers.
 /// Requires head_dim == 128 (kernel is specialized at compile time).
 /// num_heads_Q must satisfy num_heads_Q %% num_heads_KV == 0 (GQA).
-/// M must be a multiple of 64 (the kernel's q_block size = FA_BQ).
 /// Returns false if shape unsupported; caller falls back to CPU.
 bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     const uint16_t *K_host,
@@ -100,7 +104,8 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     unsigned int num_heads_Q,
                                     unsigned int num_heads_KV,
                                     unsigned int head_dim, bool causal,
-                                    unsigned int cache_from);
+                                    unsigned int cache_from,
+                                    bool svm_inputs = false);
 
 } // namespace nntrainer
 #endif /* __ATTENTION_KERNELS_H__ */

@@ -786,9 +786,21 @@ void MHACoreLayer::one_batch_incremental_forwarding(
         reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
       uint16_t *O_p = reinterpret_cast<uint16_t *>(
         attention_output_step.getData<_FP16>());
+      // Use SVM zero-copy path when all four tensors come from the
+      // cl_svm_allocator-backed MemoryPool. Skips ~9 MB of Q/K/V/O
+      // host<->device transfer per layer (paper section 3.2 tensor
+      // virtualization equivalent for our buffer-backed path).
+      const bool svm_ok =
+        query_step.getMemoryData() &&
+        b_cached_key.getMemoryData() && b_cached_value.getMemoryData() &&
+        attention_output_step.getMemoryData() &&
+        query_step.getMemoryData()->isSVM() &&
+        b_cached_key.getMemoryData()->isSVM() &&
+        b_cached_value.getMemoryData()->isSVM() &&
+        attention_output_step.getMemoryData()->isSVM();
       if (nntrainer::flash_attention_prefill_f16_cl(
             Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
-            num_heads_KV, head_dim, is_causal, cache_from)) {
+            num_heads_KV, head_dim, is_causal, cache_from, svm_ok)) {
         return;
       }
 #endif
