@@ -21,6 +21,7 @@
 
 static std::mutex rope_init_mtx;
 
+#include "_layer_prof.h"
 #include <attention_kernels.h>
 #include <fp16.h>
 #include <layer_context.h>
@@ -602,6 +603,7 @@ void MHACoreLayer::forwarding(nntrainer::RunLayerContext &context,
 void MHACoreLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                           unsigned int _from, unsigned int _to,
                                           bool training) {
+  causallm::LayerProfScope _prof("mha_core", (_to - _from) == 1);
   // External KV cache path: from/to are interpreted as the absolute write
   // position; route through forwarding() which reads cache_key/cache_value
   // from input slots 3/4. forwarding() advances cache_index internally.
@@ -1127,9 +1129,23 @@ void MHACoreLayer::one_batch_incremental_forwarding(
           reinterpret_cast<const uint16_t *>(b_cached_key.getData<_FP16>());
         const uint16_t *V_p =
           reinterpret_cast<const uint16_t *>(b_cached_value.getData<_FP16>());
-        ok = nntrainer::two_conv_attention_prefill_f16_cl(
-          Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
-          num_heads_KV, head_dim, is_causal, svm_ok);
+        // image2d_from_buffer variant gated by NNTR_MHA_GPU_IMG=1. Uses 8-half
+        // texel loads (RGBA UINT32) for the d-axis reduction, ~8x fewer
+        // memory transactions vs the scalar fp16 path. Falls back to scalar
+        // on any failure. Non-SVM only (image2d_from_buffer needs cl_mem).
+        static const bool _tca_img_on =
+          std::getenv("NNTR_MHA_GPU_IMG") != nullptr;
+        if (_tca_img_on && head_dim % 8 == 0 && (num_heads_Q * head_dim) % 8 == 0
+            && (num_heads_KV * head_dim) % 8 == 0) {
+          ok = nntrainer::two_conv_attention_prefill_f16_img_cl(
+            Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q, num_heads_KV,
+            head_dim, is_causal);
+        }
+        if (!ok) {
+          ok = nntrainer::two_conv_attention_prefill_f16_cl(
+            Q_p, K_p, V_p, O_p, step_size, cache_to, num_heads_Q,
+            num_heads_KV, head_dim, is_causal, svm_ok);
+        }
       }
       if (ok) {
         return;

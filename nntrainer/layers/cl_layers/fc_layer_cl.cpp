@@ -13,9 +13,13 @@
  */
 
 #include <blas_kernel_interface.h>
+#include <chrono>
 #include <common_properties.h>
+#include <cstdio>
+#include <cstdlib>
 #include <fc_layer_cl.h>
 #include <layer_context.h>
+#include <mutex>
 #include <lazy_tensor.h>
 #include <limits>
 #include <nntrainer_error.h>
@@ -28,6 +32,51 @@ namespace nntrainer {
 static constexpr size_t SINGLE_INOUT_IDX = 0;
 
 enum FCParams { weight, bias };
+
+// =============================================================================
+// Env-gated self-contained FC dispatch profiler. Counts wall-clock between
+// FC layer entry and exit, split by M (prefill vs decode), with a sub-bin for
+// "FC body excluding dotCl_v8c kernel time". Activated via NNTR_FC_PROFILE=1.
+// =============================================================================
+namespace {
+struct FcProfBin {
+  long long ns_total = 0;
+  long long calls = 0;
+};
+struct FcProf {
+  FcProfBin pre, dec;     // total entry-to-exit wall time
+  FcProfBin pre_pre_v8c;  // pre-dotCl_v8c time
+  FcProfBin pre_post_v8c; // post-dotCl_v8c time
+  ~FcProf() {
+    if (pre.calls + dec.calls == 0) return;
+    std::fprintf(stderr,
+                 "\n[FC-PROF]  prefill (M>1) / decode (M=1) FullyConnectedLayerCl\n");
+    auto dump = [&](const char *tag, const FcProfBin &b) {
+      if (b.calls == 0) return;
+      double ms = b.ns_total / 1.0e6;
+      std::fprintf(stderr, "  %-22s  %10.2f ms  %8lld calls  (%.3f ms/call)\n",
+                   tag, ms, b.calls,
+                   b.calls > 0 ? ms / b.calls : 0.0);
+    };
+    dump("total prefill", pre);
+    dump("total decode", dec);
+    dump("pre-v8c prefill", pre_pre_v8c);
+    dump("post-v8c prefill", pre_post_v8c);
+  }
+};
+inline FcProf &fc_prof() {
+  static FcProf p;
+  return p;
+}
+inline std::mutex &fc_prof_mtx() {
+  static std::mutex m;
+  return m;
+}
+inline bool fc_prof_enabled() {
+  static const bool on = std::getenv("NNTR_FC_PROFILE") != nullptr;
+  return on;
+}
+} // namespace
 
 FullyConnectedLayerCl::FullyConnectedLayerCl() :
   LayerImplCl(), fc_props(props::Unit()) {
@@ -145,6 +194,8 @@ void FullyConnectedLayerCl::incremental_forwarding(RunLayerContext &context,
                                                    unsigned int from,
                                                    unsigned int to,
                                                    bool training) {
+  auto _fc_t0 = fc_prof_enabled() ? std::chrono::steady_clock::now()
+                                  : std::chrono::steady_clock::time_point{};
   // Use the by-reference getWeight so QINT4 callers see the same Int4QTensor
   // instance across forwards. The Tensor::operator= path on QINT4 deep-clones
   // the Int4QTensor (see tensor.cpp:376) — that would wipe the assembled
@@ -176,6 +227,9 @@ void FullyConnectedLayerCl::incremental_forwarding(RunLayerContext &context,
   Tensor hidden_step = hidden_.getSharedDataTensor(hidden_step_dim, 0, true);
 
   hidden_step.setZero();
+
+  auto _v8c_t0 = fc_prof_enabled() ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
   // Same dispatch as forwarding(): v8c GPU path first, then CPU
   // ggml route for quantized weights, else dotCl.
   if (!dotCl_v8c(input_step, weight, hidden_step)) {
@@ -189,11 +243,40 @@ void FullyConnectedLayerCl::incremental_forwarding(RunLayerContext &context,
       dotCl(input_step, weight, hidden_step);
     }
   }
+  auto _v8c_t1 = fc_prof_enabled() ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
 
   if (auto &disable_bias = std::get<props::DisableBias>(*layer_impl_props);
       disable_bias.empty() || disable_bias.get() == false) {
     Tensor &bias = context.getWeight(weight_idx[FCParams::bias]);
     hidden_step.add_i(bias);
+  }
+
+  if (fc_prof_enabled()) {
+    auto _fc_t1 = std::chrono::steady_clock::now();
+    long long total_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(_fc_t1 - _fc_t0)
+        .count();
+    long long pre_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(_v8c_t0 - _fc_t0)
+        .count();
+    long long post_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(_fc_t1 - _v8c_t1)
+        .count();
+    bool is_dec = (to - from) == 1;
+    std::lock_guard<std::mutex> lk(fc_prof_mtx());
+    auto &p = fc_prof();
+    if (is_dec) {
+      p.dec.ns_total += total_ns;
+      ++p.dec.calls;
+    } else {
+      p.pre.ns_total += total_ns;
+      ++p.pre.calls;
+      p.pre_pre_v8c.ns_total += pre_ns;
+      ++p.pre_pre_v8c.calls;
+      p.pre_post_v8c.ns_total += post_ns;
+      ++p.pre_post_v8c.calls;
+    }
   }
 }
 

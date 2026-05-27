@@ -11,6 +11,7 @@
  * @note   This embedding layer supports FP32/FP16/Q6_K data type only.
  */
 
+#include "_layer_prof.h"
 #include <embedding_layer.h>
 #include <layer_context.h>
 #include <nntrainer_error.h>
@@ -86,11 +87,14 @@ void EmbeddingLayer::setProperty(const std::vector<std::string> &values) {
 }
 
 void EmbeddingLayer::forwarding(nntrainer::RunLayerContext &context,
-                                bool training) {}
+                                bool training) {
+  causallm::LayerProfScope _prof("embedding_fwd", false);
+}
 
 void EmbeddingLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
                                             unsigned int from, unsigned int to,
                                             bool training) {
+  causallm::LayerProfScope _prof("embedding", (to - from) == 1);
 
   /// @todo get input and output dimension from input_ and hidden itself
   unsigned int in_dim = std::get<nntrainer::props::InDim>(embedding_props);

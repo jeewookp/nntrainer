@@ -389,3 +389,160 @@ __kernel void sv_matmul_f16_kvi8(
     }
   }
 }
+
+// =============================================================
+// Packed (image2d_from_buffer) variants of qk_matmul / sv_matmul.
+// Pattern reused from v8c FC kernel (87% Adreno 830 peak): view the
+// fp16 buffer as RGBA UINT32 image2d (16 bytes = 8 halves per texel),
+// read via read_imageui returning uint4, reinterpret as half8 with
+// as_half8(). 8x fewer memory transactions than scalar half loads.
+// d, HD_Q, HD_KV must be multiples of 8.
+// =============================================================
+
+// Smaller tile (TM_IMG=2, TN_IMG=4 = 8 acc) to keep register pressure low.
+// half8 staging × (TM_IMG+TN_IMG) = 6 half8 = 48 halves = 96 bytes plus
+// the 8 float acc = 32 bytes. Fits comfortably in the per-WI register
+// file even with private temporaries.
+#ifndef TM_IMG
+#define TM_IMG 2
+#endif
+#ifndef TN_IMG
+#define TN_IMG 4
+#endif
+
+__kernel void qk_matmul_f16_img(
+    __read_only image2d_t Q_img,      // width=HD_Q/8 texels, height=M
+    __read_only image2d_t K_img,      // width=HD_KV/8 texels, height=N_kv
+    __global       half *scores,      // [H, M, N_kv] fp16, row-major
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int HD_KV, const int gqa,
+    const int causal, const float scale) {
+  const int n0 = get_global_id(0) * TN_IMG;
+  const int m0 = get_global_id(1) * TM_IMG;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || n0 >= N_kv) return;
+
+  float acc[TM_IMG][TN_IMG];
+  #pragma unroll
+  for (int i = 0; i < TM_IMG; i++)
+    #pragma unroll
+    for (int j = 0; j < TN_IMG; j++) acc[i][j] = 0.0f;
+
+  const sampler_t smp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
+                        CLK_FILTER_NEAREST;
+  const int q_tx0 = (head_q * d) >> 3;   // 1 texel = 8 halves
+  const int k_tx0 = (head_kv * d) >> 3;
+  const int d_tex = d >> 3;
+
+  for (int xt = 0; xt < d_tex; xt++) {
+    half8 q_pack[TM_IMG];
+    half8 k_pack[TN_IMG];
+
+    #pragma unroll
+    for (int i = 0; i < TM_IMG; i++) {
+      const int m = m0 + i;
+      const int my = (m < M) ? m : 0;
+      const uint4 v = read_imageui(Q_img, smp, (int2)(q_tx0 + xt, my));
+      const half8 hp = as_half8(v);
+      q_pack[i] = (m < M) ? hp : (half8)((half)0.0h);
+    }
+    #pragma unroll
+    for (int j = 0; j < TN_IMG; j++) {
+      const int n = n0 + j;
+      const int ny = (n < N_kv) ? n : 0;
+      const uint4 v = read_imageui(K_img, smp, (int2)(k_tx0 + xt, ny));
+      const half8 hp = as_half8(v);
+      k_pack[j] = (n < N_kv) ? hp : (half8)((half)0.0h);
+    }
+
+    // Per (i, j): compute one half-precision dot via two half4 dot()
+    // builtins. The compiler maps each dot(float4,float4) to fma chains.
+    #pragma unroll
+    for (int i = 0; i < TM_IMG; i++) {
+      const float4 qlo = convert_float4(q_pack[i].s0123);
+      const float4 qhi = convert_float4(q_pack[i].s4567);
+      #pragma unroll
+      for (int j = 0; j < TN_IMG; j++) {
+        const float4 klo = convert_float4(k_pack[j].s0123);
+        const float4 khi = convert_float4(k_pack[j].s4567);
+        acc[i][j] += dot(qlo, klo) + dot(qhi, khi);
+      }
+    }
+  }
+
+  // Apply scale + causal mask + write.
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  #pragma unroll
+  for (int i = 0; i < TM_IMG; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TN_IMG; j++) {
+      const int n = n0 + j;
+      if (n >= N_kv) continue;
+      float v = acc[i][j] * scale;
+      if (causal && n > m) v = -INFINITY;
+      scores[score_base + (long)m * N_kv + n] = (half)v;
+    }
+  }
+}
+
+// SV with V packed as image2d. Score is small per-n (TM_SV scalars)
+// and stays as a plain buffer; only V benefits from the texel pack.
+// Each WI computes a TM_SV_IMG x 8 tile of (M, d) for fixed head_q.
+#ifndef TM_SV_IMG
+#define TM_SV_IMG 2
+#endif
+__kernel void sv_matmul_f16_img(
+    __global const half *scores,      // [H, M, N_kv] post-softmax fp16
+    __read_only image2d_t V_img,      // width=HD_KV/8 texels, height=N_kv
+    __global       half *O,           // [M, HD_Q] fp16
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int HD_KV, const int gqa) {
+  const int x_tex = get_global_id(0);           // 1 texel = 8 halves of d
+  const int m0 = get_global_id(1) * TM_SV_IMG;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+  const int x0 = x_tex * 8;
+
+  if (m0 >= M || x0 >= d) return;
+
+  float8 acc[TM_SV_IMG];
+  #pragma unroll
+  for (int i = 0; i < TM_SV_IMG; i++) acc[i] = (float8)(0.0f);
+
+  const sampler_t smp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
+                        CLK_FILTER_NEAREST;
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  const int v_tx_x = ((head_kv * d) >> 3) + x_tex;
+
+  // Reduction over N_kv. Per n: TM_SV_IMG score scalars + one 8-half V texel.
+  for (int n = 0; n < N_kv; n++) {
+    const uint4 vv = read_imageui(V_img, smp, (int2)(v_tx_x, n));
+    const float8 v_pack = convert_float8(as_half8(vv));
+
+    #pragma unroll
+    for (int i = 0; i < TM_SV_IMG; i++) {
+      const int m = m0 + i;
+      const float sf = (m < M)
+                         ? (float)scores[score_base + (long)m * N_kv + n]
+                         : 0.0f;
+      acc[i] = mad((float8)sf, v_pack, acc[i]);
+    }
+  }
+
+  #pragma unroll
+  for (int i = 0; i < TM_SV_IMG; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    const half8 oh = convert_half8(acc[i]);
+    #pragma unroll
+    for (int e = 0; e < 8; e++) {
+      const int x = x0 + e;
+      if (x >= d) continue;
+      O[(long)m * HD_Q + head_q * d + x] = oh[e];
+    }
+  }
+}

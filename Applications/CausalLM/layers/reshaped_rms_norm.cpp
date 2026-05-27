@@ -15,6 +15,8 @@
 #include <cpu_backend.h>
 #include <reshaped_rms_norm.h>
 
+#include "_layer_prof.h"
+
 namespace causallm {
 
 static constexpr size_t SINGLE_INOUT_IDX = 0;
@@ -42,6 +44,7 @@ void ReshapedRMSNormLayer::forwarding(nntrainer::RunLayerContext &context,
 void ReshapedRMSNormLayer::incremental_forwarding(
   nntrainer::RunLayerContext &context, unsigned int from, unsigned int to,
   bool training) {
+  causallm::LayerProfScope _prof("rms_norm", (to - from) == 1);
   auto &epsilon = std::get<nntrainer::props::Epsilon>(rms_props).get();
 
   nntrainer::Tensor &in = context.getInput(SINGLE_INOUT_IDX);

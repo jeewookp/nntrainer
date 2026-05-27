@@ -116,5 +116,15 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
   unsigned int num_heads_KV, unsigned int head_dim, bool causal,
   bool svm_inputs = false);
 
+/// image2d_from_buffer variant: Q/K/V viewed as RGBA UINT32 image2d
+/// (16 bytes = 8 halves per texel), 8x fewer memory transactions vs
+/// scalar half loads. Requires head_dim, HD_Q, HD_KV all multiples of 8.
+/// SVM inputs not supported in this variant (image2d_from_buffer needs
+/// cl_mem; the wrapper copies host-host to scratch cl_mem first).
+bool two_conv_attention_prefill_f16_img_cl(
+  const uint16_t *Q_host, const uint16_t *K_host, const uint16_t *V_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, bool causal);
+
 } // namespace nntrainer
 #endif /* __ATTENTION_KERNELS_H__ */
