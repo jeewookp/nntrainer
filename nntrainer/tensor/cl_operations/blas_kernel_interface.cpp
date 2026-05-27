@@ -513,7 +513,7 @@ static V8cWeightEntry *v8c_get_or_build_weight(const Tensor &weight,
   e.N = N;
   e.K = K;
   tv::ViewSpec ws;
-  ws.as_image = true;
+  ws.kind = tv::ViewKind::IMAGE_2D;
   ws.image_channel_order = CL_RGBA;
   ws.image_channel_type = CL_UNSIGNED_INT32;
   ws.width = K / 32;

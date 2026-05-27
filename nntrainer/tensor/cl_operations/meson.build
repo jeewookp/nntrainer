@@ -5,14 +5,16 @@ cl_op_sources = [
   'attention_kernels.cpp',
   'clblast_interface.cpp',
   'cl_compute_ops.cpp',
-  'cl_tensor_view.cpp'
+  'cl_tensor_view.cpp',
+  'cl_tensor_backing_pool.cpp',
 ]
 
 cl_op_headers = [
   'blas_kernel_interface.h',
   'attention_kernel_interface.h',
   'clblast_interface.h',
-  'cl_tensor_view.h'
+  'cl_tensor_view.h',
+  'cl_tensor_backing_pool.h',
 ]
 
 if get_option('enable-fp16')
