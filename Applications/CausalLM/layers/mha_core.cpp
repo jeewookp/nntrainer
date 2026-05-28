@@ -76,6 +76,69 @@ static inline void quantize_kv_fp16_to_int8_per_row(
   }
 }
 
+// =============================================================================
+// §3.8 KV OHWI Phase 1 — env-gated K-cache layout switch.
+// =============================================================================
+// Default K cache layout: [B, max_seq_len, num_heads_KV, head_dim] row-major
+// (concat over [t, h, d]). Paper §3.8 OHWI layout reinterprets the SAME buffer
+// as [B, num_heads_KV, max_seq_len, head_dim] (per-head contiguous), which is
+// the convolution-weight form that attention's QK matmul wants for 1×1-conv
+// kernel access. Phase 1 only flips the WRITE side. The READ side allocates
+// a fresh concat-layout scratch tensor and gathers, so all existing downstream
+// attention paths (CPU gemm_attention / compute_kcaches / GPU two_conv_attention)
+// keep working without modification.
+static inline bool is_kv_ohwi_enabled() {
+  static const bool on = std::getenv("NNTR_KV_OHWI") != nullptr;
+  return on;
+}
+
+// Scatter a step's K (concat layout [step_size, num_heads_kv * head_dim])
+// into the OHWI cache buffer at positions [cache_pos, cache_pos + step_size).
+// cache_base points to the start of element [0,0,0,0] of the cache (i.e. the
+// raw Tensor data pointer). The cache's total per-batch element count is
+// max_seq_len * num_heads_kv * head_dim.
+static inline void scatter_k_concat_to_ohwi_fp16(
+  const uint16_t *src,        // [step_size, num_heads_kv * head_dim]
+  uint16_t *cache_base,       // raw cache buffer
+  unsigned int batch, unsigned int cache_pos, unsigned int step_size,
+  unsigned int num_heads_kv, unsigned int head_dim,
+  unsigned int max_seq_len) {
+  const size_t HD = (size_t)num_heads_kv * head_dim;
+  const size_t per_head = (size_t)max_seq_len * head_dim;
+  const size_t batch_off = (size_t)batch * num_heads_kv * per_head;
+  for (unsigned int h = 0; h < num_heads_kv; ++h) {
+    uint16_t *dst_head = cache_base + batch_off + (size_t)h * per_head;
+    const uint16_t *src_head = src + (size_t)h * head_dim;
+    for (unsigned int t = 0; t < step_size; ++t) {
+      std::memcpy(dst_head + (size_t)(cache_pos + t) * head_dim,
+                  src_head + (size_t)t * HD,
+                  (size_t)head_dim * sizeof(uint16_t));
+    }
+  }
+}
+
+// Gather an OHWI K cache slice [0, cache_to) into concat layout
+// [cache_to, num_heads_kv * head_dim]. dst is a freshly-allocated buffer of
+// size cache_to * num_heads_kv * head_dim elements.
+static inline void gather_k_ohwi_to_concat_fp16(
+  const uint16_t *cache_base, // raw cache buffer
+  uint16_t *dst,              // [cache_to, num_heads_kv * head_dim]
+  unsigned int batch, unsigned int cache_to, unsigned int num_heads_kv,
+  unsigned int head_dim, unsigned int max_seq_len) {
+  const size_t HD = (size_t)num_heads_kv * head_dim;
+  const size_t per_head = (size_t)max_seq_len * head_dim;
+  const size_t batch_off = (size_t)batch * num_heads_kv * per_head;
+  for (unsigned int h = 0; h < num_heads_kv; ++h) {
+    const uint16_t *src_head = cache_base + batch_off + (size_t)h * per_head;
+    uint16_t *dst_head = dst + (size_t)h * head_dim;
+    for (unsigned int t = 0; t < cache_to; ++t) {
+      std::memcpy(dst_head + (size_t)t * HD,
+                  src_head + (size_t)t * head_dim,
+                  (size_t)head_dim * sizeof(uint16_t));
+    }
+  }
+}
+
 #ifdef ENABLE_FP16
 // Decode/per-row K-cache dot product with int8-quantized K + per-(row, head)
 // fp16 scale. Mirrors the layout of nntrainer::compute_kcaches<__fp16> but
@@ -1031,9 +1094,31 @@ void MHACoreLayer::one_batch_incremental_forwarding(
     apply_rotary_emb_tensor_v2(query_step, query_step, head_dim, cache_index,
                                true);
 
-    // append kcache with rotary embedding
-    apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim,
-                               cache_index, true);
+    // append kcache with rotary embedding. §3.8 OHWI write path: when
+    // enabled and on the FP16 cache path, rotate K in-place on key_step then
+    // scatter per-head into the OHWI-laid-out cache buffer. Otherwise stick
+    // to the original concat write.
+    const bool kv_ohwi_active =
+      is_kv_ohwi_enabled() && !kv_int8 &&
+      key_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      cache_key.getDataType() == ml::train::TensorDim::DataType::FP16;
+    if (kv_ohwi_active) {
+#ifdef ENABLE_FP16
+      apply_rotary_emb_tensor_v2(key_step, key_step, head_dim, cache_index,
+                                 true);
+      scatter_k_concat_to_ohwi_fp16(
+        reinterpret_cast<const uint16_t *>(key_step.getData<_FP16>()),
+        reinterpret_cast<uint16_t *>(cache_key.getData<_FP16>()), batch,
+        cache_index, /*step_size*/ to - from, num_heads_KV, head_dim,
+        cache_key_dim.height());
+#else
+      NNTR_THROW_IF(true, std::invalid_argument)
+        << "NNTR_KV_OHWI requires ENABLE_FP16";
+#endif
+    } else {
+      apply_rotary_emb_tensor_v2(key_step, b_cache_key_step, head_dim,
+                                 cache_index, true);
+    }
 
     // append vcache without rotary embedding
     if (query_step.getDataType() == ml::train::TensorDim::DataType::FP32) {
@@ -1048,7 +1133,25 @@ void MHACoreLayer::one_batch_incremental_forwarding(
 #endif
     }
   } else {
-    b_cache_key_step.copyData(key_step);
+    // No-RoPE path. Same OHWI gate; V is always concat (Phase 3 will move V).
+    const bool kv_ohwi_active =
+      is_kv_ohwi_enabled() && !kv_int8 &&
+      key_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+      cache_key.getDataType() == ml::train::TensorDim::DataType::FP16;
+    if (kv_ohwi_active) {
+#ifdef ENABLE_FP16
+      scatter_k_concat_to_ohwi_fp16(
+        reinterpret_cast<const uint16_t *>(key_step.getData<_FP16>()),
+        reinterpret_cast<uint16_t *>(cache_key.getData<_FP16>()), batch,
+        cache_index, /*step_size*/ to - from, num_heads_KV, head_dim,
+        cache_key_dim.height());
+#else
+      NNTR_THROW_IF(true, std::invalid_argument)
+        << "NNTR_KV_OHWI requires ENABLE_FP16";
+#endif
+    } else {
+      b_cache_key_step.copyData(key_step);
+    }
     b_cache_value_step.copyData(value_step);
   }
 
@@ -1062,8 +1165,34 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   cached_key_dim.height(cache_to);
   cached_value_dim.height(cache_to);
 
-  nntrainer::Tensor b_cached_key = cache_key.getSharedDataTensor(
-    cached_key_dim, batch * cache_key_dim.getFeatureLen(), true);
+  // §3.8 OHWI Phase 1 read path: when OHWI is on, the cache_key buffer is
+  // stored in [B, H_kv, S, D] order. Existing downstream readers (CPU
+  // gemm_attention / compute_kcaches / GPU two_conv_attention) all expect
+  // the concat layout [B, 1, S, H_kv*D]. Gather into a fresh scratch tensor
+  // so no downstream code needs to change. The fresh tensor is non-SVM so
+  // the GPU prefill SVM check below will naturally fall through to CPU —
+  // intended in Phase 1; Phase 2 will add OHWI-direct GPU kernels.
+  const bool kv_ohwi_read_active =
+    is_kv_ohwi_enabled() && !kv_int8 &&
+    cache_key.getDataType() == ml::train::TensorDim::DataType::FP16;
+  nntrainer::Tensor b_cached_key;
+  if (kv_ohwi_read_active) {
+#ifdef ENABLE_FP16
+    ml::train::TensorDim per_batch_key_dim = cached_key_dim;
+    per_batch_key_dim.batch(1);
+    b_cached_key = nntrainer::Tensor(per_batch_key_dim, true);
+    gather_k_ohwi_to_concat_fp16(
+      reinterpret_cast<const uint16_t *>(cache_key.getData<_FP16>()),
+      reinterpret_cast<uint16_t *>(b_cached_key.getData<_FP16>()), batch,
+      cache_to, num_heads_KV, head_dim, cache_key_dim.height());
+#else
+    NNTR_THROW_IF(true, std::invalid_argument)
+      << "NNTR_KV_OHWI requires ENABLE_FP16";
+#endif
+  } else {
+    b_cached_key = cache_key.getSharedDataTensor(
+      cached_key_dim, batch * cache_key_dim.getFeatureLen(), true);
+  }
   nntrainer::Tensor b_cached_value = cache_value.getSharedDataTensor(
     cached_value_dim, batch * cache_value_dim.getFeatureLen(), true);
 
