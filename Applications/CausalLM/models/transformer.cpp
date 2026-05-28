@@ -244,7 +244,11 @@ std::pair<Tensor, Tensor> Transformer::constructModel() {
     h = createTransformerDecoderBlock(i, h);
   }
 
-  // final rms_norm
+  // final rms_norm. NOTE: stays on CausalLM's custom RMSNormLayer
+  // ("rms_norm" type, app_context only) so the fused-rmsq + v8c FC
+  // consumer chain works. The nntrainer GPU RMSNormLayerCl uses type
+  // "rmsnorm" (different) and has a separate reduction-order drift
+  // issue documented in [chain-robustification-dead].
   LayerHandle out_norm(
     createLayer("rms_norm", {withKey("name", "output_norm"),
                              withKey("epsilon", std::to_string(NORM_EPS)),
@@ -347,6 +351,11 @@ Tensor Transformer::createTransformerDecoderBlock(const int layer_id,
   Tensor att_out = createAttention(layer_id, INIT_SEQ_LEN, NUM_HEADS, HEAD_DIM,
                                    normed, normed, normed);
 
+  // NOTE: 'addition' with engine=gpu (AdditionLayerCL) segfaults in
+  // the transformer chain (issue triggered with engine=gpu only; CPU
+  // AdditionLayer works fine and gets the residual_publish hook added
+  // in this branch). Needs a separate debug pass before engine=gpu can
+  // be set here.
   LayerHandle decoder_add(createLayer(
     "addition",
     {withKey("name", "layer" + std::to_string(layer_id) + "_decoder_add")}));
@@ -484,7 +493,8 @@ Tensor Transformer::createMlp(const int layer_id, int dim, int hidden_dim,
 
   LayerHandle swiglu(createLayer(
     "swiglu",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu")}));
+    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
+     withKey("engine", "gpu")}));
   Tensor act = swiglu({gate, up});
 
   LayerHandle ffn_down(createLayer(

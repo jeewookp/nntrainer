@@ -13,6 +13,8 @@
 
 #include <addition_layer_cl.h>
 #include <blas_kernel_interface.h>
+#include <cstdio>
+#include <cstdlib>
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 #include <node_exporter.h>
@@ -79,6 +81,39 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
       } else {
         add_i_cl(hidden_step, input_step);
       }
+    }
+  }
+
+  // Paper §3.6 chain-residency hand-off: publish the residual_add
+  // output to a GPU TensorBacking so a downstream RMSNorm consumer
+  // (specifically fused_rmsnorm_quant_resident_fp32) can read its
+  // input from cl_mem and skip the per-call host upload. Gated by
+  // NNTR_RESIDUAL_PUBLISH=1; default off keeps the original
+  // pure-CPU contract intact.
+  static const bool publish_on =
+    std::getenv("NNTR_RESIDUAL_PUBLISH") != nullptr;
+  static int call_count = 0;
+  call_count++;
+  if (call_count <= 4 && std::getenv("NNTR_RESIDUAL_PUBLISH_TRIP") != nullptr) {
+    std::fprintf(stderr,
+                 "[RESIDUAL-PUBLISH dbg call=%d] name=%s b=%u dt=%d "
+                 "publish_on=%d\n",
+                 call_count, hidden_.getName().c_str(), hidden_.batch(),
+                 (int)hidden_.getDataType(), (int)publish_on);
+    std::fflush(stderr);
+  }
+  if (publish_on &&
+      hidden_.getDataType() == ml::train::TensorDim::DataType::FP32 &&
+      hidden_.batch() == 1) {
+    publish_host_fp32_to_backing(hidden_, hidden_.getName());
+    static int trip = 0;
+    if (!trip && std::getenv("NNTR_RESIDUAL_PUBLISH_TRIP") != nullptr) {
+      trip = 1;
+      std::fprintf(stderr,
+                   "[RESIDUAL-PUBLISH] first publish: name=%s host_ptr=%p\n",
+                   hidden_.getName().c_str(),
+                   (void *)hidden_.getData<uint8_t>());
+      std::fflush(stderr);
     }
   }
 }
