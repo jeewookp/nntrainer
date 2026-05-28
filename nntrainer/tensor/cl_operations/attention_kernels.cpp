@@ -167,6 +167,34 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
                                        unsigned int num_heads_KV,
                                        unsigned int head_dim, bool causal,
                                        bool svm_inputs) {
+  // KNOWN BUG (session 2026-05-28): the qk_matmul_f16 kernel produces
+  // numerically wrong scores when it actually runs (output text
+  // becomes "aines"-style garbage instead of the expected response).
+  // Previously the half8 subscript build error masked this — kp was
+  // null, so the function returned false and the caller fell back to
+  // CPU mha. After 4c824219 unblocked the build, the underlying
+  // correctness bug surfaced.
+  //
+  // Until the kernel correctness is debugged (need CPU-vs-GPU score
+  // diff harness), unconditionally return false here so the call site
+  // falls back to CPU mha (~295 TPS, coherent output) instead of
+  // running the broken GPU path (~138 TPS, garbage output).
+  //
+  // To re-test the kernel, set NNTR_MHA_GPU_FORCE_BROKEN=1.
+  if (std::getenv("NNTR_MHA_GPU_FORCE_BROKEN") == nullptr) {
+    static int warned = 0;
+    if (!warned && std::getenv("NNTR_MHA_GPU") != nullptr) {
+      warned = 1;
+      std::fprintf(stderr,
+                   "[NOTE] NNTR_MHA_GPU=1 requested but the GPU mha "
+                   "kernel has a known correctness bug; using CPU mha "
+                   "instead. Set NNTR_MHA_GPU_FORCE_BROKEN=1 to test "
+                   "the GPU kernel anyway (output will be garbled).\n");
+      std::fflush(stderr);
+    }
+    return false;
+  }
+
   if (head_dim == 0 || M == 0 || N_kv == 0) return false;
   if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
   // Match the kernel tile defaults; relaxing requires re-defining TM/TN.
