@@ -31,16 +31,141 @@ kernels.
 | §3.8 | K: OHWI `[cache_size, dh]` (Kᵀ form); V: reversed `[dh, cache_size]` | Row-major `[B,1,S,kv_width]` (`kv_cache_manager.cpp:39–48`); helpers in tree but unused | Layout reorder missing (Step 3) |
 | Residency | Implicit GPU-resident activations between fused ops | Every v8c FC output `clEnqueueReadBuffer`'d to host (`blas_kernel_interface.cpp:1033–1035`) | Enabled by Steps 1e+2+4 |
 
-## Five-step paper-ordered plan (user-confirmed 2026-05-28)
+## Revised: segment-based end-to-end GPU residency plan (2026-05-28)
 
-The previous three-step formulation collapsed §3.7 (stage-aware quant)
-and §3.8 (KV OHWI) into the fused-kernel steps. After direct code/paper
-comparison we split them out explicitly because:
+The previous 5-step plan focused on individual paper-section techniques
+but assumed the FC stack was the bottleneck. After direct profiling
+(`NNTR_V8C_PROFILE`, `NNTR_LAYER_PROFILE`, `NNTR_FC_PROFILE` on Qwen3-
+0.6B), the actual time distribution is:
 
-- §3.8 reorder defines the **output contract** of Step 2 (fused QKV+RoPE
-  must produce data in OHWI form so attention can read it as convolution).
-- §3.7 decode-quant is a separate kernel from prefill-quant per paper;
-  collapsing it into Step 2 would only address prefill.
+| Op | Time | % prefill (950ms) |
+|---|---|---|
+| FC GEMM kernel | 249 ms | 26% (already at 87% HW peak) |
+| FC quant_kernel | 144 ms | 15% |
+| FC write_act (host→dev) | 71 ms | 7% |
+| FC misc framework | ~191 ms | 20% |
+| **mha_core (CPU island)** | **209 ms** | **22%** |
+| swiglu CPU | 19 ms | 2% |
+| rms_norm CPU | 10 ms | 1% |
+
+**Theoretical ceiling with current GEMM and current execution model:**
+- If we eliminated 100% of write_act + quant + readback + non-FC CPU: 
+  ~950 ms → ~249 ms = **3.8× = ~1100 prefill TPS**
+- Paper-class on Qwen3-0.6B scaled (Adreno 830): ~4900 TPS
+- **The gap to paper requires changing the execution model itself**,
+  not just kernel-level optimizations.
+
+The new plan therefore organizes work by **GPU residency segments**: a
+segment is a chain of adjacent ops connected via `TensorBacking` with
+ZERO host materialize internally. Boundaries between segments are the
+only host transfers per forward pass.
+
+### Qwen3 decoder block segments
+
+```
+input ──→ attention_norm ──┬─→ wq ─→ q_norm ─→ RoPE ──┐
+   ┊      [Segment A]      ├─→ wk ─→ k_norm ─→ RoPE ──┼─→ mha ─→ wo
+   ┊                       └─→ wv ───────────────────┘  [B,CPU]  ↓
+   └────────────── residual ──────────────────────────────────→ decoder_add
+                                                                  ↓
+                                                            ffn_norm ──┬─→ wgate ──┐
+                                                            [Segment C]│            ├─→ swiglu ─→ wdown
+                                                                       └─→ wup ───┘   [Segment D]
+                                                                                            ↓
+                                                                                    decoder_output ── → next layer
+                                                                                    [Segment E]
+```
+
+### Segments
+
+#### Segment A — pre-attn RMSNorm → wq, wk, wv
+
+- **Ops:** `attention_norm` (rms_norm, hidden=1024) → `wq`, `wk`, `wv`
+- **Internal handoff:** attention_norm output kept in cl_mem, registered
+  as `TensorBacking`; wq/wk/wv read from backing (skip upload + Step
+  2b.0 quant cache continues to cover redundant quant)
+- **Host boundary at exit:** wq/wk/wv outputs materialize to host because
+  q_norm / k_norm / mha are CPU
+- **Savings per layer:** ~3 uploads (~1.6 MB) + attention_norm CPU
+  (~0.18 ms) + Step 2b.0 covers remaining quant skip
+
+#### Segment B — mha CPU island (unchanged for now)
+
+- **Ops:** q_norm, k_norm, RoPE, KV write+int8quant, QK matmul, softmax,
+  V·S matmul
+- **Status:** Stays CPU. GPU attention (`two_conv_attention.cl`) is
+  currently 1.6× slower than CPU on Adreno 830 (memory
+  [project_gpu_attention_status]). Replacing this is a separate algo-
+  rithm-level problem; deferred.
+- **Future:** When a competitive GPU mha lands, B merges with A and C
+  → entire layer GPU-resident.
+
+#### Segment C — wo → decoder_add → ffn_norm → wgate, wup
+
+- **Ops:** `wo` (FC) → `decoder_add` (residual) → `ffn_norm` (rms_norm)
+  → `wgate`, `wup` (FC)
+- **Internal handoff:** wo output GPU-resident; decoder_add takes (wo,
+  residual) — residual comes from layer input (still host today, GPU
+  once Segment E links upstream); ffn_norm reads residual_add output;
+  wgate/wup share ffn_norm output via backing
+- **Host boundary at entry:** wo input from mha (CPU island, host)
+- **Host boundary at exit:** wgate/wup outputs continue into Segment D
+  (also GPU)
+- **Savings:** residual_add CPU + ffn_norm CPU + 3 uploads (wo input
+  re-route, ffn_norm output share) + Step 2b.0 quant skip
+
+#### Segment D — wgate, wup → swiglu → wdown
+
+- **Ops:** swiglu (element-wise gate × up) → wdown (FC)
+- **Internal handoff:** wgate/wup outputs feed swiglu via backings;
+  swiglu output → wdown
+- **Savings:** swiglu CPU + 2 downloads + 1 upload
+
+#### Segment E — wdown → decoder_output → next layer's attention_norm
+
+- **Ops:** decoder_output (residual_add) → forward to next layer's
+  Segment A
+- **Internal handoff:** wdown output + residual GPU → next layer reads
+  via backing
+- **When all 28 layers' E lit:** the layer chain forms one continuous
+  GPU residency from Segment A of layer 0 to Segment E of layer 27;
+  only mha islands break it
+
+### Order of attack
+
+1. **Segment A** — smallest, lowest risk. Validates the producer-side
+   (RMSNorm backing output) + consumer-side (FC backing input) wiring.
+2. **Segment C** — biggest single chunk (4 ops, includes the bulky 
+   residual+RMSNorm pair that paper §3.6 #2 targets). Once A works the
+   pattern is templated.
+3. **Segment D** — small (2 ops + swiglu). Quick after C.
+4. **Segment E** — last hop, links layer boundaries.
+5. **Old "Steps 2-5"** become OPTIMIZATIONS within segments:
+   - Old Step 2 (fused QKV+RoPE) → Segment A optimization: merges 4
+     kernels (RMSNorm + 3 FCs + RoPE) into 1
+   - Old Step 4 (fused RMSNorm+residual+elementwise) → Segment C
+     optimization
+   - Old Step 3 (KV OHWI) → Segment B prerequisite
+   - Old Step 5 (stage-aware decode quant) → cross-segment optimization
+6. **Segment B GPU rewrite** — multi-week algorithmic problem;
+   parallel track.
+
+### Expected cumulative TPS (Qwen3-0.6B / SD8 Elite)
+
+| After | Prefill TPS | Decode TPS |
+|---|---|---|
+| Today (`9ece904e`) | 293 | 10.65 |
+| Segment A | ~330 | ~12 |
+| Segment C | ~430 | ~16 |
+| Segment D | ~470 | ~18 |
+| Segment E | ~520 | ~22 |
+| + fused-kernel optimizations (old steps 2/4) | ~750 | ~35 |
+| + Segment B GPU mha | ~1100 (ceiling) | ~60 |
+| Paper-scaled target | ~4900 | ~140 |
+
+Beyond ~1100 the bottleneck shifts to execution-model overhead (per-
+layer Tensor materialization, layer-node dispatch). Closing that
+requires command-graph-style forward (a separate, larger refactor).
 
 ### Step 1 — Foundation (paper §3.2)
 
