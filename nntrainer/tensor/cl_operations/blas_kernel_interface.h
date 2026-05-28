@@ -225,5 +225,17 @@ bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
 bool publish_host_fp32_to_backing(const Tensor &output,
                                   const std::string &output_name);
 
+/**
+ * @brief Read the contents of a tensor's GPU TensorBacking back into the
+ *        tensor's host buffer. Used by the chain-robustification rmsnorm
+ *        path to keep host and GPU views in sync after a GPU kernel
+ *        writes to the backing. Blocks on clFinish + clEnqueueReadBuffer.
+ * @param[in,out] t Tensor whose host buffer is overwritten with the
+ *                  contents of t.getBacking()'s cl_mem. Number of bytes
+ *                  read = t.bytes(). Caller is responsible for sizing.
+ * @return true if backing existed and the read completed; false otherwise.
+ */
+bool readback_backing_to_host(Tensor &t);
+
 } // namespace nntrainer
 #endif /* __BLAS_KERNEL_INTERFACE_H__ */

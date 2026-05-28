@@ -1766,4 +1766,32 @@ bool publish_host_fp32_to_backing(const Tensor &output,
   return true;
 }
 
+bool readback_backing_to_host(Tensor &t) {
+  const tv::TensorBacking *bk = t.getBacking();
+  if (bk == nullptr || bk->buffer() == nullptr)
+    return false;
+  const auto &dim = t.getDim();
+  const size_t elems = (size_t)dim.batch() * dim.channel() * dim.height() *
+                       dim.width();
+  if (elems == 0)
+    return false;
+  const size_t elem_bytes =
+    (t.getDataType() == ml::train::TensorDim::DataType::FP16) ? 2u :
+    (t.getDataType() == ml::train::TensorDim::DataType::FP32) ? 4u : 0u;
+  if (elem_bytes == 0)
+    return false;
+  const size_t bytes = elems * elem_bytes;
+  if (bk->bytes() < bytes)
+    return false;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+  clFinish(q);
+  if (clEnqueueReadBuffer(q, bk->buffer(), CL_TRUE, 0, bytes,
+                          t.getData<uint8_t>(), 0, nullptr,
+                          nullptr) != CL_SUCCESS)
+    return false;
+  return true;
+}
+
 } // namespace nntrainer
