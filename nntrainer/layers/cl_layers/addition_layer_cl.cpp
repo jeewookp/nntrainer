@@ -15,6 +15,7 @@
 #include <blas_kernel_interface.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 #include <node_exporter.h>
@@ -61,6 +62,14 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
   hidden_step_dim.batch(1);
   hidden_step_dim.height(to - from);
 
+  // FP32 fast-path bypasses Tensor::copy and add_i_cl which both
+  // misbehave in this code path (see addition_layer_cl debug notes,
+  // commit message for [v8c] Addition CL: bypass copy+add_cl). The
+  // result is bit-equivalent to AdditionLayer (CPU) for FP32 inputs.
+  // FP16 falls through to the original CL path.
+  const bool fp32_fast =
+    hidden_.getDataType() == ml::train::TensorDim::DataType::FP32;
+
   for (unsigned int b = 0; b < hidden_.batch(); ++b) {
     Tensor hidden_step = hidden_.getSharedDataTensor(
       hidden_step_dim, b * hidden_dim.getFeatureLen(), true);
@@ -76,7 +85,19 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
 
       Tensor input_step = input_.getSharedDataTensor(
         input_step_dim, b * input_dim.getFeatureLen(), true);
-      if (!idx) {
+      if (fp32_fast && hidden_step.size() == input_step.size() &&
+          input_step.getDataType() ==
+            ml::train::TensorDim::DataType::FP32) {
+        const size_t n = hidden_step.size();
+        if (!idx) {
+          std::memcpy(hidden_step.getData<uint8_t>(),
+                      input_step.getData<uint8_t>(), n * sizeof(float));
+        } else {
+          float *out = hidden_step.getData<float>();
+          const float *in = input_step.getData<float>();
+          for (size_t k = 0; k < n; ++k) out[k] += in[k];
+        }
+      } else if (!idx) {
         hidden_step.copy(input_step);
       } else {
         add_i_cl(hidden_step, input_step);
@@ -92,16 +113,6 @@ void AdditionLayerCL::incremental_forwarding(RunLayerContext &context,
   // pure-CPU contract intact.
   static const bool publish_on =
     std::getenv("NNTR_RESIDUAL_PUBLISH") != nullptr;
-  static int call_count = 0;
-  call_count++;
-  if (call_count <= 4 && std::getenv("NNTR_RESIDUAL_PUBLISH_TRIP") != nullptr) {
-    std::fprintf(stderr,
-                 "[RESIDUAL-PUBLISH dbg call=%d] name=%s b=%u dt=%d "
-                 "publish_on=%d\n",
-                 call_count, hidden_.getName().c_str(), hidden_.batch(),
-                 (int)hidden_.getDataType(), (int)publish_on);
-    std::fflush(stderr);
-  }
   if (publish_on &&
       hidden_.getDataType() == ml::train::TensorDim::DataType::FP32 &&
       hidden_.batch() == 1) {

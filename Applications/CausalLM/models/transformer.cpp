@@ -351,11 +351,18 @@ Tensor Transformer::createTransformerDecoderBlock(const int layer_id,
   Tensor att_out = createAttention(layer_id, INIT_SEQ_LEN, NUM_HEADS, HEAD_DIM,
                                    normed, normed, normed);
 
-  // NOTE: 'addition' with engine=gpu (AdditionLayerCL) segfaults in
-  // the transformer chain (issue triggered with engine=gpu only; CPU
-  // AdditionLayer works fine and gets the residual_publish hook added
-  // in this branch). Needs a separate debug pass before engine=gpu can
-  // be set here.
+  // NOTE: 'addition' with engine=gpu (AdditionLayerCL) is BROKEN.
+  // Crash#1 was Tensor::copy in incremental_forwarding — workaround
+  // with raw memcpy. Crash#2 was add_i_cl producing garbage — workaround
+  // with host-side add. With BOTH bypasses, AdditionLayerCL is
+  // functionally identical to AdditionLayer and produces matching
+  // first-8-float output (verified bit-equivalent vs CPU AddLayer
+  // running side by side on the SAME memory). BUT the final tokens
+  // are still garbage when engine=gpu — the corruption is at the
+  // graph/tensor-pool level, not at the layer-compute level.
+  // Hypothesis: TensorPool inplace optimization or alias decision
+  // changes for engine=gpu layers, leaving downstream consumers
+  // pointed at the wrong memory. Bigger debug than this session.
   LayerHandle decoder_add(createLayer(
     "addition",
     {withKey("name", "layer" + std::to_string(layer_id) + "_decoder_add")}));
@@ -493,8 +500,7 @@ Tensor Transformer::createMlp(const int layer_id, int dim, int hidden_dim,
 
   LayerHandle swiglu(createLayer(
     "swiglu",
-    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu"),
-     withKey("engine", "gpu")}));
+    {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_swiglu")}));
   Tensor act = swiglu({gate, up});
 
   LayerHandle ffn_down(createLayer(
