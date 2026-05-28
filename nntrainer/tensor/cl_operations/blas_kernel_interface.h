@@ -171,5 +171,45 @@ bool fused_qkv_rope_layout_gpu(
   unsigned int from_pos, unsigned int hq, unsigned int hkv, unsigned int dh,
   Tensor &q_out, Tensor &k_out, Tensor &v_out);
 
+/**
+ * @brief Segment A: GPU RMSNorm with TensorBacking output residency.
+ *
+ *        Paper §3.2 cross-layer residency: the output cl_mem is owned by
+ *        the process-global TensorBackingPool keyed by `output_name` and
+ *        also assigned to `output.setBacking()`. Host data of `output` is
+ *        left untouched — downstream consumers MUST read via
+ *        `getBacking()` (or pool lookup by name).
+ *
+ *        If `input.getBacking()` exists with FP16 encoding, the backing
+ *        cl_mem is used directly (zero host transfer). Otherwise the
+ *        input is uploaded from host (one transfer, same as today).
+ *        Gamma is uploaded once per (gamma name) and cached.
+ *
+ *        Env-gated via NNTR_RESIDENT_RMSNORM=1. Returns false if env not
+ *        set or any precondition fails; caller falls back to CPU path.
+ *
+ * @param[in]  input  FP16 activation [B, C, H, W]
+ * @param[in]  gamma  FP16 per-channel scale [W]
+ * @param[in]  epsilon  RMS epsilon
+ * @param[in]  B, C, H, W  shape constants matching `input`
+ * @param[in]  output_name  stable Tensor name (used as pool key)
+ * @param[out] output Tensor; setBacking() is called on success
+ * @return true if the GPU path ran; false otherwise
+ */
+bool rmsnorm_resident_fp16(const Tensor &input, const Tensor &gamma,
+                           float epsilon, unsigned int B, unsigned int C,
+                           unsigned int H, unsigned int W,
+                           const std::string &output_name, Tensor &output);
+
+/**
+ * @brief FP32 variant of rmsnorm_resident. Same contract as the FP16
+ *        version but uses rmsnorm_cl (subgroup-reduced kernel) for the
+ *        FP32 residual stream Qwen3 currently uses. Encoding of the
+ *        resulting TensorBacking is Encoding::FP32.
+ */
+bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
+                           float epsilon, unsigned int H, unsigned int W,
+                           const std::string &output_name, Tensor &output);
+
 } // namespace nntrainer
 #endif /* __BLAS_KERNEL_INTERFACE_H__ */

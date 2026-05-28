@@ -393,8 +393,10 @@ int aminCl(const Tensor &input) {
 // v8c (paper 8/4/4) dispatch entry — env-gated, dotCl fallback.
 // =============================================================================
 #include "blas_kernels.h"
+#include "cl_tensor_backing_pool.h"
 #include "cl_tensor_view.h"
 #include <cl_context.h>
+#include <cl_kernels/cl_kernels.h>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -716,20 +718,87 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
   // quant kernel. Hits fire on the wq→wk and wq→wv legs of Qwen3 QKV (and
   // gate→up of the MLP block), where the input activation is literally the
   // same tensor across multiple FC dispatches.
+  //
+  // Segment A.1 residency input mode (paper §3.2 cross-layer GPU residency).
+  // When NNTR_RESIDENT_FC=1 AND the input Tensor has a TensorBacking with
+  // FP16 encoding holding the activation in cl_mem (set by a preceding GPU
+  // op such as Segment A's RMSNorm), bypass the host→device upload entirely
+  // — clEnqueueCopyBuffer (GPU→GPU) from the backing into sc.act_in instead.
+  // Cache key uses the backing's cl_mem as the source identifier so the
+  // wq→wk→wv repeat continues to skip redundant quant. Caller-set Tensor
+  // host data is ignored in this mode.
+  //
+  // Tensor::getBacking() returns null when the producer set the backing on
+  // a different Tensor instance than the one this consumer received (the
+  // typical nntrainer pattern: layer N's "output" Tensor and layer N+1's
+  // "input" Tensor are distinct instances that share the underlying data
+  // buffer via TensorPool). Fall back to a pool lookup keyed by the host
+  // data pointer; shared-data tensors share the data pointer even when
+  // their names/instances differ.
+  static const bool resident_fc_enabled =
+    std::getenv("NNTR_RESIDENT_FC") != nullptr;
+  const tv::TensorBacking *in_backing = nullptr;
+  std::shared_ptr<tv::TensorBacking> in_backing_from_pool;
+  if (resident_fc_enabled) {
+    in_backing = input.getBacking();
+    if (!in_backing) {
+      const void *in_data_ptr = input.getData<uint8_t>();
+      char key_buf[64];
+      std::snprintf(key_buf, sizeof(key_buf), "ptr:%p", in_data_ptr);
+      in_backing_from_pool =
+        tv::TensorBackingPool::Global().get(std::string(key_buf));
+      if (!in_backing_from_pool)
+        in_backing_from_pool =
+          tv::TensorBackingPool::Global().get(input.getName());
+      if (in_backing_from_pool)
+        in_backing = in_backing_from_pool.get();
+    }
+  }
+  const bool resident_dtype_match =
+    in_backing != nullptr &&
+    ((in_backing->encoding() == tv::Encoding::FP16 &&
+      input.getDataType() == ml::train::TensorDim::DataType::FP16) ||
+     (in_backing->encoding() == tv::Encoding::FP32 &&
+      input.getDataType() == ml::train::TensorDim::DataType::FP32));
+  const bool use_resident_input = resident_dtype_match;
+
   const int cur_dtype =
     (input.getDataType() == ml::train::TensorDim::DataType::FP16) ? 1 : 0;
-  const void *cur_in_ptr = input.getData<uint8_t>();
+  const void *cur_in_ptr =
+    use_resident_input
+      ? static_cast<const void *>(in_backing->buffer())
+      : static_cast<const void *>(input.getData<uint8_t>());
+  // For resident inputs, the backing pointer can stay the same across
+  // forward passes while the underlying data changes (RMSNorm writes
+  // fresh values each pass). The Step 2b.0 cache key (pointer + shape)
+  // can't tell pass-1 stale data from pass-2 fresh data. Conservative
+  // fix: never hit the cache when the input is from a backing. The
+  // wq→wk→wv reuse still pays off via Step 2b.0 for host-uploaded
+  // inputs; residency inputs trade that gain for correctness across
+  // forward passes. A proper fix is a per-backing generation counter,
+  // tracked in a later iteration.
   const bool quant_cache_hit =
-    sc.last_quant_in_ptr != nullptr &&
+    !use_resident_input && sc.last_quant_in_ptr != nullptr &&
     sc.last_quant_in_ptr == cur_in_ptr && sc.last_quant_M == M &&
     sc.last_quant_K == K && sc.last_quant_M_pad == M_pad &&
     sc.last_quant_dtype == cur_dtype;
 
   if (!quant_cache_hit) {
     if (prof_enabled) T0 = NOW();
-    if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE, 0, (size_t)M * K * act_elem,
-                             cur_in_ptr, 0, nullptr, nullptr) != CL_SUCCESS)
-      return false;
+    if (use_resident_input) {
+      // GPU→GPU copy of the resident FP32/FP16 activation into sc.act_in.
+      // Same shape as a host upload would produce, just without crossing
+      // PCIe. Padded rows (M_pad > M) are zero-filled below.
+      if (clEnqueueCopyBuffer(q, in_backing->buffer(), sc.act_in, 0, 0,
+                              (size_t)M * K * act_elem, 0, nullptr,
+                              nullptr) != CL_SUCCESS)
+        return false;
+    } else {
+      if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE, 0,
+                               (size_t)M * K * act_elem, cur_in_ptr, 0,
+                               nullptr, nullptr) != CL_SUCCESS)
+        return false;
+    }
     if (M_pad > M) {
       const size_t pad_bytes = (size_t)(M_pad - M) * K * act_elem;
       std::vector<uint8_t> zeros(pad_bytes, 0);
@@ -1218,6 +1287,372 @@ bool fused_qkv_rope_layout_gpu(
   // Stub: return false so the caller's existing 3-FC + CPU RoPE path runs.
   // Step 2d flips this once the kernel body produces correct output.
   return false;
+}
+
+// =============================================================================
+// Segment A.2 — GPU RMSNorm with TensorBacking output residency.
+//
+// Paper §3.2 cross-layer residency. Produces a cl_mem holding FP16
+// normalized activation that downstream FC layers consume directly via
+// `dotCl_v8c`'s residency input mode (Segment A.1). No host materialize
+// when env-gated.
+//
+// First wired consumer: Qwen3's `attention_norm` and `ffn_norm` (per
+// transformer.cpp:340, 355). q_norm / k_norm use ReshapedRMSNormLayer
+// (different class) and are out of Segment A scope.
+// =============================================================================
+namespace {
+
+// Per-gamma persistent upload cache. Gamma weights don't change at
+// inference; upload once per unique gamma name, reuse forever.
+struct ResidentRmsState {
+  std::unordered_map<std::string, cl_mem> gamma_bufs;
+  std::mutex mtx;
+};
+static ResidentRmsState &resident_rms_state() {
+  static ResidentRmsState s;
+  return s;
+}
+
+static bool resident_rmsnorm_env_enabled() {
+  static int cached = -1;
+  if (cached < 0)
+    cached = std::getenv("NNTR_RESIDENT_RMSNORM") != nullptr ? 1 : 0;
+  return cached != 0;
+}
+
+} // anonymous namespace
+
+bool rmsnorm_resident_fp16(const Tensor &input, const Tensor &gamma,
+                           float epsilon, unsigned int B, unsigned int C,
+                           unsigned int H, unsigned int W,
+                           const std::string &output_name, Tensor &output) {
+  if (!resident_rmsnorm_env_enabled())
+    return false;
+  if (input.getDataType() != ml::train::TensorDim::DataType::FP16 ||
+      gamma.getDataType() != ml::train::TensorDim::DataType::FP16)
+    return false;
+  if (B == 0 || C == 0 || H == 0 || W == 0)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t total_elems = (size_t)B * C * H * W;
+  const size_t total_bytes = total_elems * sizeof(uint16_t);
+
+  // 1) Get or create the output backing in the pool. Reused across calls
+  //    with the same output_name (output is overwritten in place).
+  auto &pool = tv::TensorBackingPool::Global();
+  std::shared_ptr<tv::TensorBacking> out_bk = pool.get(output_name);
+  if (!out_bk || out_bk->bytes() < total_bytes) {
+    cl_int err = CL_SUCCESS;
+    cl_mem buf =
+      clCreateBuffer(ctx, CL_MEM_READ_WRITE, total_bytes, nullptr, &err);
+    if (err != CL_SUCCESS || !buf)
+      return false;
+    out_bk = std::make_shared<tv::TensorBacking>(
+      ctx, buf, tv::Encoding::FP16, tv::Layout::ROW_MAJOR, total_bytes,
+      /*owned=*/true);
+    pool.set(output_name, out_bk);
+  }
+
+  // 2) Source cl_mem for the input — from upstream backing if present
+  //    (zero host transfer), else upload from host on each call.
+  cl_mem in_cl = nullptr;
+  cl_mem in_upload_owned = nullptr; // freed at function exit if allocated
+  if (const tv::TensorBacking *in_bk = input.getBacking();
+      in_bk != nullptr && in_bk->encoding() == tv::Encoding::FP16 &&
+      in_bk->bytes() >= total_bytes) {
+    in_cl = in_bk->buffer();
+  } else {
+    cl_int err = CL_SUCCESS;
+    in_upload_owned = clCreateBuffer(ctx, CL_MEM_READ_ONLY, total_bytes,
+                                     nullptr, &err);
+    if (err != CL_SUCCESS || !in_upload_owned)
+      return false;
+    if (clEnqueueWriteBuffer(q, in_upload_owned, CL_TRUE, 0, total_bytes,
+                             input.getData<uint8_t>(), 0, nullptr,
+                             nullptr) != CL_SUCCESS) {
+      clReleaseMemObject(in_upload_owned);
+      return false;
+    }
+    in_cl = in_upload_owned;
+  }
+
+  // 3) Gamma upload cache — once per gamma name. Gamma doesn't change at
+  //    inference. Keyed by gamma's name (stable per layer).
+  cl_mem gamma_cl = nullptr;
+  {
+    auto &st = resident_rms_state();
+    std::lock_guard<std::mutex> lock(st.mtx);
+    const std::string &gn = gamma.getName();
+    auto it = st.gamma_bufs.find(gn);
+    if (it == st.gamma_bufs.end()) {
+      cl_int err = CL_SUCCESS;
+      cl_mem gbuf = clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+                                   (size_t)W * sizeof(uint16_t), nullptr,
+                                   &err);
+      if (err != CL_SUCCESS || !gbuf) {
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+        return false;
+      }
+      if (clEnqueueWriteBuffer(q, gbuf, CL_TRUE, 0,
+                               (size_t)W * sizeof(uint16_t),
+                               gamma.getData<uint8_t>(), 0, nullptr,
+                               nullptr) != CL_SUCCESS) {
+        clReleaseMemObject(gbuf);
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+        return false;
+      }
+      st.gamma_bufs[gn] = gbuf;
+      gamma_cl = gbuf;
+    } else {
+      gamma_cl = it->second;
+    }
+  }
+
+  // 4) Register the kernel (cached by ClContext on repeat registration).
+  ClContext::SharedPtrClKernel kp =
+    blas_cc->registerClKernel(rmsnorm_fp16_kernel, "rmsnorm_cl_fp16");
+  if (!kp) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  cl_mem out_buf = out_bk->buffer();
+  cl_half eps_half;
+  {
+    const float ef = epsilon;
+    // round-half-to-nearest float→half via the helper available in this TU.
+    // The activation residual stream is FP16 so this matches the upstream
+    // precision exactly.
+    uint16_t bits = 0;
+    // simple manual conversion for non-NaN positive epsilon (always small).
+    union { float f; uint32_t u; } v;
+    v.f = ef;
+    uint32_t e = (v.u >> 23) & 0xFF;
+    uint32_t m = v.u & 0x7FFFFF;
+    if (e == 0) bits = 0;
+    else if (e >= 143) bits = 0x7BFF; // clamp to fp16 max
+    else if (e <= 112) bits = 0;       // underflow to 0
+    else bits = ((e - 112) << 10) | (m >> 13);
+    eps_half = bits;
+  }
+
+  int arg = 0;
+  if (!kp->SetKernelArguments(arg++, &in_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &out_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &gamma_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &eps_half, sizeof(cl_half)) ||
+      !kp->SetKernelArguments(arg++, &B, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &C, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &H, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &W, sizeof(int))) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  // work-groups per existing RMSNormLayerCl: {B*C, H, 1}, local {W, 1, 1}.
+  const int wg_count[3] = {(int)(B * C), (int)H, 1};
+  const int wg_size[3] = {(int)W, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, wg_count, wg_size)) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  // 5) Publish the backing to the consumer side. Both setBacking() on the
+  //    Tensor (if the consumer's Tensor instance is the same one we got
+  //    here) AND pool.set() (already done at allocation) so a name-based
+  //    lookup is also possible. Host data of `output` is left undefined.
+  output.setBacking(out_bk.get());
+
+  // Static one-shot log for first invocation so we can confirm wiring
+  // when running a model. NNTR_RESIDENT_RMSNORM_TRIP=1 prints once.
+  static int logged_trip = 0;
+  if (!logged_trip && std::getenv("NNTR_RESIDENT_RMSNORM_TRIP") != nullptr) {
+    logged_trip = 1;
+    std::fprintf(stderr,
+                 "[SegA-RMS] first invocation: out_name=%s B=%u C=%u H=%u "
+                 "W=%u in_from_backing=%d\n",
+                 output_name.c_str(), B, C, H, W,
+                 in_upload_owned == nullptr ? 1 : 0);
+    std::fflush(stderr);
+  }
+
+  if (in_upload_owned) {
+    // The kernel reads input as a buffer; we can't release until the
+    // kernel has finished. Block once to ensure the upload buffer is
+    // safe to release. For backing-supplied inputs we don't allocate.
+    clFinish(q);
+    clReleaseMemObject(in_upload_owned);
+  }
+
+  return true;
+}
+
+// FP32 variant (Qwen3's actual residual-stream dtype). Same lifecycle/
+// caching/backing semantics as the FP16 variant; just different kernel.
+bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
+                           float epsilon, unsigned int H, unsigned int W,
+                           const std::string &output_name, Tensor &output) {
+  if (!resident_rmsnorm_env_enabled())
+    return false;
+  if (input.getDataType() != ml::train::TensorDim::DataType::FP32 ||
+      gamma.getDataType() != ml::train::TensorDim::DataType::FP32)
+    return false;
+  if (H == 0 || W == 0)
+    return false;
+  // rmsnorm_cl kernel reads input as float4 — W must be a multiple of 4.
+  if (W % 4 != 0)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t total_elems = (size_t)H * W;
+  const size_t total_bytes = total_elems * sizeof(float);
+
+  auto &pool = tv::TensorBackingPool::Global();
+  std::shared_ptr<tv::TensorBacking> out_bk = pool.get(output_name);
+  if (!out_bk || out_bk->bytes() < total_bytes ||
+      out_bk->encoding() != tv::Encoding::FP32) {
+    cl_int err = CL_SUCCESS;
+    cl_mem buf =
+      clCreateBuffer(ctx, CL_MEM_READ_WRITE, total_bytes, nullptr, &err);
+    if (err != CL_SUCCESS || !buf)
+      return false;
+    out_bk = std::make_shared<tv::TensorBacking>(
+      ctx, buf, tv::Encoding::FP32, tv::Layout::ROW_MAJOR, total_bytes,
+      /*owned=*/true);
+    pool.set(output_name, out_bk);
+  }
+  // Also register under the host-data-pointer key so consumers receiving a
+  // different Tensor instance (with the same underlying data pointer) can
+  // find this backing. See the dotCl_v8c residency-input lookup code.
+  {
+    const void *out_data_ptr = output.getData<uint8_t>();
+    char key_buf[64];
+    std::snprintf(key_buf, sizeof(key_buf), "ptr:%p", out_data_ptr);
+    pool.set(std::string(key_buf), out_bk);
+  }
+
+  cl_mem in_cl = nullptr;
+  cl_mem in_upload_owned = nullptr;
+  std::shared_ptr<tv::TensorBacking> in_bk_pool_strong;
+  if (const tv::TensorBacking *in_bk = input.getBacking();
+      in_bk != nullptr && in_bk->encoding() == tv::Encoding::FP32 &&
+      in_bk->bytes() >= total_bytes) {
+    in_cl = in_bk->buffer();
+  } else {
+    const void *in_data_ptr = input.getData<uint8_t>();
+    char key_buf[64];
+    std::snprintf(key_buf, sizeof(key_buf), "ptr:%p", in_data_ptr);
+    in_bk_pool_strong =
+      tv::TensorBackingPool::Global().get(std::string(key_buf));
+    if (in_bk_pool_strong &&
+        in_bk_pool_strong->encoding() == tv::Encoding::FP32 &&
+        in_bk_pool_strong->bytes() >= total_bytes) {
+      in_cl = in_bk_pool_strong->buffer();
+    }
+  }
+  if (in_cl == nullptr) {
+    cl_int err = CL_SUCCESS;
+    in_upload_owned = clCreateBuffer(ctx, CL_MEM_READ_ONLY, total_bytes,
+                                     nullptr, &err);
+    if (err != CL_SUCCESS || !in_upload_owned)
+      return false;
+    if (clEnqueueWriteBuffer(q, in_upload_owned, CL_TRUE, 0, total_bytes,
+                             input.getData<uint8_t>(), 0, nullptr,
+                             nullptr) != CL_SUCCESS) {
+      clReleaseMemObject(in_upload_owned);
+      return false;
+    }
+    in_cl = in_upload_owned;
+  }
+
+  cl_mem gamma_cl = nullptr;
+  {
+    auto &st = resident_rms_state();
+    std::lock_guard<std::mutex> lock(st.mtx);
+    const std::string gn = gamma.getName() + ":fp32";
+    auto it = st.gamma_bufs.find(gn);
+    if (it == st.gamma_bufs.end()) {
+      cl_int err = CL_SUCCESS;
+      cl_mem gbuf = clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+                                   (size_t)W * sizeof(float), nullptr, &err);
+      if (err != CL_SUCCESS || !gbuf) {
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+        return false;
+      }
+      if (clEnqueueWriteBuffer(q, gbuf, CL_TRUE, 0, (size_t)W * sizeof(float),
+                               gamma.getData<uint8_t>(), 0, nullptr,
+                               nullptr) != CL_SUCCESS) {
+        clReleaseMemObject(gbuf);
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+        return false;
+      }
+      st.gamma_bufs[gn] = gbuf;
+      gamma_cl = gbuf;
+    } else {
+      gamma_cl = it->second;
+    }
+  }
+
+  ClContext::SharedPtrClKernel kp =
+    blas_cc->registerClKernel(rmsnorm_kernel, "rmsnorm_cl");
+  if (!kp) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  cl_mem out_buf = out_bk->buffer();
+  int arg = 0;
+  if (!kp->SetKernelArguments(arg++, &in_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &out_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &gamma_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &epsilon, sizeof(float)) ||
+      !kp->SetKernelArguments(arg++, &H, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &W, sizeof(int))) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  // rmsnorm_cl uses get_group_id(0) → H groups, subgroup reduce inside.
+  // DispatchCommand interprets the first array as the GLOBAL work-item
+  // count (NDRange standard), so global = H * subgroup, local = subgroup.
+  // Matches rmsnorm_cl_internal at blas_kernels_templates.h:428.
+  constexpr int SUBGROUP_SIZE = 64; // Adreno
+  const int wg_count[3] = {(int)H * SUBGROUP_SIZE, 1, 1};
+  const int wg_size[3] = {SUBGROUP_SIZE, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, wg_count, wg_size)) {
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
+    return false;
+  }
+
+  output.setBacking(out_bk.get());
+
+  static int logged_trip = 0;
+  if (!logged_trip && std::getenv("NNTR_RESIDENT_RMSNORM_TRIP") != nullptr) {
+    logged_trip = 1;
+    std::fprintf(stderr,
+                 "[SegA-RMS-FP32] first invocation: out_name=%s H=%u W=%u "
+                 "in_from_backing=%d\n",
+                 output_name.c_str(), H, W,
+                 in_upload_owned == nullptr ? 1 : 0);
+    std::fflush(stderr);
+  }
+
+  if (in_upload_owned) {
+    clFinish(q);
+    clReleaseMemObject(in_upload_owned);
+  }
+
+  return true;
 }
 
 } // namespace nntrainer

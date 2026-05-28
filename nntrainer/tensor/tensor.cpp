@@ -1651,6 +1651,14 @@ Tensor Tensor::getSharedDataTensor(const TensorDim dim_, size_t offset,
   Tensor ret = *this;
   itensor_->getSharedDataTensor(dim_, offset, reset_stride, name_,
                                 ret.itensor_.get());
+  // Propagate the GPU backing pointer to the view (Segment A residency).
+  // Shared-data views share the same underlying buffer; if the source
+  // Tensor was tagged with a GPU TensorBacking, downstream consumers
+  // that receive the view (e.g., dotCl_v8c's input_step) must see the
+  // same backing. The copy ctor invoked by `Tensor ret = *this` resets
+  // gpu_backing_ to nullptr (by design — copies don't claim ownership);
+  // explicit propagation here is the share-data exception.
+  ret.gpu_backing_ = this->gpu_backing_;
   return ret;
 }
 
