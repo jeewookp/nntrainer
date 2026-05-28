@@ -337,6 +337,42 @@ void TieWordEmbedding::incremental_forwarding_lmhead(
             nntrainer::sdot(hidden_size, input_data, 1, dequant_row.data(), 1);
         }
       });
+    } else if (weight.getDataType() == nntrainer::TensorDim::DataType::Q6_K) {
+      // Q6_K manual lm_head. Mirror the Q4_0 path: dequant each vocab
+      // row to fp32, then sdot against the (single) input row. Avoids
+      // Tensor::dot which can crash on gpu-context-allocated tensors
+      // when this layer is registered on cl_context (see [rms-norm-
+      // lm-head-gpu-blocked] memory note).
+      const unsigned int hidden_size = input_step.width();
+      const unsigned int vocab_size = weight.height();
+      NNTR_THROW_IF(weight.width() != hidden_size ||
+                      hidden_step.width() != vocab_size,
+                    std::invalid_argument)
+        << "Q6_K tie word embedding lmhead has mismatched dimensions";
+
+      const unsigned int num_blocks_per_row = (hidden_size + 256 - 1) / 256;
+      const size_t row_stride = 210 * num_blocks_per_row;
+      const uint8_t *weight_data = weight.getData<uint8_t>();
+      const float *input_data = input_step.getData<float>();
+      float *logits = hidden_step.getData<float>();
+
+      auto &tm = nntrainer::ThreadManager::Global();
+      const unsigned int compute_thread_num = tm.getComputeThreadCount();
+      const unsigned int thread_num =
+        compute_thread_num == 0 ? 1 : compute_thread_num;
+      tm.parallel_for(0, static_cast<size_t>(thread_num), [=](size_t t) {
+        const unsigned int start = (t * vocab_size) / thread_num;
+        const unsigned int end = ((t + 1) * vocab_size) / thread_num;
+        std::vector<float> dequant_row(hidden_size);
+
+        for (unsigned int row = start; row < end; ++row) {
+          nntrainer::dequantize_row_q6_K(
+            static_cast<const void *>(weight_data + row_stride * row),
+            dequant_row.data(), hidden_size);
+          logits[row] =
+            nntrainer::sdot(hidden_size, input_data, 1, dequant_row.data(), 1);
+        }
+      });
     } else {
       input_step.dot(weight, hidden_step, false, true);
     }

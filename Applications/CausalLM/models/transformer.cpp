@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include <app_context.h>
+#include <cl_context.h>
 #include <engine.h>
 #include <model.h>
 
@@ -23,6 +24,7 @@
 #include <embedding_layer.h>
 #include <mha_core.h>
 #include <rms_norm.h>
+#include <rms_norm_gpu.h>
 #include <swiglu.h>
 #include <tie_word_embedding.h>
 
@@ -252,7 +254,8 @@ std::pair<Tensor, Tensor> Transformer::constructModel() {
   LayerHandle out_norm(
     createLayer("rms_norm", {withKey("name", "output_norm"),
                              withKey("epsilon", std::to_string(NORM_EPS)),
-                             withKey("packed", "false")}));
+                             withKey("packed", "false"),
+                             withKey("engine", "gpu")}));
   h = out_norm(h);
 
   return {x, h};
@@ -345,7 +348,8 @@ Tensor Transformer::createTransformerDecoderBlock(const int layer_id,
     "rms_norm",
     {withKey("name", "layer" + std::to_string(layer_id) + "_attention_norm"),
      withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
+     withKey("packed", "false"),
+     withKey("engine", "gpu")}));
   Tensor normed = attn_norm(input);
 
   Tensor att_out = createAttention(layer_id, INIT_SEQ_LEN, NUM_HEADS, HEAD_DIM,
@@ -361,7 +365,8 @@ Tensor Transformer::createTransformerDecoderBlock(const int layer_id,
     "rms_norm",
     {withKey("name", "layer" + std::to_string(layer_id) + "_ffn_norm"),
      withKey("epsilon", std::to_string(NORM_EPS)),
-     withKey("packed", "false")}));
+     withKey("packed", "false"),
+     withKey("engine", "gpu")}));
   Tensor ffn_normed = ffn_norm(residual);
 
   Tensor ffn_out = createMlp(layer_id, DIM, INTERMEDIATE_SIZE, ffn_normed);
@@ -525,6 +530,32 @@ void Transformer::registerCustomLayers() {
   } catch (std::invalid_argument &e) {
     std::cerr << "failed to register factory, reason: " << e.what()
               << std::endl;
+  }
+
+  // GPU variants: same type strings as the CPU classes but registered
+  // on cl_context so engine=gpu createLayer routes there. The GPU
+  // classes use raw getData() pointers + GPU dispatches; they avoid
+  // any CPU-only Tensor ops (Tensor::multiply / add_i / dot) that
+  // crash on gpu-context-allocated tensors.
+  const auto cl_context =
+    static_cast<nntrainer::ClContext *>(ct_engine.getRegisteredContext("gpu"));
+  if (cl_context != nullptr) {
+    try {
+      cl_context->registerFactory(
+        nntrainer::createLayer<causallm::RMSNormLayerGPU>);
+      // TieWordEmbedding is registered on cl_context with its existing
+      // class — the manual Q6_K + Q4_0 paths in incremental_forwarding_
+      // lmhead use raw-pointer compute (no Tensor::dot), so it survives
+      // gpu-context tensor allocation. The embedding-mode path is also
+      // raw-pointer-based for these dtypes. FP32 weight + Tensor::dot
+      // fallback could still crash, but Qwen3 + similar models use
+      // Q6_K so the common path is safe.
+      cl_context->registerFactory(
+        nntrainer::createLayer<causallm::TieWordEmbedding>);
+    } catch (std::invalid_argument &e) {
+      std::cerr << "failed to register GPU-routed layer on cl_context: "
+                << e.what() << std::endl;
+    }
   }
 }
 

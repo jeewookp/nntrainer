@@ -208,6 +208,7 @@ std::pair<Tensor, Tensor> CausalLM::constructModel() {
     withKey("unit", NUM_VOCAB),
     withKey("disable_bias", "true"),
     withKey("weight_dtype", LMHEAD_DTYPE),
+    withKey("engine", "gpu"),
   };
 
   if (TIE_WORD_EMBEDDINGS)
