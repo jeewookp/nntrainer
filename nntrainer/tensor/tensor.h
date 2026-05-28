@@ -37,6 +37,10 @@ namespace nntrainer {
 
 class LazyTensor;
 
+namespace tv {
+class TensorBacking;
+} // namespace tv
+
 /**
  * @class Tensor Class
  * @brief Tensor is a multidimensional matrix that contain elements of a single
@@ -2101,6 +2105,29 @@ public:
     return migrated;
   }
 
+  /**
+   * @brief Attach an opt-in GPU TensorBacking (paper §3.2 tensor
+   *        virtualization bridge). Non-owning weak pointer; the
+   *        backing's lifetime is managed by TensorBackingPool. CPU
+   *        layers ignore this field. GPU layers set it after
+   *        producing an output that lives in cl_mem so downstream
+   *        GPU layers can read it without a host round-trip.
+   *
+   *        Not propagated by copy ctor / copy assign: a Tensor's
+   *        backing is bound to its identity in the layer graph, not
+   *        to its data buffer. Move semantics carry it (default).
+   */
+  void setBacking(tv::TensorBacking *backing) noexcept {
+    gpu_backing_ = backing;
+  }
+
+  /**
+   * @brief Retrieve the attached GPU TensorBacking, or nullptr if
+   *        none was set. Callers must treat the pointer as
+   *        non-owning and may not outlive the TensorBackingPool.
+   */
+  tv::TensorBacking *getBacking() const noexcept { return gpu_backing_; }
+
 private:
   std::unique_ptr<TensorBase> itensor_;
 
@@ -2112,6 +2139,11 @@ private:
   size_t read_offset;         /** save read_offset info for virtual */
   int fd = -1;                /** save fd info for virtual */
   void *mapped_ptr = nullptr; /** save mmap buf pointer for virtual */
+
+  /** Optional GPU residency hook (paper §3.2). Non-owning; default null;
+   *  set by GPU layers when an output lives in cl_mem. CPU layers
+   *  ignore. Copies do not propagate it (see setBacking() docs). */
+  tv::TensorBacking *gpu_backing_ = nullptr;
 
   /**
    * @brief Set tensor variables

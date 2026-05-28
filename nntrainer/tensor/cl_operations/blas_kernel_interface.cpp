@@ -1068,6 +1068,25 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
       throw std::runtime_error("unsupported output dtype");
     }
     clReleaseMemObject(act_image);
+
+    // === Step 1e bridge round-trip (paper §3.2). Attach the cached
+    // v8c weight backing to the output tensor as a non-owning tracer.
+    // CPU consumers ignore this field. This is purely a bridge
+    // integrity hook today; Step 2's fused QKV kernel will replace it
+    // with a real output backing pointing at the cl_mem the next
+    // GPU layer will consume. NNTR_TENSOR_BRIDGE_TRIP=1 logs the
+    // first round-trip on real device traffic to confirm wiring.
+    output.setBacking(w->backing.get());
+    static int logged_trip = 0;
+    if (!logged_trip && std::getenv("NNTR_TENSOR_BRIDGE_TRIP") != nullptr) {
+      logged_trip = 1;
+      tv::TensorBacking *back = output.getBacking();
+      std::fprintf(stderr,
+                   "[Step1e] bridge round-trip: set=%p get=%p %s\n",
+                   (void *)w->backing.get(), (void *)back,
+                   back == w->backing.get() ? "OK" : "MISMATCH");
+      std::fflush(stderr);
+    }
   } catch (...) {
     return false;
   }
