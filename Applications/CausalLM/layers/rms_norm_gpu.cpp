@@ -11,6 +11,13 @@
 #include <cstdlib>
 #include <cstring>
 
+#if defined(__aarch64__) || defined(__ARM_NEON)
+#include <arm_neon.h>
+#define RMSNORM_GPU_HAVE_NEON 1
+#else
+#define RMSNORM_GPU_HAVE_NEON 0
+#endif
+
 #include "rms_norm_gpu.h"
 
 #include <blas_kernel_interface.h>
@@ -40,13 +47,44 @@ void RMSNormLayerGPU::updateTensorsByInputDimensions(
   context.updateOutput(SINGLE_INOUT_IDX, input_dimensions[0]);
 }
 
-// Raw-pointer host RMSNorm fallback. Used when the GPU dispatch
-// returns false (env disabled or precondition fails). Operates
-// directly on getData() pointers, no Tensor::multiply / add /
-// inv_sqrt_i calls — those crash on gpu-context-allocated tensors.
+// Raw-pointer host RMSNorm. Used because Tensor::multiply / add_i /
+// inv_sqrt_i crash on gpu-context-allocated tensors (same family as
+// the AdditionLayerCL workaround). NEON-SIMD on aarch64 for ~10×
+// throughput vs the scalar fallback; scalar code is correct for
+// reference / non-ARM builds.
 static void rms_norm_host_fp32(const float *in, const float *gamma,
                                float *out, float eps, unsigned int rows,
                                unsigned int cols) {
+#if RMSNORM_GPU_HAVE_NEON
+  for (unsigned int r = 0; r < rows; ++r) {
+    const float *in_row = in + (size_t)r * cols;
+    float *out_row = out + (size_t)r * cols;
+
+    // Pass 1: sum-of-squares with 2-lane parallel accumulation.
+    float32x4_t acc0 = vdupq_n_f32(0.0f);
+    float32x4_t acc1 = vdupq_n_f32(0.0f);
+    unsigned int k = 0;
+    for (; k + 8 <= cols; k += 8) {
+      float32x4_t v0 = vld1q_f32(in_row + k);
+      float32x4_t v1 = vld1q_f32(in_row + k + 4);
+      acc0 = vmlaq_f32(acc0, v0, v0);
+      acc1 = vmlaq_f32(acc1, v1, v1);
+    }
+    float sumsq = vaddvq_f32(vaddq_f32(acc0, acc1));
+    for (; k < cols; ++k) sumsq += in_row[k] * in_row[k];
+
+    const float inv_rms = 1.0f / std::sqrt(sumsq / (float)cols + eps);
+    const float32x4_t inv_rms_v = vdupq_n_f32(inv_rms);
+
+    // Pass 2: out[k] = in[k] * inv_rms * gamma[k].
+    for (k = 0; k + 4 <= cols; k += 4) {
+      float32x4_t v = vld1q_f32(in_row + k);
+      float32x4_t g = vld1q_f32(gamma + k);
+      vst1q_f32(out_row + k, vmulq_f32(vmulq_f32(v, inv_rms_v), g));
+    }
+    for (; k < cols; ++k) out_row[k] = in_row[k] * inv_rms * gamma[k];
+  }
+#else
   for (unsigned int r = 0; r < rows; ++r) {
     const float *in_row = in + (size_t)r * cols;
     float *out_row = out + (size_t)r * cols;
@@ -58,6 +96,7 @@ static void rms_norm_host_fp32(const float *in, const float *gamma,
     for (unsigned int k = 0; k < cols; ++k)
       out_row[k] = in_row[k] * inv_rms * gamma[k];
   }
+#endif
 }
 
 void RMSNormLayerGPU::incremental_forwarding(
@@ -109,21 +148,28 @@ void RMSNormLayerGPU::incremental_forwarding(
     const float *in_p = in_p_root + in_off;
     float *out_p = out_p_root + out_off;
 
-    // Two outputs need to be produced:
-    //   (a) The fused int8/scale/zp/rs pool entries that v8c FC's
-    //       consumer path (NNTR_V8C_CONSUME_FUSED_RMSQ=1) picks up
-    //       — this is the GPU compute path.
-    //   (b) An fp32 host buffer at `out_p` for any consumer that
-    //       reads the un-quantized output (debug/profile, layers
-    //       that didn't get the fused consumer treatment yet).
+    // NEON SIMD host RMSNorm is the primary compute path because
+    // measurement showed the fused-rmsq GPU dispatch is NET NEGATIVE
+    // for TPS even when paired with the v8c FC consumer that skips
+    // its own quant. The 56 dispatches × ~3 ms per forward outweigh
+    // the saved per-FC quant time.
     //
-    // For (a) call fused_rmsnorm_quant_resident_fp32. For (b)
-    // compute on host directly — calling rmsnorm_resident_fp32 +
-    // readback_backing_to_host would double the GPU work without
-    // saving anything since the fused kernel already did the
-    // bandwidth-heavy reduction. Host fp32 norm on K=1024 × ~282
-    // rows is ~5 ms total which is cheap.
-    if (b_size == 1) {
+    // The fused-rmsq dispatch is therefore OPT-IN via two envs:
+    //   NNTR_FUSED_RMSQ=1          — base producer env (legacy)
+    //   NNTR_RMSQ_GPU_DISPATCH=1   — engage from this GPU layer
+    // PLUS H >= NNTR_RMSQ_GPU_MIN_H (default 8) for decode skip.
+    //
+    // The NEON host norm always runs because the v8c FC consumer
+    // path is correct without the fused entries (it falls back to
+    // its own act-quant). So host norm gives correctness; the
+    // fused dispatch is now purely a perf experiment.
+    static const bool dispatch_enabled =
+      std::getenv("NNTR_RMSQ_GPU_DISPATCH") != nullptr;
+    static const unsigned int min_h_for_gpu = []() {
+      const char *e = std::getenv("NNTR_RMSQ_GPU_MIN_H");
+      return e != nullptr ? (unsigned int)std::atoi(e) : 8u;
+    }();
+    if (dispatch_enabled && b_size == 1 && H >= min_h_for_gpu) {
       nntrainer::fused_rmsnorm_quant_resident_fp32(
         in, gamma, epsilon, H, W, out.getName(), (const void *)out_p);
     }
