@@ -395,6 +395,7 @@ int aminCl(const Tensor &input) {
 #include "blas_kernels.h"
 #include "cl_tensor_backing_pool.h"
 #include "cl_tensor_view.h"
+#include <atomic>
 #include <cl_context.h>
 #include <cl_kernels/cl_kernels.h>
 #include <chrono>
@@ -465,7 +466,16 @@ struct V8cScratch {
   unsigned int last_quant_K = 0;
   unsigned int last_quant_M_pad = 0;
   int last_quant_dtype = -1;
+  unsigned long long last_quant_resident_generation = 0;
 };
+
+// Process-global Segment A resident-buffer generation counter. Producers
+// (Segment A's RMSNorm helpers) bump this on every successful write to a
+// resident TensorBacking, signalling to dotCl_v8c that any quant cache
+// keyed on a backing pointer is now stale. Same forward pass / multiple
+// FCs reusing the same backing all share the generation, so the cache
+// still hits on wq→wk→wv within the pass.
+static std::atomic<unsigned long long> g_resident_quant_generation{0};
 static V8cScratch &v8c_scratch() {
   static V8cScratch s;
   return s;
@@ -768,20 +778,27 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     use_resident_input
       ? static_cast<const void *>(in_backing->buffer())
       : static_cast<const void *>(input.getData<uint8_t>());
-  // For resident inputs, the backing pointer can stay the same across
-  // forward passes while the underlying data changes (RMSNorm writes
-  // fresh values each pass). The Step 2b.0 cache key (pointer + shape)
-  // can't tell pass-1 stale data from pass-2 fresh data. Conservative
-  // fix: never hit the cache when the input is from a backing. The
-  // wq→wk→wv reuse still pays off via Step 2b.0 for host-uploaded
-  // inputs; residency inputs trade that gain for correctness across
-  // forward passes. A proper fix is a per-backing generation counter,
-  // tracked in a later iteration.
+  // Step 2b.0 quant cache. For host-uploaded inputs the (data_ptr,
+  // shape, dtype) tuple uniquely identifies the activation, so a hit
+  // means the same data is already int8-quantized in sc.act_i8 and
+  // we can skip both the copy and the quant kernel.
+  //
+  // For backing-sourced inputs the same logic holds *within a single
+  // forward pass* because the backing pointer is stable. Across passes
+  // the same backing pointer points to different data (RMSNorm
+  // overwrites it). That cross-pass staleness is invalidated below
+  // by an external generation counter tied to RMSNorm writes:
+  // resident_input_quant_generation is bumped whenever a Segment A
+  // RMSNorm producer writes to a backing, and cached against the
+  // generation at the time of the last quant. If the generation has
+  // advanced since the last cache update, the cache is invalidated.
   const bool quant_cache_hit =
-    !use_resident_input && sc.last_quant_in_ptr != nullptr &&
+    sc.last_quant_in_ptr != nullptr &&
     sc.last_quant_in_ptr == cur_in_ptr && sc.last_quant_M == M &&
     sc.last_quant_K == K && sc.last_quant_M_pad == M_pad &&
-    sc.last_quant_dtype == cur_dtype;
+    sc.last_quant_dtype == cur_dtype &&
+    (!use_resident_input ||
+     sc.last_quant_resident_generation == g_resident_quant_generation);
 
   if (!quant_cache_hit) {
     if (prof_enabled) T0 = NOW();
@@ -839,6 +856,7 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
       sc.last_quant_K = K;
       sc.last_quant_M_pad = M_pad;
       sc.last_quant_dtype = cur_dtype;
+      sc.last_quant_resident_generation = g_resident_quant_generation.load();
     }
 
     // === Per-call CPU vs GPU quant equality check ===
@@ -1468,6 +1486,20 @@ bool rmsnorm_resident_fp16(const Tensor &input, const Tensor &gamma,
   //    here) AND pool.set() (already done at allocation) so a name-based
   //    lookup is also possible. Host data of `output` is left undefined.
   output.setBacking(out_bk.get());
+  // Bump the global resident-quant generation: any downstream FC that
+  // sees this backing pointer in its quant cache must re-quant; the
+  // backing's data has just changed.
+  g_resident_quant_generation.fetch_add(1, std::memory_order_release);
+
+  // OUT-OF-ORDER QUEUE FIX: the ClContext queue uses
+  // CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE (opencl_command_queue_
+  // manager.cpp:56). Without explicit events or a barrier, subsequent
+  // enqueues are NOT guaranteed to wait for this kernel even when they
+  // read the same cl_mem. The pool's ptr-keyed entry is overwritten by
+  // every RMSNorm in the chain (TensorPool reuses the same host buffer
+  // for all per-layer norm outputs), and multiple FC consumers race
+  // against multiple RMSNorm producers. Barrier serializes.
+  clEnqueueBarrierWithWaitList(q, 0, nullptr, nullptr);
 
   // Static one-shot log for first invocation so we can confirm wiring
   // when running a model. NNTR_RESIDENT_RMSNORM_TRIP=1 prints once.
@@ -1635,6 +1667,20 @@ bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
   }
 
   output.setBacking(out_bk.get());
+  // Bump the global resident-quant generation: any downstream FC that
+  // sees this backing pointer in its quant cache must re-quant; the
+  // backing's data has just changed.
+  g_resident_quant_generation.fetch_add(1, std::memory_order_release);
+
+  // OUT-OF-ORDER QUEUE FIX: the ClContext queue uses
+  // CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE (opencl_command_queue_
+  // manager.cpp:56). Without explicit events or a barrier, subsequent
+  // enqueues are NOT guaranteed to wait for this kernel even when they
+  // read the same cl_mem. The pool's ptr-keyed entry is overwritten by
+  // every RMSNorm in the chain (TensorPool reuses the same host buffer
+  // for all per-layer norm outputs), and multiple FC consumers race
+  // against multiple RMSNorm producers. Barrier serializes.
+  clEnqueueBarrierWithWaitList(q, 0, nullptr, nullptr);
 
   static int logged_trip = 0;
   if (!logged_trip && std::getenv("NNTR_RESIDENT_RMSNORM_TRIP") != nullptr) {
