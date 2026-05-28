@@ -1766,6 +1766,271 @@ bool publish_host_fp32_to_backing(const Tensor &output,
   return true;
 }
 
+// =============================================================================
+// Fused RMSNorm + v8c activation quant (paper §3.6 fused-kernel idea).
+// =============================================================================
+namespace {
+struct FusedRmsqScratch {
+  cl_mem gamma_cl = nullptr; // cached fp32 gamma (per gamma name)
+  std::string gamma_name;
+  unsigned int gamma_W = 0;
+};
+static FusedRmsqScratch &fused_rmsq_state() {
+  static FusedRmsqScratch s;
+  return s;
+}
+
+// CPU reference: RMSNorm + v8c-compatible asymmetric quant for one row.
+// Used by NNTR_FUSED_RMSQ_CHECK=1 to validate the GPU kernel produces
+// byte-identical outputs.
+static void fused_rmsq_cpu_ref_row(const float *in_row, const float *gamma,
+                                   float epsilon, unsigned int K,
+                                   std::vector<int8_t> &out_i8,
+                                   float &out_scale, int &out_zp,
+                                   int &out_rs) {
+  out_i8.assign(K, 0);
+  // RMSNorm.
+  double sumsq = 0.0;
+  for (unsigned int k = 0; k < K; k++) sumsq += (double)in_row[k] * in_row[k];
+  const float mean_sq = (float)(sumsq / K);
+  const float inv_rms = 1.0f / std::sqrt(mean_sq + epsilon);
+  // Min/max of normalized.
+  std::vector<float> norm(K);
+  float fmin = 0.0f, fmax = 0.0f;
+  for (unsigned int k = 0; k < K; k++) {
+    const float v = in_row[k] * inv_rms * gamma[k];
+    norm[k] = v;
+    if (v < fmin) fmin = v;
+    if (v > fmax) fmax = v;
+  }
+  const float rmin = fmin < 0.0f ? fmin : 0.0f;
+  const float rmax = fmax > 0.0f ? fmax : 0.0f;
+  const float qmin = -128.0f, qmax = 127.0f;
+  const float range = rmax - rmin;
+  const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+  const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+  const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+  const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+  float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+  if (zp_f < qmin) zp_f = qmin;
+  if (zp_f > qmax) zp_f = qmax;
+  const int zp = (int)std::lrint(zp_f);
+  out_scale = recip;
+  out_zp = zp;
+  int rs = 0;
+  for (unsigned int k = 0; k < K; k++) {
+    int q = (int)std::lrint(norm[k] * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
+    out_i8[k] = (int8_t)q;
+    rs += q;
+  }
+  out_rs = rs;
+}
+} // anonymous namespace
+
+bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
+                                       const Tensor &gamma, float epsilon,
+                                       unsigned int M, unsigned int K,
+                                       const std::string &output_name) {
+  static const bool env_on = std::getenv("NNTR_FUSED_RMSQ") != nullptr;
+  if (!env_on)
+    return false;
+  if (input.getDataType() != ml::train::TensorDim::DataType::FP32 ||
+      gamma.getDataType() != ml::train::TensorDim::DataType::FP32)
+    return false;
+  if (M == 0 || K == 0 || K > 2048u)
+    return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t in_bytes = (size_t)M * K * sizeof(float);
+  const size_t i8_bytes = (size_t)M * K * sizeof(int8_t);
+  const size_t per_row4 = (size_t)M * sizeof(int32_t); // also fp32 alias
+
+  auto &pool = tv::TensorBackingPool::Global();
+  auto ensure_bk = [&](const std::string &name, size_t bytes,
+                       tv::Encoding enc) -> std::shared_ptr<tv::TensorBacking> {
+    auto bk = pool.get(name);
+    if (!bk || bk->bytes() < bytes || bk->encoding() != enc) {
+      cl_int err = CL_SUCCESS;
+      cl_mem buf =
+        clCreateBuffer(ctx, CL_MEM_READ_WRITE, bytes, nullptr, &err);
+      if (err != CL_SUCCESS || !buf) return nullptr;
+      bk = std::make_shared<tv::TensorBacking>(
+        ctx, buf, enc, tv::Layout::ROW_MAJOR, bytes, /*owned=*/true);
+      pool.set(name, bk);
+    }
+    return bk;
+  };
+  auto bk_i8 = ensure_bk(output_name + ":fused_i8", i8_bytes, tv::Encoding::INT8);
+  auto bk_sc = ensure_bk(output_name + ":fused_scale", per_row4, tv::Encoding::FP32);
+  auto bk_zp = ensure_bk(output_name + ":fused_zp", per_row4, tv::Encoding::FP32);
+  auto bk_rs = ensure_bk(output_name + ":fused_rs", per_row4, tv::Encoding::FP32);
+  if (!bk_i8 || !bk_sc || !bk_zp || !bk_rs)
+    return false;
+
+  // Upload input. (No backing reuse for v0 — keep simple.)
+  cl_mem in_cl = nullptr;
+  cl_int err = CL_SUCCESS;
+  in_cl = clCreateBuffer(ctx, CL_MEM_READ_ONLY, in_bytes, nullptr, &err);
+  if (err != CL_SUCCESS || !in_cl) return false;
+  if (clEnqueueWriteBuffer(q, in_cl, CL_TRUE, 0, in_bytes,
+                           input.getData<uint8_t>(), 0, nullptr,
+                           nullptr) != CL_SUCCESS) {
+    clReleaseMemObject(in_cl);
+    return false;
+  }
+
+  // Gamma cache (1 buffer per gamma name).
+  cl_mem gamma_cl = nullptr;
+  {
+    auto &st = fused_rmsq_state();
+    const std::string &gn = gamma.getName();
+    if (st.gamma_cl == nullptr || st.gamma_name != gn || st.gamma_W != K) {
+      if (st.gamma_cl) clReleaseMemObject(st.gamma_cl);
+      cl_int gerr = CL_SUCCESS;
+      st.gamma_cl = clCreateBuffer(ctx, CL_MEM_READ_ONLY,
+                                   (size_t)K * sizeof(float), nullptr, &gerr);
+      if (gerr != CL_SUCCESS || !st.gamma_cl) {
+        clReleaseMemObject(in_cl);
+        st.gamma_cl = nullptr;
+        return false;
+      }
+      if (clEnqueueWriteBuffer(q, st.gamma_cl, CL_TRUE, 0,
+                               (size_t)K * sizeof(float),
+                               gamma.getData<uint8_t>(), 0, nullptr,
+                               nullptr) != CL_SUCCESS) {
+        clReleaseMemObject(in_cl);
+        clReleaseMemObject(st.gamma_cl);
+        st.gamma_cl = nullptr;
+        return false;
+      }
+      st.gamma_name = gn;
+      st.gamma_W = K;
+    }
+    gamma_cl = st.gamma_cl;
+  }
+
+  ClContext::SharedPtrClKernel kp =
+    blas_cc->registerClKernel(fused_rmsnorm_quant_kernel,
+                              "fused_rmsnorm_quant_f32_par");
+  if (!kp) {
+    clReleaseMemObject(in_cl);
+    return false;
+  }
+
+  cl_mem i8_buf = bk_i8->buffer();
+  cl_mem sc_buf = bk_sc->buffer();
+  cl_mem zp_buf = bk_zp->buffer();
+  cl_mem rs_buf = bk_rs->buffer();
+  int arg = 0;
+  const int Mi = (int)M;
+  const int Ki = (int)K;
+  if (!kp->SetKernelArguments(arg++, &in_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &gamma_cl, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &i8_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &sc_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &zp_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &rs_buf, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &epsilon, sizeof(float)) ||
+      !kp->SetKernelArguments(arg++, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ki, sizeof(int))) {
+    clReleaseMemObject(in_cl);
+    return false;
+  }
+
+  constexpr int LWS = 64;
+  const int wg_count[3] = {(int)M * LWS, 1, 1};
+  const int wg_size[3] = {LWS, 1, 1};
+  if (!blas_cc->command_queue_inst_.DispatchCommand(kp, wg_count, wg_size)) {
+    clReleaseMemObject(in_cl);
+    return false;
+  }
+  clEnqueueBarrierWithWaitList(q, 0, nullptr, nullptr);
+
+  // Self-check: full row sweep on first call, single-row summary on
+  // subsequent calls (one per layer). Reads back ALL M*K bytes + the
+  // per-row metadata and compares each row to a CPU reference.
+  if (std::getenv("NNTR_FUSED_RMSQ_CHECK") != nullptr) {
+    static int call = -1;
+    call++;
+    clFinish(q);
+    std::vector<int8_t> gpu_i8((size_t)M * K);
+    std::vector<float> gpu_scale(M);
+    std::vector<int32_t> gpu_zp(M);
+    std::vector<int32_t> gpu_rs(M);
+    clEnqueueReadBuffer(q, i8_buf, CL_TRUE, 0, (size_t)M * K, gpu_i8.data(),
+                        0, nullptr, nullptr);
+    clEnqueueReadBuffer(q, sc_buf, CL_TRUE, 0, (size_t)M * 4,
+                        gpu_scale.data(), 0, nullptr, nullptr);
+    clEnqueueReadBuffer(q, zp_buf, CL_TRUE, 0, (size_t)M * 4,
+                        gpu_zp.data(), 0, nullptr, nullptr);
+    clEnqueueReadBuffer(q, rs_buf, CL_TRUE, 0, (size_t)M * 4,
+                        gpu_rs.data(), 0, nullptr, nullptr);
+    const float *in_data =
+      reinterpret_cast<const float *>(input.getData<uint8_t>());
+    const float *gm_data =
+      reinterpret_cast<const float *>(gamma.getData<uint8_t>());
+    unsigned int total_mismatch = 0, rows_with_mismatch = 0;
+    int worst_diff = 0, worst_row = -1;
+    std::vector<int8_t> cpu_i8;
+    for (unsigned int m = 0; m < M; m++) {
+      float cs = 0.0f;
+      int cz = 0, crs = 0;
+      fused_rmsq_cpu_ref_row(in_data + (size_t)m * K, gm_data, epsilon, K,
+                             cpu_i8, cs, cz, crs);
+      unsigned int row_mismatch = 0;
+      int row_worst = 0;
+      for (unsigned int k = 0; k < K; k++) {
+        const int diff = std::abs((int)gpu_i8[(size_t)m * K + k] - (int)cpu_i8[k]);
+        if (diff > 0) {
+          row_mismatch++;
+          if (diff > row_worst) row_worst = diff;
+        }
+      }
+      // Allow 1 ulp difference in fp32 scale (results from non-bit-
+      // equivalent reduction order in the rmsnorm sum-of-squares pass).
+      // Exact equality for int zp/rs.
+      const float scale_diff = std::fabs(gpu_scale[m] - cs);
+      const float scale_eps = std::max(std::fabs(cs), std::fabs(gpu_scale[m]))
+                              * 1e-6f;
+      const bool meta_match =
+        (scale_diff <= scale_eps) && (gpu_zp[m] == cz) && (gpu_rs[m] == crs);
+      if (row_mismatch > 0 || !meta_match) {
+        rows_with_mismatch++;
+        total_mismatch += row_mismatch;
+        if (row_worst > worst_diff) {
+          worst_diff = row_worst;
+          worst_row = (int)m;
+        }
+        if (call == 0 && rows_with_mismatch <= 3) {
+          std::fprintf(stderr,
+                       "  row %u mismatch: i8_diff_count=%u worst=%d  "
+                       "scale cpu=%.9g gpu=%.9g (ulp=%.2g)  "
+                       "zp cpu=%d gpu=%d  rs cpu=%d gpu=%d\n",
+                       m, row_mismatch, row_worst, cs, gpu_scale[m],
+                       (double)scale_diff,
+                       cz, gpu_zp[m], crs, gpu_rs[m]);
+        }
+      }
+    }
+    std::fprintf(stderr,
+                 "[FUSED-RMSQ-CHECK call=%d] %s M=%u K=%u : "
+                 "rows_bad=%u/%u  total_i8_mismatch=%u  worst_diff=%d (row=%d)\n",
+                 call, output_name.c_str(), M, K, rows_with_mismatch, M,
+                 total_mismatch, worst_diff, worst_row);
+    std::fflush(stderr);
+  }
+
+  clFinish(q); // safe to release input upload
+  clReleaseMemObject(in_cl);
+  return true;
+}
+
 bool readback_backing_to_host(Tensor &t) {
   const tv::TensorBacking *bk = t.getBacking();
   if (bk == nullptr || bk->buffer() == nullptr)
