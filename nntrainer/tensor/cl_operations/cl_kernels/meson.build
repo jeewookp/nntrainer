@@ -12,6 +12,7 @@ cl_op_kernels = [
   'int4_quantize_input.cl',
   'int4_gemm.cl',
   'int8_int4_gemm_v8c.cl',
+  'fused_qkv_rope.cl',
   'two_conv_attention.cl',
   'q4_0_ab_bi_8x4.cl',
   'q6_k_sgemv.cl',

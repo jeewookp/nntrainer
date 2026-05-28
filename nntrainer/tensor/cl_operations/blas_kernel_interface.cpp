@@ -1093,4 +1093,88 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
   return true;
 }
 
+// =============================================================================
+// Step 2 — Fused Q + K + V projection + RoPE + layout transform.
+//
+// Paper reference: arXiv:2505.00232 §3.6, "We crafted a custom kernel to
+// combine rotary embedding with the layout transformations of query (Q),
+// key (K), and value (V) projections."
+//
+// THIS IS THE STEP 2a SKELETON. The host-side dispatch + env gate are wired
+// against the final-form OpenCL kernel signature, but the kernel body is a
+// stub (zero-fills outputs). Returns false in all cases except when
+// NNTR_FUSED_QKV_GPU=1 AND every binding precondition holds — and even then,
+// the actual compute is the stub. Step 2b will replace the kernel body with
+// the real shared-quant-then-3-GEMM-then-RoPE math.
+//
+// The function returns `false` even on stub success: callers (qkv_layer.cpp,
+// once wired) MUST fall back to the existing 3-FC + CPU RoPE path. Step 2d
+// flips the return to `true` once the kernel body is correctness-validated.
+// =============================================================================
+
+namespace {
+
+static bool fused_qkv_env_enabled() {
+  static int cached = -1;
+  if (cached < 0)
+    cached = std::getenv("NNTR_FUSED_QKV_GPU") != nullptr ? 1 : 0;
+  return cached != 0;
+}
+
+} // anonymous namespace
+
+bool fused_qkv_rope_layout_gpu(
+  const Tensor &input, const Tensor &wq, const Tensor &wk, const Tensor &wv,
+  const Tensor &cos_table, const Tensor &sin_table,
+  unsigned int from_pos, unsigned int hq, unsigned int hkv, unsigned int dh,
+  Tensor &q_out, Tensor &k_out, Tensor &v_out) {
+
+  // Step 2a: gate off by default. No-op when the env flag isn't set so this
+  // commit is invisible on every existing run (Qwen3-0.6B baseline, all CIs).
+  if (!fused_qkv_env_enabled())
+    return false;
+
+  // === Precondition checks ===
+  // (Mirroring dotCl_v8c's contract; Step 2b will tighten these once we know
+  // exactly what the kernel body requires.)
+  if (wq.getDataType() != ml::train::TensorDim::DataType::QINT4 ||
+      wk.getDataType() != ml::train::TensorDim::DataType::QINT4 ||
+      wv.getDataType() != ml::train::TensorDim::DataType::QINT4)
+    return false;
+  if (input.getDataType() != ml::train::TensorDim::DataType::FP16)
+    return false; // Step 2a is FP16-only; FP32 path TBD in 2b.
+  if (cos_table.getDataType() != ml::train::TensorDim::DataType::FP16 ||
+      sin_table.getDataType() != ml::train::TensorDim::DataType::FP16)
+    return false;
+  if (hq == 0 || hkv == 0 || dh == 0 || hq % hkv != 0)
+    return false;
+  if (dh % 2 != 0)
+    return false; // RoPE pair rotation needs even head_dim.
+
+  // Step 2a stub: log once on first invocation that the gate fired, then
+  // return false so the caller falls back. This proves the dispatch path
+  // compiled and is reachable without changing model output.
+  static int logged_stub = 0;
+  if (!logged_stub) {
+    logged_stub = 1;
+    std::fprintf(
+      stderr,
+      "[Step2a] fused_qkv_rope_layout_gpu stub reached: "
+      "S=%u hidden=%u hq=%u hkv=%u dh=%u from=%u\n",
+      input.height(),
+      (input.getFormat() == Tformat::NHWC) ? input.channel() : input.width(),
+      hq, hkv, dh, from_pos);
+    std::fflush(stderr);
+  }
+
+  // Silence unused-param warnings while the body is a stub.
+  (void)wq; (void)wk; (void)wv;
+  (void)cos_table; (void)sin_table;
+  (void)q_out; (void)k_out; (void)v_out;
+
+  // Stub: return false so the caller's existing 3-FC + CPU RoPE path runs.
+  // Step 2d flips this once the kernel body produces correct output.
+  return false;
+}
+
 } // namespace nntrainer

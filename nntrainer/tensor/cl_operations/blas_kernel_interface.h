@@ -132,5 +132,44 @@ int aminCl(const Tensor &input);
  */
 bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output);
 
+/**
+ * @brief Fused Q + K + V projection + RoPE + layout transform (paper §3.6 #1).
+ *
+ * Replaces three separate dotCl_v8c dispatches (Q, K, V FCs) plus the CPU
+ * RoPE pass in MHACoreLayer with one OpenCL kernel. Reference paper:
+ * "We crafted a custom kernel to combine rotary embedding with the layout
+ *  transformations of query (Q), key (K), and value (V) projections,
+ *  transforming the query projection from (B,1,S,hq·dh) to
+ *  (B·hkv, S·hq/hkv, dh)." -- arXiv:2505.00232 §3.6
+ *
+ * Step 2a (this commit): skeleton — kernel body is a stub (zero-fills
+ *   outputs); validates that the dispatch + env gate + build wiring is
+ *   sound. Returns false unless NNTR_FUSED_QKV_GPU=1.
+ *
+ * Step 2b (next): replace stub with shared activation quant + 3-pass int4
+ *   GEMM + per-Q/K RoPE + writeback in the OHWI-ready layout.
+ *
+ * @param[in]  input  activation `[B, 1, S, hidden]` FP16 (FP32 → reject in 2a)
+ * @param[in]  wq     Q weight, QINT4 channel-wise, [hidden, hq*dh]
+ * @param[in]  wk     K weight, QINT4 channel-wise, [hidden, hkv*dh]
+ * @param[in]  wv     V weight, QINT4 channel-wise, [hidden, hkv*dh]
+ * @param[in]  cos_table cos LUT `[max_pos, dh]` FP16
+ * @param[in]  sin_table sin LUT `[max_pos, dh]` FP16
+ * @param[in]  from_pos  RoPE position offset (cache index for the first
+ *                       token of this dispatch)
+ * @param[in]  hq, hkv, dh head geometry
+ * @param[out] q_out  `[B, S, hq*dh]` FP16, RoPE applied
+ * @param[out] k_out  `[B, S, hkv*dh]` FP16, RoPE applied
+ * @param[out] v_out  `[B, S, hkv*dh]` FP16, no RoPE (paper convention)
+ * @return true if the fused path executed; false if env not set, shapes
+ *         unsupported, or any binding precondition failed. Caller MUST fall
+ *         back to the existing 3-FC + CPU RoPE path on false.
+ */
+bool fused_qkv_rope_layout_gpu(
+  const Tensor &input, const Tensor &wq, const Tensor &wk, const Tensor &wv,
+  const Tensor &cos_table, const Tensor &sin_table,
+  unsigned int from_pos, unsigned int hq, unsigned int hkv, unsigned int dh,
+  Tensor &q_out, Tensor &k_out, Tensor &v_out);
+
 } // namespace nntrainer
 #endif /* __BLAS_KERNEL_INTERFACE_H__ */

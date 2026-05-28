@@ -71,13 +71,92 @@ Single OpenCL kernel taking post-RMSNorm activation (PHWC4 image2d
 view via `TensorBacking`) + Q/K/V weight backings, producing Q/K/V in
 attention-input layout `[B·hkv, S·hq/hkv, dh]`.
 
-**Output contract (consumed by Step 3 KV cache writer):**
+#### Current path being replaced
 
-- Q tensor: `[B·hkv, S·hq/hkv, dh]`, packed PHWC4-style if possible
-- K tensor: `[B·hkv, S, dh]` — direct OHWI-write-friendly form
-- V tensor: `[B·hkv, dh, S]` — direct OHWI_T-write-friendly form
+Today (verified at `dab3e48a`):
 
-Replaces 3 FC dispatches + separate CPU RoPE with 1 kernel.
+| Pass | Where | What |
+|---|---|---|
+| Q FC | `qkv_layer.cpp:178` → `dotCl_v8c` | `[S,hidden] · Wq → [S, hq·dh]` FP16 |
+| K FC | same | `[S,hidden] · Wk → [S, hkv·dh]` FP16 |
+| V FC | same | `[S,hidden] · Wv → [S, hkv·dh]` FP16 |
+| RoPE Q | `mha_core.cpp:978/1031` → `apply_rotary_emb_tensor_v2` (2208) → `compute_rotary_emb_value` | in-place on Q, CPU NEON, uses cached cos/sin table |
+| RoPE K | `mha_core.cpp:980/1035` | same, on K (in-place or to write view) |
+| V copy | `mha_core.cpp:1045` | `copyData` only — no rotation (paper convention) |
+
+3 GPU dispatches + CPU pass for RoPE + CPU pass for V copy = 5
+synchronization points per attention block. v8c GEMM hits 87% peak in
+isolation but the e2e cost is dominated by inter-op overhead.
+
+#### Qwen3-0.6B target shapes
+
+- hidden = 1024, num_heads_q (hq) = 16, num_heads_kv (hkv) = 8,
+  head_dim (dh) = 128, GQA_SIZE (hq/hkv) = 2
+- Q FC: K=1024, N=hq·dh=2048
+- K FC: K=1024, N=hkv·dh=1024
+- V FC: K=1024, N=hkv·dh=1024
+- RoPE: cos/sin table `[max_position, head_dim]` FP16, pair-rotation
+  with `half_ = head_dim/2 = 64`. Cached in
+  `MHACoreLayer::rope_freq_cache` (static, lifetime = process).
+
+#### Kernel design (first cut)
+
+Single OpenCL kernel `fused_qkv_rope_layout` that:
+
+1. **Quantize activation once.** Activation `[1, S, 1024]` FP16 → int8
+   per-row with FP32 scale + int32 zero-point. Same code path as v8c's
+   quant_kernel, but only runs ONCE (today: 3×, once per FC).
+
+2. **Three int4×int8 GEMM passes inline.** Each pass reads from the
+   shared int8 activation buffer + its own QINT4 weight image2d view
+   (existing v8c weight backings, already cached). Writes intermediate
+   int32 output per output row.
+
+3. **Dequantize each output inline.** Multiply by activation scale ·
+   weight scale per row, subtract row-sum corrections, produce FP16
+   per-element output.
+
+4. **Apply RoPE on Q and K.** For each `(s, head, dim_pair_idx)` of Q
+   and K, load cos[from+s, dim_pair_idx] and sin[from+s, dim_pair_idx]
+   from `__constant`-pinned tables, do pair-wise rotation
+   `(x0, x1) ← (x0·cos − x1·sin, x0·sin + x1·cos)`. V skipped.
+
+5. **Layout transform on Q only.** Q output is the only one that
+   needs a non-trivial reshape: from `[S, hq·dh]` row-major to
+   `[hkv, S·(hq/hkv), dh]` = `[8, S·2, 128]` for Qwen3. K and V come
+   out as `[S, hkv·dh]` which is already the OHWI weight-form `[S, dh]`
+   per head — just a re-interpretation, no shuffle.
+
+#### Output contract (consumed by Step 3 KV cache writer)
+
+- Q tensor: `[B·hkv, S·hq/hkv, dh]`, packed PHWC4 image2d-ready.
+- K tensor: `[B, S, hkv·dh]` row-major, byte-compatible with OHWI
+  `[hkv, S, dh]` view (paper §3.8 K-cache form).
+- V tensor: `[B, S, hkv·dh]` row-major. Step 3 will need to physically
+  transpose to `[B, hkv, dh, S]` (OHWI_T form) at cache-write time, OR
+  this kernel can produce it in OHWI_T directly. Decision deferred to
+  Step 3.
+
+#### Plumbing plan (this step's commits)
+
+- **2a (skeleton):** new file `nntrainer/tensor/cl_operations/blas_kernels/fused_qkv_rope.cl`
+  with kernel body stub; `blas_kernel_interface.{h,cpp}` exposes
+  `fused_qkv_rope_layout_gpu(input, wq, wk, wv, cos_tbl, sin_tbl,
+  from_pos, q_out, k_out, v_out)`. Env-gated `NNTR_FUSED_QKV_GPU=1`;
+  default returns `false` to fall back to existing 3-FC path.
+- **2b (kernel body):** flesh out the quant → 3-GEMM → dequant → RoPE
+  → writeback. Unit-tested in isolation against synthetic input.
+- **2c (validation):** synthetic-input harness producing reference Q/K/V
+  via current 3-FC + CPU RoPE pipeline; compare element-wise with
+  fused kernel output, gate on relL2 < 0.5%.
+- **2d (live wire):** modify `qkv_layer.cpp:178` to call
+  `fused_qkv_rope_layout_gpu` when env-gated, fall through to
+  `input_step.dot(Weights, Outputs)` + current RoPE otherwise. Also
+  needs to suppress mha_core's RoPE call (lines 978/980/1031/1035)
+  when the fused path took over — likely a flag in
+  `MHACoreLayer::incremental_forwarding`.
+- **2e (TPS measurement):** Qwen3-0.6B prefill TPS on SD8 Elite.
+  Expected ~700 prefill / ~12 decode (closes ~half the prefill gap).
 
 **Exit criterion:** bit-equivalent (relL2 < 0.5%) vs current pipeline.
 
