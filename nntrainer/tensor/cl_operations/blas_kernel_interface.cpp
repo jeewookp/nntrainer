@@ -447,6 +447,22 @@ struct V8cScratch {
   size_t act_zp_bytes = 0;
   cl_mem y_fp16 = nullptr;
   size_t y_fp16_bytes = 0;
+
+  // Step 2b.0 shared-quant cache (paper §3.6 fused-quant motivation, host-side).
+  // Qwen3 layer graph dispatches three consecutive dotCl_v8c calls with the
+  // SAME input pointer (wq/wk/wv all read the same post-RMSNorm activation),
+  // and similarly gate/up MLP FCs share their input. After the first call
+  // populates act_i8/act_scale/act_zp/act_rs for that input, the next 2-of-3
+  // calls can skip the host→device upload AND the quant kernel entirely.
+  //
+  // Cache key: (input data pointer, M, K, M_pad, dtype). Pointer identity is
+  // sufficient within one forward pass since the layer graph executes
+  // serially — the input buffer isn't aliased between dispatches.
+  const void *last_quant_in_ptr = nullptr;
+  unsigned int last_quant_M = 0;
+  unsigned int last_quant_K = 0;
+  unsigned int last_quant_M_pad = 0;
+  int last_quant_dtype = -1;
 };
 static V8cScratch &v8c_scratch() {
   static V8cScratch s;
@@ -692,41 +708,68 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
                  : (M <= 32)  ? 2
                  : (M <= 256) ? 3
                               : 4;
-  if (prof_enabled) T0 = NOW();
-  if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE, 0, (size_t)M * K * act_elem,
-                           input.getData<uint8_t>(), 0, nullptr,
-                           nullptr) != CL_SUCCESS)
-    return false;
-  if (M_pad > M) {
-    const size_t pad_bytes = (size_t)(M_pad - M) * K * act_elem;
-    std::vector<uint8_t> zeros(pad_bytes, 0);
-    if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE,
-                             (size_t)M * K * act_elem, pad_bytes, zeros.data(),
-                             0, nullptr, nullptr) != CL_SUCCESS)
+
+  // Step 2b.0 shared-quant cache check (paper §3.6 fused-quant insight,
+  // host-side). If this dotCl_v8c was called with the same (input ptr,
+  // M, K, M_pad, dtype) as the most recent call, sc.act_i8/scale/zp/rs are
+  // already correctly populated — skip both the host→device write AND the
+  // quant kernel. Hits fire on the wq→wk and wq→wv legs of Qwen3 QKV (and
+  // gate→up of the MLP block), where the input activation is literally the
+  // same tensor across multiple FC dispatches.
+  const int cur_dtype =
+    (input.getDataType() == ml::train::TensorDim::DataType::FP16) ? 1 : 0;
+  const void *cur_in_ptr = input.getData<uint8_t>();
+  const bool quant_cache_hit =
+    sc.last_quant_in_ptr != nullptr &&
+    sc.last_quant_in_ptr == cur_in_ptr && sc.last_quant_M == M &&
+    sc.last_quant_K == K && sc.last_quant_M_pad == M_pad &&
+    sc.last_quant_dtype == cur_dtype;
+
+  if (!quant_cache_hit) {
+    if (prof_enabled) T0 = NOW();
+    if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE, 0, (size_t)M * K * act_elem,
+                             cur_in_ptr, 0, nullptr, nullptr) != CL_SUCCESS)
       return false;
-  }
-  if (prof_enabled) {
-    clFinish(q);
-    T1 = NOW();
-    prof.bin[prof_bin].write_ns += NS(T1, T0);
-    prof.bin[prof_bin].write_bytes += (long long)M * K * act_elem;
+    if (M_pad > M) {
+      const size_t pad_bytes = (size_t)(M_pad - M) * K * act_elem;
+      std::vector<uint8_t> zeros(pad_bytes, 0);
+      if (clEnqueueWriteBuffer(q, sc.act_in, CL_FALSE,
+                               (size_t)M * K * act_elem, pad_bytes,
+                               zeros.data(), 0, nullptr, nullptr) != CL_SUCCESS)
+        return false;
+    }
+    if (prof_enabled) {
+      clFinish(q);
+      T1 = NOW();
+      prof.bin[prof_bin].write_ns += NS(T1, T0);
+      prof.bin[prof_bin].write_bytes += (long long)M * K * act_elem;
+    }
   }
 
   try {
     // (c) fp→int8 asymmetric act quant + zero-point + row_sum over M_pad rows.
     //     Padded rows map to (scale=1, zp=0, q=0, row_sum=0), so they
     //     contribute zero in the GEMM and don't pollute valid rows.
-    if (prof_enabled) T0 = NOW();
-    if (input.getDataType() == ml::train::TensorDim::DataType::FP16)
-      quantize_act_v8c_fp16_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_zp,
-                               sc.act_rs, M_pad, K);
-    else
-      quantize_act_v8c_fp32_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_zp,
-                               sc.act_rs, M_pad, K);
-    if (prof_enabled) {
-      clFinish(q);
-      T1 = NOW();
-      prof.bin[prof_bin].quant_ns += NS(T1, T0);
+    //     Step 2b.0: skipped entirely on cache hit (see above).
+    if (!quant_cache_hit) {
+      if (prof_enabled) T0 = NOW();
+      if (input.getDataType() == ml::train::TensorDim::DataType::FP16)
+        quantize_act_v8c_fp16_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_zp,
+                                 sc.act_rs, M_pad, K);
+      else
+        quantize_act_v8c_fp32_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_zp,
+                                 sc.act_rs, M_pad, K);
+      if (prof_enabled) {
+        clFinish(q);
+        T1 = NOW();
+        prof.bin[prof_bin].quant_ns += NS(T1, T0);
+      }
+      // Update cache key only after a successful quant.
+      sc.last_quant_in_ptr = cur_in_ptr;
+      sc.last_quant_M = M;
+      sc.last_quant_K = K;
+      sc.last_quant_M_pad = M_pad;
+      sc.last_quant_dtype = cur_dtype;
     }
 
     // === Per-call CPU vs GPU quant equality check ===
