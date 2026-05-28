@@ -73,21 +73,33 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // dispatch). Output backing is published; host data is overwritten
   // with the GPU result via clEnqueueReadBuffer so CPU consumers stay
   // bit-equal to GPU consumers.
-  // Fused RMSNorm + v8c-quant path. Always runs alongside the CPU
-  // RMSNorm when both inputs are FP32 — produces 4 GPU buffers in the
-  // pool under '<out.name>:fused_{i8,scale,zp,rs}' AND under
-  // 'ptr:<out_host>:fused_{i8,scale,zp,rs}' so v8c FC can find them by
-  // host data ptr. NNTR_FUSED_RMSQ_CHECK=1 also runs a CPU reference
-  // comparison.
+  // Fused RMSNorm + v8c-quant path. Always runs when env is on and dtype
+  // matches — produces 4 GPU buffers in the pool keyed by (output_name |
+  // ptr:out_host) so v8c FC can find them and skip its own activation
+  // quant (paper §3.6 #2). If the consumer wire is also on, the CPU
+  // RMSNorm below is redundant and can be skipped.
+  bool fused_ok = false;
   if (b_size == 1 &&
       in.getDataType() == ml::train::TensorDim::DataType::FP32 &&
       gamma.getDataType() == ml::train::TensorDim::DataType::FP32) {
     const auto &d = in_step_dim;
     const void *out_host = out.getData<uint8_t>();
-    nntrainer::fused_rmsnorm_quant_resident_fp32(
+    fused_ok = nntrainer::fused_rmsnorm_quant_resident_fp32(
       in, gamma, epsilon, d.batch() * d.channel() * d.height(), d.width(),
       out.getName(), out_host);
   }
+  // NOTE: Even when fused-consume is wired up, the CPU RMSNorm result
+  // turns out to be read by SOMETHING downstream we haven't fully
+  // mapped (skipping it produces drift-amplified garbage). Most
+  // likely candidates: a TensorPool reuse where rmsnorm's `out`
+  // memory aliases a later layer's buffer that gets re-read before
+  // being overwritten, or a debug/profile path that reads it. Until
+  // that producer/consumer map is verified, leave the CPU RMSNorm on
+  // unconditionally. CPU cost is ~5 ms/prefill so the perf headroom
+  // is small anyway; the real win lies in the host-upload elimination
+  // (resident-input mode in fused_rmsnorm_quant_resident_fp32, fires
+  // when the producer of this layer's input publishes a backing).
+  (void)fused_ok;
 
   bool gpu_handled = false;
   if (b_size == 1 && std::getenv("NNTR_RMSNORM_GPU") != nullptr) {

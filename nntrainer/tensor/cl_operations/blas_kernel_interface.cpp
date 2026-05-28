@@ -829,20 +829,21 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     fr_rs_bk = pool.get(k4);
     const size_t need_i8 = (size_t)M * K;
     const size_t need_meta = (size_t)M * 4;
+    static int hits = 0, misses = 0;
     if (fr_i8_bk && fr_sc_bk && fr_zp_bk && fr_rs_bk &&
         fr_i8_bk->bytes() >= need_i8 && fr_sc_bk->bytes() >= need_meta &&
         fr_zp_bk->bytes() >= need_meta && fr_rs_bk->bytes() >= need_meta) {
       fused_rmsq_hit = true;
+      hits++;
       act_i8_arg = fr_i8_bk->buffer();
       act_scale_arg = fr_sc_bk->buffer();
       act_zp_arg = fr_zp_bk->buffer();
       act_rs_arg = fr_rs_bk->buffer();
-      static int trip = 0;
-      if (!trip && std::getenv("NNTR_V8C_CONSUME_FUSED_RMSQ_TRIP") != nullptr) {
-        trip = 1;
+      if (std::getenv("NNTR_V8C_CONSUME_FUSED_RMSQ_TRIP") != nullptr &&
+          (hits <= 6 || hits % 60 == 0)) {
         std::fprintf(stderr,
-                     "[V8C-FUSED-RMSQ] first hit: input.name=%s M=%u K=%u\n",
-                     input.getName().c_str(), M, K);
+                     "[V8C-FUSED-RMSQ] HIT #%d: input.name=%s M=%u K=%u\n",
+                     hits, input.getName().c_str(), M, K);
         std::fflush(stderr);
       }
       // Note: M_pad > M case would mean the fused kernel's output is too
@@ -855,6 +856,19 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
         act_scale_arg = sc.act_scale;
         act_zp_arg = sc.act_zp;
         act_rs_arg = sc.act_rs;
+      }
+    } else {
+      misses++;
+      if (std::getenv("NNTR_V8C_CONSUME_FUSED_RMSQ_TRIP") != nullptr &&
+          misses <= 6) {
+        std::fprintf(stderr,
+                     "[V8C-FUSED-RMSQ] MISS #%d: input.name=%s M=%u K=%u  "
+                     "i8=%d sc=%d zp=%d rs=%d  i8_sz=%zu (need %zu)\n",
+                     misses, input.getName().c_str(), M, K,
+                     fr_i8_bk ? 1 : 0, fr_sc_bk ? 1 : 0,
+                     fr_zp_bk ? 1 : 0, fr_rs_bk ? 1 : 0,
+                     fr_i8_bk ? fr_i8_bk->bytes() : 0ul, need_i8);
+        std::fflush(stderr);
       }
     }
   }
@@ -1958,16 +1972,52 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
     pool.set(k, bk_rs);
   }
 
-  // Upload input. (No backing reuse for v0 — keep simple.)
+  // Resolve input: prefer a TensorBacking from the input tensor (or the
+  // pool keyed by host data ptr). Falls back to a fresh host upload.
   cl_mem in_cl = nullptr;
-  cl_int err = CL_SUCCESS;
-  in_cl = clCreateBuffer(ctx, CL_MEM_READ_ONLY, in_bytes, nullptr, &err);
-  if (err != CL_SUCCESS || !in_cl) return false;
-  if (clEnqueueWriteBuffer(q, in_cl, CL_TRUE, 0, in_bytes,
-                           input.getData<uint8_t>(), 0, nullptr,
-                           nullptr) != CL_SUCCESS) {
-    clReleaseMemObject(in_cl);
-    return false;
+  cl_mem in_upload_owned = nullptr;
+  std::shared_ptr<tv::TensorBacking> in_bk_pool_strong;
+  if (const tv::TensorBacking *in_bk = input.getBacking();
+      in_bk != nullptr && in_bk->encoding() == tv::Encoding::FP32 &&
+      in_bk->bytes() >= in_bytes) {
+    in_cl = in_bk->buffer();
+  } else {
+    const void *in_data_ptr = input.getData<uint8_t>();
+    char key_buf[64];
+    std::snprintf(key_buf, sizeof(key_buf), "ptr:%p", in_data_ptr);
+    in_bk_pool_strong = pool.get(std::string(key_buf));
+    if (in_bk_pool_strong &&
+        in_bk_pool_strong->encoding() == tv::Encoding::FP32 &&
+        in_bk_pool_strong->bytes() >= in_bytes) {
+      in_cl = in_bk_pool_strong->buffer();
+    }
+  }
+  if (in_cl == nullptr) {
+    cl_int err = CL_SUCCESS;
+    in_upload_owned =
+      clCreateBuffer(ctx, CL_MEM_READ_ONLY, in_bytes, nullptr, &err);
+    if (err != CL_SUCCESS || !in_upload_owned) return false;
+    if (clEnqueueWriteBuffer(q, in_upload_owned, CL_TRUE, 0, in_bytes,
+                             input.getData<uint8_t>(), 0, nullptr,
+                             nullptr) != CL_SUCCESS) {
+      clReleaseMemObject(in_upload_owned);
+      return false;
+    }
+    in_cl = in_upload_owned;
+  }
+  // First-trip diagnostic so we know whether the resident path fired.
+  if (std::getenv("NNTR_FUSED_RMSQ_TRIP") != nullptr) {
+    static int trip = 0;
+    if (!trip) {
+      trip = 1;
+      std::fprintf(stderr,
+                   "[FUSED-RMSQ] first call: name=%s M=%u K=%u  "
+                   "input from %s\n",
+                   output_name.c_str(), M, K,
+                   in_upload_owned == nullptr ? "BACKING (resident)"
+                                              : "HOST upload");
+      std::fflush(stderr);
+    }
   }
 
   // Gamma cache (1 buffer per gamma name).
@@ -1981,7 +2031,7 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
       st.gamma_cl = clCreateBuffer(ctx, CL_MEM_READ_ONLY,
                                    (size_t)K * sizeof(float), nullptr, &gerr);
       if (gerr != CL_SUCCESS || !st.gamma_cl) {
-        clReleaseMemObject(in_cl);
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
         st.gamma_cl = nullptr;
         return false;
       }
@@ -1989,7 +2039,7 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
                                (size_t)K * sizeof(float),
                                gamma.getData<uint8_t>(), 0, nullptr,
                                nullptr) != CL_SUCCESS) {
-        clReleaseMemObject(in_cl);
+        if (in_upload_owned) clReleaseMemObject(in_upload_owned);
         clReleaseMemObject(st.gamma_cl);
         st.gamma_cl = nullptr;
         return false;
@@ -2004,7 +2054,7 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
     blas_cc->registerClKernel(fused_rmsnorm_quant_kernel,
                               "fused_rmsnorm_quant_f32_par");
   if (!kp) {
-    clReleaseMemObject(in_cl);
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
     return false;
   }
 
@@ -2024,7 +2074,7 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
       !kp->SetKernelArguments(arg++, &epsilon, sizeof(float)) ||
       !kp->SetKernelArguments(arg++, &Mi, sizeof(int)) ||
       !kp->SetKernelArguments(arg++, &Ki, sizeof(int))) {
-    clReleaseMemObject(in_cl);
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
     return false;
   }
 
@@ -2032,7 +2082,7 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
   const int wg_count[3] = {(int)M * LWS, 1, 1};
   const int wg_size[3] = {LWS, 1, 1};
   if (!blas_cc->command_queue_inst_.DispatchCommand(kp, wg_count, wg_size)) {
-    clReleaseMemObject(in_cl);
+    if (in_upload_owned) clReleaseMemObject(in_upload_owned);
     return false;
   }
   clEnqueueBarrierWithWaitList(q, 0, nullptr, nullptr);
@@ -2111,8 +2161,10 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
     std::fflush(stderr);
   }
 
-  clFinish(q); // safe to release input upload
-  clReleaseMemObject(in_cl);
+  if (in_upload_owned) {
+    clFinish(q); // safe to release input upload
+    clReleaseMemObject(in_upload_owned);
+  }
   return true;
 }
 
