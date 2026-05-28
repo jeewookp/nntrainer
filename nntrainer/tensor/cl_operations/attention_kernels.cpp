@@ -193,9 +193,18 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
       return false;
     const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
     const size_t mx = (M + TM_QK - 1) / TM_QK;
-    std::array<size_t, 3> gws = {nx, mx, num_heads_Q};
+    // Pack WIs into Adreno-sized workgroups so the 64-wide subgroup is
+    // actually fed. Without an explicit lws the driver defaults to 1
+    // WI per WG, which on Adreno 830 leaves the wave/subgroup empty
+    // and pegs the kernel to ~1/64 of compute peak. Pad gws[0] up to a
+    // multiple of LWS_QK[0]; the kernel's `if (m0 >= M || n0 >= N_kv)
+    // return` handles the padded slots harmlessly.
+    constexpr size_t LWS_QK_X = 64;
+    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   // ---- K2: row softmax over N_kv ----
@@ -241,9 +250,15 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
       return false;
     const size_t dx = (head_dim + TD_SV - 1) / TD_SV;
     const size_t mx = (M + TM_SV - 1) / TM_SV;
-    std::array<size_t, 3> gws = {dx, mx, num_heads_Q};
+    // Same fix as QK: explicit lws to fill the 64-wide Adreno subgroup
+    // instead of relying on driver-default lws=1. Kernel has bounds
+    // check so padded slots harmlessly return.
+    constexpr size_t LWS_SV_X = 64;
+    const size_t dx_pad = ((dx + LWS_SV_X - 1) / LWS_SV_X) * LWS_SV_X;
+    std::array<size_t, 3> gws = {dx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_SV_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   if (svm_inputs) {
@@ -366,9 +381,12 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
       return false;
     const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
     const size_t mx = (M + TM_QK - 1) / TM_QK;
-    std::array<size_t, 3> gws = {nx, mx, num_heads_Q};
+    constexpr size_t LWS_QK_X = 64;
+    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   // ---- K2: row softmax over N_kv (shared with fp16 path) ----
@@ -418,9 +436,15 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
       return false;
     const size_t dx = (head_dim + TD_SV - 1) / TD_SV;
     const size_t mx = (M + TM_SV - 1) / TM_SV;
-    std::array<size_t, 3> gws = {dx, mx, num_heads_Q};
+    // Same fix as QK: explicit lws to fill the 64-wide Adreno subgroup
+    // instead of relying on driver-default lws=1. Kernel has bounds
+    // check so padded slots harmlessly return.
+    constexpr size_t LWS_SV_X = 64;
+    const size_t dx_pad = ((dx + LWS_SV_X - 1) / LWS_SV_X) * LWS_SV_X;
+    std::array<size_t, 3> gws = {dx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_SV_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   if (svm_inputs) {
