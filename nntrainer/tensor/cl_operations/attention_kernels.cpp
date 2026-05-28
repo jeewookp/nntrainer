@@ -623,4 +623,70 @@ bool two_conv_attention_prefill_f16_img_cl(
   return true;
 }
 
+// =============================================================================
+// Step #1 (skeleton) of the GPU mha migration. flash-attention single-
+// kernel prefill. See attention_kernels.h declaration + flash_attention.cl
+// for the kernel-side design + memory budget. This wrapper is the host
+// dispatch point that mha_core.cpp will call once Step #2 fills in the
+// kernel body.
+//
+// Step status:
+//   - .cl file is registered, kernel compiles into the registry.
+//   - this wrapper validates shapes, sets up cl_mem bindings, dispatches
+//     the kernel, and reads the result back. Body of the kernel is a
+//     zero-fill stub, so the output is meaningless. Wrapper returns
+//     `false` regardless of dispatch outcome so the caller's existing
+//     CPU path runs. The point is to exercise the build + symbol +
+//     env-gate plumbing.
+// =============================================================================
+namespace {
+
+static bool gpu_mha_env_enabled() {
+  static int cached = -1;
+  if (cached < 0)
+    cached = std::getenv("NNTR_GPU_MHA") != nullptr ? 1 : 0;
+  return cached != 0;
+}
+
+} // anonymous namespace
+
+bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
+                                    const uint16_t *K_host,
+                                    const uint16_t *V_host,
+                                    uint16_t *O_host, unsigned int M,
+                                    unsigned int N_kv,
+                                    unsigned int num_heads_Q,
+                                    unsigned int num_heads_KV,
+                                    unsigned int head_dim, bool causal,
+                                    bool svm_inputs) {
+  if (!gpu_mha_env_enabled())
+    return false;
+  if (num_heads_Q == 0 || num_heads_KV == 0 || head_dim == 0 || M == 0 ||
+      N_kv == 0)
+    return false;
+  if (num_heads_Q % num_heads_KV != 0)
+    return false;
+
+  // Step 1 stub log so we can confirm the dispatch path is reachable
+  // on real device traffic when NNTR_GPU_MHA=1 + NNTR_GPU_MHA_TRIP=1.
+  static int logged_trip = 0;
+  if (!logged_trip && std::getenv("NNTR_GPU_MHA_TRIP") != nullptr) {
+    logged_trip = 1;
+    std::fprintf(stderr,
+                 "[GPU-MHA] flash_attention stub reached: M=%u N_kv=%u "
+                 "hq=%u hkv=%u d=%u causal=%d svm=%d\n",
+                 M, N_kv, num_heads_Q, num_heads_KV, head_dim,
+                 (int)causal, (int)svm_inputs);
+    std::fflush(stderr);
+  }
+
+  // Silence unused-param warnings while body is a stub.
+  (void)Q_host; (void)K_host; (void)V_host; (void)O_host;
+
+  // Stub: return false so the caller's existing CPU mha path runs.
+  // Step #2 of the GPU mha plan will set up the cl_mem bindings,
+  // dispatch the real kernel, and flip the return to true.
+  return false;
+}
+
 } // namespace nntrainer

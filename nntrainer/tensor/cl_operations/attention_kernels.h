@@ -126,5 +126,38 @@ bool two_conv_attention_prefill_f16_img_cl(
   uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
   unsigned int num_heads_KV, unsigned int head_dim, bool causal);
 
+/// Single-kernel flash-attention prefill (paper §3.6 fusion +
+/// Dao et al. 2022 online softmax). Replaces the three-kernel
+/// two_conv_attention pipeline with one kernel that does QK · softmax
+/// · V·S inline using local-memory K/V tiles + per-row online softmax
+/// accumulators. Eliminates the global scores[H, M, N_kv] tensor
+/// (~6.7 MB bandwidth per prefill on Qwen3-0.6B at S=282) and avoids
+/// the VGPR spill that makes the 3-kernel path slower than CPU.
+///
+///   Q: [M, num_heads_Q * head_dim] fp16 row-major
+///   K: [N_kv, num_heads_KV * head_dim] fp16
+///   V: [N_kv, num_heads_KV * head_dim] fp16
+///   O: [M, num_heads_Q * head_dim] fp16
+/// GQA is resolved inside the kernel: head_kv = head_q / (num_heads_Q
+/// / num_heads_KV).
+///
+/// Env-gated by NNTR_GPU_MHA=1. Returns false on shape mismatch or
+/// when the env is unset; caller falls back to CPU mha. Step #1 of
+/// the everything-on-GPU plan (see TENSOR_VIRTUALIZATION_PLAN.md).
+///
+/// Step status: SKELETON. Body is a zero-fill stub; the host wrapper
+/// always returns false so the caller's existing CPU path runs. The
+/// real flash-attention body lands once the dispatch path is
+/// proven and the synthetic-input validation harness is in place.
+bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
+                                    const uint16_t *K_host,
+                                    const uint16_t *V_host,
+                                    uint16_t *O_host, unsigned int M,
+                                    unsigned int N_kv,
+                                    unsigned int num_heads_Q,
+                                    unsigned int num_heads_KV,
+                                    unsigned int head_dim, bool causal,
+                                    bool svm_inputs = false);
+
 } // namespace nntrainer
 #endif /* __ATTENTION_KERNELS_H__ */

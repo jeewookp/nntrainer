@@ -31,7 +31,106 @@ kernels.
 | §3.8 | K: OHWI `[cache_size, dh]` (Kᵀ form); V: reversed `[dh, cache_size]` | Row-major `[B,1,S,kv_width]` (`kv_cache_manager.cpp:39–48`); helpers in tree but unused | Layout reorder missing (Step 3) |
 | Residency | Implicit GPU-resident activations between fused ops | Every v8c FC output `clEnqueueReadBuffer`'d to host (`blas_kernel_interface.cpp:1033–1035`) | Enabled by Steps 1e+2+4 |
 
-## Revised: segment-based end-to-end GPU residency plan (2026-05-28)
+## Re-revised: everything-on-GPU plan (2026-05-28)
+
+The earlier segment-based plan (still useful as the chaining strategy,
+preserved below) tried to convert *chains* of adjacent ops together to
+avoid host materialize in between. That approach hit a hard wall in
+Segment A.2 (`8a53efcf`): the GPU RMSNorm kernel's ~1e-6 reduction-
+order drift from CPU NEON, amplified by v8c's int8 quantization
+boundary across 28 layers, produced garbled output. The
+CPU-norm+publish workaround is bit-exact but TPS-regressing because
+producer side stays CPU.
+
+**Conclusion:** mixed CPU/GPU numerics cannot coexist for this stack.
+Either all-CPU or all-GPU within the residual chain. Pivot:
+
+> **Move EVERY op onto GPU, then chain via TensorBacking. The chain
+> uses one numerics system (GPU). Final model output may differ
+> bit-for-bit from CPU baseline but stays coherent because every
+> op shares the same drift.**
+
+This is the architectural goal the user has set since Session 1.
+Plan is reorganized by op-level migration priority (largest CPU
+wedge first, then dependencies).
+
+### Op-level migration priority (current time costs, 950 ms prefill)
+
+| # | Op | CPU ms | Existing kernel | New work | Est. effort |
+|---|---|---|---|---|---|
+| **1** | **QK · softmax · V·S (mha core)** | **~150** | `two_conv_attention.cl` (3-kernel, VGPR-spilled, slower than CPU) | **single-kernel flash-style fusion** | **3-4 wk** |
+| 2 | RoPE on Q, K | ~20 | `rotary_emb.cl` ✓ (not wired live) | wire + take cl_mem inputs | 1 wk |
+| 3 | KV cache write + int8 quant | ~30 | none | new kernel | 1-2 wk |
+| 4 | RMSNorm (3 sites: attn_norm, ffn_norm, output_norm) | ~10 | `rmsnorm.cl` exists (numeric drift) | fused with residual (paper §3.6 #2) — own numerics | 1-2 wk |
+| 5 | residual add (×2 per layer) | ~15 | `addition.cl` ✓ (not wired) | wire + fused with norm (#4) | 0.5 wk |
+| 6 | SwiGLU (gate × σ(gate) × up) | ~19 | `swiglu.cl` ✓ (not wired) | wire + take cl_mem | 0.5 wk |
+| 7 | Async FC readback (drop `CL_TRUE`) | ~50 | n/a (queue restructure) | event-chain + barrier-with-wait-list | 1 wk |
+| 8 | Embedding lookup | ~10 | none | new gather kernel | 1 wk |
+| 9 | LM head (FC projection to vocab) | ~5 | v8c reusable | wire | 0.5 wk |
+| 10 | q_norm / k_norm (small RMSNorm per head_dim) | ~5 | `rmsnorm.cl` variant | similar to #4 | 0.5 wk |
+
+**Total ~3 months.** Expected end state: prefill ~600-800 TPS,
+decode ~50-70 TPS. Beyond that, paper-class (~4900/140) requires
+command-graph forward (separate execution-model rewrite).
+
+### Why GPU attention (#1) first
+
+- Largest single wedge (~150 ms, but reaches ~209 ms in some
+  measurements when counting RoPE + KV write inside the same CPU
+  island).
+- Unblocks the entire attention chain to be GPU: once mha is GPU,
+  RoPE/KV write/QK·softmax·VS are all in cl_mem; surrounding wq/wk/wv
+  outputs (already GPU) can feed directly without host materialize.
+- Existing `two_conv_attention.cl` is the wrong design (3 separate
+  kernels + global intermediate scores). Flash-attention-style
+  single kernel solves both the perf and the residency problem.
+
+### Design constraints for GPU attention single-kernel
+
+- Adreno 830: 32 KB local memory budget per workgroup (tight).
+- VGPR per work-item: limited; full FP32 score row per WI is
+  expensive. Use tile-based per-block accumulation with online
+  softmax (Dao et al. 2022 flash attention pattern).
+- Subgroup size: 64 (qcom "half" of natural 128).
+- Per-attention-block sizing for Qwen3-0.6B:
+  - 1 workgroup per (head, query-row) pair
+  - head_dim = 128, num_heads_q = 16, num_heads_kv = 8 (GQA=2)
+  - prefill: max M=282 queries × M=282 keys per head
+  - decode: M=1 query × M_cache keys
+- KV cache currently row-major `[B, 1, S, kv_width]`. New kernel
+  reads via that layout for now; reordering to OHWI (paper §3.8)
+  is a separate downstream win.
+
+### Numerical-parity strategy
+
+Once GPU attention lands, the chain CPU→GPU→CPU→GPU→... is broken
+by replacing each remaining CPU op with its GPU variant in priority
+order (table above). At each replacement step, the model output
+will diverge from CPU baseline but should stay coherent (uniform
+GPU drift, not mixed). Acceptance check at each step: run the
+prompt, verify output looks like reasonable text (Korean/English
+sentences, not random Unicode).
+
+### Workspace flag conventions
+
+Each migration uses an env gate so it can be toggled independently
+during development:
+- `NNTR_GPU_MHA=1` — GPU attention path (Task #16)
+- `NNTR_GPU_ROPE=1` — wire `rotary_emb.cl`
+- `NNTR_GPU_KV_WRITE=1` — new KV write/quant kernel
+- `NNTR_GPU_RMSNORM=1` — fused RMSNorm+residual path
+- (etc.)
+
+When all flags are ON, the chain is fully GPU. Until then,
+each flag enables one piece; CPU fallback handles the rest.
+
+---
+
+## Older: segment-based end-to-end GPU residency plan (2026-05-28)
+
+(Kept for reference — chaining strategy still applies once each op
+is GPU. Was the framing before the all-GPU pivot above.)
+
 
 The previous 5-step plan focused on individual paper-section techniques
 but assumed the FC stack was the bottleneck. After direct profiling
