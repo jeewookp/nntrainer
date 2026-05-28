@@ -12,9 +12,12 @@
  */
 
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 
 #include "rms_norm.h"
+
+#include <blas_kernel_interface.h>
 
 namespace causallm {
 
@@ -83,6 +86,17 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
     std::cout << context.getName() << " \n input:" << in_step
               << "output:" << out_step << "gamma:" << gamma << std::endl;
 #endif
+  }
+
+  // Segment A.2 hand-off: publish the CPU-computed RMSNorm output to a
+  // TensorBacking so that downstream FC layers with NNTR_RESIDENT_FC=1
+  // can read GPU-resident data and skip the host→device upload. Bit-
+  // exact w.r.t. baseline because the math runs on CPU exactly as
+  // before; this just makes the result reachable by GPU consumers.
+  // Env-gated so the original CPU-only path remains intact when off.
+  if (std::getenv("NNTR_SEGA_RMSNORM_PUBLISH") != nullptr && b_size == 1 &&
+      out.getDataType() == ml::train::TensorDim::DataType::FP32) {
+    nntrainer::publish_host_fp32_to_backing(out, out.getName());
   }
 }
 

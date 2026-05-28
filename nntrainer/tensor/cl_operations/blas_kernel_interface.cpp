@@ -1658,9 +1658,15 @@ bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
   // DispatchCommand interprets the first array as the GLOBAL work-item
   // count (NDRange standard), so global = H * subgroup, local = subgroup.
   // Matches rmsnorm_cl_internal at blas_kernels_templates.h:428.
-  constexpr int SUBGROUP_SIZE = 64; // Adreno
-  const int wg_count[3] = {(int)H * SUBGROUP_SIZE, 1, 1};
-  const int wg_size[3] = {SUBGROUP_SIZE, 1, 1};
+  // Diagnostic NNTR_SEGA_RMS_LOCAL=N overrides the local size. With
+  // N=1, the kernel runs single-threaded per row (no subgroup reduce),
+  // useful to isolate whether subgroup_reduce_add is the divergence
+  // source from CPU NEON.
+  int subgroup_size = 64; // Adreno default
+  if (const char *e = std::getenv("NNTR_SEGA_RMS_LOCAL"))
+    subgroup_size = std::atoi(e);
+  const int wg_count[3] = {(int)H * subgroup_size, 1, 1};
+  const int wg_size[3] = {subgroup_size, 1, 1};
   if (!blas_cc->command_queue_inst_.DispatchCommand(kp, wg_count, wg_size)) {
     if (in_upload_owned) clReleaseMemObject(in_upload_owned);
     return false;
@@ -1697,6 +1703,65 @@ bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
     clFinish(q);
     clReleaseMemObject(in_upload_owned);
   }
+
+  return true;
+}
+
+// CPU-norm + GPU-residency-handoff path. Uploads the output Tensor's
+// host FP32 data into a TensorBacking under `output_name`. Bit-exact
+// w.r.t. CPU computation because no GPU compute occurs here. Caller
+// must have already populated output.getData<float>() via the existing
+// CPU RMSNorm code.
+bool publish_host_fp32_to_backing(const Tensor &output,
+                                  const std::string &output_name) {
+  if (output.getDataType() != ml::train::TensorDim::DataType::FP32)
+    return false;
+  const auto &dim = output.getDim();
+  const size_t total_elems = (size_t)dim.batch() * dim.channel() *
+                             dim.height() * dim.width();
+  if (total_elems == 0)
+    return false;
+  const size_t total_bytes = total_elems * sizeof(float);
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  auto &pool = tv::TensorBackingPool::Global();
+  std::shared_ptr<tv::TensorBacking> bk = pool.get(output_name);
+  if (!bk || bk->bytes() < total_bytes ||
+      bk->encoding() != tv::Encoding::FP32) {
+    cl_int err = CL_SUCCESS;
+    cl_mem buf =
+      clCreateBuffer(ctx, CL_MEM_READ_WRITE, total_bytes, nullptr, &err);
+    if (err != CL_SUCCESS || !buf)
+      return false;
+    bk = std::make_shared<tv::TensorBacking>(
+      ctx, buf, tv::Encoding::FP32, tv::Layout::ROW_MAJOR, total_bytes,
+      /*owned=*/true);
+    pool.set(output_name, bk);
+  }
+  // Also register under the host-data-pointer key so consumers receiving
+  // a different Tensor instance (same underlying buffer) find this entry.
+  {
+    char key_buf[64];
+    std::snprintf(key_buf, sizeof(key_buf), "ptr:%p",
+                  static_cast<const void *>(output.getData<uint8_t>()));
+    pool.set(std::string(key_buf), bk);
+  }
+
+  // Upload the CPU-computed RMSNorm output into the backing's cl_mem.
+  if (clEnqueueWriteBuffer(q, bk->buffer(), CL_FALSE, 0, total_bytes,
+                           output.getData<uint8_t>(), 0, nullptr,
+                           nullptr) != CL_SUCCESS)
+    return false;
+  // Bump the generation so the v8c quant cache invalidates stale entries.
+  g_resident_quant_generation.fetch_add(1, std::memory_order_release);
+  // We don't need a barrier here — the FC's queued ops follow this write
+  // in the same queue; OoO scheduler tracks the cl_mem write dependency
+  // for the FC's read (and barrier would prevent the FC enqueue from
+  // starting earlier than necessary anyway).
 
   return true;
 }

@@ -211,5 +211,19 @@ bool rmsnorm_resident_fp32(const Tensor &input, const Tensor &gamma,
                            float epsilon, unsigned int H, unsigned int W,
                            const std::string &output_name, Tensor &output);
 
+/**
+ * @brief Publish an already-computed FP32 host buffer to a GPU
+ *        TensorBacking under `output_name`. Used by the CPU-norm
+ *        + GPU-residency-handoff path: CPU RMSNorm writes to the
+ *        output Tensor's host data, then this helper uploads that
+ *        host data into the backing's cl_mem and registers it in
+ *        the pool. Downstream FC layers with NNTR_RESIDENT_FC=1
+ *        consume the backing directly. Bit-exact w.r.t. CPU output
+ *        because no GPU computation happens here.
+ * @return true if the backing was created/updated and registered.
+ */
+bool publish_host_fp32_to_backing(const Tensor &output,
+                                  const std::string &output_name);
+
 } // namespace nntrainer
 #endif /* __BLAS_KERNEL_INTERFACE_H__ */
