@@ -800,7 +800,76 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     (!use_resident_input ||
      sc.last_quant_resident_generation == g_resident_quant_generation);
 
-  if (!quant_cache_hit) {
+  // Fused-rmsq consumer (paper §3.6 Step 4). If a preceding RMSNormLayer
+  // ran fused_rmsnorm_quant_resident_fp32 on this input, the pool holds
+  // ready-to-use int8/scale/zp/rs buffers keyed by host data pointer.
+  // Skip the (a) host upload + (c) quant kernel entirely and bind those
+  // buffers as the GEMM inputs. Eliminates the rmsnorm→FC fp32 boundary
+  // documented in [chain-robustification-dead].
+  static const bool consume_fused_rmsq =
+    std::getenv("NNTR_V8C_CONSUME_FUSED_RMSQ") != nullptr;
+  cl_mem act_i8_arg = sc.act_i8;
+  cl_mem act_scale_arg = sc.act_scale;
+  cl_mem act_zp_arg = sc.act_zp;
+  cl_mem act_rs_arg = sc.act_rs;
+  bool fused_rmsq_hit = false;
+  std::shared_ptr<tv::TensorBacking> fr_i8_bk, fr_sc_bk, fr_zp_bk, fr_rs_bk;
+  if (consume_fused_rmsq &&
+      input.getDataType() == ml::train::TensorDim::DataType::FP32) {
+    const void *in_data_ptr = input.getData<uint8_t>();
+    char k1[80], k2[80], k3[80], k4[80];
+    std::snprintf(k1, sizeof(k1), "ptr:%p:fused_i8", in_data_ptr);
+    std::snprintf(k2, sizeof(k2), "ptr:%p:fused_scale", in_data_ptr);
+    std::snprintf(k3, sizeof(k3), "ptr:%p:fused_zp", in_data_ptr);
+    std::snprintf(k4, sizeof(k4), "ptr:%p:fused_rs", in_data_ptr);
+    auto &pool = tv::TensorBackingPool::Global();
+    fr_i8_bk = pool.get(k1);
+    fr_sc_bk = pool.get(k2);
+    fr_zp_bk = pool.get(k3);
+    fr_rs_bk = pool.get(k4);
+    const size_t need_i8 = (size_t)M * K;
+    const size_t need_meta = (size_t)M * 4;
+    if (fr_i8_bk && fr_sc_bk && fr_zp_bk && fr_rs_bk &&
+        fr_i8_bk->bytes() >= need_i8 && fr_sc_bk->bytes() >= need_meta &&
+        fr_zp_bk->bytes() >= need_meta && fr_rs_bk->bytes() >= need_meta) {
+      fused_rmsq_hit = true;
+      act_i8_arg = fr_i8_bk->buffer();
+      act_scale_arg = fr_sc_bk->buffer();
+      act_zp_arg = fr_zp_bk->buffer();
+      act_rs_arg = fr_rs_bk->buffer();
+      static int trip = 0;
+      if (!trip && std::getenv("NNTR_V8C_CONSUME_FUSED_RMSQ_TRIP") != nullptr) {
+        trip = 1;
+        std::fprintf(stderr,
+                     "[V8C-FUSED-RMSQ] first hit: input.name=%s M=%u K=%u\n",
+                     input.getName().c_str(), M, K);
+        std::fflush(stderr);
+      }
+      // Note: M_pad > M case would mean the fused kernel's output is too
+      // short by (M_pad - M)*K bytes for the GEMM kernel which expects
+      // padded rows. Disable consumer in that case until the fused kernel
+      // is updated to write padded zero rows.
+      if (M_pad > M) {
+        fused_rmsq_hit = false;
+        act_i8_arg = sc.act_i8;
+        act_scale_arg = sc.act_scale;
+        act_zp_arg = sc.act_zp;
+        act_rs_arg = sc.act_rs;
+      }
+    }
+  }
+  // When the fused consumer wins, treat as a quant-cache hit so the
+  // existing skip-quant branches below trigger. Also invalidate the
+  // quant cache so a subsequent call with the same input pointer but
+  // no fused entries (rare, but possible if the producer didn't run)
+  // doesn't falsely hit sc.act_i8 (which may hold stale data from
+  // before the fused path took over).
+  const bool skip_upload_and_quant = fused_rmsq_hit || quant_cache_hit;
+  if (fused_rmsq_hit) {
+    sc.last_quant_in_ptr = nullptr;
+  }
+
+  if (!skip_upload_and_quant) {
     if (prof_enabled) T0 = NOW();
     if (use_resident_input) {
       // GPU→GPU copy of the resident FP32/FP16 activation into sc.act_in.
@@ -837,7 +906,7 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     //     Padded rows map to (scale=1, zp=0, q=0, row_sum=0), so they
     //     contribute zero in the GEMM and don't pollute valid rows.
     //     Step 2b.0: skipped entirely on cache hit (see above).
-    if (!quant_cache_hit) {
+    if (!skip_upload_and_quant) {
       if (prof_enabled) T0 = NOW();
       if (input.getDataType() == ml::train::TensorDim::DataType::FP16)
         quantize_act_v8c_fp16_cl(sc.act_in, sc.act_i8, sc.act_scale, sc.act_zp,
@@ -947,7 +1016,7 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
     adesc.image_width = K / 16;
     adesc.image_height = M_pad;
     adesc.image_row_pitch = K;
-    adesc.buffer = sc.act_i8;
+    adesc.buffer = act_i8_arg;
     cl_mem act_image =
       clCreateImage(ctx, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
     if (err != CL_SUCCESS) throw std::runtime_error("act image view fail");
@@ -959,9 +1028,9 @@ bool dotCl_v8c(const Tensor &input, const Tensor &weight, Tensor &output) {
 
     // (b) v8c GEMM — run on padded M_pad rows, but only read back the valid
     // M rows to the caller buffer.
-    gemm_int8_v8c_cl(act_image, w->weight_image, sc.act_scale, w->scale_buf,
-                     sc.act_rs, sc.act_zp, w->row_sum_w_int4, sc.y_fp16, M_pad,
-                     N, K);
+    gemm_int8_v8c_cl(act_image, w->weight_image, act_scale_arg, w->scale_buf,
+                     act_rs_arg, act_zp_arg, w->row_sum_w_int4, sc.y_fp16,
+                     M_pad, N, K);
     if (prof_enabled) {
       clFinish(q);
       T1 = NOW();
@@ -1832,7 +1901,8 @@ static void fused_rmsq_cpu_ref_row(const float *in_row, const float *gamma,
 bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
                                        const Tensor &gamma, float epsilon,
                                        unsigned int M, unsigned int K,
-                                       const std::string &output_name) {
+                                       const std::string &output_name,
+                                       const void *output_host_ptr) {
   static const bool env_on = std::getenv("NNTR_FUSED_RMSQ") != nullptr;
   if (!env_on)
     return false;
@@ -1872,6 +1942,21 @@ bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
   auto bk_rs = ensure_bk(output_name + ":fused_rs", per_row4, tv::Encoding::FP32);
   if (!bk_i8 || !bk_sc || !bk_zp || !bk_rs)
     return false;
+  // Also register under ptr-keyed names so a downstream consumer (whose
+  // Tensor instance shares the same data pointer via TensorPool reuse)
+  // can find these entries without knowing the producer's tensor name.
+  // See dotCl_v8c's existing ptr-based backing lookup.
+  if (output_host_ptr != nullptr) {
+    char k[80];
+    std::snprintf(k, sizeof(k), "ptr:%p:fused_i8", output_host_ptr);
+    pool.set(k, bk_i8);
+    std::snprintf(k, sizeof(k), "ptr:%p:fused_scale", output_host_ptr);
+    pool.set(k, bk_sc);
+    std::snprintf(k, sizeof(k), "ptr:%p:fused_zp", output_host_ptr);
+    pool.set(k, bk_zp);
+    std::snprintf(k, sizeof(k), "ptr:%p:fused_rs", output_host_ptr);
+    pool.set(k, bk_rs);
+  }
 
   // Upload input. (No backing reuse for v0 — keep simple.)
   cl_mem in_cl = nullptr;

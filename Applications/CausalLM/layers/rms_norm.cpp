@@ -73,19 +73,20 @@ void RMSNormLayer::incremental_forwarding(nntrainer::RunLayerContext &context,
   // dispatch). Output backing is published; host data is overwritten
   // with the GPU result via clEnqueueReadBuffer so CPU consumers stay
   // bit-equal to GPU consumers.
-  // Fused RMSNorm + v8c-quant probe (self-check). Triggers when both
-  // NNTR_FUSED_RMSQ=1 and NNTR_FUSED_RMSQ_CHECK=1 are set; runs the GPU
-  // kernel ALONGSIDE the existing CPU path (we don't yet swap it in
-  // because no consumer reads the quant outputs). Prints a one-shot
-  // per-row diff between CPU and GPU outputs so we can validate the
-  // kernel's math before wiring it into production.
+  // Fused RMSNorm + v8c-quant path. Always runs alongside the CPU
+  // RMSNorm when both inputs are FP32 — produces 4 GPU buffers in the
+  // pool under '<out.name>:fused_{i8,scale,zp,rs}' AND under
+  // 'ptr:<out_host>:fused_{i8,scale,zp,rs}' so v8c FC can find them by
+  // host data ptr. NNTR_FUSED_RMSQ_CHECK=1 also runs a CPU reference
+  // comparison.
   if (b_size == 1 &&
       in.getDataType() == ml::train::TensorDim::DataType::FP32 &&
       gamma.getDataType() == ml::train::TensorDim::DataType::FP32) {
     const auto &d = in_step_dim;
+    const void *out_host = out.getData<uint8_t>();
     nntrainer::fused_rmsnorm_quant_resident_fp32(
       in, gamma, epsilon, d.batch() * d.channel() * d.height(), d.width(),
-      out.getName());
+      out.getName(), out_host);
   }
 
   bool gpu_handled = false;

@@ -280,7 +280,8 @@ bool readback_backing_to_host(Tensor &t);
 bool fused_rmsnorm_quant_resident_fp32(const Tensor &input,
                                        const Tensor &gamma, float epsilon,
                                        unsigned int M, unsigned int K,
-                                       const std::string &output_name);
+                                       const std::string &output_name,
+                                       const void *output_host_ptr = nullptr);
 
 } // namespace nntrainer
 #endif /* __BLAS_KERNEL_INTERFACE_H__ */
