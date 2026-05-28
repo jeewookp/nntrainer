@@ -586,9 +586,16 @@ bool two_conv_attention_prefill_f16_img_cl(
     }
     const size_t nx = (N_kv + TN_IMG - 1) / TN_IMG;
     const size_t mx = (M + TM_IMG - 1) / TM_IMG;
-    std::array<size_t, 3> gws = {nx, mx, num_heads_Q};
+    // Fair comparison to the buffer variant: same lws=64 fix
+    // (see aad66ab5). Without this the image kernel was dispatched
+    // with driver-default lws=1, leaving the 64-wide Adreno subgroup
+    // empty and tanking image2d perf below buffer perf.
+    constexpr size_t LWS_QK_X = 64;
+    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   // ---- K2: softmax (shared with the scalar fp16 path) ----
@@ -633,9 +640,14 @@ bool two_conv_attention_prefill_f16_img_cl(
     }
     const size_t dx = head_dim / 8;
     const size_t mx = (M + TM_SV_IMG - 1) / TM_SV_IMG;
-    std::array<size_t, 3> gws = {dx, mx, num_heads_Q};
+    // Same lws=64 fix as the buffer variant. For Qwen3 head_dim=128,
+    // dx=16 — padded up to 64; WIs 16..63 early-out via `x0 >= d`.
+    constexpr size_t LWS_SV_X = 64;
+    const size_t dx_pad = ((dx + LWS_SV_X - 1) / LWS_SV_X) * LWS_SV_X;
+    std::array<size_t, 3> gws = {dx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_SV_X, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               nullptr, 0, nullptr, nullptr);
+                                               lws.data(), 0, nullptr, nullptr);
   }
 
   if (clEnqueueReadBuffer(q, sc.o_buf, CL_TRUE, 0, o_bytes, O_host, 0, nullptr,
