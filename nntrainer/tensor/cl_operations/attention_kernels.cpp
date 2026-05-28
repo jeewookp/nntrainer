@@ -13,9 +13,12 @@
 
 #include "attention_kernels_templates.h"
 #include <array>
+#include <chrono>
 #include <cl_kernels/rotary_emb.h>
 #include <cl_kernels/two_conv_attention.h>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <mutex>
 
 namespace nntrainer {
@@ -101,6 +104,58 @@ static bool tca_ensure(cl_context ctx, cl_mem *buf, size_t *cap, size_t bytes,
   *cap = bytes;
   return true;
 }
+// =============================================================================
+// Per-kernel timing for the buffer-path two_conv attention. Env-gated
+// NNTR_MHA_PROFILE=1. Reports K1 (QK matmul) / K2 (softmax) / K3 (SV matmul)
+// wall-clock split + read_output time. Adds a clFinish between each kernel
+// when enabled — slows the chain (sync overhead) but isolates per-step time.
+// =============================================================================
+struct McaProf {
+  long long k1_ns = 0;  // QK matmul
+  long long k2_ns = 0;  // softmax
+  long long k3_ns = 0;  // SV matmul
+  long long upload_ns = 0;
+  long long read_ns = 0;
+  long long calls = 0;
+  long long m_sum = 0;
+  ~McaProf() {
+    if (!calls) return;
+    std::FILE *f = std::fopen("/data/local/tmp/qwen3_qint4/mca_prof.log", "a");
+    if (!f) f = stderr;
+    auto pct = [&](long long x) {
+      long long tot = k1_ns + k2_ns + k3_ns + upload_ns + read_ns;
+      return tot > 0 ? (double)x * 100.0 / (double)tot : 0.0;
+    };
+    std::fprintf(f,
+                 "\n[MCA-PROF] %lld calls (avg M=%.1f)\n"
+                 "  upload    %.2f ms (%.1f%%)\n"
+                 "  K1 QK     %.2f ms (%.1f%%)\n"
+                 "  K2 sftmx  %.2f ms (%.1f%%)\n"
+                 "  K3 SV     %.2f ms (%.1f%%)\n"
+                 "  read_out  %.2f ms (%.1f%%)\n"
+                 "  total     %.2f ms\n",
+                 calls, (double)m_sum / (double)calls,
+                 upload_ns / 1e6, pct(upload_ns),
+                 k1_ns / 1e6, pct(k1_ns),
+                 k2_ns / 1e6, pct(k2_ns),
+                 k3_ns / 1e6, pct(k3_ns),
+                 read_ns / 1e6, pct(read_ns),
+                 (k1_ns + k2_ns + k3_ns + upload_ns + read_ns) / 1e6);
+    std::fflush(f);
+    if (f != stderr) std::fclose(f);
+  }
+};
+static McaProf &mca_prof() {
+  static McaProf p;
+  return p;
+}
+static bool mca_prof_enabled() {
+  static int cached = -1;
+  if (cached < 0)
+    cached = std::getenv("NNTR_MHA_PROFILE") != nullptr ? 1 : 0;
+  return cached != 0;
+}
+
 } // namespace
 
 bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
@@ -162,6 +217,19 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
     o_arg = sc.o_buf;
   }
 
+  // Pre-K1 sync point for profiling. Always cheap when env unset.
+  const bool _prof = std::getenv("NNTR_MHA_PROFILE") != nullptr;
+  std::chrono::steady_clock::time_point _t0, _t1;
+  auto NOW = []() { return std::chrono::steady_clock::now(); };
+  auto NS = [](auto t1, auto t0) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
+      .count();
+  };
+  if (_prof) {
+    clFinish(q);
+    _t0 = NOW();
+  }
+
   // ---- K1: QK matmul ----
   {
     ClContext::SharedPtrClKernel kp =
@@ -206,6 +274,12 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                                lws.data(), 0, nullptr, nullptr);
   }
+  if (_prof) {
+    clFinish(q);
+    _t1 = NOW();
+    mca_prof().k1_ns += NS(_t1, _t0);
+    _t0 = NOW();
+  }
 
   // ---- K2: row softmax over N_kv ----
   {
@@ -221,6 +295,12 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
     std::array<size_t, 3> lws = {SOFTMAX_LWS, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                                lws.data(), 0, nullptr, nullptr);
+  }
+  if (_prof) {
+    clFinish(q);
+    _t1 = NOW();
+    mca_prof().k2_ns += NS(_t1, _t0);
+    _t0 = NOW();
   }
 
   // ---- K3: scores @ V -> O ----
@@ -260,6 +340,12 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                                lws.data(), 0, nullptr, nullptr);
   }
+  if (_prof) {
+    clFinish(q);
+    _t1 = NOW();
+    mca_prof().k3_ns += NS(_t1, _t0);
+    _t0 = NOW();
+  }
 
   if (svm_inputs) {
     clFinish(q);
@@ -267,6 +353,24 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
     if (clEnqueueReadBuffer(q, sc.o_buf, CL_TRUE, 0, o_bytes, O_host, 0,
                             nullptr, nullptr) != CL_SUCCESS)
       return false;
+  }
+  if (_prof) {
+    _t1 = NOW();
+    mca_prof().read_ns += NS(_t1, _t0);
+    mca_prof().calls += 1;
+    mca_prof().m_sum += M;
+    // Periodic dump every N calls (don't rely on dtor firing).
+    if (mca_prof().calls % 28 == 0) {
+      const McaProf &p = mca_prof();
+      long long tot = p.k1_ns + p.k2_ns + p.k3_ns + p.read_ns;
+      std::fprintf(stderr,
+                   "[MCA-PROF] %lld calls (avg M=%.1f) "
+                   "K1=%.1fms K2=%.1fms K3=%.1fms read=%.1fms total=%.1fms\n",
+                   p.calls, (double)p.m_sum / (double)p.calls,
+                   p.k1_ns / 1e6, p.k2_ns / 1e6, p.k3_ns / 1e6,
+                   p.read_ns / 1e6, tot / 1e6);
+      std::fflush(stderr);
+    }
   }
   return true;
 }

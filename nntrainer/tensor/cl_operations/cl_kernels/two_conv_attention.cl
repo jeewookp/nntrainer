@@ -538,11 +538,15 @@ __kernel void sv_matmul_f16_img(
     const int m = m0 + i;
     if (m >= M) continue;
     const half8 oh = convert_half8(acc[i]);
+    // Adreno's OpenCL compiler rejects subscript on vector types
+    // (`oh[e]`); spill to a half[8] array and index that instead.
+    half oh_arr[8];
+    vstore8(oh, 0, oh_arr);
     #pragma unroll
     for (int e = 0; e < 8; e++) {
       const int x = x0 + e;
       if (x >= d) continue;
-      O[(long)m * HD_Q + head_q * d + x] = oh[e];
+      O[(long)m * HD_Q + head_q * d + x] = oh_arr[e];
     }
   }
 }
