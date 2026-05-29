@@ -100,24 +100,27 @@ public:
   /// math. Returns true if the kernel ran and produced finite output.
   bool run_rmsnorm_layer0();
 
-  /// Load layer 0's wq (QINT4 KAI Section A, [K=hidden, N=H_Q*head_dim])
-  /// from the mmap'd weight file, build a v8c-ready weight backing
+  /// Load layer 0's QKV projection weights (wq, wk, wv) — all QINT4 in
+  /// KAI Section A format, sharing a common K=hidden input dim — from
+  /// the mmap'd weight file. Each weight gets a v8c-ready backing
   /// (cl_mem buffer + image2d view + per-channel fp32 scales + per-
-  /// channel int32 weight row-sums) via the existing nntrainer helper
-  /// make_v8c_weight_backing_from_kai_section_a, and stash it for the
-  /// dispatch call below. The mmap region stays alive until the
-  /// destructor; the GPU buffers are owned by this class.
-  bool load_layer0_wq();
+  /// channel int32 weight row-sums) via
+  /// make_v8c_weight_backing_from_kai_section_a. Skips over the
+  /// q_norm and k_norm gamma slabs interleaved between wq/wk/wv per
+  /// the Qwen3 layer save order (load helpers for those come in the
+  /// next commit).
+  bool load_layer0_qkv_weights();
 
-  /// Dispatch the full v8c FC pipeline on the wq weight: rmsnorm.cl on
-  /// a known deterministic input (cl_mem) → quantize_act_v8c_fp32_cl
-  /// (cl_mem int8 + scale + zp + row-sum) → image2d view of the int8
-  /// activation → gemm_int8_v8c_cl → fp16 output [1, N]. Reads the
-  /// output back to host, prints a summary (first/last few values,
-  /// finite check). The point is to prove the full per-FC GPU pipeline
-  /// (act-quant → image2d → int8×int4 GEMM → fp16) works against
-  /// real loaded weights, on a single token.
-  bool run_layer0_wq_v8c();
+  /// Run the full QKV projection pipeline for layer 0 on the same
+  /// deterministic input pattern as step 2/3: rmsnorm.cl ONCE against
+  /// the SVM attention_norm gamma, then quantize_act_v8c_fp32_cl ONCE
+  /// on the rmsnorm output (shared activation quant — paper §3.6
+  /// insight, same pattern as dotCl_v8c's shared-quant cache hit on
+  /// wq/wk/wv), then three gemm_int8_v8c_cl dispatches against the
+  /// loaded Q/K/V weights. Outputs three fp16 cl_mem buffers
+  /// (Q[hQ*d], K[hKV*d], V[hKV*d]); reads each back to host and prints
+  /// summary stats + finite checks.
+  bool run_layer0_qkv_projection();
 
   const Qwen3Config &config() const { return cfg_; }
   size_t weight_file_size() const { return weight_bytes_; }
@@ -139,14 +142,33 @@ private:
   // Layer 0 attention_norm gamma (fp32, [hidden_size]) in SVM.
   void *layer0_attn_norm_gamma_svm_ = nullptr;
 
-  // Layer 0 wq (v8c-ready weight backing + per-channel scale + row-sum).
-  // Built once by load_layer0_wq() from the mmap'd KAI Section A nibbles.
-  // The TensorBacking is held opaquely so this header doesn't depend on
-  // cl_tensor_view.h; the dispatch site casts back to access the cl_mem.
-  void *layer0_wq_backing_ = nullptr;   // tv::TensorBacking* (owning)
-  cl_mem layer0_wq_weight_image_ = nullptr; // image2d view (owned by backing)
-  cl_mem layer0_wq_scale_buf_ = nullptr;    // fp32 [N=hQ*d]
-  cl_mem layer0_wq_row_sum_w_int4_ = nullptr; // int32 [N]
+  /// Bundled v8c-ready state for one int4 GEMM weight. Built once by
+  /// load_qint4_weight_at() from a mmap'd KAI Section A payload via
+  /// make_v8c_weight_backing_from_kai_section_a. The TensorBacking is
+  /// held opaquely so this header doesn't depend on cl_tensor_view.h;
+  /// the dispatch site casts back to access the cl_mem image view.
+  struct V8cFcWeight {
+    void *backing = nullptr;       // tv::TensorBacking* (owning)
+    cl_mem weight_image = nullptr; // image2d view (owned by backing)
+    cl_mem scale_buf = nullptr;    // fp32 [N]
+    cl_mem row_sum_w_int4 = nullptr; // int32 [N]
+    unsigned int K = 0, N = 0;
+  };
+
+  // Layer 0 Q/K/V projection weights.
+  V8cFcWeight layer0_wq_{};
+  V8cFcWeight layer0_wk_{};
+  V8cFcWeight layer0_wv_{};
+
+  /// Generic loader: parses one Int4QTensor blob at the given file
+  /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates
+  /// `out`. Returns false on shape / qscheme validation failure.
+  bool load_qint4_weight_at(size_t file_offset, unsigned int K,
+                            unsigned int N, V8cFcWeight *out,
+                            const char *tag);
+
+  /// Release a V8cFcWeight (used by destructor).
+  void release_v8c_weight(V8cFcWeight *w);
 };
 
 } // namespace causallm_gpu

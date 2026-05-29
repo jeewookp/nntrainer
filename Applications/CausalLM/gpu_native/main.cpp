@@ -81,20 +81,20 @@ int main(int argc, char **argv) {
     return 5;
   }
 
-  // Step 3: full per-FC pipeline for layer 0 wq. Loads the KAI Section A
-  // QINT4 weight from disk, builds the v8c weight backing, then runs:
-  // rmsnorm.cl -> quantize_act_v8c -> gemm_int8_v8c -> read back, verify
-  // output is finite. Just wq this commit; wk/wv/wo come next.
-  if (!fwd.load_layer0_wq()) {
-    std::fprintf(stderr, "[main] load_layer0_wq failed\n");
+  // Step 4: load Q/K/V projection weights together + run all three FCs
+  // against the SAME rmsnorm output (shared activation quant — single
+  // quantize_act, three GEMMs). Outputs Q[hQ*d], K[hKV*d], V[hKV*d] —
+  // ready inputs for q_norm/k_norm/RoPE/attention (next commits).
+  if (!fwd.load_layer0_qkv_weights()) {
+    std::fprintf(stderr, "[main] load_layer0_qkv_weights failed\n");
     return 6;
   }
-  if (!fwd.run_layer0_wq_v8c()) {
-    std::fprintf(stderr, "[main] run_layer0_wq_v8c failed\n");
+  if (!fwd.run_layer0_qkv_projection()) {
+    std::fprintf(stderr, "[main] run_layer0_qkv_projection failed\n");
     return 7;
   }
 
   std::fprintf(stderr,
-               "[main] step 3 OK. Next: wk/wv/q_norm/k_norm.\n");
+               "[main] step 4 OK. Next: q_norm/k_norm + RoPE.\n");
   return 0;
 }
