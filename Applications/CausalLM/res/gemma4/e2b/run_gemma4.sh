@@ -342,6 +342,9 @@ adb shell "cd $DEVICE_INSTALL_DIR && \
     export LD_LIBRARY_PATH=$DEVICE_INSTALL_DIR:\$LD_LIBRARY_PATH && \
     export OMP_NUM_THREADS=4 && \
     export NNTRAINER_ASYNC_PIPELINE=1 && \
+    export NNTRAINER_GEMV_ZEROCOPY=1 && \
+    export NNTRAINER_GEMV_ADRENO_V4=1 && \
+    export NNTRAINER_GEMV_ADRENO_V3=1 && \
     ./nntrainer_causallm $DEVICE_MODEL_DIR '$PROMPT'; echo \"[EXIT] \$?\"" 2>&1
 ADB_EXIT=$?
 set -e
