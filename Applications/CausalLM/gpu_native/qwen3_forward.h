@@ -117,6 +117,20 @@ public:
   /// expects `half alpha`) — converted on the host side at load time.
   bool load_layer0_qk_norm_gammas();
 
+  /// Precompute the RoPE cos/sin tables for one position into SVM
+  /// (fp16, [head_dim] each) using the cfg's rope_theta. Position 0
+  /// gives identity rotation (cos=1, sin=0); pass a non-zero position
+  /// to actually exercise the rotation math. Reuses existing SVM
+  /// allocations if called multiple times (always rewrites the table).
+  bool precompute_rope_for_position(unsigned int position);
+
+  /// Dispatch the inline `rope_fp16` kernel on the layer-0 Q and K
+  /// fp16 cl_mem buffers in place. Must be called after RoPE freqs
+  /// are precomputed for the same position. Hooked into the QKV
+  /// pipeline by run_layer0_qkv_projection when rope position is
+  /// preconfigured; otherwise skipped.
+  bool run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k);
+
   /// Run the full QKV projection pipeline for layer 0 on the same
   /// deterministic input pattern as step 2/3: rmsnorm.cl ONCE against
   /// the SVM attention_norm gamma, then quantize_act_v8c_fp32_cl ONCE
@@ -155,6 +169,14 @@ private:
   // directly to rmsnorm_cl_fp16 (which takes `half alpha`).
   void *layer0_q_norm_gamma_svm_fp16_ = nullptr;
   void *layer0_k_norm_gamma_svm_fp16_ = nullptr;
+  // RoPE cos/sin tables for the currently-configured position
+  // (fp16, [head_dim]) in SVM. Repopulated by
+  // precompute_rope_for_position(). The doubled-half layout
+  // matches the CPU mha_core path: cos[k+half] = cos[k], sin[k+half] =
+  // sin[k] so the kernel can index head_dim values directly.
+  void *layer0_rope_cos_svm_fp16_ = nullptr;
+  void *layer0_rope_sin_svm_fp16_ = nullptr;
+  int   layer0_rope_position_ = -1; // -1 = no position configured
 
   /// Bundled v8c-ready state for one int4 GEMM weight. Built once by
   /// load_qint4_weight_at() from a mmap'd KAI Section A payload via

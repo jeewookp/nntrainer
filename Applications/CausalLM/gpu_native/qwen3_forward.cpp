@@ -43,6 +43,10 @@ Qwen3Forward::~Qwen3Forward() {
   release_v8c_weight(&layer0_wq_);
   release_v8c_weight(&layer0_wk_);
   release_v8c_weight(&layer0_wv_);
+  if (layer0_rope_cos_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_rope_cos_svm_fp16_);
+  if (layer0_rope_sin_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_rope_sin_svm_fp16_);
   if (layer0_q_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_q_norm_gamma_svm_fp16_);
   if (layer0_k_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
@@ -842,10 +846,26 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
     }
   }
 
-  // (f) Sanity-check each output (M=0 valid row only). Q/K are
-  //     post-q_norm/k_norm; V is post-projection only.
-  bool ok_q = summarize_fp16_buf(cl_q_, y_q, N_q,  "Q (post q_norm)");
-  bool ok_k = summarize_fp16_buf(cl_q_, y_k, N_kv, "K (post k_norm)");
+  // (f) RoPE on Q and K (in place). Skipped when rope freqs haven't been
+  //     precomputed for any position (precompute_rope_for_position
+  //     wasn't called). V has no RoPE.
+  if (layer0_rope_position_ >= 0) {
+    if (!run_layer0_rope_on_qk(y_q, y_k)) {
+      std::fprintf(stderr, "[qwen3-gpu] RoPE dispatch failed\n");
+      // fall through to summarize
+    } else {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] RoPE applied at position=%d\n",
+                   layer0_rope_position_);
+    }
+  }
+
+  // (g) Sanity-check each output (M=0 valid row only). Q/K are
+  //     post-q_norm/k_norm + optional RoPE; V is post-projection only.
+  bool ok_q = summarize_fp16_buf(cl_q_, y_q, N_q,
+                                 "Q (post q_norm + RoPE)");
+  bool ok_k = summarize_fp16_buf(cl_q_, y_k, N_kv,
+                                 "K (post k_norm + RoPE)");
   bool ok_v = summarize_fp16_buf(cl_q_, y_v, N_kv, "V");
 
   clReleaseMemObject(y_v);
@@ -859,6 +879,137 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
   clReleaseMemObject(rmsnorm_out_buf);
   clReleaseMemObject(in_buf);
   return ok_q && ok_k && ok_v;
+}
+
+// Inline fp16 RoPE kernel for the GPU-native runtime. Operates in place
+// on a [num_heads, head_dim] fp16 buffer. cos/sin tables are
+// pre-doubled (cos[k+half] = cos[k], sin[k+half] = sin[k]) to match the
+// CPU mha_core convention. Math: for k in [0, half):
+//   x_lo = xy[h, k]; x_hi = xy[h, k + half]
+//   xy[h, k]        = x_lo * cos[k] - x_hi * sin[k]
+//   xy[h, k + half] = x_hi * cos[k] + x_lo * sin[k]
+// (compute_rotary_emb_value's transformed_value sign convention).
+// GWS = (num_heads, half); one WI per rotation pair.
+static const std::string kRopeFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void rope_fp16(__global half *xy,
+                        __global const half *cos_tbl,
+                        __global const half *sin_tbl,
+                        const int num_heads,
+                        const int half_d) {
+  int h = get_global_id(0);
+  int k = get_global_id(1);
+  if (h >= num_heads || k >= half_d) return;
+  int base = h * (half_d * 2);
+  half c = cos_tbl[k];
+  half s = sin_tbl[k];
+  half x_lo = xy[base + k];
+  half x_hi = xy[base + k + half_d];
+  xy[base + k]          = x_lo * c - x_hi * s;
+  xy[base + k + half_d] = x_hi * c + x_lo * s;
+}
+)CL";
+
+bool Qwen3Forward::precompute_rope_for_position(unsigned int position) {
+  if (cl_ctx_ == nullptr) return false;
+  const unsigned int d = cfg_.head_dim;
+  const unsigned int half = d / 2;
+  const size_t tbl_bytes = (size_t)d * sizeof(uint16_t);
+
+  // (Re)allocate SVM if first time.
+  auto ensure_svm = [this, tbl_bytes](void **dst) -> bool {
+    if (*dst != nullptr) return true;
+    *dst = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, tbl_bytes, 0);
+    if (*dst == nullptr) {
+      std::fprintf(stderr, "[qwen3-gpu] rope SVMAlloc failed\n");
+      return false;
+    }
+    return true;
+  };
+  if (!ensure_svm(&layer0_rope_cos_svm_fp16_) ||
+      !ensure_svm(&layer0_rope_sin_svm_fp16_))
+    return false;
+
+  // Compute thetas[j] = theta ^ (-2j/d) for j in [0, half), then for
+  // this position, cos/sin per "doubled half" layout.
+  std::vector<float> cos_tmp(d), sin_tmp(d);
+  for (unsigned int j = 0; j < half; ++j) {
+    float exponent = -2.0f * static_cast<float>(j) / static_cast<float>(d);
+    float theta_j = std::pow(cfg_.rope_theta, exponent);
+    float angle = static_cast<float>(position) * theta_j;
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    cos_tmp[j]        = c;
+    cos_tmp[j + half] = c;
+    sin_tmp[j]        = s;
+    sin_tmp[j + half] = s;
+  }
+
+  // Push (converted to fp16) into SVM.
+  auto write_svm = [&](void *dst, const std::vector<float> &src,
+                       const char *tag) -> bool {
+    cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst,
+                                 tbl_bytes, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+      std::fprintf(stderr, "[qwen3-gpu] rope %s SVMMap WRITE err=%d\n",
+                   tag, err);
+      return false;
+    }
+    uint16_t *p = static_cast<uint16_t *>(dst);
+    for (unsigned int i = 0; i < d; ++i) p[i] = f2h(src[i]);
+    err = clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) return false;
+    clFinish(cl_q_);
+    return true;
+  };
+  if (!write_svm(layer0_rope_cos_svm_fp16_, cos_tmp, "cos")) return false;
+  if (!write_svm(layer0_rope_sin_svm_fp16_, sin_tmp, "sin")) return false;
+  layer0_rope_position_ = static_cast<int>(position);
+  std::fprintf(stderr,
+               "[qwen3-gpu] RoPE freqs precomputed for position=%u: "
+               "cos[0..3] = %g %g %g %g, sin[0..3] = %g %g %g %g\n",
+               position, cos_tmp[0], cos_tmp[1], cos_tmp[2], cos_tmp[3],
+               sin_tmp[0], sin_tmp[1], sin_tmp[2], sin_tmp[3]);
+  return true;
+}
+
+bool Qwen3Forward::run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k) {
+  if (layer0_rope_cos_svm_fp16_ == nullptr ||
+      layer0_rope_sin_svm_fp16_ == nullptr || layer0_rope_position_ < 0) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] run_layer0_rope_on_qk: freqs not loaded\n");
+    return false;
+  }
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  auto kp = cl->registerClKernel(kRopeFp16Kernel, "rope_fp16");
+  if (!kp) {
+    std::fprintf(stderr, "[qwen3-gpu] rope_fp16 register failed\n");
+    return false;
+  }
+  auto dispatch_one = [&](cl_mem io, unsigned int num_heads,
+                          const char *tag) -> bool {
+    int nh = static_cast<int>(num_heads);
+    int half_d = static_cast<int>(cfg_.head_dim / 2);
+    if (!kp->SetKernelArguments(0, &io, sizeof(cl_mem)) ||
+        !kp->SetKernelSVMArguments(1, layer0_rope_cos_svm_fp16_) ||
+        !kp->SetKernelSVMArguments(2, layer0_rope_sin_svm_fp16_) ||
+        !kp->SetKernelArguments(3, &nh, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &half_d, sizeof(int))) {
+      std::fprintf(stderr, "[qwen3-gpu] %s rope args failed\n", tag);
+      return false;
+    }
+    std::array<size_t, 2> gws = {(size_t)num_heads,
+                                 (size_t)(cfg_.head_dim / 2)};
+    std::array<size_t, 2> lws = {1, 1};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    return true;
+  };
+  if (!dispatch_one(y_q, cfg_.num_heads_Q, "Q")) return false;
+  if (!dispatch_one(y_k, cfg_.num_heads_KV, "K")) return false;
+  clFinish(cl_q_);
+  return true;
 }
 
 } // namespace causallm_gpu

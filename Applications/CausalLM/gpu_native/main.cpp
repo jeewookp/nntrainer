@@ -93,12 +93,21 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
     return 7;
   }
+  // Pre-arm RoPE at a non-zero position so we actually exercise the
+  // rotation math (position 0 is identity — cos=1, sin=0). 5 is a
+  // small but non-trivial position; the precise value doesn't matter
+  // for the kernel-validation goal here, only that cos/sin != 1/0.
+  if (!fwd.precompute_rope_for_position(5)) {
+    std::fprintf(stderr, "[main] precompute_rope_for_position failed\n");
+    return 8;
+  }
   if (!fwd.run_layer0_qkv_projection()) {
     std::fprintf(stderr, "[main] run_layer0_qkv_projection failed\n");
-    return 8;
+    return 9;
   }
 
   std::fprintf(stderr,
-               "[main] step 4b OK (Q/K post per-head norm). Next: RoPE.\n");
+               "[main] step 4c OK (Q/K post q_norm + RoPE). Next: KV cache "
+               "write + attention.\n");
   return 0;
 }
