@@ -16,6 +16,8 @@
 
 #include "util_func.h"
 #include <array>
+#include <cstdio>
+#include <cstdlib>
 #include <fp16.h>
 
 namespace nntrainer {
@@ -1419,8 +1421,32 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   } else {
     constexpr size_t TM = 4, TN = 8;
     std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
+    // CL-event profiling showed the historic NULL lws (driver-chosen
+    // workgroup) lands the GEMM at ~14% of dp4a peak in-forward, vs 87%
+    // in the standalone microbench which used a tuned LWS. Set an explicit
+    // LWS that divides gws (the kernel has no cross-WI sync, so any divisor
+    // is valid); fall back to NULL when it does not divide (small-M prefill).
+    // NNTR_V8C_LWS="lx,ly" overrides for sweeping; default tuned below.
+    static const std::array<size_t, 2> v8c_lws = []() {
+      const char *e = std::getenv("NNTR_V8C_LWS");
+      size_t lx = 4, ly = 16; // swept sweet spot @ M=1024 (WG=64): v8c_gemm
+                              // 1704ms(NULL)->192ms = 8.9x; matches the
+                              // standalone microbench's tuned LWS 4x16.
+      if (e) {
+        long a = 0, b = 0;
+        if (std::sscanf(e, "%ld,%ld", &a, &b) == 2 && a > 0 && b > 0) {
+          lx = (size_t)a;
+          ly = (size_t)b;
+        }
+      }
+      return std::array<size_t, 2>{lx, ly};
+    }();
+    const bool lws_ok = (v8c_lws[0] && v8c_lws[1] && gws[0] % v8c_lws[0] == 0 &&
+                         gws[1] % v8c_lws[1] == 0);
+    std::array<size_t, 3> lws = {v8c_lws[0], v8c_lws[1], 1};
     blas_cc->command_queue_inst_.enqueueKernel(
-      kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
+      kp->GetKernel(), 2, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
+      nullptr);
   }
 }
 
