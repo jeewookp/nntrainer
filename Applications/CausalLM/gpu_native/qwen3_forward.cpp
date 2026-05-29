@@ -2840,7 +2840,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               scratch_.qkv_act_rs, scratch_.qkv_act_zp,
                               lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv,
                               K_h);
-  clFinish(cl_q_);
+  // stage_end_add does its own clFinish when profiling; skip the
+  // unconditional host stall in production. #46i.
   stage_end_add(timings_.qkv_gemm_ms);
 
   // (d) q_norm / k_norm in place. Multi-token: M token rows × num_heads
@@ -2880,8 +2881,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clReleaseMemObject(act_image);
     return false;
   }
-  clFinish(cl_q_);
-  stage_end_add(timings_.qk_norm_rope_ms);
+  stage_end_add(timings_.qk_norm_rope_ms);  // #46i: no extra clFinish
 
   // (e) Write K, V (M rows) to this layer's SVM cache starting at
   //     `position`. y_k/y_v are [M_pad * N_kv] fp16; we copy only the
@@ -3012,8 +3012,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  clFinish(cl_q_);
-  stage_end_add(timings_.kv_write_ms);
+  stage_end_add(timings_.kv_write_ms);  // #46i: no extra clFinish
 
   // (f) attention via SVM. Upload all M Q rows. N_kv (cache_to) =
   //     position + M (all rows just written are visible to attention).
@@ -3111,7 +3110,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               scratch_.wo_act_rs, scratch_.wo_act_zp,
                               lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
                               K_h, N_q);
-  clFinish(cl_q_);
+  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   {
     auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
     int n = (int)(M * K_h);
@@ -3135,8 +3134,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  clFinish(cl_q_);
-  stage_end_add(timings_.wo_ms);
+  stage_end_add(timings_.wo_ms);  // #46i: no extra clFinish
 
   // (h) ffn block: pad residual_1 -> ffn_in_padded, rmsnorm -> ffn_normed,
   //     shared quant, ffn_up + ffn_gate, cvt fp16->fp32, swiglu, quant,
@@ -3182,7 +3180,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               scratch_.fa_rs, scratch_.fa_zp,
                               lw.ffn_gate.row_sum_w_int4, scratch_.gate_fp16,
                               M_pad, I, K_h);
-  clFinish(cl_q_);
+  // GPU-side barrier instead of host clFinish: keeps serialization
+  // for the OOO queue's next consumers (cvt h2f) without stalling
+  // the host. #46i — biggest single overhead lever in FFN block.
+  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   auto disp_cvt = [&](cl_mem hin, cl_mem fout, unsigned int n) {
     auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
     int ni = (int)n;
@@ -3196,7 +3197,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   };
   disp_cvt(scratch_.up_fp16,   scratch_.up_fp32,   M * I);
   disp_cvt(scratch_.gate_fp16, scratch_.gate_fp32, M * I);
-  clFinish(cl_q_);
+  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   clEnqueueFillBuffer(cl_q_, scratch_.swiglu_out, &zero, sizeof(float), 0,
                       (size_t)M_pad * I * sizeof(float), 0, nullptr, nullptr);
   {
@@ -3227,9 +3228,9 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               scratch_.dn_rs, scratch_.dn_zp,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
-  clFinish(cl_q_);
+  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   disp_cvt(scratch_.dn_fp16, scratch_.dn_fp32, M * K_h);
-  clFinish(cl_q_);
+  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   // Final residual add → out_fp32 (caller-managed).
   {
     auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
@@ -3243,8 +3244,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  clFinish(cl_q_);
-  stage_end_add(timings_.ffn_ms);
+  stage_end_add(timings_.ffn_ms);  // #46i: no extra clFinish
   if (profile_stages_) timings_.calls += 1;
 
   // Only image2d views were freshly created this call; release them.
