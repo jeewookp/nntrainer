@@ -128,6 +128,25 @@
   ret.s7 = ptr[idx];                                                           \
   idx += get_max_sub_group_size();
 
+#define BLOCK_READ_IMPL_16                                                     \
+  BLOCK_READ_IMPL_8                                                            \
+  ret.s8 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.s9 = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.sa = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.sb = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.sc = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.sd = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.se = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();                                             \
+  ret.sf = ptr[idx];                                                           \
+  idx += get_max_sub_group_size();
+
 #define BLOCK_READ_IMPL(vec_size) CAT(BLOCK_READ_IMPL_, vec_size)
 #define BLOCK_READ_FUNC_NAME(type_size, vec_size)                              \
   MAKE_VECTOR_TYPE(BLOCK_READ_FUNC(type_size), vec_size)
