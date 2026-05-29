@@ -179,6 +179,14 @@ Qwen3Forward::~Qwen3Forward() {
       clReleaseMemObject(lw.cache_v_buf_ohwi);
       lw.cache_v_buf_ohwi = nullptr;
     }
+    if (lw.cache_k_image_ohwi) {
+      clReleaseMemObject(lw.cache_k_image_ohwi);
+      lw.cache_k_image_ohwi = nullptr;
+    }
+    if (lw.cache_k_buf_ohwi) {
+      clReleaseMemObject(lw.cache_k_buf_ohwi);
+      lw.cache_k_buf_ohwi = nullptr;
+    }
     release_v8c_weight(&lw.wq);
     release_v8c_weight(&lw.wk);
     release_v8c_weight(&lw.wv);
@@ -1981,8 +1989,7 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
     clEnqueueFillBuffer(cl_q_, lw.cache_v_buf_ohwi, &zero, sizeof(uint16_t), 0,
                         cache_bytes, 0, nullptr, nullptr);
     clFinish(cl_q_);
-    // Build the image2d_from_buffer view once; sv_matmul_f16_ohwi_img
-    // takes the image directly so no per-call clCreateImage cost.
+    // Build the V image2d_from_buffer view once.
     cl_image_format img_fmt{CL_RGBA, CL_UNSIGNED_INT32};
     cl_image_desc vd{};
     vd.image_type = CL_MEM_OBJECT_IMAGE2D;
@@ -1999,6 +2006,44 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
                    "err=%d (image2d V experiment disabled)\n",
                    layer_id, ie);
       lw.cache_v_image_ohwi = nullptr;
+    }
+  }
+
+  // #46h: K image2d mirror. Same memory size as cache_k_svm, but
+  // cl_mem so image2d_from_buffer can wrap. K's OHWI layout has
+  // O=cache_size (rows), I=d_h (cols) per head, so the image2d
+  // axes are: width = d_h/8 texels, height = H_kv * S_max.
+  cl_int ke = CL_SUCCESS;
+  lw.cache_k_buf_ohwi =
+    clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE, cache_bytes, nullptr, &ke);
+  if (ke != CL_SUCCESS || lw.cache_k_buf_ohwi == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] layer %u: clCreateBuffer(cache_k_buf_ohwi) "
+                 "err=%d (K image2d disabled)\n",
+                 layer_id, ke);
+    lw.cache_k_buf_ohwi = nullptr;
+  } else {
+    lw.cache_k_buf_ohwi_bytes = cache_bytes;
+    const uint16_t zero = 0;
+    clEnqueueFillBuffer(cl_q_, lw.cache_k_buf_ohwi, &zero, sizeof(uint16_t), 0,
+                        cache_bytes, 0, nullptr, nullptr);
+    clFinish(cl_q_);
+    cl_image_format kf{CL_RGBA, CL_UNSIGNED_INT32};
+    cl_image_desc kd{};
+    kd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    kd.image_width = (size_t)cfg_.head_dim / 8;
+    kd.image_height =
+      (size_t)cfg_.num_heads_KV * (size_t)max_seq_len_used;
+    kd.image_row_pitch = (size_t)cfg_.head_dim * sizeof(uint16_t);
+    kd.buffer = lw.cache_k_buf_ohwi;
+    cl_int kie = CL_SUCCESS;
+    lw.cache_k_image_ohwi =
+      clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &kf, &kd, nullptr, &kie);
+    if (kie != CL_SUCCESS || lw.cache_k_image_ohwi == nullptr) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: clCreateImage(cache_k_image_ohwi) "
+                   "err=%d\n", layer_id, kie);
+      lw.cache_k_image_ohwi = nullptr;
     }
   }
 
@@ -2706,7 +2751,13 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   const size_t d_bytes = (size_t)cfg_.head_dim * sizeof(uint16_t);
   const size_t max_S = kv_cache_max_seq_len_;
   stage_begin();
-  // K: OHWI scatter.
+  // K: OHWI scatter. Same layout for SVM and cl_mem mirror; under
+  // NNTR_OHWI_IMG=1 we additionally populate cache_k_buf_ohwi so the
+  // image2d view sees up-to-date data.
+  static const bool use_ohwi_img_k = []() {
+    const char *e = std::getenv("NNTR_OHWI_IMG");
+    return e && std::atoi(e) != 0;
+  }();
   {
     cl_int e;
     void *p_k = clEnqueueMapBuffer(cl_q_, scratch_.y_k, CL_TRUE, CL_MAP_READ,
@@ -2716,6 +2767,13 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
       max_S * cfg_.num_heads_KV * cfg_.head_dim * sizeof(uint16_t);
     clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, lw.cache_k_svm,
                     cache_bytes_total, 0, nullptr, nullptr);
+    uint16_t *dst_buf = nullptr;
+    if (use_ohwi_img_k && lw.cache_k_buf_ohwi != nullptr) {
+      cl_int me;
+      dst_buf = static_cast<uint16_t *>(clEnqueueMapBuffer(
+        cl_q_, lw.cache_k_buf_ohwi, CL_TRUE, CL_MAP_WRITE, 0, cache_bytes_total,
+        0, nullptr, nullptr, &me));
+    }
     const uint16_t *src = static_cast<const uint16_t *>(p_k);
     uint16_t *dst = static_cast<uint16_t *>(lw.cache_k_svm);
     const size_t hKV = cfg_.num_heads_KV;
@@ -2723,9 +2781,15 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     for (unsigned int t = 0; t < M; ++t) {
       for (size_t h = 0; h < hKV; ++h) {
         const uint16_t *src_row = src + (size_t)t * hKV * d + h * d;
-        uint16_t *dst_row = dst + h * max_S * d + ((size_t)position + t) * d;
-        std::memcpy(dst_row, src_row, d_bytes);
+        const size_t dst_off = h * max_S * d + ((size_t)position + t) * d;
+        std::memcpy(dst + dst_off, src_row, d_bytes);
+        if (dst_buf != nullptr)
+          std::memcpy(dst_buf + dst_off, src_row, d_bytes);
       }
+    }
+    if (dst_buf != nullptr) {
+      clEnqueueUnmapMemObject(cl_q_, lw.cache_k_buf_ohwi, dst_buf, 0, nullptr,
+                              nullptr);
     }
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
@@ -2820,12 +2884,31 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //   NNTR_OHWI_IMG  → _ohwi_img_cl (K OHWI SVM, V cl_mem→image2d, #46f)
   bool attn_ok;
   if (use_ohwi_img) {
-    attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_img_view_cl(
-      static_cast<const uint16_t *>(scratch_.q_svm),
-      static_cast<const uint16_t *>(lw.cache_k_svm), lw.cache_v_image_ohwi,
-      static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
-      cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
-      kv_cache_max_seq_len_, true);
+    // K image2d is built per-layer (cache_k_image_ohwi) but unused by
+    // default: K is already OHWI [H_kv, S_max, d_h] where d_h is the
+    // innermost (stride-1) axis matching qk_matmul_f16_ohwi's inner
+    // reduction. Buffer scalar reads are already coalesced; wrapping
+    // K as image2d gave no measurable speedup (#46h: 204→203 TPS at
+    // M=1024). NNTR_OHWI_KIMG=1 forces the K-image path for ablation.
+    const bool use_k_image = []() {
+      const char *e = std::getenv("NNTR_OHWI_KIMG");
+      return e && std::atoi(e) != 0;
+    }();
+    if (use_k_image && lw.cache_k_image_ohwi != nullptr) {
+      attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
+        static_cast<const uint16_t *>(scratch_.q_svm),
+        lw.cache_k_image_ohwi, lw.cache_v_image_ohwi,
+        static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+        cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+        kv_cache_max_seq_len_, true);
+    } else {
+      attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_img_view_cl(
+        static_cast<const uint16_t *>(scratch_.q_svm),
+        static_cast<const uint16_t *>(lw.cache_k_svm), lw.cache_v_image_ohwi,
+        static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+        cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+        kv_cache_max_seq_len_, true);
+    }
   } else {
     attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
       static_cast<const uint16_t *>(scratch_.q_svm),

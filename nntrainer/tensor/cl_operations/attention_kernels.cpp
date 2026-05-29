@@ -1472,10 +1472,12 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
 // Core implementation shared by _img_cl (buf input → create image inside)
 // and _img_view_cl (caller-cached image). When `v_image_in` is non-null
 // we use it directly; otherwise we build/cache an image2d from
-// `v_buf_in`.
+// `v_buf_in`. Similarly, when `k_image_in` is non-null we dispatch the
+// image2d-K kernel (qk_matmul_f16_ohwi_img); otherwise we use the
+// SVM-K kernel (qk_matmul_f16_ohwi) with K_svm.
 static bool two_conv_attention_prefill_f16_ohwi_img_impl(
   const uint16_t *Q_svm, const uint16_t *K_svm,
-  cl_mem v_buf_in, cl_mem v_image_in,
+  cl_mem v_buf_in, cl_mem v_image_in, cl_mem k_image_in,
   uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal);
@@ -1486,7 +1488,8 @@ bool two_conv_attention_prefill_f16_ohwi_img_cl(
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal) {
   return two_conv_attention_prefill_f16_ohwi_img_impl(
-    Q_svm, K_svm, V_buf_ohwi, /*v_image_in=*/nullptr, O_svm, M, N_kv,
+    Q_svm, K_svm, V_buf_ohwi, /*v_image_in=*/nullptr,
+    /*k_image_in=*/nullptr, O_svm, M, N_kv,
     num_heads_Q, num_heads_KV, head_dim, max_seq_len, causal);
 }
 
@@ -1497,7 +1500,20 @@ bool two_conv_attention_prefill_f16_ohwi_img_view_cl(
   bool causal) {
   if (!V_image_ohwi) return false;
   return two_conv_attention_prefill_f16_ohwi_img_impl(
-    Q_svm, K_svm, /*v_buf_in=*/nullptr, V_image_ohwi, O_svm, M, N_kv,
+    Q_svm, K_svm, /*v_buf_in=*/nullptr, V_image_ohwi,
+    /*k_image_in=*/nullptr, O_svm, M, N_kv,
+    num_heads_Q, num_heads_KV, head_dim, max_seq_len, causal);
+}
+
+bool two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
+  const uint16_t *Q_svm, cl_mem K_image_ohwi, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal) {
+  if (!K_image_ohwi || !V_image_ohwi) return false;
+  return two_conv_attention_prefill_f16_ohwi_img_impl(
+    Q_svm, /*K_svm=*/nullptr, /*v_buf_in=*/nullptr, V_image_ohwi,
+    K_image_ohwi, O_svm, M, N_kv,
     num_heads_Q, num_heads_KV, head_dim, max_seq_len, causal);
 }
 
@@ -1510,7 +1526,7 @@ bool two_conv_attention_prefill_f16_ohwi_img_view_cl(
 // =============================================================================
 static bool two_conv_attention_prefill_f16_ohwi_img_impl(
   const uint16_t *Q_svm, const uint16_t *K_svm,
-  cl_mem v_buf_in, cl_mem v_image_in,
+  cl_mem v_buf_in, cl_mem v_image_in, cl_mem k_image_in,
   uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal) {
@@ -1518,6 +1534,7 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
   if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
   if (N_kv > max_seq_len) return false;
   if (!v_buf_in && !v_image_in) return false;
+  if (!k_image_in && !K_svm) return false;
   if (max_seq_len % 8 != 0) return false;
   if (head_dim % 8 != 0) return false;
 
@@ -1577,15 +1594,24 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
 
   clFinish(q);
 
-  // ---- K1: QK matmul OHWI (Q SVM, K SVM, scores cl_mem) ----
+  // ---- K1: QK matmul OHWI — pick image2d-K kernel when caller gave
+  //          us a K image, else the SVM buffer kernel.
   {
+    const char *k1_name = k_image_in != nullptr
+                            ? "qk_matmul_f16_ohwi_img"
+                            : "qk_matmul_f16_ohwi";
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "qk_matmul_f16_ohwi");
+      two_conv_attention_kernel, k1_name);
     if (!kp) return false;
-    if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_svm)) ||
-        !kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_svm)) ||
-        !kp->SetKernelArguments(2, &sc.scores, sizeof(cl_mem)))
+    if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_svm)))
       return false;
+    if (k_image_in != nullptr) {
+      if (!kp->SetKernelArguments(1, &k_image_in, sizeof(cl_mem))) return false;
+    } else {
+      if (!kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_svm)))
+        return false;
+    }
+    if (!kp->SetKernelArguments(2, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
     int hdq = (int)HD_Q, smax = (int)max_seq_len;
     int gqa = (int)(num_heads_Q / num_heads_KV);

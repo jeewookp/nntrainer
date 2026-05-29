@@ -185,6 +185,23 @@ bool two_conv_attention_prefill_f16_ohwi_img_view_cl(
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal);
 
+/// §3.7 + §3.8 full image2d KV: both K and V wrapped as image2d_from_
+/// buffer (OHWI K layout O=cache_size,I=d_h and OHWI-reversed V).
+/// qk_matmul_f16_ohwi_img kernel reads K via texel pack (8 halves of d
+/// per texel); sv_matmul_f16_ohwi_img reads V via texel pack (8 halves
+/// of n per texel). Q stays SVM (scalar half loads in both kernels).
+///
+///   K_image_ohwi: image2d over OHWI K cl_mem.
+///     width = d_h/8 texels, height = H_kv * S_max,
+///     row_pitch = d_h * sizeof(half).
+///   V_image_ohwi: image2d over OHWI-reversed V cl_mem (as in
+///                 _img_view_cl).
+bool two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
+  const uint16_t *Q_svm, cl_mem K_image_ohwi, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal);
+
 /// Single-kernel flash-attention prefill (paper §3.6 fusion +
 /// Dao et al. 2022 online softmax). Replaces the three-kernel
 /// two_conv_attention pipeline with one kernel that does QK · softmax

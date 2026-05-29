@@ -371,6 +371,12 @@ private:
     cl_mem cache_v_buf_ohwi = nullptr;
     size_t cache_v_buf_ohwi_bytes = 0;
     cl_mem cache_v_image_ohwi = nullptr;  // image2d_from_buffer over above
+    // #46h: K image2d mirror. K is already OHWI (O=cache_size, I=d_h)
+    // per paper §3.7; we mirror it in a regular cl_mem so image2d_from_
+    // buffer can wrap it for qk_matmul_f16_ohwi_img.
+    cl_mem cache_k_buf_ohwi = nullptr;
+    size_t cache_k_buf_ohwi_bytes = 0;
+    cl_mem cache_k_image_ohwi = nullptr;  // image2d_from_buffer over above
   };
   std::vector<LayerWeights> layers_;
 

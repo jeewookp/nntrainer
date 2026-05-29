@@ -177,6 +177,90 @@ __kernel void qk_matmul_f16_ohwi(
 }
 
 // =============================================================
+// qk_matmul_f16_ohwi_img — paper §3.7/§3.8 K via image2d.
+// K image layout: width = d_h/8 texels (8 halves per texel along d),
+//                 height = H_kv * S_max
+//   texel(d_tex, head_kv*S_max + n) = K[head_kv, n, d_tex*8 .. +7]
+// Q stays in SVM (scalar half loads); only K benefits from the
+// texture cache. Same TM_QK/TN_QK tiling as the buffer variant —
+// inner loop over d in 8-wide chunks via 1 K image read per (n, d).
+// =============================================================
+__kernel void qk_matmul_f16_ohwi_img(
+    __global const half *Q,            // [M, HD_Q] fp16, row-major
+    __read_only image2d_t K_img,       // see comment above
+    __global       half *scores,       // [H, M, N_kv] fp16, row-major
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int S_max, const int gqa,
+    const int causal, const float scale) {
+  const int n0 = get_global_id(0) * TN_QK;
+  const int m0 = get_global_id(1) * TM_QK;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || n0 >= N_kv) return;
+
+  float acc[TM_QK][TN_QK];
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++)
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) acc[i][j] = 0.0f;
+
+  const sampler_t smp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
+                        CLK_FILTER_NEAREST;
+  const int d_tex_count = d >> 3;
+  const int k_row_base = head_kv * S_max;
+
+  for (int dt = 0; dt < d_tex_count; dt++) {
+    half8 q_pack[TM_QK];
+    half8 k_pack[TN_QK];
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const int m = m0 + i;
+      if (m < M) {
+        const long off = (long)m * HD_Q + (long)head_q * d + (long)dt * 8;
+        q_pack[i] = vload8(0, Q + off);
+      } else {
+        q_pack[i] = (half8)((half)0.0h);
+      }
+    }
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      const int ny = (n < N_kv) ? n : 0;
+      const uint4 vv = read_imageui(K_img, smp, (int2)(dt, k_row_base + ny));
+      const half8 hp = as_half8(vv);
+      k_pack[j] = (n < N_kv) ? hp : (half8)((half)0.0h);
+    }
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const float4 qlo = convert_float4(q_pack[i].s0123);
+      const float4 qhi = convert_float4(q_pack[i].s4567);
+      #pragma unroll
+      for (int j = 0; j < TN_QK; j++) {
+        const float4 klo = convert_float4(k_pack[j].s0123);
+        const float4 khi = convert_float4(k_pack[j].s4567);
+        acc[i][j] += dot(qlo, klo) + dot(qhi, khi);
+      }
+    }
+  }
+
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      if (n >= N_kv) continue;
+      float v = acc[i][j] * scale;
+      if (causal && n > m) v = -INFINITY;
+      scores[score_base + (long)m * N_kv + n] = (half)v;
+    }
+  }
+}
+
+// =============================================================
 // Row softmax (in-place): for each (h, m), softmax over N_kv axis.
 //   One workgroup of LWS WIs per (h, m). Three local-memory
 //   reductions: max, then exp + sum, then inverse-multiply.
