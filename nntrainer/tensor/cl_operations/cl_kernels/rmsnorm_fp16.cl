@@ -76,3 +76,44 @@ __kernel void rmsnorm_cl_fp16_coop(__global const half *input,
     out8[i] = hv * a8[i];
   }
 }
+
+// Same cooperative RMSNorm but with an FP32 input (the residual stream is
+// accumulated in fp32 to avoid the last-layer massive-activation overflow of
+// fp16, #47j). Output stays fp16 (normalized values are O(1), feed int8 quant).
+__attribute__((reqd_work_group_size(RMSN_LWS, 1, 1)))
+__kernel void rmsnorm_f32in_f16out_coop(__global const float *input,
+                                        __global half *output,
+                                        __global const half *alpha,
+                                        half epsilon, int n_rows, int W) {
+  const int row = get_group_id(0);
+  const int tid = get_local_id(0);
+  if (row >= n_rows)
+    return;
+  const long base = (long)row * (long)W;
+  const int W8 = W >> 3;
+  __global const float8 *in8 = (__global const float8 *)(input + base);
+
+  float partial = 0.0f;
+  for (int i = tid; i < W8; i += RMSN_LWS) {
+    const float8 v = in8[i];
+    partial += dot(v.lo, v.lo) + dot(v.hi, v.hi);
+  }
+
+  __local float lsum[RMSN_LWS];
+  lsum[tid] = partial;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = RMSN_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s)
+      lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  const float mean = lsum[0] / (float)W;
+  const float scale = rsqrt(mean + (float)epsilon);
+  __global half8 *out8 = (__global half8 *)(output + base);
+  __global const half8 *a8 = (__global const half8 *)(alpha);
+  for (int i = tid; i < W8; i += RMSN_LWS) {
+    const half8 hv = convert_half8(in8[i] * scale);
+    out8[i] = hv * a8[i];
+  }
+}

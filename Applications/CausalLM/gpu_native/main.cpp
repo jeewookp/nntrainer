@@ -335,12 +335,72 @@ int main(int argc, char **argv) {
       cl->command_queue_inst_.dumpProfile(ptag);
     }
   }
+
+  // ===== Prefill CORRECTNESS: greedy generation via repeated prefill =====
+  // Real multi-token prefill (distinct tokens + per-position RoPE + causal
+  // attention), re-prefilling the growing sequence each step and reading the
+  // LAST position's logits. Validates that prefill output is now valid
+  // (#47i fp32 swiglu fixed the last-layer fp16 overflow NaN).
+  {
+    std::fprintf(stderr,
+                 "\n[main] === prefill correctness: greedy generation from BOS ===\n");
+    cl_int eg = CL_SUCCESS;
+    cl_mem last_row =
+      clCreateBuffer(ctx3, CL_MEM_READ_WRITE, H * sizeof(float), nullptr, &eg);
+    std::vector<int> seq{(int)BOS_TOKEN};
+    const int GEN = 20;
+    auto prefill_predict = [&](int read_row) -> int {
+      const int M = (int)seq.size();
+      for (int i = 0; i < M; ++i) {
+        cl_mem em = fwd.embedding_lookup_to_fp32_clmem((unsigned int)seq[i]);
+        if (!em) return -2;
+        clEnqueueCopyBuffer(q, em, pf_in, 0, (size_t)i * H * sizeof(float),
+                            H * sizeof(float), 0, nullptr, nullptr);
+        clReleaseMemObject(em);
+      }
+      clFinish(q);
+      cl_mem in_b = pf_in, out_b = pf_out;
+      for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+        if (!fwd.forward_one_layer_v2(L, in_b, out_b, 0, (unsigned int)M))
+          return -2;
+        std::swap(in_b, out_b);
+      }
+      const int r = (read_row < 0) ? (M - 1) : read_row;
+      clEnqueueCopyBuffer(q, in_b, last_row, (size_t)r * H * sizeof(float), 0,
+                          H * sizeof(float), 0, nullptr, nullptr);
+      clFinish(q);
+      if (!fwd.run_output_norm(last_row)) return -2;
+      return fwd.run_lm_head_and_argmax_cpu(last_row);
+    };
+    bool ok = true;
+    for (int step = 0; step < GEN; ++step) {
+      int nxt = prefill_predict(-1);
+      if (nxt < 0) { std::fprintf(stderr, "  step %d: predict failed (%d)\n", step, nxt); ok = false; break; }
+      if (step == 0)
+        std::fprintf(stderr,
+                     "  [self-consistency] prefill([BOS]) -> %d (decode=7212, match=%d)\n",
+                     nxt, nxt == 7212);
+      seq.push_back(nxt);
+    }
+    // Causal check: prefill([BOS,X]) row 0 must equal [BOS]-alone prediction.
+    {
+      std::vector<int> saved = seq; seq = {(int)BOS_TOKEN, 12345};
+      int r0 = prefill_predict(0);
+      std::fprintf(stderr, "  [causal] prefill([BOS,12345]) row0 -> %d (match=%d)\n",
+                   r0, r0 == 7212);
+      seq = saved;
+    }
+    std::fprintf(stderr, "  generated %zu token ids (greedy, no NaN=%d):\n   ",
+                 seq.size(), ok);
+    for (int t : seq) std::fprintf(stderr, " %d", t);
+    std::fprintf(stderr, "\n");
+    clReleaseMemObject(last_row);
+  }
+
   clReleaseMemObject(pf_in);
   clReleaseMemObject(pf_out);
 
   std::fprintf(stderr,
-               "\n[main] step #45 OK — multi-token prefill chain runs.\n"
-               "  Compare to baseline CausalLM 1K prefill: 460 TPS.\n"
-               "  (RoPE per-position correctness pending task #45b.)\n");
+               "\n[main] step #45 OK — multi-token prefill chain runs.\n");
   return 0;
 }

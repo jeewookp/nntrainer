@@ -2848,7 +2848,7 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   };
 
   // #46m: residual stream is fp16 throughout (paper-aligned).
-  if (!alloc(scratch_.in_padded,    CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t), "in_padded"))    return false;
+  if (!alloc(scratch_.in_padded,    CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float), "in_padded"))    return false;     // #47j fp32 inter-layer residual
   if (!alloc(scratch_.attn_normed,  CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t), "attn_normed"))  return false;
   if (!alloc(scratch_.qkv_act_i8,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                 "qkv_act_i8"))   return false;
   if (!alloc(scratch_.qkv_act_scale,CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "qkv_act_scale"))return false;
@@ -2873,8 +2873,8 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   if (!alloc(scratch_.wo_y_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"wo_y_fp16"))   return false;
   // #46m: residual fp16.
   if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"wo_fp32"))     return false;
-  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"residual_1"))  return false;
-  if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"ffn_in_padded"))return false;
+  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),"residual_1"))  return false;     // #47j fp32 residual accumulation (last-layer massive-activation overflow)
+  if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),"ffn_in_padded"))return false;  // #47j fp32
   if (!alloc(scratch_.ffn_normed,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"ffn_normed"))   return false;
   if (!alloc(scratch_.fa_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                  "fa_i8"))       return false;
   if (!alloc(scratch_.fa_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "fa_sc"))       return false;
@@ -2884,7 +2884,7 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   if (!alloc(scratch_.gate_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "gate_fp16"))   return false;
   if (!alloc(scratch_.up_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "up_fp32"))     return false;
   if (!alloc(scratch_.gate_fp32,    CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "gate_fp32"))   return false;
-  if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(uint16_t), "swiglu_out"))  return false;
+  if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float), "swiglu_out"))  return false;  // #47i: fp32 swiglu product (avoids fp16 overflow of silu(gate)*up)
   if (!alloc(scratch_.dn_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * I,                    "dn_i8"))       return false;
   if (!alloc(scratch_.dn_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "dn_sc"))       return false;
   if (!alloc(scratch_.dn_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_zp"))       return false;
@@ -2952,30 +2952,20 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_begin();
   float zero = 0.0f;
   const uint16_t zero_h = 0;
-  // Only zero the pad rows [M, M_pad); the first M rows are fully
-  // overwritten by the cvt below. At M_pad==M (M%4==0, e.g. M=1024) this
-  // is a no-op, saving a full-buffer fill per layer.
+  // #47j: in_padded is FP32 (the inter-layer residual is kept in fp32 — the
+  // last layer's massive activations exceed the fp16 max, and truncating the
+  // residual to fp16 here would inf). Pad rows [M, M_pad) zeroed; [0, M) is a
+  // straight fp32 copy of the caller's fp32 residual input.
   if (M_pad > M)
-    clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero_h, sizeof(uint16_t),
-                        (size_t)M * K_h * sizeof(uint16_t),
-                        (size_t)(M_pad - M) * K_h * sizeof(uint16_t), 0,
+    clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero, sizeof(float),
+                        (size_t)M * K_h * sizeof(float),
+                        (size_t)(M_pad - M) * K_h * sizeof(float), 0,
                         nullptr, nullptr);
-  // Boundary cvt: in_fp32 -> in_padded (first M rows). Padded rows
-  // beyond M stay zero from the fill above.
-  {
-    auto kp = cl->registerClKernel(kCvtF2hKernel, "cvt_f2h");
-    int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.in_padded, sizeof(cl_mem));
-    kp->SetKernelArguments(2, &n, sizeof(int));
-    std::array<size_t, 1> gws = {(((size_t)n + 63) / 64) * 64};
-    std::array<size_t, 1> lws = {64};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
-                                          lws.data(), 0, nullptr, nullptr);
-  }
+  clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
+                      (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16_coop");
+                                   "rmsnorm_f32in_f16out_coop");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
     int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
@@ -3300,14 +3290,16 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
                               K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  // #46m: add_fp16 (in_padded[0..M*K_h] + wo_y_fp16 → residual_1, all fp16).
-  // in_padded holds the fp16 residual input from stage (a).
+  // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
+  // accumulated in fp32 because the last layer's massive activations exceed
+  // the fp16 max (65504) -> inf -> NaN cascade through ffn_norm.
   {
-    auto kp = cl->registerClKernel(kAddFp16Kernel, "add_fp16");
+    auto kp =
+      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
     int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));
-    kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));  // fp32
+    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));  // fp16
+    kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem)); // fp32
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
@@ -3320,19 +3312,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     shared quant, ffn_up + ffn_gate, cvt fp16->fp32, swiglu, quant,
   //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
   stage_begin();
-  // #46m: residual_1 is fp16; copy directly to ffn_in_padded fp16.
+  // #47j: residual_1 and ffn_in_padded are FP32 (fp32 residual accumulation).
   // Only zero the pad rows [M, M_pad); the copy below overwrites [0, M).
   if (M_pad > M)
-    clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero_h,
-                        sizeof(uint16_t), (size_t)M * K_h * sizeof(uint16_t),
-                        (size_t)(M_pad - M) * K_h * sizeof(uint16_t), 0,
+    clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero,
+                        sizeof(float), (size_t)M * K_h * sizeof(float),
+                        (size_t)(M_pad - M) * K_h * sizeof(float), 0,
                         nullptr, nullptr);
   clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
-                      0, (size_t)M * K_h * sizeof(uint16_t), 0, nullptr,
+                      0, (size_t)M * K_h * sizeof(float), 0, nullptr,
                       nullptr);
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16_coop");
+                                   "rmsnorm_f32in_f16out_coop");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
     int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.ffn_in_padded, sizeof(cl_mem));
@@ -3382,21 +3374,26 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
-  // #46m: fp16 swiglu (input/output both fp16, paper-aligned).
+  // #47i: swiglu product silu(gate)*up in FP32. gate/up individually fit
+  // fp16, but their product overflows fp16 (e.g. silu(30)*3000 = 90000 >
+  // 65504) at the last layer's massive activations -> inf -> the per-row
+  // int8 quant scale becomes NaN -> down GEMM spreads NaN to all 1024 dims
+  // -> garbage prefill output for those rows. Computing the product in fp32
+  // (h2f kernel) lets the per-row int8 quant absorb the large magnitude.
   {
     auto kp =
-      cl->registerClKernel(kFusedSwigluFp16Kernel, "fused_swiglu_fp16");
+      cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
     int n = (int)(M * I);
     kp->SetKernelArguments(0, &scratch_.gate_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.up_fp16, sizeof(cl_mem));
-    kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem)); // fp32
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  nntrainer::quantize_act_v8c_fp16_cl(scratch_.swiglu_out, scratch_.dn_i8,
+  nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
   cl_image_desc dn_adesc{};
@@ -3413,13 +3410,13 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  // #46m: end-of-layer boundary. residual_1 (fp16) + dn_fp16 → out_fp32.
-  // Once main.cpp ping-pong switches to fp16 we replace with add_fp16.
+  // #47j: end-of-layer boundary. residual_1 (FP32) + dn_fp16 → out_fp32.
   {
-    auto kp = cl->registerClKernel(kAddFp16ToFp32Kernel, "add_fp16_to_fp32");
+    auto kp =
+      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
     int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem)); // fp32
+    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));    // fp16
     kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
