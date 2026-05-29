@@ -128,6 +128,49 @@ else
     log_success "Android binary up to date"
 fi
 
+# ── Ensure libnntrainer.so is up-to-date for Android ──────────────────────────
+# OpenCL kernel sources (.cl files) are embedded as C++ string literals at
+# meson configure/build time.  ndk-build cannot update them.  We must rebuild
+# libnntrainer.so via package_android.sh when:
+#   (a) builddir is missing or misconfigured for x86 (not Android), OR
+#   (b) any .cl file is newer than the installed libnntrainer.so
+_PREBUILT_SO="$BUILD_DIR/android_build_result/lib/arm64-v8a/libnntrainer.so"
+_CL_DIR="$NNTRAINER_ROOT/nntrainer/tensor/cl_operations/cl_kernels"
+
+# Reads the meson 'platform' option from builddir; prints "android", "none", etc.
+_meson_platform() {
+    python3 -c "
+import json,sys
+try:
+    opts=json.load(open('$BUILD_DIR/meson-info/intro-buildoptions.json'))
+    print(next((str(o.get('value','')) for o in opts if o.get('name')=='platform'), 'unknown'))
+except: print('unknown')
+" 2>/dev/null || echo "unknown"
+}
+
+_platform=$(_meson_platform)
+_cl_changed=false
+if [ -f "$_PREBUILT_SO" ] && \
+   find "$_CL_DIR" -name "*.cl" -newer "$_PREBUILT_SO" 2>/dev/null | grep -q .; then
+    _cl_changed=true
+fi
+
+if [ "$_platform" = "android" ] && [ "$_cl_changed" = true ]; then
+    # builddir is correctly configured for Android and only CL sources changed:
+    # incremental rebuild is sufficient.
+    log_info "OpenCL kernels changed — incremental rebuild of libnntrainer.so..."
+    ninja -C "$BUILD_DIR" install
+    log_success "libnntrainer.so rebuilt (incremental)"
+elif [ "$_platform" != "android" ]; then
+    # builddir is missing or misconfigured (e.g. reconfigured to x86).
+    # Full reconfigure + build via package_android.sh.
+    log_info "builddir platform=$_platform (not Android) — rebuilding libnntrainer.so..."
+    log_info "This may take several minutes..."
+    bash "$NNTRAINER_ROOT/tools/package_android.sh" "$NNTRAINER_ROOT" --arm-arch=armv8.2-a
+    log_success "libnntrainer.so rebuilt (full)"
+fi
+unset _PREBUILT_SO _CL_DIR _platform _cl_changed
+
 # Linux meson build for nntr_quantize using a dedicated x86 builddir
 # (arm-arch=none → AVX path; avoids ARM NEON recompile of libnntrainer)
 QUANTIZE_BUILDDIR="$NNTRAINER_ROOT/builddir_quantize"
