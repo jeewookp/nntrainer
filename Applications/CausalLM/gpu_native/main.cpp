@@ -22,6 +22,7 @@
 
 #include "qwen3_forward.h"
 
+#include <chrono>
 #include <cl_context.h>
 #include <cmath>
 #include <cstdio>
@@ -81,6 +82,13 @@ int main(int argc, char **argv) {
   // sized for max_seq_len_used = 8 (we only test position 0 today; 8
   // is round-up safety for future short prefills).
   const unsigned int max_seq_len_used = 8;
+  auto NOW = []() { return std::chrono::steady_clock::now(); };
+  auto MS = [](auto t1, auto t0) {
+    return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+             .count() / 1000.0;
+  };
+
+  auto t_load_start = NOW();
   size_t off = fwd.layers_start_offset();
   for (unsigned int L = 0; L < cfg.num_layers; ++L) {
     if (!fwd.load_layer(L, &off, max_seq_len_used)) {
@@ -88,111 +96,97 @@ int main(int argc, char **argv) {
       return 10 + (int)L;
     }
   }
+  auto t_load_done = NOW();
   std::fprintf(stderr,
-               "[main] all %u layers loaded; final offset=%zu MB "
-               "(file=%zu MB)\n",
-               cfg.num_layers, off / (1024 * 1024),
+               "[main] all %u layers loaded in %.1f ms; final offset=%zu "
+               "MB (file=%zu MB)\n",
+               cfg.num_layers, MS(t_load_done, t_load_start),
+               off / (1024 * 1024),
                fwd.weight_file_size() / (1024 * 1024));
 
-  // Initial layer-0 input: real embedding lookup. Use Qwen3's BOS token
-  // (151643 per HF config.json) so the first generated token has actual
-  // semantic meaning (vs the synthetic ramp pattern). The lookup is CPU-
-  // side Q6_K dequant + clCreateBuffer into a fresh cl_mem fp32 buffer.
+  // Load output_norm gamma up front (sits at the file tail right after
+  // layer 27). Doing it here makes the per-iteration timing below
+  // exclude this one-time load.
+  if (!fwd.load_output_norm(off)) {
+    std::fprintf(stderr, "[main] load_output_norm failed\n");
+    return 60;
+  }
+
   constexpr unsigned int BOS_TOKEN = 151643;
   auto *cl = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
   const unsigned int H = cfg.hidden_size;
-  cl_mem cur = fwd.embedding_lookup_to_fp32_clmem(BOS_TOKEN);
-  if (cur == nullptr) {
-    std::fprintf(stderr, "[main] embedding_lookup failed\n");
-    return 50;
-  }
 
-  // Chain through all 28 layers. Each forward_one_layer returns a fresh
-  // cl_mem; release the previous one after the call.
-  for (unsigned int L = 0; L < cfg.num_layers; ++L) {
-    cl_mem nxt = fwd.forward_one_layer(L, cur, /*position=*/0);
-    if (nxt == nullptr) {
-      std::fprintf(stderr, "[main] forward_one_layer(%u) failed\n", L);
-      clReleaseMemObject(cur);
-      return 100 + (int)L;
+  // Step 9: run 3 iterations to measure timing breakdown + verify
+  // determinism (same predicted token every run).
+  constexpr int NUM_RUNS = 3;
+  int prev_token = -1;
+  bool deterministic = true;
+  for (int run = 0; run < NUM_RUNS; ++run) {
+    auto t_embed_start = NOW();
+    cl_mem cur = fwd.embedding_lookup_to_fp32_clmem(BOS_TOKEN);
+    if (cur == nullptr) {
+      std::fprintf(stderr, "[main] embedding_lookup failed\n");
+      return 50;
     }
-    clReleaseMemObject(cur);
-    cur = nxt;
-    // Periodic progress + sanity summary every 7 layers.
-    if (L == 0 || L == 6 || L == 13 || L == 20 || L == cfg.num_layers - 1) {
-      std::vector<float> r(H);
-      clEnqueueReadBuffer(q, cur, CL_TRUE, 0, H * sizeof(float), r.data(),
-                          0, nullptr, nullptr);
-      bool finite = true;
-      float mn = std::numeric_limits<float>::infinity();
-      float mx = -mn;
-      for (float v : r) {
-        if (!std::isfinite(v)) finite = false;
-        if (v < mn) mn = v;
-        if (v > mx) mx = v;
+    auto t_embed_done = NOW();
+
+    auto t_chain_start = NOW();
+    for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+      cl_mem nxt = fwd.forward_one_layer(L, cur, /*position=*/0);
+      if (nxt == nullptr) {
+        std::fprintf(stderr, "[main] forward_one_layer(%u) failed\n", L);
+        clReleaseMemObject(cur);
+        return 100 + (int)L;
       }
-      std::fprintf(stderr,
-                   "[chain] after layer %2u  first 4: %g %g %g %g  "
-                   "min=%g max=%g finite=%d\n",
-                   L, r[0], r[1], r[2], r[3], mn, mx, finite);
+      clReleaseMemObject(cur);
+      cur = nxt;
     }
-  }
+    auto t_chain_done = NOW();
 
-  // Step 7c: output_norm. Loads the final gamma at the tail of the
-  // weight file (right after layer 27's last byte; `off` was advanced
-  // by the load loop) and applies rmsnorm.cl in place. Post-norm the
-  // residual stream magnitude collapses from ~10^4 back to ~[-2, +2]
-  // (RMS-normalized) — that's the shape lm_head expects.
-  if (!fwd.load_output_norm(off)) {
-    std::fprintf(stderr, "[main] load_output_norm failed\n");
-    clReleaseMemObject(cur);
-    return 60;
-  }
-  if (!fwd.run_output_norm(cur)) {
-    std::fprintf(stderr, "[main] run_output_norm failed\n");
-    clReleaseMemObject(cur);
-    return 61;
-  }
-  {
-    std::vector<float> r(H);
-    clEnqueueReadBuffer(q, cur, CL_TRUE, 0, H * sizeof(float), r.data(), 0,
-                        nullptr, nullptr);
-    bool finite = true;
-    float mn = std::numeric_limits<float>::infinity();
-    float mx = -mn;
-    for (float v : r) {
-      if (!std::isfinite(v)) finite = false;
-      if (v < mn) mn = v;
-      if (v > mx) mx = v;
+    if (!fwd.run_output_norm(cur)) {
+      std::fprintf(stderr, "[main] run_output_norm failed\n");
+      clReleaseMemObject(cur);
+      return 61;
     }
-    std::fprintf(stderr,
-                 "[qwen3-gpu] POST output_norm fp32 N=%u first 8:", H);
-    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", r[i]);
-    std::fprintf(stderr, "\n  last 4:");
-    for (int i = 0; i < 4; ++i) std::fprintf(stderr, " %g", r[H - 4 + i]);
-    std::fprintf(stderr,
-                 "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
-  }
+    auto t_norm_done = NOW();
 
-  // Step 8: lm_head (Q6_K tied embedding, CPU) + argmax → first token id.
-  int next_token = fwd.run_lm_head_and_argmax_cpu(cur);
-  clReleaseMemObject(cur);
-  if (next_token < 0) {
-    std::fprintf(stderr, "[main] lm_head failed\n");
-    return 70;
+    int next_token = fwd.run_lm_head_and_argmax_cpu(cur);
+    clReleaseMemObject(cur);
+    if (next_token < 0) {
+      std::fprintf(stderr, "[main] lm_head failed\n");
+      return 70;
+    }
+    auto t_lm_done = NOW();
+
+    const double t_embed   = MS(t_embed_done, t_embed_start);
+    const double t_chain   = MS(t_chain_done, t_chain_start);
+    const double t_norm    = MS(t_norm_done,  t_chain_done);
+    const double t_lm      = MS(t_lm_done,    t_norm_done);
+    const double t_total   = MS(t_lm_done,    t_embed_start);
+    const double t_per_layer = t_chain / cfg.num_layers;
+    const double tps = 1000.0 / t_total;
+
+    std::fprintf(stderr,
+                 "[run %d] embed=%.2f ms  chain=%.1f ms (%.2f ms/layer)  "
+                 "out_norm=%.2f ms  lm_head=%.1f ms  TOTAL=%.1f ms  "
+                 "(=> %.2f TPS effective)  -> token %d\n",
+                 run, t_embed, t_chain, t_per_layer, t_norm, t_lm, t_total,
+                 tps, next_token);
+
+    if (run > 0 && next_token != prev_token) deterministic = false;
+    prev_token = next_token;
   }
 
   std::fprintf(stderr,
-               "[main] step 8 OK — END-TO-END INFERENCE COMPLETE.\n"
-               "  input  token: %u (BOS)\n"
-               "  output token: %d\n"
-               "  pipeline: Q6_K embed lookup -> 28 GPU layers "
-               "(rmsnorm/QKV/qknorm/RoPE/SVM KV cache/attention/wo/"
-               "residual_1/ffn_norm/ffn_up/gate/swiglu/ffn_down/"
-               "residual_2) -> output_norm -> CPU Q6_K lm_head -> "
-               "argmax.\n",
-               BOS_TOKEN, next_token);
+               "\n[main] step 9 — coherence + perf summary:\n"
+               "  predicted token over %d runs: %d (deterministic=%d)\n"
+               "  baseline reference: CausalLM ~6.7 decode TPS "
+               "(== ~150 ms/decode token) on the same SD8 Elite.\n"
+               "  Pipeline: real BOS embedding lookup (CPU Q6_K dequant) "
+               "-> 28-layer GPU chain (all SVM/cl_mem resident) "
+               "-> output_norm -> CPU Q6_K lm_head + argmax.\n",
+               NUM_RUNS, prev_token, deterministic ? 1 : 0);
   return 0;
 }
