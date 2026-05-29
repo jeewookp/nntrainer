@@ -72,6 +72,26 @@ __kernel void add_fp32(__global const float *a, __global const float *b,
 // the destination is what the sv_matmul_f16_ohwi kernel reads
 // sequentially, so this write-side cost is amortized by attention.
 // GWS = (M, hKV, d). For typical sizes 1024 * 8 * 128 = 1M WIs.
+// K scatter to OHWI [hKV, S_max, d_h] layout. Same shape as the
+// existing K SVM scatter but on GPU side and writing to cl_mem.
+// Lets us skip the CPU sync-map dual-write when NNTR_OHWI_IMG=1.
+// WI: (t, h, x). x is stride-1 in both src and dst → coalesced.
+static const std::string kKScatterOhwiKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void k_scatter_ohwi(__global const half *src,
+                             __global half *dst,
+                             const int M, const int hKV,
+                             const int d, const int max_S,
+                             const int position) {
+  int t = get_global_id(0);
+  int h = get_global_id(1);
+  int x = get_global_id(2);
+  if (t >= M || h >= hKV || x >= d) return;
+  dst[(long)h * max_S * d + (long)(position + t) * d + x] =
+    src[(long)t * hKV * d + (long)h * d + x];
+}
+)CL";
+
 static const std::string kVScatterOhwiTKernel = R"CL(
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 __kernel void v_scatter_ohwi_t(__global const half *src,
@@ -2958,14 +2978,64 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   const size_t d_bytes = (size_t)cfg_.head_dim * sizeof(uint16_t);
   const size_t max_S = kv_cache_max_seq_len_;
   stage_begin();
-  // K: OHWI scatter. Same layout for SVM and cl_mem mirror; under
-  // NNTR_OHWI_IMG=1 we additionally populate cache_k_buf_ohwi so the
-  // image2d view sees up-to-date data.
-  static const bool use_ohwi_img_k = []() {
-    const char *e = std::getenv("NNTR_OHWI_IMG");
+  // K scatter:
+  //   NNTR_OHWI_IMG=1 + cache_k_buf_ohwi → GPU k_scatter_ohwi kernel
+  //                                        (no CPU sync map, like V).
+  //                                        Optionally ALSO writes SVM if
+  //                                        the K-image attention path is
+  //                                        off (caller still reads SVM).
+  //   default                           → CPU map + per-(t,h) memcpy.
+  static const bool use_k_image_scatter = []() {
+    const char *e = std::getenv("NNTR_OHWI_KIMG");
     return e && std::atoi(e) != 0;
   }();
-  {
+  const bool gpu_k_scatter =
+    use_ohwi_img && (lw.cache_k_buf_ohwi != nullptr);
+  const bool need_k_svm_after_scatter = !use_k_image_scatter;
+
+  if (gpu_k_scatter) {
+    // GPU-side OHWI K scatter. Stays on the command queue with the prior
+    // q_norm/k_norm/RoPE kernels — no host sync, no map.
+    auto kp = cl->registerClKernel(kKScatterOhwiKernel, "k_scatter_ohwi");
+    if (!kp) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: k_scatter_ohwi register failed\n",
+                   layer_id);
+      clReleaseMemObject(act_image);
+      return false;
+    }
+    cl_mem src_mem = scratch_.y_k;
+    cl_mem dst_mem = lw.cache_k_buf_ohwi;
+    int Mi = (int)M;
+    int hKVi = (int)cfg_.num_heads_KV;
+    int di = (int)cfg_.head_dim;
+    int max_Si = (int)max_S;
+    int pos_i = (int)position;
+    if (!kp->SetKernelArguments(0, &src_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &dst_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(2, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(3, &hKVi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &max_Si, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &pos_i, sizeof(int))) {
+      clReleaseMemObject(act_image);
+      return false;
+    }
+    // x in stride-1, coalesce on innermost dim.
+    constexpr size_t LWS_X = 1, LWS_Y = 1, LWS_Z = 64;
+    const size_t gws_x = (size_t)Mi;
+    const size_t gws_y = (size_t)hKVi;
+    const size_t gws_z = ((size_t)di + LWS_Z - 1) / LWS_Z * LWS_Z;
+    std::array<size_t, 3> gws = {gws_x, gws_y, gws_z};
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+
+  if (!gpu_k_scatter || need_k_svm_after_scatter) {
+    // CPU-side scatter path: writes cache_k_svm (and, in legacy NNTR_OHWI
+    // _IMG-without-KIMG mode, also keeps SVM in sync for the SVM-K
+    // attention kernel).
     cl_int e;
     void *p_k = clEnqueueMapBuffer(cl_q_, scratch_.y_k, CL_TRUE, CL_MAP_READ,
                                    0, kv_total_bytes, 0, nullptr, nullptr,
@@ -2974,13 +3044,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
       max_S * cfg_.num_heads_KV * cfg_.head_dim * sizeof(uint16_t);
     clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, lw.cache_k_svm,
                     cache_bytes_total, 0, nullptr, nullptr);
-    uint16_t *dst_buf = nullptr;
-    if (use_ohwi_img_k && lw.cache_k_buf_ohwi != nullptr) {
-      cl_int me;
-      dst_buf = static_cast<uint16_t *>(clEnqueueMapBuffer(
-        cl_q_, lw.cache_k_buf_ohwi, CL_TRUE, CL_MAP_WRITE, 0, cache_bytes_total,
-        0, nullptr, nullptr, &me));
-    }
     const uint16_t *src = static_cast<const uint16_t *>(p_k);
     uint16_t *dst = static_cast<uint16_t *>(lw.cache_k_svm);
     const size_t hKV = cfg_.num_heads_KV;
@@ -2990,13 +3053,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
         const uint16_t *src_row = src + (size_t)t * hKV * d + h * d;
         const size_t dst_off = h * max_S * d + ((size_t)position + t) * d;
         std::memcpy(dst + dst_off, src_row, d_bytes);
-        if (dst_buf != nullptr)
-          std::memcpy(dst_buf + dst_off, src_row, d_bytes);
       }
-    }
-    if (dst_buf != nullptr) {
-      clEnqueueUnmapMemObject(cl_q_, lw.cache_k_buf_ohwi, dst_buf, 0, nullptr,
-                              nullptr);
     }
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
