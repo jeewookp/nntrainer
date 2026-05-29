@@ -368,6 +368,11 @@ private:
   // Final output_norm gamma (fp32, [hidden]) in SVM.
   void *output_norm_gamma_svm_ = nullptr;
 
+  // Per-layer KV cache stride (max_seq_len that was passed to
+  // load_layer); needed by the OHWI K attention wrapper to compute
+  // per-head offsets into the cache.
+  unsigned int kv_cache_max_seq_len_ = 0;
+
   /// Per-forward scratch. All 28 layers use identical shapes (model
   /// constants), so a single set of these is reused across every
   /// layer of every forward call. Allocated once on first

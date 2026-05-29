@@ -1932,6 +1932,11 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   clFinish(cl_q_);
 
   *offset_inout = off;
+  // Record the cache stride so the OHWI attention wrapper can pass it
+  // as `max_seq_len` (the per-head index stride in the OHWI layout).
+  // All layers share the same max_seq_len_used in our setup.
+  if (kv_cache_max_seq_len_ == 0)
+    kv_cache_max_seq_len_ = max_seq_len_used;
   std::fprintf(stderr,
                "[qwen3-gpu] layer %u loaded; advanced offset to %zu "
                "(~%zu MB)\n",
@@ -2614,28 +2619,60 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // (e) Write K, V (M rows) to this layer's SVM cache starting at
   //     `position`. y_k/y_v are [M_pad * N_kv] fp16; we copy only the
   //     valid M*N_kv prefix.
+  //
+  //   K cache: OHWI layout [hKV, max_seq_len, d] — sequential per-head.
+  //            Per token row t we scatter to per-head offsets so the
+  //            qk_matmul_f16_ohwi kernel can read each head's K
+  //            contiguously (paper §3.8). This costs O(M*hKV) small
+  //            memcpys per layer instead of one contiguous copy, but
+  //            (i) M*hKV at 1024*8 = 8K copies of 256B is still ~2 MB
+  //            total in <10 ms, and (ii) the attention speedup from
+  //            cache-friendly access dwarfs the write-side cost.
+  //   V cache: concat layout [max_seq_len, hKV*d] — V OHWI_T is task
+  //            #46d (needs new sv_matmul kernel variant).
   const size_t kv_row_bytes = (size_t)N_kv * sizeof(uint16_t);
   const size_t kv_total_bytes = (size_t)M * kv_row_bytes;
-  auto copy_cl_to_svm = [&](cl_mem src, void *dst_svm_base,
-                            size_t offset_bytes, size_t bytes) {
-    cl_int e;
-    void *p = clEnqueueMapBuffer(cl_q_, src, CL_TRUE, CL_MAP_READ, 0,
-                                 bytes, 0, nullptr, nullptr, &e);
-    if (!p) return false;
-    void *dst = static_cast<uint8_t *>(dst_svm_base) + offset_bytes;
-    if (clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, bytes, 0,
-                        nullptr, nullptr) != CL_SUCCESS)
-      return false;
-    std::memcpy(dst, p, bytes);
-    clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
-    clEnqueueUnmapMemObject(cl_q_, src, p, 0, nullptr, nullptr);
-    return true;
-  };
+  const size_t d_bytes = (size_t)cfg_.head_dim * sizeof(uint16_t);
+  const size_t max_S = kv_cache_max_seq_len_;
   stage_begin();
-  copy_cl_to_svm(scratch_.y_k, lw.cache_k_svm,
-                 (size_t)position * kv_row_bytes, kv_total_bytes);
-  copy_cl_to_svm(scratch_.y_v, lw.cache_v_svm,
-                 (size_t)position * kv_row_bytes, kv_total_bytes);
+  // K: OHWI scatter.
+  {
+    cl_int e;
+    void *p_k = clEnqueueMapBuffer(cl_q_, scratch_.y_k, CL_TRUE, CL_MAP_READ,
+                                   0, kv_total_bytes, 0, nullptr, nullptr,
+                                   &e);
+    const size_t cache_bytes_total =
+      max_S * cfg_.num_heads_KV * cfg_.head_dim * sizeof(uint16_t);
+    clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, lw.cache_k_svm,
+                    cache_bytes_total, 0, nullptr, nullptr);
+    const uint16_t *src = static_cast<const uint16_t *>(p_k);
+    uint16_t *dst = static_cast<uint16_t *>(lw.cache_k_svm);
+    const size_t hKV = cfg_.num_heads_KV;
+    const size_t d = cfg_.head_dim;
+    for (unsigned int t = 0; t < M; ++t) {
+      for (size_t h = 0; h < hKV; ++h) {
+        const uint16_t *src_row = src + (size_t)t * hKV * d + h * d;
+        uint16_t *dst_row = dst + h * max_S * d + ((size_t)position + t) * d;
+        std::memcpy(dst_row, src_row, d_bytes);
+      }
+    }
+    clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
+    clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
+  }
+  // V: concat copy (unchanged).
+  {
+    cl_int e;
+    void *p_v = clEnqueueMapBuffer(cl_q_, scratch_.y_v, CL_TRUE, CL_MAP_READ,
+                                   0, kv_total_bytes, 0, nullptr, nullptr,
+                                   &e);
+    void *dst = static_cast<uint8_t *>(lw.cache_v_svm) +
+                (size_t)position * kv_row_bytes;
+    clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, kv_total_bytes, 0,
+                    nullptr, nullptr);
+    std::memcpy(dst, p_v, kv_total_bytes);
+    clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
+    clEnqueueUnmapMemObject(cl_q_, scratch_.y_v, p_v, 0, nullptr, nullptr);
+  }
   clFinish(cl_q_);
   stage_end_add(timings_.kv_write_ms);
 
@@ -2654,12 +2691,18 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
   }
-  bool attn_ok = nntrainer::two_conv_attention_prefill_f16_cl(
+  // Paper §3.8 K OHWI: per-head sequential K reads inside qk_matmul,
+  // cache-friendly. V stays concat (sv_matmul reuses the original
+  // sv_matmul_f16 kernel via this wrapper). The OHWI wrapper takes
+  // an extra max_seq_len argument = the per-head index stride in the
+  // K SVM buffer (matches what we used when allocating cache_k_svm).
+  bool attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
     static_cast<const uint16_t *>(scratch_.q_svm),
     static_cast<const uint16_t *>(lw.cache_k_svm),
     static_cast<const uint16_t *>(lw.cache_v_svm),
     static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
-    cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim, true, true);
+    cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+    kv_cache_max_seq_len_, true, /*svm_inputs=*/true);
   stage_end_add(timings_.attn_dispatch_ms);
   if (!attn_ok) {
     std::fprintf(stderr,
