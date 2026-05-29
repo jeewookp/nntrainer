@@ -239,6 +239,19 @@ public:
   /// preconfigured; otherwise skipped.
   bool run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k);
 
+  /// Path 4 / #45b: precompute the full RoPE cos/sin LUT once for
+  /// positions [0, max_positions). Idempotent — no-op if a table of
+  /// at least the requested size already exists. Stored in SVM
+  /// (rope_cos_full_svm_, rope_sin_full_svm_).
+  bool precompute_rope_full_lut(unsigned int max_positions);
+
+  /// Dispatch the batched RoPE kernel on a [M, num_heads * head_dim]
+  /// fp16 cl_mem in place. Applies rotation for positions
+  /// [start_pos, start_pos + M). Requires precompute_rope_full_lut
+  /// to have been called with max_positions >= start_pos + M.
+  bool dispatch_rope_batched(cl_mem io, unsigned int M,
+                             unsigned int num_heads, unsigned int start_pos);
+
   /// Allocate layer 0's K and V caches as SVM cl_mem buffers, sized
   /// for the full max_seq_len. Both zeroed at allocation so any
   /// position we haven't written reads as 0 (causal-mask-friendly).
@@ -312,6 +325,14 @@ private:
   void *layer0_rope_cos_svm_fp16_ = nullptr;
   void *layer0_rope_sin_svm_fp16_ = nullptr;
   int   layer0_rope_position_ = -1; // -1 = no position configured
+
+  // Path 4 / #45b: full RoPE LUT [max_positions, half_d] in SVM.
+  // Built once on first prefill via precompute_rope_full_lut(); the
+  // batched rope_fp16_batched kernel indexes (start_pos + t) * half_d + k.
+  // Session-wide (rope_theta + head_dim identical across layers).
+  void *rope_cos_full_svm_ = nullptr;
+  void *rope_sin_full_svm_ = nullptr;
+  unsigned int rope_full_max_positions_ = 0;
 
   // Layer 0 K and V caches (SVM cl_mem), [max_seq_len * hKV * d] fp16
   // each. Concat row-major layout: cache[pos * hKV*d + hkv*d + k]. Both

@@ -128,6 +128,42 @@ __kernel void rope_fp16(__global half *xy,
 }
 )CL";
 
+// Batched RoPE (Path 4 / #45b): single dispatch covers M tokens
+// across all heads. cos_full / sin_full are session-wide precomputed
+// LUTs of shape [max_positions, half_d] (the +half copy that the
+// single-token kernel duplicates is unused here; the kernel indexes
+// cos/sin only on the first-half index k).
+//
+//   xy layout: [M, num_heads * (2 * half_d)] fp16 row-major
+//              (head_dim = 2*half_d).
+//   gws = (M, num_heads, half_d). Each WI handles one (k, k+half_d)
+//   pair on one (token, head). 1 dispatch per Q and per K vs the
+//   M loop the per-position kernel needed.
+static const std::string kRopeFp16BatchedKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void rope_fp16_batched(
+    __global       half *xy,
+    __global const half *cos_full,    // [max_positions, half_d]
+    __global const half *sin_full,    // [max_positions, half_d]
+    const int M,
+    const int num_heads,
+    const int half_d,
+    const int start_pos) {
+  int t = get_global_id(0);
+  int h = get_global_id(1);
+  int k = get_global_id(2);
+  if (t >= M || h >= num_heads || k >= half_d) return;
+  long row_base = (long)t * num_heads * (2 * half_d) + (long)h * (2 * half_d);
+  long lut_off = (long)(start_pos + t) * half_d + k;
+  half c = cos_full[lut_off];
+  half s = sin_full[lut_off];
+  half x_lo = xy[row_base + k];
+  half x_hi = xy[row_base + k + half_d];
+  xy[row_base + k]          = x_lo * c - x_hi * s;
+  xy[row_base + k + half_d] = x_hi * c + x_lo * s;
+}
+)CL";
+
 Qwen3Forward::Qwen3Forward() = default;
 
 Qwen3Forward::~Qwen3Forward() {
@@ -216,6 +252,10 @@ Qwen3Forward::~Qwen3Forward() {
     clSVMFree(cl_ctx_, layer0_rope_cos_svm_fp16_);
   if (layer0_rope_sin_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_rope_sin_svm_fp16_);
+  if (rope_cos_full_svm_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, rope_cos_full_svm_);
+  if (rope_sin_full_svm_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, rope_sin_full_svm_);
   if (layer0_q_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_q_norm_gamma_svm_fp16_);
   if (layer0_k_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
@@ -1494,6 +1534,118 @@ bool Qwen3Forward::run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k) {
   return true;
 }
 
+bool Qwen3Forward::precompute_rope_full_lut(unsigned int max_positions) {
+  if (max_positions == 0 || cl_ctx_ == nullptr) return false;
+  if (rope_cos_full_svm_ != nullptr &&
+      rope_full_max_positions_ >= max_positions) {
+    return true;
+  }
+  const unsigned int d = cfg_.head_dim;
+  if (d % 2 != 0) return false;
+  const unsigned int half = d / 2;
+  const size_t bytes =
+    (size_t)max_positions * (size_t)half * sizeof(uint16_t);
+
+  if (rope_cos_full_svm_ != nullptr) {
+    clSVMFree(cl_ctx_, rope_cos_full_svm_);
+    rope_cos_full_svm_ = nullptr;
+  }
+  if (rope_sin_full_svm_ != nullptr) {
+    clSVMFree(cl_ctx_, rope_sin_full_svm_);
+    rope_sin_full_svm_ = nullptr;
+  }
+  rope_cos_full_svm_ = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, bytes, 0);
+  rope_sin_full_svm_ = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, bytes, 0);
+  if (rope_cos_full_svm_ == nullptr || rope_sin_full_svm_ == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] precompute_rope_full_lut: SVMAlloc(%zu) failed\n",
+                 bytes);
+    return false;
+  }
+
+  // Map both for write, fill, unmap.
+  cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE,
+                               rope_cos_full_svm_, bytes, 0, nullptr, nullptr);
+  if (err != CL_SUCCESS) return false;
+  err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, rope_sin_full_svm_,
+                        bytes, 0, nullptr, nullptr);
+  if (err != CL_SUCCESS) return false;
+  uint16_t *pc = static_cast<uint16_t *>(rope_cos_full_svm_);
+  uint16_t *ps = static_cast<uint16_t *>(rope_sin_full_svm_);
+  for (unsigned int j = 0; j < half; ++j) {
+    float exponent = -2.0f * (float)j / (float)d;
+    float theta_j = std::pow(cfg_.rope_theta, exponent);
+    for (unsigned int pos = 0; pos < max_positions; ++pos) {
+      float angle = (float)pos * theta_j;
+      pc[(size_t)pos * half + j] = f2h(std::cos(angle));
+      ps[(size_t)pos * half + j] = f2h(std::sin(angle));
+    }
+  }
+  clEnqueueSVMUnmap(cl_q_, rope_cos_full_svm_, 0, nullptr, nullptr);
+  clEnqueueSVMUnmap(cl_q_, rope_sin_full_svm_, 0, nullptr, nullptr);
+  clFinish(cl_q_);
+  rope_full_max_positions_ = max_positions;
+  std::fprintf(stderr,
+               "[qwen3-gpu] RoPE full LUT built: %u positions × %u half_d "
+               "(%.2f MB)\n",
+               max_positions, half, (double)(2 * bytes) / (1024.0 * 1024.0));
+  return true;
+}
+
+bool Qwen3Forward::dispatch_rope_batched(cl_mem io, unsigned int M,
+                                         unsigned int num_heads,
+                                         unsigned int start_pos) {
+  if (io == nullptr || M == 0 || num_heads == 0) return true;
+  if (rope_cos_full_svm_ == nullptr || rope_sin_full_svm_ == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] dispatch_rope_batched: LUT not built\n");
+    return false;
+  }
+  if (start_pos + M > rope_full_max_positions_) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] dispatch_rope_batched: start+M=%u > LUT %u\n",
+                 start_pos + M, rope_full_max_positions_);
+    return false;
+  }
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  auto kp =
+    cl->registerClKernel(kRopeFp16BatchedKernel, "rope_fp16_batched");
+  if (!kp) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] rope_fp16_batched register failed\n");
+    return false;
+  }
+  int Mi = (int)M;
+  int nh = (int)num_heads;
+  int half_d = (int)(cfg_.head_dim / 2);
+  int sp = (int)start_pos;
+  if (!kp->SetKernelArguments(0, &io, sizeof(cl_mem)) ||
+      !kp->SetKernelSVMArguments(1, rope_cos_full_svm_) ||
+      !kp->SetKernelSVMArguments(2, rope_sin_full_svm_) ||
+      !kp->SetKernelArguments(3, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(4, &nh, sizeof(int)) ||
+      !kp->SetKernelArguments(5, &half_d, sizeof(int)) ||
+      !kp->SetKernelArguments(6, &sp, sizeof(int))) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] rope_fp16_batched arg setup failed\n");
+    return false;
+  }
+  // Pick lws covering the half_d direction (small: 64 at d=128 / 2 = 64),
+  // tile M and heads on the outer dims.
+  constexpr size_t LWS_K = 64;
+  constexpr size_t LWS_H = 1;
+  constexpr size_t LWS_T = 1;
+  const size_t gws_k = ((size_t)half_d + LWS_K - 1) / LWS_K * LWS_K;
+  const size_t gws_h = (size_t)nh;
+  const size_t gws_t = (size_t)Mi;
+  std::array<size_t, 3> gws = {gws_t, gws_h, gws_k};
+  std::array<size_t, 3> lws = {LWS_T, LWS_H, LWS_K};
+  cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                        lws.data(), 0, nullptr, nullptr);
+  return true;
+}
+
 bool Qwen3Forward::load_layer0_ffn_weights() {
   // After wo there are NO weights for decoder_add. ffn_norm gamma is
   // the next slab, then ffn_up, ffn_gate, ffn_down.
@@ -2717,19 +2869,18 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
   disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
 
-  // RoPE on Q/K.  Task #45b: for M>1 each token needs its own
-  // (start_pos + i) rotation. The current rope_fp16 kernel only
-  // handles a single position; per-token loop at M=1024 costs ~28
-  // seconds in dispatch overhead alone. Until #45b lands a batched
-  // RoPE kernel, SKIP RoPE entirely for M>1 (output not semantically
-  // valid for prefill anyway). For M=1 (decode), apply normally.
-  if (M == 1) {
-    if (layer0_rope_position_ != (int)position) {
-      if (!precompute_rope_for_position(position)) return false;
-    }
-    run_layer0_rope_on_qk(scratch_.y_q, scratch_.y_k);
-    clFinish(cl_q_);
+  // RoPE on Q/K via batched LUT kernel (#45b / Path 4). Single
+  // dispatch covers all M tokens × num_heads × half_d, looking up
+  // cos/sin from the precomputed full LUT. Works for M=1 (decode)
+  // and M>1 (prefill) without the per-token dispatch storm that
+  // made prefill RoPE infeasible before.
+  if (!precompute_rope_full_lut(cfg_.max_seq_len)) return false;
+  if (!dispatch_rope_batched(scratch_.y_q, M, cfg_.num_heads_Q, position) ||
+      !dispatch_rope_batched(scratch_.y_k, M, cfg_.num_heads_KV, position)) {
+    clReleaseMemObject(act_image);
+    return false;
   }
+  clFinish(cl_q_);
   stage_end_add(timings_.qk_norm_rope_ms);
 
   // (e) Write K, V (M rows) to this layer's SVM cache starting at
