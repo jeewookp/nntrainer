@@ -3,178 +3,89 @@
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[DIAG] cgroup entry: 0::/system/uid_0/pid_18609
+[DIAG] cgroup entry: 0::/system/uid_0/pid_6181
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 372416 KB
+[DIAG] RSS before initialize: 373064 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=5575
-[CL_LOG] BC-src-code:232:16: warning: unknown attribute 'intel_reqd_sub_group_size' ignored [-Wattributes]
-[CL_LOG] __attribute__((intel_reqd_sub_group_size(SUBGROUP_SIZE))) kernel void
-[CL_LOG]                ^
-[CL_LOG] BC-src-code:296:58: error: can't convert between vector values of different size ('unsigned char  __attribute__((ext_vector_type(16)))' and 'int')
-[CL_LOG]       char16 i4x16_odd_c16 = (as_char16(as_uchar16(bx16) >> 4));
-[CL_LOG]                                         ~~~~~~~~~~~~~~~~ ^  ~
-[CL_LOG] BC-src-code:305:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[0] += as_half(sub_group_broadcast(input_value, 0)) * i4x16_even.s0 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:310:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[1] += as_half(sub_group_broadcast(input_value, 0)) * i4x16_even.s1 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:315:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[2] += as_half(sub_group_broadcast(input_value, 1)) * i4x16_odd.s0 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:320:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[3] += as_half(sub_group_broadcast(input_value, 1)) * i4x16_odd.s1 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:325:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[4] += as_half(sub_group_broadcast(input_value, 2)) * i4x16_even.s2 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:330:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[5] += as_half(sub_group_broadcast(input_value, 2)) * i4x16_even.s3 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:335:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[6] += as_half(sub_group_broadcast(input_value, 3)) * i4x16_odd.s2 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:340:10: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]       sum[7] += as_half(sub_group_broadcast(input_value, 3)) * i4x16_odd.s3 +
-[CL_LOG]       ~~~^
-[CL_LOG] BC-src-code:346:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]     sum_all[0] += (sum[0] + sum[2] + sum[4] + sum[6]) * scale_0;
-[CL_LOG]     ~~~~~~~^
-[CL_LOG] BC-src-code:346:23: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[0] += (sum[0] + sum[2] + sum[4] + sum[6]) * scale_0;
-[CL_LOG]                    ~~~^
-[CL_LOG] BC-src-code:346:32: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[0] += (sum[0] + sum[2] + sum[4] + sum[6]) * scale_0;
-[CL_LOG]                             ~~~^
-[CL_LOG] BC-src-code:346:41: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[0] += (sum[0] + sum[2] + sum[4] + sum[6]) * scale_0;
-[CL_LOG]                                      ~~~^
-[CL_LOG] BC-src-code:346:50: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[0] += (sum[0] + sum[2] + sum[4] + sum[6]) * scale_0;
-[CL_LOG]                                               ~~~^
-[CL_LOG] BC-src-code:347:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]     sum_all[1] += (sum[1] + sum[3] + sum[5] + sum[7]) * scale_1;
-[CL_LOG]     ~~~~~~~^
-[CL_LOG] BC-src-code:347:23: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[1] += (sum[1] + sum[3] + sum[5] + sum[7]) * scale_1;
-[CL_LOG]                    ~~~^
-[CL_LOG] BC-src-code:347:32: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[1] += (sum[1] + sum[3] + sum[5] + sum[7]) * scale_1;
-[CL_LOG]                             ~~~^
-[CL_LOG] BC-src-code:347:41: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[1] += (sum[1] + sum[3] + sum[5] + sum[7]) * scale_1;
-[CL_LOG]                                      ~~~^
-[CL_LOG] BC-src-code:347:50: error: Attempt to use subscript to obtain element of 'float8'.
-[CL_LOG]     sum_all[1] += (sum[1] + sum[3] + sum[5] + sum[7]) * scale_1;
-[CL_LOG]                                               ~~~^
-[CL_LOG] BC-src-code:350:40: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   all_sum_even[wi_id][thr_id] = sum_all[0];
-[CL_LOG]                                 ~~~~~~~^
-[CL_LOG] BC-src-code:351:39: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   all_sum_odd[wi_id][thr_id] = sum_all[1];
-[CL_LOG]                                ~~~~~~~^
-[CL_LOG] BC-src-code:355:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[0] = as_float(
-[CL_LOG]   ~~~~~~~~~^
-[CL_LOG] BC-src-code:356:5: error: implicit declaration of function 'intel_sub_group_block_read' is invalid in C99 [-Werror,-Wimplicit-function-declaration]
-[CL_LOG]     intel_sub_group_block_read((const __local uint *)all_sum_even[thr_id]));
-[CL_LOG]     ^
-[CL_LOG] BC-src-code:357:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[1] = as_float(
-[CL_LOG]   ~~~~~~~~~^
-[CL_LOG] BC-src-code:359:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[0] = sub_group_reduce_add(sum_value[0]);
-[CL_LOG]   ~~~~~~~~~^
-[CL_LOG] BC-src-code:359:48: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[0] = sub_group_reduce_add(sum_value[0]);
-[CL_LOG]                                       ~~~~~~~~~^
-[CL_LOG] BC-src-code:360:12: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[1] = sub_group_reduce_add(sum_value[1]);
-[CL_LOG]   ~~~~~~~~~^
-[CL_LOG] BC-src-code:360:48: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]   sum_value[1] = sub_group_reduce_add(sum_value[1]);
-[CL_LOG]                                       ~~~~~~~~~^
-[CL_LOG] BC-src-code:367:55: error: Attempt to use subscript to obtain element of 'float2'.
-[CL_LOG]         TO_GEMV_OUTPUT_VEC_TYPE(convert_half(sum_value[i]));
-[CL_LOG]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
-[CL_LOG] BC-src-code:199:72: note: expanded from macro 'TO_GEMV_OUTPUT_VEC_TYPE'
-[CL_LOG] #define TO_GEMV_OUTPUT_VEC_TYPE(x) CAT(convert_, GEMV_OUTPUT_VEC_TYPE)(x)
-[CL_LOG]                                                                        ^
-[CL_LOG] 30 diagnostic(s) generated.
-[DIAG] RSS after initialize:  184016 KB
+[DIAG] RSS after initialize:  186144 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=397 MB, avail=5235 MB
-[DIAG] load_weight: 472 MB written, RSS=654 MB, avail=4980 MB
-[DIAG] load_weight: 755 MB written, RSS=938 MB, avail=4695 MB
-[DIAG] load_weight: 772 MB written, RSS=955 MB, avail=4676 MB
-[DIAG] load_weight: 1038 MB written, RSS=1221 MB, avail=4409 MB
-[DIAG] load_weight: 1321 MB written, RSS=1504 MB, avail=4156 MB
-[DIAG] load_weight: 1605 MB written, RSS=1788 MB, avail=3929 MB
-[DIAG] load_weight: 1888 MB written, RSS=2071 MB, avail=3924 MB
-[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=3794 MB
-[DIAG] load_weight: 2176 MB written, RSS=2359 MB, avail=3799 MB
-[DIAG] load_weight: 2455 MB written, RSS=2639 MB, avail=3774 MB
-[DIAG] load_weight: 2738 MB written, RSS=2921 MB, avail=3558 MB
-[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3502 MB
-[DIAG] load_weight: 3305 MB written, RSS=3488 MB, avail=3392 MB
-[DIAG] load_weight: 3332 MB written, RSS=3515 MB, avail=3360 MB
-[DIAG] load_weight: 3588 MB written, RSS=3771 MB, avail=3106 MB
-[DIAG] load_weight: post sweep: avail=2888 MB, RSS=4055 MB, sweeping 242 regions
-[DIAG] load_weight: after post sweep RSS=4055 MB, avail=2888 MB
-[DIAG] load_weight: 3871 MB written, RSS=4055 MB, avail=2888 MB
-[DIAG] load_weight: post sweep: avail=2934 MB, RSS=4339 MB, sweeping 262 regions
-[DIAG] load_weight: after post sweep RSS=4339 MB, avail=2934 MB
-[DIAG] load_weight: 4155 MB written, RSS=4339 MB, avail=2934 MB
-[DIAG] load_weight: post sweep: avail=2729 MB, RSS=4621 MB, sweeping 282 regions
-[DIAG] load_weight: after post sweep RSS=4621 MB, avail=2728 MB
-[DIAG] load_weight: 4438 MB written, RSS=4621 MB, avail=2728 MB
-[DIAG] load_weight: post sweep: avail=2531 MB, RSS=4904 MB, sweeping 302 regions
-[DIAG] load_weight: after post sweep RSS=4904 MB, avail=2530 MB
-[DIAG] load_weight: 4721 MB written, RSS=4904 MB, avail=2530 MB
-[DIAG] load_weight: 4738 MB written, RSS=4920 MB, avail=2508 MB
-[DIAG] load_weight: post sweep: avail=2240 MB, RSS=5186 MB, sweeping 319 regions
-[DIAG] load_weight: after post sweep RSS=5186 MB, avail=2239 MB
-[DIAG] load_weight: 5004 MB written, RSS=5186 MB, avail=2239 MB
-[DIAG] load_weight: post sweep: avail=1963 MB, RSS=5466 MB, sweeping 336 regions
-[DIAG] load_weight: after post sweep RSS=5466 MB, avail=1963 MB
-[DIAG] load_weight: 5286 MB written, RSS=5466 MB, avail=1963 MB
-[DIAG] load_weight: post sweep: avail=1708 MB, RSS=5748 MB, sweeping 353 regions
-[DIAG] load_weight: after post sweep RSS=5748 MB, avail=1713 MB
-[DIAG] load_weight: 5569 MB written, RSS=5748 MB, avail=1713 MB
-[DIAG] load_weight: post sweep: avail=1510 MB, RSS=6031 MB, sweeping 370 regions
-[DIAG] load_weight: after post sweep RSS=6031 MB, avail=1510 MB
-[DIAG] load_weight: 5851 MB written, RSS=6031 MB, avail=1510 MB
-[DIAG] load_weight: post sweep: avail=1532 MB, RSS=6313 MB, sweeping 387 regions
-[DIAG] load_weight: after post sweep RSS=6313 MB, avail=1535 MB
-[DIAG] load_weight: 6134 MB written, RSS=6313 MB, avail=1535 MB
-[DIAG] load_weight: 6145 MB written, RSS=6324 MB, avail=1521 MB
-[DIAG] load_weight: post sweep: avail=1400 MB, RSS=6524 MB, sweeping 404 regions
-[DIAG] load_weight: after post sweep RSS=6524 MB, avail=1400 MB
-[DIAG] load_weight: 6416 MB written, RSS=6524 MB, avail=1400 MB
-[DIAG] load_weight: post sweep: avail=1169 MB, RSS=6560 MB, sweeping 421 regions
-[DIAG] load_weight: after post sweep RSS=6560 MB, avail=1169 MB
-[DIAG] load_weight: 6699 MB written, RSS=6560 MB, avail=1169 MB
-[DIAG] load_weight: post sweep: avail=1024 MB, RSS=6727 MB, sweeping 438 regions
-[DIAG] load_weight: after post sweep RSS=6727 MB, avail=1025 MB
-[DIAG] load_weight: 6981 MB written, RSS=6727 MB, avail=1025 MB
-[DIAG] load_weight: post sweep: avail=772 MB, RSS=6883 MB, sweeping 455 regions
-[DIAG] load_weight: after post sweep RSS=6871 MB, avail=747 MB
-[DIAG] load_weight: 7263 MB written, RSS=6871 MB, avail=747 MB
-[DIAG] load_weight: post sweep: avail=781 MB, RSS=6659 MB, sweeping 472 regions
-[DIAG] load_weight: after post sweep RSS=6602 MB, avail=752 MB
-[DIAG] load_weight: 7546 MB written, RSS=6602 MB, avail=753 MB
-[DIAG] load_weight: 7554 MB written, RSS=6608 MB, avail=751 MB
-[DIAG] load_weight: post sweep: avail=830 MB, RSS=5822 MB, sweeping 489 regions
-[DIAG] load_weight: after post sweep RSS=5820 MB, avail=756 MB
-[DIAG] load_weight: 7828 MB written, RSS=5820 MB, avail=756 MB
-[DIAG] load_weight: post sweep: avail=681 MB, RSS=4971 MB, sweeping 506 regions
-[DIAG] load_weight: after post sweep RSS=4966 MB, avail=578 MB
-[DIAG] load_weight: 8111 MB written, RSS=4966 MB, avail=578 MB
-[DIAG] load_weight: post sweep: avail=483 MB, RSS=5246 MB, sweeping 523 regions
-[DIAG] load_weight: after post sweep RSS=5245 MB, avail=468 MB
-[DIAG] load_weight: 8393 MB written, RSS=5245 MB, avail=468 MB
-^C
+[DIAG] load_weight: 216 MB written, RSS=398 MB, avail=6499 MB
+[DIAG] load_weight: 472 MB written, RSS=654 MB, avail=6250 MB
+[DIAG] load_weight: 755 MB written, RSS=938 MB, avail=5968 MB
+[DIAG] load_weight: 772 MB written, RSS=955 MB, avail=5950 MB
+[DIAG] load_weight: 1038 MB written, RSS=1221 MB, avail=5683 MB
+[DIAG] load_weight: 1321 MB written, RSS=1504 MB, avail=5432 MB
+[DIAG] load_weight: 1605 MB written, RSS=1788 MB, avail=5267 MB
+[DIAG] load_weight: 1888 MB written, RSS=2071 MB, avail=5221 MB
+[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=5117 MB
+[DIAG] load_weight: 2176 MB written, RSS=2359 MB, avail=5110 MB
+[DIAG] load_weight: 2455 MB written, RSS=2637 MB, avail=4962 MB
+[DIAG] load_weight: 2738 MB written, RSS=2921 MB, avail=4877 MB
+[DIAG] load_weight: 3021 MB written, RSS=3204 MB, avail=4596 MB
+[DIAG] load_weight: 3305 MB written, RSS=3487 MB, avail=4312 MB
+[DIAG] load_weight: 3332 MB written, RSS=3515 MB, avail=4281 MB
+[DIAG] load_weight: 3588 MB written, RSS=3771 MB, avail=4027 MB
+[DIAG] load_weight: 3871 MB written, RSS=4054 MB, avail=3742 MB
+[DIAG] load_weight: 4155 MB written, RSS=4337 MB, avail=3457 MB
+[DIAG] load_weight: 4438 MB written, RSS=4621 MB, avail=3174 MB
+[DIAG] load_weight: post sweep: avail=2891 MB, RSS=4904 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4904 MB, avail=2890 MB
+[DIAG] load_weight: 4721 MB written, RSS=4904 MB, avail=2890 MB
+[DIAG] load_weight: 4738 MB written, RSS=4920 MB, avail=2871 MB
+[DIAG] load_weight: post sweep: avail=2611 MB, RSS=5187 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5187 MB, avail=2611 MB
+[DIAG] load_weight: 5004 MB written, RSS=5187 MB, avail=2611 MB
+[DIAG] load_weight: post sweep: avail=2393 MB, RSS=5468 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5468 MB, avail=2392 MB
+[DIAG] load_weight: 5286 MB written, RSS=5468 MB, avail=2392 MB
+[DIAG] load_weight: post sweep: avail=2168 MB, RSS=5750 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5750 MB, avail=2140 MB
+[DIAG] load_weight: 5569 MB written, RSS=5750 MB, avail=2140 MB
+[DIAG] load_weight: post sweep: avail=1928 MB, RSS=6033 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6033 MB, avail=1928 MB
+[DIAG] load_weight: 5851 MB written, RSS=6033 MB, avail=1928 MB
+[DIAG] load_weight: post sweep: avail=1734 MB, RSS=6315 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6315 MB, avail=1732 MB
+[DIAG] load_weight: 6134 MB written, RSS=6315 MB, avail=1732 MB
+[DIAG] load_weight: 6145 MB written, RSS=6327 MB, avail=1720 MB
+[DIAG] load_weight: post sweep: avail=1539 MB, RSS=6596 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6596 MB, avail=1539 MB
+[DIAG] load_weight: 6416 MB written, RSS=6596 MB, avail=1539 MB
+[DIAG] load_weight: post sweep: avail=1326 MB, RSS=6878 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6878 MB, avail=1324 MB
+[DIAG] load_weight: 6699 MB written, RSS=6878 MB, avail=1324 MB
+[DIAG] load_weight: post sweep: avail=1080 MB, RSS=7161 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=7161 MB, avail=1080 MB
+[DIAG] load_weight: 6981 MB written, RSS=7161 MB, avail=1080 MB
+[DIAG] load_weight: post sweep: avail=830 MB, RSS=7393 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=7393 MB, avail=812 MB
+[DIAG] load_weight: 7263 MB written, RSS=7393 MB, avail=812 MB
+[DIAG] load_weight: post sweep: avail=886 MB, RSS=5911 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=5874 MB, avail=839 MB
+[DIAG] load_weight: 7546 MB written, RSS=5874 MB, avail=840 MB
+[DIAG] load_weight: 7554 MB written, RSS=5875 MB, avail=829 MB
+[DIAG] load_weight: post sweep: avail=829 MB, RSS=6013 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=6013 MB, avail=769 MB
+[DIAG] load_weight: 7828 MB written, RSS=6013 MB, avail=770 MB
+[DIAG] load_weight: post sweep: avail=723 MB, RSS=4920 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=4918 MB, avail=662 MB
+[DIAG] load_weight: 8111 MB written, RSS=4918 MB, avail=662 MB
+[DIAG] load_weight: post sweep: avail=487 MB, RSS=5193 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5193 MB, avail=490 MB
+[DIAG] load_weight: 8393 MB written, RSS=5193 MB, avail=491 MB
+[DIAG] load_weight: post sweep: avail=418 MB, RSS=5472 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5472 MB, avail=417 MB
+[DIAG] load_weight: 8676 MB written, RSS=5472 MB, avail=417 MB
+[DIAG] load_weight: post sweep: avail=364 MB, RSS=5515 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5516 MB, avail=363 MB
+[DIAG] load_weight: 8958 MB written, RSS=5516 MB, avail=363 MB
+[DIAG] load_weight: 8960 MB written, RSS=5517 MB, avail=365 MB
+[DIAG] load_weight: post sweep: avail=370 MB, RSS=5610 MB, sweeping 574 regions
+[DIAG] load_weight: after post sweep RSS=5609 MB, avail=371 MB
+[DIAG] load_weight: 9241 MB written, RSS=5609 MB, avail=368 MB
+────────────────────────────────────────────────
+[INFO] adb shell exit: 0
+[OK] Done!
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
 
