@@ -258,7 +258,7 @@ fully_connected_gpu_int4_gemv(__global half *input, const __global half *scales,
     scales += (n / 32) * 32 + (n % 32) / 2;
   }
 
-  float2 sum_all = 0;
+  float sum_all[2] = {0.0f, 0.0f};
   for (int gk = gk0; gk < gk1; gk++) {
     __global half *A = input + gk * quantization_group_size;
     int w_id = get_4bit_weight_index(gk * quantization_group_size, n,
@@ -266,7 +266,7 @@ fully_connected_gpu_int4_gemv(__global half *input, const __global half *scales,
 
     const __global char *B = weights + w_id;
 
-    GEMV_ACCUMULATOR_VEC_TYPE sum = 0;
+    float sum[8] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
     float scale_0, scale_1;
     if (scale_row_major) {
@@ -290,10 +290,10 @@ fully_connected_gpu_int4_gemv(__global half *input, const __global half *scales,
       GEMV_FILTER_VEC_TYPE i4x16_even =
         TO_GEMV_FILTER_VEC_TYPE(bx16 & (char16)0xF);
       GEMV_FILTER_VEC_TYPE i4x16_odd =
-        TO_GEMV_FILTER_VEC_TYPE(as_char16(as_uchar16(bx16) >> 4));
+        TO_GEMV_FILTER_VEC_TYPE(as_char16(as_uchar16(bx16) >> (uchar16)4));
 #else
       char16 i4x16_even_c16 = (bx16 & (char16)0xF);
-      char16 i4x16_odd_c16 = (as_char16(as_uchar16(bx16) >> 4));
+      char16 i4x16_odd_c16 = (as_char16(as_uchar16(bx16) >> (uchar16)4));
       i4x16_even_c16 = select(i4x16_even_c16, i4x16_even_c16 - (char16)16,
                               i4x16_even_c16 > (char16)7);
       i4x16_odd_c16 = select(i4x16_odd_c16, i4x16_odd_c16 - (char16)16,
@@ -351,11 +351,9 @@ fully_connected_gpu_int4_gemv(__global half *input, const __global half *scales,
   all_sum_odd[wi_id][thr_id] = sum_all[1];
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  float2 sum_value;
-  sum_value[0] = as_float(
-    intel_sub_group_block_read((const __local uint *)all_sum_even[thr_id]));
-  sum_value[1] = as_float(
-    intel_sub_group_block_read((const __local uint *)all_sum_odd[thr_id]));
+  float sum_value[2];
+  sum_value[0] = all_sum_even[thr_id][wi_id];
+  sum_value[1] = all_sum_odd[thr_id][wi_id];
   sum_value[0] = sub_group_reduce_add(sum_value[0]);
   sum_value[1] = sub_group_reduce_add(sum_value[1]);
 
