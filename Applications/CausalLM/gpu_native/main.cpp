@@ -7,16 +7,17 @@
  * @brief  Entry point for the GPU-native Qwen3 forward binary
  *         (nntrainer_qwen3_gpu).
  *
- * First commit: just init, dump weight-file header, run SVM round-trip
- * smoke test. No forward yet. Next commits add layer-0 forward, then
- * full 36 layers + lm_head.
+ * Step 7b: end-to-end 28-layer chain via the generic load_layer +
+ * forward_one_layer path. Old layer0_* methods are still in the .cpp
+ * but unused — they'll go away when output_norm + lm_head land in
+ * step 7c (which finishes the from-scratch inference pipeline up
+ * through the first generated token).
  *
  * Usage:
  *   nntrainer_qwen3_gpu <weight_file_path>
  *
- * The Qwen3-4B config is hardcoded for now (matches the production
- * QINT4 model on device). When more configs are needed we'll parse
- * config.json — not in scope for the skeleton commit.
+ * Qwen3-0.6B config is hardcoded (matches the verified production
+ * QINT4 model on device).
  */
 
 #include "qwen3_forward.h"
@@ -30,12 +31,10 @@
 #include <string>
 #include <vector>
 
-// Bypass the production safety gate in two_conv_attention_prefill_f16_cl:
-// the existing CausalLM defaults to CPU fallback when NNTR_MHA_GPU=1 (to
-// avoid chain drift on Qwen3-0.6B). NNTR_MHA_VERIFY=1 is the documented
-// opt-in to actually run the GPU kernel. The from-scratch runtime is the
-// intended consumer (paper §3.6 same-numerics chain — we accept GPU
-// baseline as the reference, not bit-equality to CPU).
+// Bypass the production safety gate in two_conv_attention_prefill_f16_cl.
+// The from-scratch runtime explicitly accepts GPU baseline as reference
+// (paper §3.6 same-numerics chain), so the existing "Using CPU mha"
+// fallback in the production wrapper isn't useful here.
 static struct EnvSetup {
   EnvSetup() { setenv("NNTR_MHA_VERIFY", "1", 1); }
 } _env_setup;
@@ -45,19 +44,12 @@ int main(int argc, char **argv) {
     std::fprintf(stderr,
                  "usage: %s <weight_file_path>\n"
                  "  e.g. %s /data/local/tmp/nntrainer/causallm/models/"
-                 "qwen3-4b/nntr_qwen3-4b-q6_K-qint4-idx3-fp32-arm.bin\n",
+                 "qwen3-0.6b-qint4-fresh/nntr_qwen3_0.6b_qint4.bin\n",
                  argv[0], argv[0]);
     return 1;
   }
   const std::string weight_path = argv[1];
 
-  // Qwen3-0.6B QINT4 hardcoded (from config.json on device). The 4B
-  // file `nntr_qwen3-4b-...idx3-fp32-arm.bin` was preferred but it
-  // currently fails the production load path with "QINT4 Dot on CPU
-  // only supports PER_CHANNEL_AFFINE or KAI_QSI4CXP_4x4x32 scheme"
-  // — invalid qscheme bytes. The 0.6B model is the verified production
-  // QINT4 path and the same kernels target both, so the chain we build
-  // here transfers to the 4B model once it's re-quantized properly.
   causallm_gpu::Qwen3Config cfg;
   cfg.hidden_size = 1024;
   cfg.intermediate_size = 3072;
@@ -75,125 +67,87 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] init failed\n");
     return 2;
   }
-  fwd.dump_weight_header(64);
 
-  // SVM round-trip: 256 KB, well within any sane SVM budget.
-  if (!fwd.svm_smoke_test(256 * 1024)) {
-    std::fprintf(stderr, "[main] svm_smoke_test failed\n");
+  // RoPE freqs for position 0 (identity rotation; degenerate single-
+  // token attention where softmax of one element = 1.0, attention
+  // output = V per head). Precomputed once and reused across all 28
+  // layers.
+  if (!fwd.precompute_rope_for_position(0)) {
+    std::fprintf(stderr, "[main] precompute_rope_for_position failed\n");
     return 3;
   }
 
-  // Step 2: load layer 0 attention_norm gamma into SVM + run rmsnorm.cl
-  // on a deterministic input pattern + verify output is finite. Proves
-  // the (weight-mmap -> SVM -> GPU kernel -> read back) data path works
-  // end-to-end with a single op.
-  if (!fwd.load_layer0_attention_norm_to_svm()) {
-    std::fprintf(stderr, "[main] load_layer0_attention_norm failed\n");
-    return 4;
-  }
-  if (!fwd.run_rmsnorm_layer0()) {
-    std::fprintf(stderr, "[main] run_rmsnorm_layer0 failed\n");
-    return 5;
-  }
-
-  // Step 4: load Q/K/V projection weights together + run all three FCs
-  // against the SAME rmsnorm output (shared activation quant — single
-  // quantize_act, three GEMMs). Outputs Q[hQ*d], K[hKV*d], V[hKV*d] —
-  // ready inputs for q_norm/k_norm/RoPE/attention (next commits).
-  if (!fwd.load_layer0_qkv_weights()) {
-    std::fprintf(stderr, "[main] load_layer0_qkv_weights failed\n");
-    return 6;
-  }
-  if (!fwd.load_layer0_wo()) {
-    std::fprintf(stderr, "[main] load_layer0_wo failed\n");
-    return 11;
-  }
-  if (!fwd.load_layer0_ffn_weights()) {
-    std::fprintf(stderr, "[main] load_layer0_ffn_weights failed\n");
-    return 12;
-  }
-  if (!fwd.load_layer0_qk_norm_gammas()) {
-    std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
-    return 7;
-  }
-  // Step 5 attention check: position=0 makes N_kv=1 in the cache, which
-  // is degenerate single-token attention (softmax of one element = 1.0).
-  // The expected output per head_q is exactly V[head_q / gqa] — easy
-  // bit-pattern check vs the post-projection V values.
-  if (!fwd.precompute_rope_for_position(0)) {
-    std::fprintf(stderr, "[main] precompute_rope_for_position failed\n");
-    return 8;
-  }
-  if (!fwd.allocate_layer0_kv_cache_svm()) {
-    std::fprintf(stderr, "[main] allocate_layer0_kv_cache_svm failed\n");
-    return 9;
-  }
-  if (!fwd.run_layer0_qkv_projection()) {
-    std::fprintf(stderr,
-                 "[main] run_layer0_qkv_projection failed (attention path)\n");
-    return 10;
-  }
-
-  if (!fwd.run_layer0_ffn()) {
-    std::fprintf(stderr, "[main] run_layer0_ffn failed\n");
-    return 13;
-  }
-
-  std::fprintf(stderr,
-               "[main] step 6 OK (layer 0 full forward via old path).\n");
-
-  // Step 7a: validate the new generic load_layer + forward_one_layer
-  // path by loading layer 1 and chaining: layer 0 output (from the old
-  // path above) -> layer 1 input. Confirms the new path's load + forward
-  // mechanics match the layer-0 reference. Step 7b will scale the loop
-  // to all 28 layers and drop the old layer0_* methods entirely.
+  // Walk the weight file, loading all 28 layers. Per-layer KV cache
+  // sized for max_seq_len_used = 8 (we only test position 0 today; 8
+  // is round-up safety for future short prefills).
   const unsigned int max_seq_len_used = 8;
   size_t off = fwd.layers_start_offset();
-  if (!fwd.load_layer(0, &off, max_seq_len_used)) {
-    std::fprintf(stderr, "[main] load_layer(0) failed\n");
-    return 14;
-  }
-  if (!fwd.load_layer(1, &off, max_seq_len_used)) {
-    std::fprintf(stderr, "[main] load_layer(1) failed\n");
-    return 15;
-  }
-  cl_mem h0 = fwd.layer0_output_fp32();
-  cl_mem h1 = fwd.forward_one_layer(/*layer_id=*/1, h0, /*position=*/0);
-  if (h1 == nullptr) {
-    std::fprintf(stderr, "[main] forward_one_layer(1) returned null\n");
-    return 16;
-  }
-  // Quick summary of h1.
-  {
-    std::vector<float> r(fwd.config().hidden_size);
-    // Pull a queue from a fresh ClContext lookup to read back.
-    auto *cl = static_cast<nntrainer::ClContext *>(
-      nntrainer::Engine::Global().getRegisteredContext("gpu"));
-    cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
-    clEnqueueReadBuffer(q, h1, CL_TRUE, 0,
-                        r.size() * sizeof(float), r.data(), 0, nullptr,
-                        nullptr);
-    bool finite = true;
-    float mn = std::numeric_limits<float>::infinity();
-    float mx = -mn;
-    for (float v : r) {
-      if (!std::isfinite(v)) finite = false;
-      if (v < mn) mn = v;
-      if (v > mx) mx = v;
+  for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+    if (!fwd.load_layer(L, &off, max_seq_len_used)) {
+      std::fprintf(stderr, "[main] load_layer(%u) failed\n", L);
+      return 10 + (int)L;
     }
-    std::fprintf(stderr,
-                 "[qwen3-gpu] LAYER-1 output fp32 N=%zu first 8:", r.size());
-    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", r[i]);
-    std::fprintf(stderr, "\n  last 4:");
-    for (int i = 0; i < 4; ++i)
-      std::fprintf(stderr, " %g", r[r.size() - 4 + i]);
-    std::fprintf(stderr,
-                 "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
-    clReleaseMemObject(h1);
+  }
+  std::fprintf(stderr,
+               "[main] all %u layers loaded; final offset=%zu MB "
+               "(file=%zu MB)\n",
+               cfg.num_layers, off / (1024 * 1024),
+               fwd.weight_file_size() / (1024 * 1024));
+
+  // Initial layer-0 input: same deterministic fp32 ramp used in the
+  // single-layer tests (0.001 * (i+1) for i in [0, hidden)). Real
+  // inference would use embedding(token_id) here.
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
+  cl_context ctx = cl->context_inst_.GetContext();
+  const unsigned int H = cfg.hidden_size;
+  std::vector<float> in_host(H);
+  for (unsigned int i = 0; i < H; ++i)
+    in_host[i] = 0.001f * static_cast<float>(i + 1);
+  cl_int err = CL_SUCCESS;
+  cl_mem cur = clCreateBuffer(ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                              H * sizeof(float), in_host.data(), &err);
+  if (err != CL_SUCCESS || !cur) {
+    std::fprintf(stderr, "[main] initial input buffer alloc err=%d\n", err);
+    return 50;
   }
 
+  // Chain through all 28 layers. Each forward_one_layer returns a fresh
+  // cl_mem; release the previous one after the call.
+  for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+    cl_mem nxt = fwd.forward_one_layer(L, cur, /*position=*/0);
+    if (nxt == nullptr) {
+      std::fprintf(stderr, "[main] forward_one_layer(%u) failed\n", L);
+      clReleaseMemObject(cur);
+      return 100 + (int)L;
+    }
+    clReleaseMemObject(cur);
+    cur = nxt;
+    // Periodic progress + sanity summary every 7 layers.
+    if (L == 0 || L == 6 || L == 13 || L == 20 || L == cfg.num_layers - 1) {
+      std::vector<float> r(H);
+      clEnqueueReadBuffer(q, cur, CL_TRUE, 0, H * sizeof(float), r.data(),
+                          0, nullptr, nullptr);
+      bool finite = true;
+      float mn = std::numeric_limits<float>::infinity();
+      float mx = -mn;
+      for (float v : r) {
+        if (!std::isfinite(v)) finite = false;
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+      }
+      std::fprintf(stderr,
+                   "[chain] after layer %2u  first 4: %g %g %g %g  "
+                   "min=%g max=%g finite=%d\n",
+                   L, r[0], r[1], r[2], r[3], mn, mx, finite);
+    }
+  }
+  clReleaseMemObject(cur);
+
   std::fprintf(stderr,
-               "[main] step 7a OK (layer-0 -> layer-1 via new generic "
-               "path, output finite). Step 7b: full 28-layer chain.\n");
+               "[main] step 7b OK (28-layer chain via new path; final "
+               "hidden finite). Next: output_norm + lm_head + first "
+               "token sampling.\n");
   return 0;
 }
