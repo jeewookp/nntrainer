@@ -149,16 +149,19 @@ except: print('unknown')
 }
 
 _platform=$(_meson_platform)
-_cl_changed=false
-if [ -f "$_PREBUILT_SO" ] && \
-   find "$_CL_DIR" -name "*.cl" -newer "$_PREBUILT_SO" 2>/dev/null | grep -q .; then
-    _cl_changed=true
+_src_changed=false
+if [ -f "$_PREBUILT_SO" ]; then
+    if find "$_CL_DIR" "$NNTRAINER_ROOT/nntrainer/opencl" \
+         \( -name "*.cl" -o -name "*.cpp" -o -name "*.h" \) \
+         -newer "$_PREBUILT_SO" 2>/dev/null | grep -q .; then
+        _src_changed=true
+    fi
 fi
 
-if [ "$_platform" = "android" ] && [ "$_cl_changed" = true ]; then
-    # builddir is correctly configured for Android and only CL sources changed:
+if [ "$_platform" = "android" ] && [ "$_src_changed" = true ]; then
+    # builddir is correctly configured for Android and sources changed:
     # incremental rebuild is sufficient.
-    log_info "OpenCL kernels changed — incremental rebuild of libnntrainer.so..."
+    log_info "OpenCL/opencl sources changed — incremental rebuild of libnntrainer.so..."
     ninja -C "$BUILD_DIR" install
     log_success "libnntrainer.so rebuilt (incremental)"
 elif [ "$_platform" != "android" ]; then
@@ -169,7 +172,7 @@ elif [ "$_platform" != "android" ]; then
     bash "$NNTRAINER_ROOT/tools/package_android.sh" "$NNTRAINER_ROOT" --arm-arch=armv8.2-a
     log_success "libnntrainer.so rebuilt (full)"
 fi
-unset _PREBUILT_SO _CL_DIR _platform _cl_changed
+unset _PREBUILT_SO _CL_DIR _platform _src_changed
 
 # Linux meson build for nntr_quantize using a dedicated x86 builddir
 # (arm-arch=none → AVX path; avoids ARM NEON recompile of libnntrainer)
