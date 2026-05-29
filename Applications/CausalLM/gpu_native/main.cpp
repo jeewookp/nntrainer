@@ -258,7 +258,17 @@ int main(int argc, char **argv) {
     clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0,
                          (size_t)M_test * H * sizeof(float),
                          rep_input.data(), 0, nullptr, nullptr);
-    // Time JUST the 28-layer chain.
+    // Enable per-stage profiling at M=256 (peak) and M=1024 (cliff)
+    // so we can see WHERE the cliff time goes. Profiling adds a
+    // clFinish per stage = overhead; total ms reported INCLUDES that
+    // overhead but per-stage attribution is clean.
+    const bool profile = (M_test == 256 || M_test == 1024);
+    if (profile) {
+      fwd.timings_.reset();
+      fwd.profile_stages_ = true;
+    } else {
+      fwd.profile_stages_ = false;
+    }
     auto t0 = NOW();
     cl_mem in_b = pf_in, out_b = pf_out;
     bool ok = true;
@@ -287,6 +297,33 @@ int main(int argc, char **argv) {
                  "=> %7.1f TPS  (L0=%.1f ms, L27=%.1f ms)\n",
                  M_test, t_ms, ms_per_token, tps,
                  t_layer_0, t_layer_last);
+    if (profile) {
+      const auto &tt = fwd.timings_;
+      const double sum = tt.pad_attn_norm_ms + tt.qkv_quant_image_ms +
+                         tt.qkv_gemm_ms + tt.qk_norm_rope_ms +
+                         tt.kv_write_ms + tt.attn_dispatch_ms +
+                         tt.wo_ms + tt.ffn_ms;
+      auto pct = [&](double v) { return sum > 0 ? 100.0 * v / sum : 0.0; };
+      std::fprintf(stderr,
+                   "  [stage timings, M=%d, %d layer-calls totaling %.0f ms]:\n"
+                   "    (a) pad+attn_norm  %7.1f ms (%4.1f%%)\n"
+                   "    (b) qkv quant+img  %7.1f ms (%4.1f%%)\n"
+                   "    (c) Q/K/V GEMM     %7.1f ms (%4.1f%%)\n"
+                   "    (d) qk_norm[+RoPE] %7.1f ms (%4.1f%%)\n"
+                   "    (e) KV write SVM   %7.1f ms (%4.1f%%)\n"
+                   "    (f) attention      %7.1f ms (%4.1f%%)\n"
+                   "    (g) wo + resid_1   %7.1f ms (%4.1f%%)\n"
+                   "    (h) ffn block      %7.1f ms (%4.1f%%)\n",
+                   M_test, tt.calls, sum,
+                   tt.pad_attn_norm_ms,   pct(tt.pad_attn_norm_ms),
+                   tt.qkv_quant_image_ms, pct(tt.qkv_quant_image_ms),
+                   tt.qkv_gemm_ms,        pct(tt.qkv_gemm_ms),
+                   tt.qk_norm_rope_ms,    pct(tt.qk_norm_rope_ms),
+                   tt.kv_write_ms,        pct(tt.kv_write_ms),
+                   tt.attn_dispatch_ms,   pct(tt.attn_dispatch_ms),
+                   tt.wo_ms,              pct(tt.wo_ms),
+                   tt.ffn_ms,             pct(tt.ffn_ms));
+    }
   }
   clReleaseMemObject(pf_in);
   clReleaseMemObject(pf_out);

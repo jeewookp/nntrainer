@@ -2494,7 +2494,22 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
   const unsigned int I = cfg_.intermediate_size;
 
+  // Profiling helpers (no-op when profile_stages_ is false).
+  auto NOW = []() { return std::chrono::steady_clock::now(); };
+  auto MS  = [](auto t1, auto t0) {
+    return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+             .count() / 1000.0;
+  };
+  std::chrono::steady_clock::time_point t_stage;
+  auto stage_begin = [&]() {
+    if (profile_stages_) { clFinish(cl_q_); t_stage = NOW(); }
+  };
+  auto stage_end_add = [&](double &accum) {
+    if (profile_stages_) { clFinish(cl_q_); accum += MS(NOW(), t_stage); }
+  };
+
   // (a) pad in_fp32 [M*K_h] -> scratch_.in_padded [M_pad*K_h], attn_norm.
+  stage_begin();
   float zero = 0.0f;
   clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero, sizeof(float), 0,
                       (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
@@ -2516,8 +2531,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
+  stage_end_add(timings_.pad_attn_norm_ms);
 
   // (b) shared act quant Q/K/V.
+  stage_begin();
   nntrainer::quantize_act_v8c_fp32_cl(scratch_.attn_normed, scratch_.qkv_act_i8,
                                       scratch_.qkv_act_scale,
                                       scratch_.qkv_act_zp, scratch_.qkv_act_rs,
@@ -2531,7 +2548,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   adesc.buffer = scratch_.qkv_act_i8;
   cl_mem act_image =
     clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
+  stage_end_add(timings_.qkv_quant_image_ms);
+
   // (c) Q/K/V GEMMs against persistent y_q/y_k/y_v.
+  stage_begin();
   nntrainer::gemm_int8_v8c_cl(act_image, lw.wq.weight_image,
                               scratch_.qkv_act_scale, lw.wq.scale_buf,
                               scratch_.qkv_act_rs, scratch_.qkv_act_zp,
@@ -2548,6 +2568,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv,
                               K_h);
   clFinish(cl_q_);
+  stage_end_add(timings_.qkv_gemm_ms);
 
   // (d) q_norm / k_norm in place. Multi-token: M token rows × num_heads
   //     heads × head_dim. Kernel iterates (B*C, H) where index is
@@ -2571,6 +2592,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
+  stage_begin();
   disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
   disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
 
@@ -2587,6 +2609,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     run_layer0_rope_on_qk(scratch_.y_q, scratch_.y_k);
     clFinish(cl_q_);
   }
+  stage_end_add(timings_.qk_norm_rope_ms);
 
   // (e) Write K, V (M rows) to this layer's SVM cache starting at
   //     `position`. y_k/y_v are [M_pad * N_kv] fp16; we copy only the
@@ -2608,14 +2631,17 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueUnmapMemObject(cl_q_, src, p, 0, nullptr, nullptr);
     return true;
   };
+  stage_begin();
   copy_cl_to_svm(scratch_.y_k, lw.cache_k_svm,
                  (size_t)position * kv_row_bytes, kv_total_bytes);
   copy_cl_to_svm(scratch_.y_v, lw.cache_v_svm,
                  (size_t)position * kv_row_bytes, kv_total_bytes);
   clFinish(cl_q_);
+  stage_end_add(timings_.kv_write_ms);
 
   // (f) attention via SVM. Upload all M Q rows. N_kv (cache_to) =
   //     position + M (all rows just written are visible to attention).
+  stage_begin();
   const size_t q_total_bytes = (size_t)M * N_q * sizeof(uint16_t);
   {
     cl_int e;
@@ -2634,6 +2660,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     static_cast<const uint16_t *>(lw.cache_v_svm),
     static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
     cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim, true, true);
+  stage_end_add(timings_.attn_dispatch_ms);
   if (!attn_ok) {
     std::fprintf(stderr,
                  "[qwen3-gpu] layer %u attention failed\n", layer_id);
@@ -2643,6 +2670,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
 
   // (g) wo: cvt_h2f(o_svm) -> o_fp32, then v8c FC, then cvt -> wo_fp32,
   //     then add_fp32(in, wo) -> residual_1.
+  stage_begin();
   clEnqueueFillBuffer(cl_q_, scratch_.o_fp32, &zero, sizeof(float), 0,
                       (size_t)M_pad * N_q * sizeof(float), 0, nullptr,
                       nullptr);
@@ -2699,10 +2727,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
   }
   clFinish(cl_q_);
+  stage_end_add(timings_.wo_ms);
 
   // (h) ffn block: pad residual_1 -> ffn_in_padded, rmsnorm -> ffn_normed,
   //     shared quant, ffn_up + ffn_gate, cvt fp16->fp32, swiglu, quant,
   //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
+  stage_begin();
   clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero, sizeof(float), 0,
                       (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
                       nullptr);
@@ -2805,6 +2835,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
   }
   clFinish(cl_q_);
+  stage_end_add(timings_.ffn_ms);
+  if (profile_stages_) timings_.calls += 1;
 
   // Only image2d views were freshly created this call; release them.
   // Their backing buffers (scratch_.qkv_act_i8 etc.) persist.

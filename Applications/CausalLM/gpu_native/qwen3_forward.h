@@ -153,6 +153,25 @@ public:
   cl_mem forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
                            unsigned int position);
 
+  /// Per-stage timing breakdown for profiling. Each field accumulates
+  /// total ms across all calls. Reset before a measurement window.
+  /// Profiling adds a clFinish at each stage boundary — adds overhead
+  /// but makes per-stage attribution clean.
+  struct ForwardTimings {
+    double pad_attn_norm_ms = 0;     // (a) input pad + attn_norm
+    double qkv_quant_image_ms = 0;   // (b) act quant + image2d view
+    double qkv_gemm_ms = 0;          // (c) Q/K/V v8c GEMMs
+    double qk_norm_rope_ms = 0;      // (d) q_norm/k_norm + RoPE (M=1 only)
+    double kv_write_ms = 0;          // (e) KV cache SVM bridge
+    double attn_dispatch_ms = 0;     // (f) Q SVM upload + attention call
+    double wo_ms = 0;                // (g) wo: cvt+quant+image+GEMM+cvt+add
+    double ffn_ms = 0;               // (h) ffn block (full)
+    int    calls = 0;
+    void reset() { *this = ForwardTimings{}; }
+  };
+  ForwardTimings timings_{};
+  bool profile_stages_ = false; // set true to enable per-stage timing
+
   /// Same as forward_one_layer but uses persistent `scratch_` for
   /// all intermediate cl_mems (no per-call alloc/release). Caller-
   /// managed output: pass a cl_mem fp32 [M*hidden] out_fp32 (typically
