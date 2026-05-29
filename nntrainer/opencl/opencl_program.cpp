@@ -58,7 +58,11 @@ bool Program::BuildProgram(cl_device_id device_id,
     // subscript -- both fail every run, neither related to this work)
     // don't blow ~30 lines of macro-expansion trace per failure into
     // the run log.
-    std::string first_diag;
+    // Print all error lines (not just warnings) so we can diagnose failures.
+    std::fprintf(stderr,
+                 "[CL_BUILD_FAIL] err=%d (%s) log_bytes=%zu\n",
+                 error_code, OpenCLErrorCodeToString(error_code),
+                 build_log.size());
     if (!build_log.empty()) {
       size_t p = 0;
       while (p < build_log.size()) {
@@ -67,17 +71,12 @@ bool Program::BuildProgram(cl_device_id device_id,
           build_log.substr(p, nl == std::string::npos ? std::string::npos
                                                        : nl - p);
         if (!line.empty()) {
-          first_diag = line;
-          break;
+          std::fprintf(stderr, "[CL_LOG] %s\n", line.c_str());
         }
         if (nl == std::string::npos) break;
         p = nl + 1;
       }
     }
-    std::fprintf(stderr,
-                 "[CL_BUILD_FAIL] err=%d (%s) log_bytes=%zu first=\"%s\"\n",
-                 error_code, OpenCLErrorCodeToString(error_code),
-                 build_log.size(), first_diag.c_str());
     std::fflush(stderr);
     return false;
   }
