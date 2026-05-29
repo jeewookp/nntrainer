@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace causallm_gpu {
 
@@ -133,6 +134,22 @@ public:
   /// run_layer0_qkv_projection in step 6a). Prints summary stats.
   bool run_layer0_ffn();
 
+  /// Load weights for one decoder layer at the given file offset.
+  /// Advances offset_inout past the layer's bytes. Populates
+  /// layers_[layer_id]. Also allocates per-layer KV cache (SVM,
+  /// sized for max_seq_len_used positions).
+  bool load_layer(unsigned int layer_id, size_t *offset_inout,
+                  unsigned int max_seq_len_used);
+
+  /// Generic per-layer forward used for chaining. Takes a cl_mem
+  /// fp32 [hidden] input buffer, returns a newly-allocated cl_mem
+  /// fp32 [hidden] output buffer (the post-layer residual stream).
+  /// Caller owns the output. Position is the RoPE / KV cache
+  /// position for the single token being processed (single-token
+  /// forward only for now — prefill comes later).
+  cl_mem forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
+                           unsigned int position);
+
   /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
   /// the mmap'd weights. They sit between wq/wk and wk/wv in the
   /// save order. Pushed into SVM as fp16 (the rmsnorm_cl_fp16 kernel
@@ -178,6 +195,17 @@ public:
 
   const Qwen3Config &config() const { return cfg_; }
   size_t weight_file_size() const { return weight_bytes_; }
+
+  /// Byte offset in the weight file where decoder layer 0 starts —
+  /// i.e. right after the embedding (Q6_K) blob. Useful for chaining
+  /// load_layer(0..L-1, &offset, ...).
+  size_t layers_start_offset() const;
+
+  /// Accessor for the layer-0 output cl_mem produced by the old path
+  /// (run_layer0_ffn). Available so step-7a's new chain (which uses
+  /// the generic load_layer + forward_one_layer path) can take layer
+  /// 0's output as its starting input.
+  cl_mem layer0_output_fp32() const { return layer0_output_fp32_; }
 
 private:
   /// Byte size of the embedding tensor on disk (Q6_K).
@@ -246,6 +274,20 @@ private:
   // pass (subsequent steps in this layer read them; freed in destructor).
   cl_mem layer0_residual1_fp32_ = nullptr; // [hidden] = x + wo(O)
   cl_mem layer0_output_fp32_    = nullptr; // [hidden] = residual_1 + ffn(.)
+
+  /// Bundled per-layer weight state for the generic forward path.
+  /// Populated by load_layer(); consumed by forward_one_layer().
+  struct LayerWeights {
+    void *attn_norm_gamma_svm = nullptr;     // fp32 [hidden]
+    void *q_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
+    void *k_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
+    void *ffn_norm_gamma_svm = nullptr;      // fp32 [hidden]
+    V8cFcWeight wq, wk, wv, wo;
+    V8cFcWeight ffn_up, ffn_gate, ffn_down;
+    void *cache_k_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
+    void *cache_v_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
+  };
+  std::vector<LayerWeights> layers_;
 
   /// Generic loader: parses one Int4QTensor blob at the given file
   /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates

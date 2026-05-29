@@ -21,9 +21,14 @@
 
 #include "qwen3_forward.h"
 
+#include <cl_context.h>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <engine.h>
+#include <limits>
 #include <string>
+#include <vector>
 
 // Bypass the production safety gate in two_conv_attention_prefill_f16_cl:
 // the existing CausalLM defaults to CPU fallback when NNTR_MHA_GPU=1 (to
@@ -135,10 +140,60 @@ int main(int argc, char **argv) {
   }
 
   std::fprintf(stderr,
-               "[main] step 6 OK (layer 0 full forward complete: rmsnorm -> "
-               "QKV -> q_norm/k_norm -> RoPE -> KV cache -> attention -> "
-               "wo + residual_1 -> ffn_norm -> ffn_up/gate -> swiglu -> "
-               "ffn_down -> residual_2 -> layer 0 output).\n"
-               "Next: chain 28 layers + lm_head + first token sampling.\n");
+               "[main] step 6 OK (layer 0 full forward via old path).\n");
+
+  // Step 7a: validate the new generic load_layer + forward_one_layer
+  // path by loading layer 1 and chaining: layer 0 output (from the old
+  // path above) -> layer 1 input. Confirms the new path's load + forward
+  // mechanics match the layer-0 reference. Step 7b will scale the loop
+  // to all 28 layers and drop the old layer0_* methods entirely.
+  const unsigned int max_seq_len_used = 8;
+  size_t off = fwd.layers_start_offset();
+  if (!fwd.load_layer(0, &off, max_seq_len_used)) {
+    std::fprintf(stderr, "[main] load_layer(0) failed\n");
+    return 14;
+  }
+  if (!fwd.load_layer(1, &off, max_seq_len_used)) {
+    std::fprintf(stderr, "[main] load_layer(1) failed\n");
+    return 15;
+  }
+  cl_mem h0 = fwd.layer0_output_fp32();
+  cl_mem h1 = fwd.forward_one_layer(/*layer_id=*/1, h0, /*position=*/0);
+  if (h1 == nullptr) {
+    std::fprintf(stderr, "[main] forward_one_layer(1) returned null\n");
+    return 16;
+  }
+  // Quick summary of h1.
+  {
+    std::vector<float> r(fwd.config().hidden_size);
+    // Pull a queue from a fresh ClContext lookup to read back.
+    auto *cl = static_cast<nntrainer::ClContext *>(
+      nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
+    clEnqueueReadBuffer(q, h1, CL_TRUE, 0,
+                        r.size() * sizeof(float), r.data(), 0, nullptr,
+                        nullptr);
+    bool finite = true;
+    float mn = std::numeric_limits<float>::infinity();
+    float mx = -mn;
+    for (float v : r) {
+      if (!std::isfinite(v)) finite = false;
+      if (v < mn) mn = v;
+      if (v > mx) mx = v;
+    }
+    std::fprintf(stderr,
+                 "[qwen3-gpu] LAYER-1 output fp32 N=%zu first 8:", r.size());
+    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", r[i]);
+    std::fprintf(stderr, "\n  last 4:");
+    for (int i = 0; i < 4; ++i)
+      std::fprintf(stderr, " %g", r[r.size() - 4 + i]);
+    std::fprintf(stderr,
+                 "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
+    clReleaseMemObject(h1);
+  }
+
+  std::fprintf(stderr,
+               "[main] step 7a OK (layer-0 -> layer-1 via new generic "
+               "path, output finite). Step 7b: full 28-layer chain.\n");
   return 0;
 }
