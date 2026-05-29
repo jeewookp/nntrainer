@@ -199,6 +199,25 @@ __kernel void qk_matmul_f16_ohwi_img(
 
   if (m0 >= M || n0 >= N_kv) return;
 
+  // Causal whole-tile skip: if the smallest key index in this tile (n0)
+  // exceeds the largest query index (m0+TM_QK-1), every element is masked
+  // (matches the per-element `n > m` rule below). Write -INF and skip the
+  // d-reduction — ~half the tiles for a square causal prefill.
+  if (causal && n0 > m0 + (TM_QK - 1)) {
+    const long sb = (long)head_q * (long)M * (long)N_kv;
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const int m = m0 + i;
+      if (m >= M) continue;
+      #pragma unroll
+      for (int j = 0; j < TN_QK; j++) {
+        const int n = n0 + j;
+        if (n < N_kv) scores[sb + (long)m * N_kv + n] = (half)(-INFINITY);
+      }
+    }
+    return;
+  }
+
   float acc[TM_QK][TN_QK];
   #pragma unroll
   for (int i = 0; i < TM_QK; i++)
