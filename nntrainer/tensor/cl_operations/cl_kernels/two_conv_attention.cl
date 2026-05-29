@@ -838,7 +838,13 @@ __kernel void sv_matmul_f16_ohwi_img(
   const int v_row = head_kv * d + x;
   const long score_base =
       (long)head_q * (long)M * (long)N_kv + (long)m * (long)N_kv;
-  const int N_kv_tex = (N_kv + 7) >> 3;
+  // Causal prefill: scores[m][n]=0 for n>m (softmax of the -inf qk wrote),
+  // so only the first ceil((m+1)/8) score chunks contribute. Cap the
+  // reduction here — paired with qk_matmul_f16_ohwi_img's causal tile-skip
+  // (this prefill path is always causal with the current chunk's keys).
+  int N_kv_tex = (N_kv + 7) >> 3;
+  const int N_kv_tex_causal = (m >> 3) + 1;
+  if (N_kv_tex_causal < N_kv_tex) N_kv_tex = N_kv_tex_causal;
 
   float acc = 0.0f;
   for (int n_tex = 0; n_tex < N_kv_tex; n_tex++) {
