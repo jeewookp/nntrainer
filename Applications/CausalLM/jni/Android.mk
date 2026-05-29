@@ -43,6 +43,15 @@ LOCAL_MODULE := ccapi-nntrainer
 LOCAL_SRC_FILES := $(NNTRAINER_ROOT)/builddir/android_build_result/lib/$(TARGET_ARCH_ABI)/libccapi-nntrainer.so
 include $(PREBUILT_SHARED_LIBRARY)
 
+# OpenCL driver: linked by the GPU-native binary that calls clSVMAlloc /
+# clEnqueueSVM* directly. libnntrainer.so resolves these dynamically via
+# its own loader; standalone binaries need the link explicitly.
+include $(CLEAR_VARS)
+LOCAL_MODULE := OpenCL
+LOCAL_SRC_FILES := $(NNTRAINER_ROOT)/builddir/opencl/lib/$(TARGET_ARCH_ABI)/libOpenCL.so
+LOCAL_EXPORT_C_INCLUDES := $(NNTRAINER_ROOT)/builddir/opencl/include
+include $(PREBUILT_SHARED_LIBRARY)
+
 # Tokenizer library
 include $(CLEAR_VARS)
 LOCAL_MODULE := tokenizers_c
@@ -157,6 +166,30 @@ LOCAL_SHARED_LIBRARIES := causallm_core nntrainer ccapi-nntrainer
 LOCAL_STATIC_LIBRARIES := tokenizers_c
 
 LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES) $(CAUSALLM_COMMON_INCLUDES)
+
+include $(BUILD_EXECUTABLE)
+
+# Build nntrainer_qwen3_gpu executable — paper-aligned GPU-native Qwen3
+# forward (bypasses the layer graph; activations live in SVM cl_mem).
+include $(CLEAR_VARS)
+
+LOCAL_ARM_NEON := true
+LOCAL_CFLAGS += -std=c++17 -Ofast -mcpu=cortex-a53 -DENABLE_FP16=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1 -mtune=cortex-a76 -O3 -ffast-math -DCL_TARGET_OPENCL_VERSION=200
+LOCAL_CXXFLAGS += -std=c++17 -frtti
+LOCAL_CFLAGS += -pthread -fexceptions -DENABLE_FP16=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1 -mtune=cortex-a76 -O3 -ffast-math
+LOCAL_LDFLAGS += -fexceptions -DENABLE_FP16=1 -DUSE__FP16=1 -D__ARM_NEON__=1 -march=armv8.2-a+fp16+dotprod+i8mm -DUSE_NEON=1 -mtune=cortex-a76 -O3 -ffast-math
+LOCAL_MODULE_TAGS := optional
+LOCAL_ARM_MODE := arm
+LOCAL_MODULE := nntrainer_qwen3_gpu
+LOCAL_LDLIBS := -llog -landroid
+
+LOCAL_SRC_FILES := \
+    ../gpu_native/main.cpp \
+    ../gpu_native/qwen3_forward.cpp
+
+LOCAL_SHARED_LIBRARIES := nntrainer ccapi-nntrainer OpenCL
+
+LOCAL_C_INCLUDES += $(NNTRAINER_INCLUDES) $(LOCAL_PATH)/../gpu_native
 
 include $(BUILD_EXECUTABLE)
 
