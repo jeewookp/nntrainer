@@ -379,6 +379,10 @@ int main(int argc, char *argv[]) {
     std::fprintf(stderr, "[DIAG] RSS after load_weight: %zu KB\n",
                  read_vm_rss_kb()); std::fflush(stderr);
     std::fprintf(stderr, "[DIAG] load_weight done\n"); std::fflush(stderr);
+    std::fprintf(stderr, "[DIAG] ZEROCOPY=%s V3=%s V4=%s\n",
+      getenv("NNTRAINER_GEMV_ZEROCOPY") ? "1" : "0",
+      getenv("NNTRAINER_GEMV_ADRENO_V3") ? "1" : "0",
+      getenv("NNTRAINER_GEMV_ADRENO_V4") ? "1" : "0"); std::fflush(stderr);
     std::fprintf(stderr, "[DIAG] starting inference\n"); std::fflush(stderr);
 
     bool do_sample = generation_cfg.value("do_sample", false);
