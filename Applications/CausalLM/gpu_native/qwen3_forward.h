@@ -111,15 +111,24 @@ public:
   /// next commit).
   bool load_layer0_qkv_weights();
 
+  /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
+  /// the mmap'd weights. They sit between wq/wk and wk/wv in the
+  /// save order. Pushed into SVM as fp16 (the rmsnorm_cl_fp16 kernel
+  /// expects `half alpha`) — converted on the host side at load time.
+  bool load_layer0_qk_norm_gammas();
+
   /// Run the full QKV projection pipeline for layer 0 on the same
   /// deterministic input pattern as step 2/3: rmsnorm.cl ONCE against
   /// the SVM attention_norm gamma, then quantize_act_v8c_fp32_cl ONCE
   /// on the rmsnorm output (shared activation quant — paper §3.6
   /// insight, same pattern as dotCl_v8c's shared-quant cache hit on
   /// wq/wk/wv), then three gemm_int8_v8c_cl dispatches against the
-  /// loaded Q/K/V weights. Outputs three fp16 cl_mem buffers
-  /// (Q[hQ*d], K[hKV*d], V[hKV*d]); reads each back to host and prints
-  /// summary stats + finite checks.
+  /// loaded Q/K/V weights. Then rmsnorm_cl_fp16 over each head row of
+  /// Q (H=hQ, W=d) and K (H=hKV, W=d) using the SVM q_norm/k_norm
+  /// gammas — paper §3.3 Qwen3-specific per-head normalization.
+  /// Outputs three fp16 cl_mem buffers (Q[hQ*d], K[hKV*d], V[hKV*d])
+  /// — Q/K are post-norm and ready for RoPE in the next commit;
+  /// V is unchanged (Qwen3 has no v_norm).
   bool run_layer0_qkv_projection();
 
   const Qwen3Config &config() const { return cfg_; }
@@ -141,6 +150,11 @@ private:
 
   // Layer 0 attention_norm gamma (fp32, [hidden_size]) in SVM.
   void *layer0_attn_norm_gamma_svm_ = nullptr;
+  // Layer 0 q_norm / k_norm gammas (fp16, [head_dim]) in SVM. Converted
+  // from the fp32 on-disk gammas at load time so they can be passed
+  // directly to rmsnorm_cl_fp16 (which takes `half alpha`).
+  void *layer0_q_norm_gamma_svm_fp16_ = nullptr;
+  void *layer0_k_norm_gamma_svm_fp16_ = nullptr;
 
   /// Bundled v8c-ready state for one int4 GEMM weight. Built once by
   /// load_qint4_weight_at() from a mmap'd KAI Section A payload via

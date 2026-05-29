@@ -89,12 +89,16 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] load_layer0_qkv_weights failed\n");
     return 6;
   }
+  if (!fwd.load_layer0_qk_norm_gammas()) {
+    std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
+    return 7;
+  }
   if (!fwd.run_layer0_qkv_projection()) {
     std::fprintf(stderr, "[main] run_layer0_qkv_projection failed\n");
-    return 7;
+    return 8;
   }
 
   std::fprintf(stderr,
-               "[main] step 4 OK. Next: q_norm/k_norm + RoPE.\n");
+               "[main] step 4b OK (Q/K post per-head norm). Next: RoPE.\n");
   return 0;
 }

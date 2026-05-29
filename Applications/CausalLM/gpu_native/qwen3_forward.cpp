@@ -14,6 +14,7 @@
 #include <cl_tensor_view.h>
 #include <engine.h>
 #include <rmsnorm.h>
+#include <rmsnorm_fp16.h>
 
 #include <array>
 #include <cmath>
@@ -42,6 +43,10 @@ Qwen3Forward::~Qwen3Forward() {
   release_v8c_weight(&layer0_wq_);
   release_v8c_weight(&layer0_wk_);
   release_v8c_weight(&layer0_wv_);
+  if (layer0_q_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_q_norm_gamma_svm_fp16_);
+  if (layer0_k_norm_gamma_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_k_norm_gamma_svm_fp16_);
   if (layer0_attn_norm_gamma_svm_ != nullptr && cl_ctx_ != nullptr) {
     clSVMFree(cl_ctx_, layer0_attn_norm_gamma_svm_);
   }
@@ -484,6 +489,121 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
   return true;
 }
 
+// Convert N fp32 values to fp16-bits (uint16). Round-to-nearest-even.
+// Minimal correct converter — for one-time small gamma loads, perf isn't
+// a concern. Returns 0x7E00 (qNaN) on NaN, ±inf on overflow, denormal
+// on underflow.
+static uint16_t f2h(float f) {
+  uint32_t u;
+  std::memcpy(&u, &f, 4);
+  uint32_t s = (u >> 16) & 0x8000u;
+  int32_t e = ((u >> 23) & 0xff) - 127 + 15;
+  uint32_t m = u & 0x7fffff;
+  if (((u >> 23) & 0xff) == 0xff) {
+    // inf / nan
+    return (uint16_t)(s | 0x7c00 | (m ? 0x200 : 0));
+  }
+  if (e >= 31) return (uint16_t)(s | 0x7c00);             // overflow -> inf
+  if (e <= 0) {
+    // subnormal
+    if (e < -10) return (uint16_t)s;
+    m |= 0x800000;
+    uint32_t shift = (uint32_t)(14 - e);
+    uint32_t half = m >> shift;
+    if ((m >> (shift - 1)) & 1u) half += 1; // round to nearest
+    return (uint16_t)(s | half);
+  }
+  uint16_t r = (uint16_t)(s | (uint16_t)(e << 10) | (uint16_t)(m >> 13));
+  if (m & 0x1000) r += 1; // round-to-nearest-even (simplified)
+  return r;
+}
+
+bool Qwen3Forward::load_layer0_qk_norm_gammas() {
+  if (weight_mmap_ == nullptr || cl_ctx_ == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] load_layer0_qk_norm_gammas: not initialized\n");
+    return false;
+  }
+  if (layer0_q_norm_gamma_svm_fp16_ != nullptr &&
+      layer0_k_norm_gamma_svm_fp16_ != nullptr)
+    return true;
+
+  // Per the layer save layout (qkv weights commit), q_norm/k_norm gammas
+  // live right after wq/wk respectively. Recompute offsets here so the
+  // loader is independent of the wq load step.
+  const size_t embed_bytes = embed_table_bytes();
+  const size_t attn_norm_bytes =
+    static_cast<size_t>(cfg_.hidden_size) * sizeof(float);
+  const size_t head_dim_bytes =
+    static_cast<size_t>(cfg_.head_dim) * sizeof(float);
+
+  const unsigned int K_hidden = cfg_.hidden_size;
+  const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
+  const size_t wq_bytes =
+    sizeof(uint16_t) + (size_t)K_hidden * N_q / 2 + (size_t)N_q * 2;
+  const size_t wk_bytes =
+    sizeof(uint16_t) + (size_t)K_hidden * N_kv / 2 + (size_t)N_kv * 2;
+
+  const size_t wq_off = embed_bytes + attn_norm_bytes;
+  const size_t q_norm_off = wq_off + wq_bytes;
+  const size_t wk_off = q_norm_off + head_dim_bytes;
+  const size_t k_norm_off = wk_off + wk_bytes;
+
+  if (k_norm_off + head_dim_bytes > weight_bytes_) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] qk_norm offsets out of range\n");
+    return false;
+  }
+
+  const float *q_gamma_fp32 =
+    reinterpret_cast<const float *>(weight_mmap_ + q_norm_off);
+  const float *k_gamma_fp32 =
+    reinterpret_cast<const float *>(weight_mmap_ + k_norm_off);
+
+  std::fprintf(stderr,
+               "[qwen3-gpu] q_norm off=%zu (~%zu KB) first 4: %g %g %g %g\n"
+               "[qwen3-gpu] k_norm off=%zu (~%zu KB) first 4: %g %g %g %g\n",
+               q_norm_off, q_norm_off / 1024,
+               q_gamma_fp32[0], q_gamma_fp32[1], q_gamma_fp32[2],
+               q_gamma_fp32[3],
+               k_norm_off, k_norm_off / 1024,
+               k_gamma_fp32[0], k_gamma_fp32[1], k_gamma_fp32[2],
+               k_gamma_fp32[3]);
+
+  // Convert fp32 -> fp16 and push to SVM. head_dim values × 2 bytes.
+  const size_t gamma_fp16_bytes =
+    (size_t)cfg_.head_dim * sizeof(uint16_t);
+  auto load_one = [this, gamma_fp16_bytes](
+                    const float *src_fp32, void **dst_svm,
+                    const char *tag) -> bool {
+    *dst_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, gamma_fp16_bytes, 0);
+    if (*dst_svm == nullptr) {
+      std::fprintf(stderr, "[qwen3-gpu] %s SVMAlloc failed\n", tag);
+      return false;
+    }
+    cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, *dst_svm,
+                                 gamma_fp16_bytes, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+      std::fprintf(stderr, "[qwen3-gpu] %s SVMMap WRITE err=%d\n", tag, err);
+      return false;
+    }
+    uint16_t *p = static_cast<uint16_t *>(*dst_svm);
+    for (unsigned int i = 0; i < cfg_.head_dim; ++i)
+      p[i] = f2h(src_fp32[i]);
+    err = clEnqueueSVMUnmap(cl_q_, *dst_svm, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) return false;
+    clFinish(cl_q_);
+    return true;
+  };
+  if (!load_one(q_gamma_fp32, &layer0_q_norm_gamma_svm_fp16_, "q_norm")) return false;
+  if (!load_one(k_gamma_fp32, &layer0_k_norm_gamma_svm_fp16_, "k_norm")) return false;
+  std::fprintf(stderr,
+               "[qwen3-gpu] q_norm + k_norm gammas -> SVM (fp16, %zu B each)\n",
+               gamma_fp16_bytes);
+  return true;
+}
+
 bool Qwen3Forward::load_layer0_qkv_weights() {
   // Layer save order in Qwen3 createTransformerDecoderBlock +
   // Qwen3Transformer::createAttention:
@@ -673,9 +793,59 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
                               layer0_wv_.row_sum_w_int4, y_v, M_pad, N_kv, K);
   clFinish(cl_q_);
 
-  // (e) Sanity-check each output (M=0 valid row only).
-  bool ok_q = summarize_fp16_buf(cl_q_, y_q, N_q,  "Q");
-  bool ok_k = summarize_fp16_buf(cl_q_, y_k, N_kv, "K");
+  // (e) Per-head q_norm / k_norm via rmsnorm_cl_fp16 in place. Q is
+  //     reshaped [M=1, hQ*d] -> [1, 1, hQ, d] and normed per-head;
+  //     same for K with hKV. V is unchanged (Qwen3 has no v_norm).
+  //     Kernel signature: rmsnorm_cl_fp16(in, out, alpha, eps_half,
+  //     B, C, H, W). For our case B=1, C=1, H=num_heads, W=head_dim.
+  //     GWS = (B*C, H) = (1, num_heads); LWS = (1, 1) — no subgroup
+  //     reqs in this kernel.
+  if (layer0_q_norm_gamma_svm_fp16_ != nullptr &&
+      layer0_k_norm_gamma_svm_fp16_ != nullptr) {
+    auto dispatch_qk_norm =
+      [&](cl_mem io_buf, void *gamma_svm, unsigned int num_heads,
+          const char *tag) -> bool {
+      auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                     "rmsnorm_cl_fp16");
+      if (!kp) {
+        std::fprintf(stderr,
+                     "[qwen3-gpu] %s register rmsnorm_cl_fp16 failed\n", tag);
+        return false;
+      }
+      uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+      int B = 1, C = 1;
+      int H = static_cast<int>(num_heads),
+          W = static_cast<int>(cfg_.head_dim);
+      if (!kp->SetKernelArguments(0, &io_buf, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(1, &io_buf, sizeof(cl_mem)) || // in-place
+          !kp->SetKernelSVMArguments(2, gamma_svm) ||
+          !kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t)) ||
+          !kp->SetKernelArguments(4, &B, sizeof(int)) ||
+          !kp->SetKernelArguments(5, &C, sizeof(int)) ||
+          !kp->SetKernelArguments(6, &H, sizeof(int)) ||
+          !kp->SetKernelArguments(7, &W, sizeof(int))) {
+        std::fprintf(stderr, "[qwen3-gpu] %s rmsnorm_fp16 args failed\n", tag);
+        return false;
+      }
+      std::array<size_t, 2> gws = {(size_t)B * C, (size_t)H};
+      std::array<size_t, 2> lws = {1, 1};
+      cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+                                            lws.data(), 0, nullptr, nullptr);
+      clFinish(cl_q_);
+      return true;
+    };
+    if (!dispatch_qk_norm(y_q, layer0_q_norm_gamma_svm_fp16_,
+                          cfg_.num_heads_Q, "q_norm") ||
+        !dispatch_qk_norm(y_k, layer0_k_norm_gamma_svm_fp16_,
+                          cfg_.num_heads_KV, "k_norm")) {
+      // fall through to summarize so we can see partial state
+    }
+  }
+
+  // (f) Sanity-check each output (M=0 valid row only). Q/K are
+  //     post-q_norm/k_norm; V is post-projection only.
+  bool ok_q = summarize_fp16_buf(cl_q_, y_q, N_q,  "Q (post q_norm)");
+  bool ok_k = summarize_fp16_buf(cl_q_, y_k, N_kv, "K (post k_norm)");
   bool ok_v = summarize_fp16_buf(cl_q_, y_v, N_kv, "V");
 
   clReleaseMemObject(y_v);
