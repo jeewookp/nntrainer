@@ -2952,9 +2952,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_begin();
   float zero = 0.0f;
   const uint16_t zero_h = 0;
-  clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero_h, sizeof(uint16_t), 0,
-                      (size_t)M_pad * K_h * sizeof(uint16_t), 0, nullptr,
-                      nullptr);
+  // Only zero the pad rows [M, M_pad); the first M rows are fully
+  // overwritten by the cvt below. At M_pad==M (M%4==0, e.g. M=1024) this
+  // is a no-op, saving a full-buffer fill per layer.
+  if (M_pad > M)
+    clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero_h, sizeof(uint16_t),
+                        (size_t)M * K_h * sizeof(uint16_t),
+                        (size_t)(M_pad - M) * K_h * sizeof(uint16_t), 0,
+                        nullptr, nullptr);
   // Boundary cvt: in_fp32 -> in_padded (first M rows). Padded rows
   // beyond M stay zero from the fill above.
   {
@@ -3316,9 +3321,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
   stage_begin();
   // #46m: residual_1 is fp16; copy directly to ffn_in_padded fp16.
-  clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero_h, sizeof(uint16_t),
-                      0, (size_t)M_pad * K_h * sizeof(uint16_t), 0, nullptr,
-                      nullptr);
+  // Only zero the pad rows [M, M_pad); the copy below overwrites [0, M).
+  if (M_pad > M)
+    clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero_h,
+                        sizeof(uint16_t), (size_t)M * K_h * sizeof(uint16_t),
+                        (size_t)(M_pad - M) * K_h * sizeof(uint16_t), 0,
+                        nullptr, nullptr);
   clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
                       0, (size_t)M * K_h * sizeof(uint16_t), 0, nullptr,
                       nullptr);
