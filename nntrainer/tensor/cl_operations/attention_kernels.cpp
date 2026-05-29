@@ -1672,12 +1672,13 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
         !kp->SetKernelArguments(7, &smax, sizeof(int)) ||
         !kp->SetKernelArguments(8, &gqa, sizeof(int)))
       return false;
-    // 1 WI per output element O[m, head_q*d + x]. Workgroup tiled as
-    // (LWS_X=16 x's, LWS_Y=4 m's): 4 WIs share each V row read → image
-    // cache hit on the same texel row.
+    // TDX=8 tiled: each WI computes 8 output channels, so the x grid is
+    // head_dim/8 work-items. Workgroup (LWS_X x's, LWS_Y=4 m's).
+    constexpr size_t TDX = 8;
     constexpr size_t LWS_X = 16;
     constexpr size_t LWS_Y = 4;
-    const size_t dx_pad = ((head_dim + LWS_X - 1) / LWS_X) * LWS_X;
+    const size_t dx = (head_dim + TDX - 1) / TDX;
+    const size_t dx_pad = ((dx + LWS_X - 1) / LWS_X) * LWS_X;
     const size_t mx_pad = ((M + LWS_Y - 1) / LWS_Y) * LWS_Y;
     std::array<size_t, 3> gws = {dx_pad, mx_pad, num_heads_Q};
     std::array<size_t, 3> lws = {LWS_X, LWS_Y, 1};

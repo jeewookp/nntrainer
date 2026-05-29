@@ -827,29 +827,34 @@ __kernel void sv_matmul_f16_ohwi_img(
     __global       half *O,           // [M, HD_Q] fp16, row-major
     const int M, const int N_kv, const int d,
     const int HD_Q, const int S_max, const int gqa) {
-  const int x = get_global_id(0);
+  // Tiled over the output d/x axis: each WI computes TDX=8 consecutive
+  // output channels x0..x0+7. The scores chunk depends only on (m, n_tex),
+  // NOT on x, so it is loaded ONCE per n_tex and reused across all 8 x's —
+  // cutting scores-buffer reads 8x vs the 1-output-per-WI version (the
+  // scores row was previously re-read by all d WIs of a given m).
+  const int x0 = get_global_id(0) * 8;
   const int m = get_global_id(1);
   const int head_q = get_global_id(2);
-  if (m >= M || x >= d) return;
+  if (m >= M || x0 >= d) return;
   const int head_kv = head_q / gqa;
 
   const sampler_t smp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
                         CLK_FILTER_NEAREST;
-  const int v_row = head_kv * d + x;
+  const int v_row0 = head_kv * d + x0;
   const long score_base =
       (long)head_q * (long)M * (long)N_kv + (long)m * (long)N_kv;
   // Causal prefill: scores[m][n]=0 for n>m (softmax of the -inf qk wrote),
   // so only the first ceil((m+1)/8) score chunks contribute. Cap the
-  // reduction here — paired with qk_matmul_f16_ohwi_img's causal tile-skip
-  // (this prefill path is always causal with the current chunk's keys).
+  // reduction here — paired with qk_matmul_f16_ohwi_img's causal tile-skip.
   int N_kv_tex = (N_kv + 7) >> 3;
   const int N_kv_tex_causal = (m >> 3) + 1;
   if (N_kv_tex_causal < N_kv_tex) N_kv_tex = N_kv_tex_causal;
 
-  float acc = 0.0f;
+  float acc[8];
+  #pragma unroll
+  for (int t = 0; t < 8; t++) acc[t] = 0.0f;
+
   for (int n_tex = 0; n_tex < N_kv_tex; n_tex++) {
-    const uint4 vv = read_imageui(V_img, smp, (int2)(n_tex, v_row));
-    const half8 v_pack = as_half8(vv);
     const int n0 = n_tex * 8;
     half8 s_pack;
     if (n0 + 8 <= N_kv) {
@@ -861,12 +866,20 @@ __kernel void sv_matmul_f16_ohwi_img(
         tmp[k] = (n0 + k < N_kv) ? scores[score_base + n0 + k] : (half)0.0h;
       s_pack = vload8(0, tmp);
     }
-    const float4 vlo = convert_float4(v_pack.s0123);
-    const float4 vhi = convert_float4(v_pack.s4567);
     const float4 slo = convert_float4(s_pack.s0123);
     const float4 shi = convert_float4(s_pack.s4567);
-    acc += dot(slo, vlo) + dot(shi, vhi);
+    #pragma unroll
+    for (int t = 0; t < 8; t++) {
+      const uint4 vv = read_imageui(V_img, smp, (int2)(n_tex, v_row0 + t));
+      const half8 v_pack = as_half8(vv);
+      acc[t] += dot(slo, convert_float4(v_pack.s0123)) +
+                dot(shi, convert_float4(v_pack.s4567));
+    }
   }
 
-  O[(long)m * HD_Q + head_q * d + x] = (half)acc;
+  #pragma unroll
+  for (int t = 0; t < 8; t++) {
+    const int x = x0 + t;
+    if (x < d) O[(long)m * HD_Q + head_q * d + x] = (half)acc[t];
+  }
 }
