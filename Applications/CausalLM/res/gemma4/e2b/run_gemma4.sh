@@ -314,7 +314,9 @@ push_if_changed() {
         log_error "  $(basename "$src") not found on host: $src"; return 1
     fi
     h_md5=$(md5sum "$src" | cut -d' ' -f1)
-    d_md5=$(adb shell "md5sum '$dst' 2>/dev/null" | awk '{print $1}' | tr -d '[:space:]')
+    # adb shell md5sum returns non-zero when the file is absent on the device;
+    # suppress the error with || so set -e does not silently abort the script.
+    d_md5=$(adb shell "md5sum '$dst' 2>/dev/null" 2>/dev/null | awk '{print $1}' | tr -d '[:space:]') || d_md5=""
     if [ "$h_md5" != "$d_md5" ]; then
         log_info "  Pushing $(basename "$src") ($(du -h "$src" | cut -f1))..."
         adb push "$src" "$dst" || { log_error "  adb push failed for $(basename "$src")"; return 1; }
