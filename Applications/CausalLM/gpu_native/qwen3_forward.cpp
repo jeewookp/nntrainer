@@ -13,6 +13,7 @@
 #include <blas_kernels.h>
 #include <cl_context.h>
 #include <cl_tensor_view.h>
+#include <cpu_backend.h>
 #include <engine.h>
 #include <rmsnorm.h>
 #include <rmsnorm_fp16.h>
@@ -2396,6 +2397,102 @@ bool Qwen3Forward::run_output_norm(cl_mem inout_fp32) {
                                         lws.data(), 0, nullptr, nullptr);
   clFinish(cl_q_);
   return true;
+}
+
+cl_mem Qwen3Forward::embedding_lookup_to_fp32_clmem(unsigned int token_id) {
+  if (weight_mmap_ == nullptr || cl_ctx_ == nullptr) return nullptr;
+  if (token_id >= cfg_.vocab_size) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] embedding_lookup: token_id %u >= vocab %u\n",
+                 token_id, cfg_.vocab_size);
+    return nullptr;
+  }
+  const unsigned int H = cfg_.hidden_size;
+  // Q6_K row stride: H * 210 / 256 bytes. For H=1024 -> 4 blocks * 210 =
+  // 840 bytes per row. Embedding starts at file offset 0.
+  if (H % Q6_K_BLOCK_ELTS != 0) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] embedding_lookup: hidden %u not multiple of "
+                 "Q6_K block (%zu)\n", H, Q6_K_BLOCK_ELTS);
+    return nullptr;
+  }
+  const size_t row_bytes = (H / Q6_K_BLOCK_ELTS) * Q6_K_BLOCK_BYTES;
+  const size_t row_off = (size_t)token_id * row_bytes;
+  if (row_off + row_bytes > embed_table_bytes()) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] embedding_lookup: row offset %zu past embed "
+                 "table %zu\n", row_off, embed_table_bytes());
+    return nullptr;
+  }
+  std::vector<float> host_row(H);
+  nntrainer::dequantize_row_q6_K(weight_mmap_ + row_off, host_row.data(),
+                                 (int64_t)H);
+  std::fprintf(stderr,
+               "[qwen3-gpu] embedding[%u] dequant first 8:", token_id);
+  for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", host_row[i]);
+  std::fprintf(stderr, "\n");
+
+  cl_int err = CL_SUCCESS;
+  cl_mem buf = clCreateBuffer(cl_ctx_,
+                              CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                              (size_t)H * sizeof(float), host_row.data(),
+                              &err);
+  if (err != CL_SUCCESS || buf == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] embedding_lookup: clCreateBuffer err=%d\n",
+                 err);
+    return nullptr;
+  }
+  return buf;
+}
+
+int Qwen3Forward::run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32) {
+  if (weight_mmap_ == nullptr || cl_ctx_ == nullptr ||
+      post_norm_fp32 == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head: not initialized\n");
+    return -1;
+  }
+  const unsigned int H = cfg_.hidden_size;
+  const unsigned int V = cfg_.vocab_size;
+  if (H % Q6_K_BLOCK_ELTS != 0) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] lm_head: hidden %u not multiple of Q6_K\n", H);
+    return -1;
+  }
+  // Read post_norm to host (fp32 [hidden]).
+  std::vector<float> hidden(H);
+  cl_int err = clEnqueueReadBuffer(cl_q_, post_norm_fp32, CL_TRUE, 0,
+                                   (size_t)H * sizeof(float), hidden.data(),
+                                   0, nullptr, nullptr);
+  if (err != CL_SUCCESS) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head: hidden read err=%d\n", err);
+    return -1;
+  }
+
+  // Per-vocab row: dequant Q6_K -> 1024 fp32, dot with hidden, store
+  // logit. Argmax incrementally to avoid the [vocab=151936] logits
+  // buffer. Embedding row stride = (H/256) * 210 bytes.
+  const size_t row_bytes = (H / Q6_K_BLOCK_ELTS) * Q6_K_BLOCK_BYTES;
+  const uint8_t *embed_base = weight_mmap_;
+
+  std::vector<float> dequant_row(H);
+  float best_logit = -std::numeric_limits<float>::infinity();
+  int best_token = -1;
+  for (unsigned int v = 0; v < V; ++v) {
+    nntrainer::dequantize_row_q6_K(embed_base + (size_t)v * row_bytes,
+                                   dequant_row.data(), (int64_t)H);
+    float dot = 0.0f;
+    for (unsigned int i = 0; i < H; ++i)
+      dot += dequant_row[i] * hidden[i];
+    if (dot > best_logit) {
+      best_logit = dot;
+      best_token = (int)v;
+    }
+  }
+  std::fprintf(stderr,
+               "[qwen3-gpu] lm_head: argmax token=%d logit=%g (vocab=%u)\n",
+               best_token, best_logit, V);
+  return best_token;
 }
 
 bool Qwen3Forward::allocate_layer0_kv_cache_svm() {

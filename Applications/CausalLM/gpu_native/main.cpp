@@ -94,22 +94,18 @@ int main(int argc, char **argv) {
                cfg.num_layers, off / (1024 * 1024),
                fwd.weight_file_size() / (1024 * 1024));
 
-  // Initial layer-0 input: same deterministic fp32 ramp used in the
-  // single-layer tests (0.001 * (i+1) for i in [0, hidden)). Real
-  // inference would use embedding(token_id) here.
+  // Initial layer-0 input: real embedding lookup. Use Qwen3's BOS token
+  // (151643 per HF config.json) so the first generated token has actual
+  // semantic meaning (vs the synthetic ramp pattern). The lookup is CPU-
+  // side Q6_K dequant + clCreateBuffer into a fresh cl_mem fp32 buffer.
+  constexpr unsigned int BOS_TOKEN = 151643;
   auto *cl = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
-  cl_context ctx = cl->context_inst_.GetContext();
   const unsigned int H = cfg.hidden_size;
-  std::vector<float> in_host(H);
-  for (unsigned int i = 0; i < H; ++i)
-    in_host[i] = 0.001f * static_cast<float>(i + 1);
-  cl_int err = CL_SUCCESS;
-  cl_mem cur = clCreateBuffer(ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                              H * sizeof(float), in_host.data(), &err);
-  if (err != CL_SUCCESS || !cur) {
-    std::fprintf(stderr, "[main] initial input buffer alloc err=%d\n", err);
+  cl_mem cur = fwd.embedding_lookup_to_fp32_clmem(BOS_TOKEN);
+  if (cur == nullptr) {
+    std::fprintf(stderr, "[main] embedding_lookup failed\n");
     return 50;
   }
 
@@ -179,11 +175,24 @@ int main(int argc, char **argv) {
     std::fprintf(stderr,
                  "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
   }
+
+  // Step 8: lm_head (Q6_K tied embedding, CPU) + argmax → first token id.
+  int next_token = fwd.run_lm_head_and_argmax_cpu(cur);
   clReleaseMemObject(cur);
+  if (next_token < 0) {
+    std::fprintf(stderr, "[main] lm_head failed\n");
+    return 70;
+  }
 
   std::fprintf(stderr,
-               "[main] step 7c OK (28-layer chain + output_norm). "
-               "Next: lm_head (Q6_K tied embedding) + first-token "
-               "argmax for end-to-end inference.\n");
+               "[main] step 8 OK — END-TO-END INFERENCE COMPLETE.\n"
+               "  input  token: %u (BOS)\n"
+               "  output token: %d\n"
+               "  pipeline: Q6_K embed lookup -> 28 GPU layers "
+               "(rmsnorm/QKV/qknorm/RoPE/SVM KV cache/attention/wo/"
+               "residual_1/ffn_norm/ffn_up/gate/swiglu/ffn_down/"
+               "residual_2) -> output_norm -> CPU Q6_K lm_head -> "
+               "argmax.\n",
+               BOS_TOKEN, next_token);
   return 0;
 }

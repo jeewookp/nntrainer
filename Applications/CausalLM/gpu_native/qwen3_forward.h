@@ -160,6 +160,21 @@ public:
   /// input, in place. Caller's buffer is modified.
   bool run_output_norm(cl_mem inout_fp32);
 
+  /// CPU-side embedding lookup: dequant the Q6_K row at token_id from
+  /// the mmap'd embedding table directly to an fp32 cl_mem [hidden]
+  /// buffer ready as layer-0 input. Returns the new cl_mem (caller
+  /// owns). nullptr on failure (out-of-range token_id, alloc failure).
+  cl_mem embedding_lookup_to_fp32_clmem(unsigned int token_id);
+
+  /// CPU-side lm_head: read post-output_norm fp32 [hidden] from the
+  /// cl_mem back to host, then for each vocab row dequant the Q6_K
+  /// row from the tied embedding table, compute the dot product with
+  /// the hidden, and finally argmax. Returns the predicted next-token
+  /// id (or -1 on failure). Q6_K kernel is CPU-only in nntrainer, so
+  /// this matmul stays on host for now — a GPU Q6_K kernel is a
+  /// separate kernel-design follow-up.
+  int run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32);
+
   /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
   /// the mmap'd weights. They sit between wq/wk and wk/wv in the
   /// save order. Pushed into SVM as fp16 (the rmsnorm_cl_fp16 kernel
