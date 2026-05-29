@@ -363,20 +363,26 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
-          // PRE-PREAD backpressure: when system memory is tight, sleep 1 s
-          // BEFORE committing new physical pages via pread.  Sleeping here
-          // (not after) means the very last weight does NOT get a trailing
-          // sleep — once pread is done the lambda returns, forEachLayer
-          // completes, and fd is closed immediately without any extra delay
-          // during which the OOM killer could fire.
-          // Mechanism: MADV_PAGEOUT on Adreno SVM cannot free pages by itself
-          // (GPU driver holds DMA refs), but during our sleep the kernel's
-          // own background reclaim swaps out Android background processes
-          // (higher oom_score_adj → LMKD targets), raising MemAvailable.
+          // PRE-PREAD backpressure: when system memory is tight, wait before
+          // committing new physical pages via pread.
+          // With NNTRAINER_SVM_FINE_GRAIN=1: MADV_PAGEOUT truly evicts pages
+          // to zRAM (no GPU DMA pin), so avail stays high.  The loop below is
+          // a safety net for the case where zRAM fills up.
+          // With coarse-grain SVM: MADV_PAGEOUT cannot free pages (GPU DMA
+          // holds them), so we rely on Android LMKD killing background
+          // processes during the sleep to raise MemAvailable.
           {
             size_t avail_kb = read_mem_available_kb();
-            if (avail_kb < 512UL * 1024) { // system < 512 MB free
-              ::usleep(1000000);            // 1 s — let kernel reclaim BG apps
+            if (avail_kb < 1UL * 1024 * 1024) { // system < 1 GB free
+              for (int _bp = 0; _bp < 10 && avail_kb < 512UL * 1024; ++_bp) {
+                std::fprintf(stderr,
+                             "[DIAG] load_weight: backpressure avail=%zu MB "
+                             "(retry %d/10)\n",
+                             avail_kb / 1024, _bp + 1);
+                std::fflush(stderr);
+                ::usleep(2000000); // 2 s — let LMKD/zRAM reclaim
+                avail_kb = read_mem_available_kb();
+              }
             }
           }
 
@@ -421,7 +427,7 @@ void Transformer::load_weight(const std::string &weight_path) {
             rss_kb = read_rss_kb();
             size_t avail_kb = read_mem_available_kb();
             if ((bytes_done - last_aggressive_pageout_bytes) >= (256UL << 20) &&
-                avail_kb < 3UL * 1024 * 1024) { // system < 3 GB free
+                avail_kb < 4UL * 1024 * 1024) { // system < 4 GB free
               std::fprintf(stderr,
                            "[DIAG] load_weight: post sweep: avail=%zu MB, "
                            "RSS=%zu MB, sweeping %zu regions\n",
