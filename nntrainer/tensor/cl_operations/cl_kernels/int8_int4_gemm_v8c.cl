@@ -445,3 +445,91 @@ __kernel void v8c_gemm_int8_int4_m1(
     Y[n0 + j] = (half)v;
   }
 }
+
+// ============================================================
+// #46l: V projection fused with OHWI-reversed scatter (paper §3.6
+// "tensor reordering ops fused"). Same compute as v8c_gemm_int8_int4
+// but writes directly into V cache [hKV, d, S_max] OHWI-reversed
+// layout at offset position+m (over the t-axis). Eliminates the
+// separate v_scatter_ohwi_t pass that was ~700 ms at M=1024.
+//
+// Caller constraints (enforced by checks in host wrapper):
+//   * d * hKV == N   (otherwise n decomposition is wrong)
+//   * V8C_TN must divide d (so an 8-wide n-tile stays in one head)
+//   * Output layout: V[head, x, position+t] at byte offset
+//     2 * (head*d*S_max + x*S_max + (position+t))
+// ============================================================
+__kernel void v8c_gemm_int8_int4_v_ohwi(
+    __read_only image2d_t  Ximg,
+    __read_only image2d_t  Wimg,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *V_ohwi,        // [hKV, d, S_max] fp16
+    const int M, const int N, const int K,
+    const int d, const int S_max, const int position,
+    const int M_real) {                   // skip writes for rows >= M_real
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K32 = K >> 5;
+
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    uint4 a_lo[V8C_TM], a_hi[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++) {
+      a_lo[i] = read_imageui(Ximg, SMP_v8c, (int2)(2*k32  , m0 + i));
+      a_hi[i] = read_imageui(Ximg, SMP_v8c, (int2)(2*k32+1, m0 + i));
+    }
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+      const uint M4 = 0x0F0F0F0Fu;
+      uint w0lo =  w.x        & M4;
+      uint w0hi = (w.x >> 4)  & M4;
+      uint w1lo =  w.y        & M4;
+      uint w1hi = (w.y >> 4)  & M4;
+      uint w2lo =  w.z        & M4;
+      uint w2hi = (w.z >> 4)  & M4;
+      uint w3lo =  w.w        & M4;
+      uint w3hi = (w.w >> 4)  & M4;
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_su_int(a_lo[i].x, w0lo)
+                   + dot_4x8packed_su_int(a_lo[i].y, w0hi)
+                   + dot_4x8packed_su_int(a_lo[i].z, w1lo)
+                   + dot_4x8packed_su_int(a_lo[i].w, w1hi)
+                   + dot_4x8packed_su_int(a_hi[i].x, w2lo)
+                   + dot_4x8packed_su_int(a_hi[i].y, w2hi)
+                   + dot_4x8packed_su_int(a_hi[i].z, w3lo)
+                   + dot_4x8packed_su_int(a_hi[i].w, w3hi);
+      }
+    }
+  }
+  // n0 is V8C_TN-aligned and V8C_TN divides d → all 8 n's share one head.
+  const int head = n0 / d;
+  const int x_base = n0 - head * d;
+  const long head_off = (long)head * (long)d * (long)S_max;
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    const int m = m0 + i;
+    if (m >= M_real) continue;
+    int rs = row_sum_act[m];
+    int zp = zp_act[m];
+    float s_i = scale_act[m];
+    const long t_off = (long)(position + m);
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      V_ohwi[head_off + (long)(x_base + j) * (long)S_max + t_off] = (half)v;
+    }
+  }
+}

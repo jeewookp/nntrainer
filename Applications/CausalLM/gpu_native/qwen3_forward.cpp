@@ -2796,6 +2796,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   cl_int err = CL_SUCCESS;
 
+  // #46f/h/l: NNTR_OHWI_IMG=1 enables the V image2d path (and the wv FC
+  // fused-OHWI-scatter from #46l). Read once per process; same flag
+  // controls scatter / wv dispatch / attention call.
+  static const bool use_ohwi_img = []() {
+    const char *e = std::getenv("NNTR_OHWI_IMG");
+    return e && std::atoi(e) != 0;
+  }();
+
   // v8c tile alignment: M_pad >= M, multiple of 4.
   const unsigned int M_pad = ((M + 3) / 4) * 4;
   const unsigned int K_h = cfg_.hidden_size;
@@ -2871,11 +2879,23 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               scratch_.qkv_act_rs, scratch_.qkv_act_zp,
                               lw.wk.row_sum_w_int4, scratch_.y_k, M_pad, N_kv,
                               K_h);
-  nntrainer::gemm_int8_v8c_cl(act_image, lw.wv.weight_image,
-                              scratch_.qkv_act_scale, lw.wv.scale_buf,
-                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
-                              lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv,
-                              K_h);
+  // #46l: when OHWI_IMG path is active, wv writes outputs directly into
+  // cache_v_buf_ohwi at OHWI-reversed positions (paper §3.6 reorder
+  // fusion). Eliminates the separate v_scatter_ohwi_t pass below.
+  // Fallback: original concat write to scratch_.y_v.
+  if (use_ohwi_img && lw.cache_v_buf_ohwi != nullptr) {
+    nntrainer::gemm_int8_v8c_v_ohwi_cl(
+      act_image, lw.wv.weight_image, scratch_.qkv_act_scale, lw.wv.scale_buf,
+      scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wv.row_sum_w_int4,
+      lw.cache_v_buf_ohwi, M_pad, N_kv, K_h, cfg_.head_dim,
+      kv_cache_max_seq_len_, position, /*M_real=*/M);
+  } else {
+    nntrainer::gemm_int8_v8c_cl(act_image, lw.wv.weight_image,
+                                scratch_.qkv_act_scale, lw.wv.scale_buf,
+                                scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+                                lw.wv.row_sum_w_int4, scratch_.y_v, M_pad,
+                                N_kv, K_h);
+  }
   // stage_end_add does its own clFinish when profiling; skip the
   // unconditional host stall in production. #46i.
   stage_end_add(timings_.qkv_gemm_ms);
@@ -2981,15 +3001,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
   }
-  // V: two scatter paths.
+  // V scatter:
   //   default               → concat copy into cache_v_svm (sv_matmul_f16)
-  //   NNTR_OHWI_IMG=1 (#46f)→ OHWI-reversed [hKV, d, S_max] scatter into
-  //                           cache_v_buf_ohwi (cl_mem) for image2d wrap.
-  // The two layouts are exclusive per run; we read the env once.
-  static const bool use_ohwi_img = []() {
-    const char *e = std::getenv("NNTR_OHWI_IMG");
-    return e && std::atoi(e) != 0;
-  }();
+  //   NNTR_OHWI_IMG=1 (#46l)→ NO-OP: wv FC already wrote OHWI-reversed
+  //                           directly into cache_v_buf_ohwi.
   if (!use_ohwi_img) {
     cl_int e;
     void *p_v = clEnqueueMapBuffer(cl_q_, scratch_.y_v, CL_TRUE, CL_MAP_READ,
@@ -3002,52 +3017,9 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     std::memcpy(dst, p_v, kv_total_bytes);
     clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_v, p_v, 0, nullptr, nullptr);
-  } else {
-    if (lw.cache_v_buf_ohwi == nullptr) {
-      std::fprintf(stderr,
-                   "[qwen3-gpu] layer %u: NNTR_OHWI_IMG=1 but "
-                   "cache_v_buf_ohwi is null\n", layer_id);
-      clReleaseMemObject(act_image);
-      return false;
-    }
-    // GPU scatter via v_scatter_ohwi_t: 1 WI per (t, h, x).
-    auto *cl =
-      static_cast<nntrainer::ClContext *>(
-        nntrainer::Engine::Global().getRegisteredContext("gpu"));
-    auto kp = cl->registerClKernel(kVScatterOhwiTKernel, "v_scatter_ohwi_t");
-    if (!kp) {
-      std::fprintf(stderr,
-                   "[qwen3-gpu] layer %u: v_scatter_ohwi_t register failed\n",
-                   layer_id);
-      clReleaseMemObject(act_image);
-      return false;
-    }
-    cl_mem src_mem = scratch_.y_v;
-    cl_mem dst_mem = lw.cache_v_buf_ohwi;
-    int Mi = (int)M;
-    int hKVi = (int)cfg_.num_heads_KV;
-    int di = (int)cfg_.head_dim;
-    int max_Si = (int)max_S;
-    int pos_i = (int)position;
-    if (!kp->SetKernelArguments(0, &src_mem, sizeof(cl_mem)) ||
-        !kp->SetKernelArguments(1, &dst_mem, sizeof(cl_mem)) ||
-        !kp->SetKernelArguments(2, &Mi, sizeof(int)) ||
-        !kp->SetKernelArguments(3, &hKVi, sizeof(int)) ||
-        !kp->SetKernelArguments(4, &di, sizeof(int)) ||
-        !kp->SetKernelArguments(5, &max_Si, sizeof(int)) ||
-        !kp->SetKernelArguments(6, &pos_i, sizeof(int))) {
-      clReleaseMemObject(act_image);
-      return false;
-    }
-    constexpr size_t LWS_X = 4, LWS_Y = 1, LWS_Z = 16;
-    const size_t gws_x = ((size_t)Mi + LWS_X - 1) / LWS_X * LWS_X;
-    const size_t gws_y = (size_t)hKVi;
-    const size_t gws_z = ((size_t)di + LWS_Z - 1) / LWS_Z * LWS_Z;
-    std::array<size_t, 3> gws = {gws_x, gws_y, gws_z};
-    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                          lws.data(), 0, nullptr, nullptr);
   }
+  // #46l NNTR_OHWI_IMG=1: wv FC already wrote OHWI-reversed into
+  // cache_v_buf_ohwi (gemm_int8_v8c_v_ohwi_cl). No separate scatter.
   stage_end_add(timings_.kv_write_ms);  // #46i: no extra clFinish
 
   // (f) attention via SVM. Upload all M Q rows. N_kv (cache_to) =

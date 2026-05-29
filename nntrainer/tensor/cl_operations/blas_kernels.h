@@ -387,6 +387,27 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
                       unsigned int N, unsigned int K);
 
 /**
+ * @brief #46l: v8c GEMM with fused OHWI-reversed V scatter. Same compute as
+ *        gemm_int8_v8c_cl but writes outputs directly into V cache at the
+ *        OHWI-reversed layout positions, eliminating the separate
+ *        v_scatter_ohwi_t pass. Requires N == hKV * head_dim and
+ *        V8C_TN (= 8) divides head_dim (so per-WI 8-wide n-tile stays in
+ *        one head). N is the same FC output channel count; head_dim and
+ *        S_max parameterize the OHWI cache geometry; position is the start
+ *        token offset in the t-axis.
+ *
+ * @param[out] v_ohwi  cl_mem [hKV * head_dim * S_max] fp16
+ * @param[in]  position  start token offset along the S_max axis
+ */
+void gemm_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
+                             cl_mem scale_act, cl_mem scale_wgt,
+                             cl_mem row_sum_act, cl_mem zp_act,
+                             cl_mem row_sum_w_int4, cl_mem v_ohwi,
+                             unsigned int M_pad, unsigned int N, unsigned int K,
+                             unsigned int head_dim, unsigned int S_max,
+                             unsigned int position, unsigned int M_real);
+
+/**
  * @brief Asymmetric int8 activation quantization for v8c.
  *        fp16/fp32 → int8 + per-row recip-scale + per-row int32 zero-point
  *        + per-row int32 sum. The scale/zp form matches KAI's qai8dxp_f32

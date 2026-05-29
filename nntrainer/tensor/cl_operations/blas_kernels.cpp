@@ -1424,6 +1424,57 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   }
 }
 
+void gemm_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
+                             cl_mem scale_act, cl_mem scale_wgt,
+                             cl_mem row_sum_act, cl_mem zp_act,
+                             cl_mem row_sum_w_int4, cl_mem v_ohwi,
+                             unsigned int M_pad, unsigned int N, unsigned int K,
+                             unsigned int head_dim, unsigned int S_max,
+                             unsigned int position, unsigned int M_real) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (M_pad == 0 || N == 0 || K == 0 || head_dim == 0 || S_max == 0)
+    throw std::runtime_error("gemm_int8_v8c_v_ohwi: zero dim");
+  constexpr unsigned int V8C_TM = 4, V8C_TN = 8;
+  if (M_pad % V8C_TM != 0 || N % V8C_TN != 0 || K % 32 != 0)
+    throw std::runtime_error("gemm_int8_v8c_v_ohwi: M/N/K not aligned");
+  if (head_dim % V8C_TN != 0)
+    throw std::runtime_error("gemm_int8_v8c_v_ohwi: head_dim % TN != 0");
+  if (N % head_dim != 0)
+    throw std::runtime_error("gemm_int8_v8c_v_ohwi: N % head_dim != 0");
+  if (M_real > M_pad) M_real = M_pad;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    int8_int4_gemm_v8c_kernel, "v8c_gemm_int8_int4_v_ohwi");
+  if (!kp)
+    throw std::runtime_error("v8c_v_ohwi: registerClKernel failed");
+
+  int arg = 0;
+  if (!kp->SetKernelArguments(arg++, &act_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &weight_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_wgt, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &zp_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_w_int4, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &v_ohwi, sizeof(cl_mem)))
+    throw std::runtime_error("v8c_v_ohwi: cl_mem arg failed");
+  int Mi = (int)M_pad, Ni = (int)N, Ki = (int)K;
+  int di = (int)head_dim, Si = (int)S_max, pi = (int)position;
+  int Mr = (int)M_real;
+  if (!kp->SetKernelArguments(arg++, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ni, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ki, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &di, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Si, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &pi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Mr, sizeof(int)))
+    throw std::runtime_error("v8c_v_ohwi: int arg failed");
+  std::array<size_t, 3> gws = {(size_t)N / V8C_TN, (size_t)M_pad / V8C_TM, 1};
+  blas_cc->command_queue_inst_.enqueueKernel(
+    kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
+}
+
 static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
                                      cl_mem out_scale, cl_mem out_zp,
                                      cl_mem out_row_sum, unsigned int M,
