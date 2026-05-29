@@ -89,3 +89,101 @@
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
+[Step 5/5] Run on device
+──────────────────────
+── Output ──────────────────────────────────────
+/data/local/tmp/nntrainer/causallm/models/gemma4
+/data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
+[DIAG] cgroup entry: 0::/system/uid_0/pid_5286
+[DIAG] oom_score_adj set to -1000
+[DIAG] RSS before initialize: 373416 KB
+[CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
+[CL_BUILD_FAIL] err=-11 (CL_BUILD_PROGRAM_FAILURE) log_bytes=5575 first="BC-src-code:232:16: warning: unknown attribute 'intel_reqd_sub_group_size' ignored [-Wattributes]"
+[DIAG] RSS after initialize:  183148 KB
+[DIAG] initialize done
+[DIAG] load_weight: file=10606484620 bytes
+[DIAG] load_weight: 216 MB written, RSS=396 MB, avail=6567 MB
+[DIAG] load_weight: 472 MB written, RSS=654 MB, avail=6308 MB
+[DIAG] load_weight: 755 MB written, RSS=938 MB, avail=6025 MB
+[DIAG] load_weight: 772 MB written, RSS=954 MB, avail=6009 MB
+[DIAG] load_weight: 1038 MB written, RSS=1220 MB, avail=5741 MB
+[DIAG] load_weight: 1321 MB written, RSS=1503 MB, avail=5452 MB
+[DIAG] load_weight: 1605 MB written, RSS=1787 MB, avail=5170 MB
+[DIAG] load_weight: 1888 MB written, RSS=2070 MB, avail=4900 MB
+[DIAG] load_weight: 2171 MB written, RSS=2353 MB, avail=4611 MB
+[DIAG] load_weight: 2176 MB written, RSS=2358 MB, avail=4610 MB
+[DIAG] load_weight: 2455 MB written, RSS=2637 MB, avail=4326 MB
+[DIAG] load_weight: 2738 MB written, RSS=2920 MB, avail=4043 MB
+[DIAG] load_weight: 3021 MB written, RSS=3203 MB, avail=3759 MB
+[DIAG] load_weight: 3305 MB written, RSS=3487 MB, avail=3474 MB
+[DIAG] load_weight: 3332 MB written, RSS=3514 MB, avail=3447 MB
+[DIAG] load_weight: 3588 MB written, RSS=3770 MB, avail=3191 MB
+[DIAG] load_weight: post sweep: avail=2945 MB, RSS=4053 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4053 MB, avail=2942 MB
+[DIAG] load_weight: 3871 MB written, RSS=4053 MB, avail=2942 MB
+[DIAG] load_weight: post sweep: avail=2762 MB, RSS=4336 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4336 MB, avail=2763 MB
+[DIAG] load_weight: 4155 MB written, RSS=4336 MB, avail=2763 MB
+[DIAG] load_weight: post sweep: avail=2478 MB, RSS=4620 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4620 MB, avail=2477 MB
+[DIAG] load_weight: 4438 MB written, RSS=4620 MB, avail=2477 MB
+[DIAG] load_weight: post sweep: avail=2192 MB, RSS=4903 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4903 MB, avail=2192 MB
+[DIAG] load_weight: 4721 MB written, RSS=4903 MB, avail=2192 MB
+[DIAG] load_weight: 4738 MB written, RSS=4919 MB, avail=2176 MB
+[DIAG] load_weight: post sweep: avail=1974 MB, RSS=5186 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5186 MB, avail=1974 MB
+[DIAG] load_weight: 5004 MB written, RSS=5186 MB, avail=1974 MB
+[DIAG] load_weight: post sweep: avail=1834 MB, RSS=5467 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1834 MB
+[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1834 MB
+[DIAG] load_weight: post sweep: avail=1750 MB, RSS=5747 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5747 MB, avail=1750 MB
+[DIAG] load_weight: 5569 MB written, RSS=5747 MB, avail=1750 MB
+[DIAG] load_weight: post sweep: avail=1605 MB, RSS=6030 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6030 MB, avail=1605 MB
+[DIAG] load_weight: 5851 MB written, RSS=6030 MB, avail=1605 MB
+[DIAG] load_weight: post sweep: avail=1459 MB, RSS=6311 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6311 MB, avail=1458 MB
+[DIAG] load_weight: 6134 MB written, RSS=6311 MB, avail=1458 MB
+[DIAG] load_weight: 6145 MB written, RSS=6324 MB, avail=1444 MB
+[DIAG] load_weight: post sweep: avail=1274 MB, RSS=6594 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6594 MB, avail=1273 MB
+[DIAG] load_weight: 6416 MB written, RSS=6594 MB, avail=1273 MB
+[DIAG] load_weight: post sweep: avail=1119 MB, RSS=6851 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6851 MB, avail=1118 MB
+[DIAG] load_weight: 6699 MB written, RSS=6851 MB, avail=1118 MB
+[DIAG] load_weight: post sweep: avail=1046 MB, RSS=7098 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=7098 MB, avail=1046 MB
+[DIAG] load_weight: 6981 MB written, RSS=7098 MB, avail=1046 MB
+[DIAG] load_weight: post sweep: avail=861 MB, RSS=7204 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=7204 MB, avail=860 MB
+[DIAG] load_weight: 7263 MB written, RSS=7204 MB, avail=860 MB
+[DIAG] load_weight: post sweep: avail=780 MB, RSS=6451 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=6451 MB, avail=780 MB
+[DIAG] load_weight: 7546 MB written, RSS=6451 MB, avail=780 MB
+[DIAG] load_weight: 7554 MB written, RSS=6459 MB, avail=768 MB
+[DIAG] load_weight: post sweep: avail=663 MB, RSS=6295 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=6295 MB, avail=639 MB
+[DIAG] load_weight: 7828 MB written, RSS=6295 MB, avail=639 MB
+[DIAG] load_weight: post sweep: avail=672 MB, RSS=5644 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=5529 MB, avail=638 MB
+[DIAG] load_weight: 8111 MB written, RSS=5529 MB, avail=638 MB
+[DIAG] load_weight: post sweep: avail=424 MB, RSS=5649 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5614 MB, avail=414 MB
+[DIAG] load_weight: 8393 MB written, RSS=5614 MB, avail=415 MB
+[DIAG] load_weight: post sweep: avail=450 MB, RSS=5588 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5588 MB, avail=453 MB
+[DIAG] load_weight: 8676 MB written, RSS=5588 MB, avail=452 MB
+[DIAG] load_weight: post sweep: avail=360 MB, RSS=5616 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5616 MB, avail=360 MB
+[DIAG] load_weight: 8958 MB written, RSS=5616 MB, avail=358 MB
+[DIAG] load_weight: 8960 MB written, RSS=5618 MB, avail=357 MB
+[DIAG] load_weight: post sweep: avail=415 MB, RSS=5621 MB, sweeping 574 regions
+[DIAG] load_weight: after post sweep RSS=5618 MB, avail=395 MB
+[DIAG] load_weight: 9241 MB written, RSS=5618 MB, avail=395 MB
+────────────────────────────────────────────────
+[INFO] adb shell exit: 0
+[OK] Done!
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
