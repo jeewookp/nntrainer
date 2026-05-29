@@ -126,6 +126,27 @@ bool two_conv_attention_prefill_f16_img_cl(
   uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
   unsigned int num_heads_KV, unsigned int head_dim, bool causal);
 
+/// §3.8 OHWI K-cache variant of two_conv_attention_prefill_f16_cl.
+/// Same three-kernel pipeline but K is laid out as [H_kv, S_max, d]
+/// (per-head contiguous, paper's "convolution weight" form) rather
+/// than the default row-major [N_kv, H_kv * d]. V is still in concat
+/// layout — only K1 (qk_matmul_f16_ohwi) is replaced; K2 (softmax)
+/// and K3 (sv_matmul_f16) are reused unchanged.
+///
+///   K_host: per-batch base of the OHWI cache, i.e.
+///           &cache_key[batch][0][0][0]; total size H_kv*S_max*d halves.
+///   max_seq_len: the allocated S_max (head stride in the OHWI layout).
+///                The kernel only reads N_kv rows.
+///
+/// Opt-in by setting BOTH NNTR_KV_OHWI=1 AND NNTR_MHA_GPU=1. Unlike
+/// the concat _f16_cl wrapper, this path has no "force-broken" gate:
+/// turning both env vars on is the explicit opt-in.
+bool two_conv_attention_prefill_f16_ohwi_cl(
+  const uint16_t *Q_host, const uint16_t *K_host, const uint16_t *V_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal, bool svm_inputs = false);
+
 /// Single-kernel flash-attention prefill (paper §3.6 fusion +
 /// Dao et al. 2022 online softmax). Replaces the three-kernel
 /// two_conv_attention pipeline with one kernel that does QK · softmax

@@ -1165,13 +1165,90 @@ void MHACoreLayer::one_batch_incremental_forwarding(
   cached_key_dim.height(cache_to);
   cached_value_dim.height(cache_to);
 
+  // §3.8 Phase 2: OHWI-direct GPU prefill. When both NNTR_KV_OHWI=1 and
+  // NNTR_MHA_GPU=1 are set, the K cache is already laid out as
+  // [H_kv, S_max, d] (Phase 1 write) and we can dispatch the
+  // qk_matmul_f16_ohwi kernel against the raw SVM cache_key buffer
+  // directly — skipping the Phase 1 gather entirely. V is still concat
+  // (Phase 3 will move V); sv_matmul_f16 is reused. Returns early on
+  // success; on failure falls through to the Phase 1 gather + concat
+  // path below. Opt-in by both env vars together; no broken-gate.
+  {
+    constexpr unsigned int FLASH_MIN_PREFILL = 32;
+    static const bool _ohwi_gpu_on =
+      is_kv_ohwi_enabled() && !kv_int8 &&
+      std::getenv("NNTR_MHA_GPU") != nullptr;
+    const unsigned int step_size_p2 = to - from;
+    const unsigned int cache_to_p2 = cache_index + step_size_p2;
+    if (_ohwi_gpu_on && use_gemm_attention &&
+        step_size_p2 >= FLASH_MIN_PREFILL &&
+        query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+        cache_key.getDataType() == ml::train::TensorDim::DataType::FP16 &&
+        attention_output_step.getDataType() ==
+          ml::train::TensorDim::DataType::FP16 &&
+        head_dim > 0 && num_heads_KV > 0 &&
+        num_heads_Q % num_heads_KV == 0) {
+#ifdef ENABLE_FP16
+      const uint16_t *Q_p =
+        reinterpret_cast<const uint16_t *>(query_step.getData<_FP16>());
+      uint16_t *O_p = reinterpret_cast<uint16_t *>(
+        attention_output_step.getData<_FP16>());
+      const size_t kv_per_batch =
+        (size_t)num_heads_KV * cache_key_dim.height() * head_dim;
+      const uint16_t *K_ohwi =
+        reinterpret_cast<const uint16_t *>(cache_key.getData<_FP16>()) +
+        (size_t)batch * kv_per_batch;
+      const uint16_t *V_concat =
+        reinterpret_cast<const uint16_t *>(cache_value.getData<_FP16>()) +
+        (size_t)batch * cache_value_dim.getFeatureLen();
+      const bool svm_ok =
+        query_step.getMemoryData() && cache_key.getMemoryData() &&
+        cache_value.getMemoryData() && attention_output_step.getMemoryData() &&
+        query_step.getMemoryData()->isSVM() &&
+        cache_key.getMemoryData()->isSVM() &&
+        cache_value.getMemoryData()->isSVM() &&
+        attention_output_step.getMemoryData()->isSVM();
+      // SVM-gated by default. With the current KVCacheManager (plain
+      // host-tensor cache), svm_ok is false and the non-SVM wrapper
+      // path would upload the full H_kv*S_max*d slab per layer per
+      // step (4MB at S_max=2048, ~7x more than the live N_kv slice
+      // would need). Phase 2.5 will allocate the KV cache through the
+      // SVM allocator; until then, opting into NNTR_KV_OHWI_GPU_FORCE=1
+      // exercises the non-SVM path (slow + drift-prone, for kernel
+      // validation only).
+      static const bool _ohwi_force =
+        std::getenv("NNTR_KV_OHWI_GPU_FORCE") != nullptr;
+      static int _ohwi_logged = 0;
+      if (!_ohwi_logged) {
+        _ohwi_logged = 1;
+        std::fprintf(stderr,
+                     "[OHWI-P2] M=%u N_kv=%u S_max=%u H_q=%u H_kv=%u "
+                     "d=%u svm=%d force=%d\n",
+                     step_size_p2, cache_to_p2, cache_key_dim.height(),
+                     num_heads_Q, num_heads_KV, head_dim, (int)svm_ok,
+                     (int)_ohwi_force);
+        std::fflush(stderr);
+      }
+      if (svm_ok || _ohwi_force) {
+        bool ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
+          Q_p, K_ohwi, V_concat, O_p, step_size_p2, cache_to_p2, num_heads_Q,
+          num_heads_KV, head_dim, cache_key_dim.height(), is_causal,
+          /*svm_inputs=*/svm_ok);
+        if (ok)
+          return;
+      }
+#endif
+    }
+  }
+
   // §3.8 OHWI Phase 1 read path: when OHWI is on, the cache_key buffer is
   // stored in [B, H_kv, S, D] order. Existing downstream readers (CPU
   // gemm_attention / compute_kcaches / GPU two_conv_attention) all expect
   // the concat layout [B, 1, S, H_kv*D]. Gather into a fresh scratch tensor
   // so no downstream code needs to change. The fresh tensor is non-SVM so
   // the GPU prefill SVM check below will naturally fall through to CPU —
-  // intended in Phase 1; Phase 2 will add OHWI-direct GPU kernels.
+  // intended in Phase 1; Phase 2's OHWI-direct path above handles the
+  // success case for the OHWI+MHA_GPU combo.
   const bool kv_ohwi_read_active =
     is_kv_ohwi_enabled() && !kv_int8 &&
     cache_key.getDataType() == ml::train::TensorDim::DataType::FP16;

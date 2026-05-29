@@ -100,6 +100,83 @@ __kernel void qk_matmul_f16(
 }
 
 // =============================================================
+// §3.8 OHWI K-cache variant of qk_matmul_f16.
+// K is laid out as [H_kv, S_max, d] (per-head contiguous over the
+// S/d axes — the OHWI "convolution weight" form), not the default
+// row-major [N_kv, H_kv * d]. The kernel only reads N_kv rows out
+// of the S_max allocated; S_max is the head stride.
+//
+// Element index:  K[(long)head_kv * (long)S_max * d + n * d + x]
+//
+// Per-head contiguous d-axis reads (stride 1 inside the inner d loop)
+// are more cache-line friendly than the concat layout's strided reads
+// (stride = HD_KV per token), so the scalar kernel should match or
+// beat the concat variant. Image2d OHWI variant is a follow-up.
+// =============================================================
+__kernel void qk_matmul_f16_ohwi(
+    __global const half *Q,           // [M, HD_Q] fp16, row-major (unchanged)
+    __global const half *K,           // [H_kv, S_max, d] fp16, OHWI
+    __global       half *scores,      // [H, M, N_kv] fp16, row-major
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int S_max, const int gqa,
+    const int causal, const float scale) {
+  const int n0 = get_global_id(0) * TN_QK;
+  const int m0 = get_global_id(1) * TM_QK;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || n0 >= N_kv) return;
+
+  float acc[TM_QK][TN_QK];
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++)
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) acc[i][j] = 0.0f;
+
+  const long k_head_base = (long)head_kv * (long)S_max * (long)d;
+
+  for (int x = 0; x < d; x++) {
+    half q_col[TM_QK];
+    half k_col[TN_QK];
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const int m = m0 + i;
+      q_col[i] = (m < M)
+                   ? Q[(long)m * HD_Q + head_q * d + x]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      k_col[j] = (n < N_kv)
+                   ? K[k_head_base + (long)n * d + x]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int i = 0; i < TM_QK; i++) {
+      const float qf = (float)q_col[i];
+      #pragma unroll
+      for (int j = 0; j < TN_QK; j++) acc[i][j] += qf * (float)k_col[j];
+    }
+  }
+
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  #pragma unroll
+  for (int i = 0; i < TM_QK; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TN_QK; j++) {
+      const int n = n0 + j;
+      if (n >= N_kv) continue;
+      float v = acc[i][j] * scale;
+      if (causal && n > m) v = -INFINITY;
+      scores[score_base + (long)m * N_kv + n] = (half)v;
+    }
+  }
+}
+
+// =============================================================
 // Row softmax (in-place): for each (h, m), softmax over N_kv axis.
 //   One workgroup of LWS WIs per (h, m). Three local-memory
 //   reductions: max, then exp + sum, then inverse-multiply.
