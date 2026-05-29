@@ -9,6 +9,7 @@
 
 #include "qwen3_forward.h"
 
+#include <attention_kernels.h>
 #include <blas_kernels.h>
 #include <cl_context.h>
 #include <cl_tensor_view.h>
@@ -43,6 +44,10 @@ Qwen3Forward::~Qwen3Forward() {
   release_v8c_weight(&layer0_wq_);
   release_v8c_weight(&layer0_wk_);
   release_v8c_weight(&layer0_wv_);
+  if (layer0_cache_k_svm_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_cache_k_svm_);
+  if (layer0_cache_v_svm_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_cache_v_svm_);
   if (layer0_rope_cos_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_rope_cos_svm_fp16_);
   if (layer0_rope_sin_svm_fp16_ != nullptr && cl_ctx_ != nullptr)
@@ -868,6 +873,154 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
                                  "K (post k_norm + RoPE)");
   bool ok_v = summarize_fp16_buf(cl_q_, y_v, N_kv, "V");
 
+  // (h) KV cache write + attention dispatch. Only runs if a position has
+  //     been configured via precompute_rope_for_position AND the KV cache
+  //     has been allocated. The cache write is row 0 of y_k / y_v
+  //     (M_pad=4 but only row 0 is the valid token) into cache[position].
+  //     Then dispatch the existing two_conv_attention_prefill_f16_cl
+  //     kernel with svm_inputs=true — first time in the codebase this
+  //     path runs in production because the existing CausalLM doesn't
+  //     SVM-allocate its KV cache.
+  bool ok_attn = true;
+  if (layer0_cache_k_svm_ != nullptr && layer0_cache_v_svm_ != nullptr &&
+      layer0_rope_position_ >= 0) {
+    const unsigned int pos = (unsigned int)layer0_rope_position_;
+    const size_t kv_row_elts = (size_t)N_kv;          // hKV * d
+    const size_t kv_row_bytes = kv_row_elts * sizeof(uint16_t);
+    const size_t q_row_bytes  = (size_t)N_q * sizeof(uint16_t);
+
+    // Copy y_k row 0 -> cache_K[pos], y_v row 0 -> cache_V[pos] via
+    // map-source + memcpy-into-SVM-region. Both src and dst are tiny
+    // (~2 KB each for our 0.6B config) so the host round-trip is
+    // negligible. A pure-GPU path (copy kernel) is a follow-up.
+    auto map_src = [&](cl_mem src) -> void * {
+      cl_int err;
+      void *p = clEnqueueMapBuffer(cl_q_, src, CL_TRUE, CL_MAP_READ, 0,
+                                   std::max(q_row_bytes, kv_row_bytes), 0,
+                                   nullptr, nullptr, &err);
+      return err == CL_SUCCESS ? p : nullptr;
+    };
+    auto write_into_svm_region = [&](void *svm_base, size_t offset_bytes,
+                                     const void *src_host, size_t bytes,
+                                     const char *tag) -> bool {
+      void *dst = static_cast<uint8_t *>(svm_base) + offset_bytes;
+      cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, bytes,
+                                   0, nullptr, nullptr);
+      if (err != CL_SUCCESS) {
+        std::fprintf(stderr, "[qwen3-gpu] %s SVMMap WRITE err=%d\n", tag,
+                     err);
+        return false;
+      }
+      std::memcpy(dst, src_host, bytes);
+      err = clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
+      return err == CL_SUCCESS;
+    };
+
+    void *p_k = map_src(y_k);
+    if (p_k) {
+      write_into_svm_region(layer0_cache_k_svm_, pos * kv_row_bytes, p_k,
+                            kv_row_bytes, "cache_K");
+      clEnqueueUnmapMemObject(cl_q_, y_k, p_k, 0, nullptr, nullptr);
+    }
+    void *p_v = map_src(y_v);
+    if (p_v) {
+      write_into_svm_region(layer0_cache_v_svm_, pos * kv_row_bytes, p_v,
+                            kv_row_bytes, "cache_V");
+      clEnqueueUnmapMemObject(cl_q_, y_v, p_v, 0, nullptr, nullptr);
+    }
+    clFinish(cl_q_);
+    std::fprintf(stderr,
+                 "[qwen3-gpu] wrote K/V at cache position %u\n", pos);
+
+    // Allocate Q SVM + O SVM (per-dispatch scratch) and copy Q row 0.
+    void *q_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, q_row_bytes, 0);
+    void *o_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, q_row_bytes, 0);
+    void *p_q = map_src(y_q);
+    if (q_svm && o_svm && p_q) {
+      write_into_svm_region(q_svm, 0, p_q, q_row_bytes, "Q_svm");
+      clEnqueueUnmapMemObject(cl_q_, y_q, p_q, 0, nullptr, nullptr);
+      clFinish(cl_q_);
+
+      // Dispatch attention. M=1 query, N_kv = pos + 1 (all positions 0..pos
+      // in cache; with our setup pos=0 means N_kv=1 → degenerate single-
+      // token attention where softmax of one element is 1.0, so output
+      // per head_q is exactly V[head_q / gqa] for this token. Easy to
+      // sanity-check vs the post-projection V values.
+      const unsigned int N_kv_cache = pos + 1;
+      bool ok = nntrainer::two_conv_attention_prefill_f16_cl(
+        static_cast<const uint16_t *>(q_svm),
+        static_cast<const uint16_t *>(layer0_cache_k_svm_),
+        static_cast<const uint16_t *>(layer0_cache_v_svm_),
+        static_cast<uint16_t *>(o_svm),
+        /*M=*/1, /*N_kv=*/N_kv_cache,
+        cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+        /*causal=*/true, /*svm_inputs=*/true);
+      std::fprintf(stderr,
+                   "[qwen3-gpu] two_conv_attention_prefill_f16_cl returned "
+                   "%d (M=1, N_kv=%u)\n",
+                   (int)ok, N_kv_cache);
+
+      if (ok) {
+        // Verify: for M=1, N_kv=1, output per head_q ≈ V[head_q / gqa].
+        // Print attention output + sample expected V per head.
+        cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_READ, o_svm,
+                                     q_row_bytes, 0, nullptr, nullptr);
+        if (err == CL_SUCCESS) {
+          const uint16_t *o = static_cast<const uint16_t *>(o_svm);
+          bool finite = true;
+          float min_v = std::numeric_limits<float>::infinity();
+          float max_v = -std::numeric_limits<float>::infinity();
+          for (unsigned int i = 0; i < N_q; ++i) {
+            float f = h2f(o[i]);
+            if (!std::isfinite(f)) finite = false;
+            if (f < min_v) min_v = f;
+            if (f > max_v) max_v = f;
+          }
+          std::fprintf(stderr,
+                       "[qwen3-gpu] Attention output (fp16, N=%u) first 8:",
+                       N_q);
+          for (int i = 0; i < 8; ++i)
+            std::fprintf(stderr, " %g", h2f(o[i]));
+          std::fprintf(stderr, "\n  last 4:");
+          for (int i = 0; i < 4; ++i)
+            std::fprintf(stderr, " %g", h2f(o[N_q - 4 + i]));
+          std::fprintf(stderr,
+                       "\n  min=%g max=%g all_finite=%d\n",
+                       min_v, max_v, finite ? 1 : 0);
+
+          // For N_kv=1 each output[hq, :d] ≈ V[hq/gqa, :d]. Spot-check
+          // hq=0 (gqa group 0) against V[0, :d] — both should be the
+          // same fp16 bit pattern.
+          if (N_kv_cache == 1) {
+            void *p_v_again = map_src(y_v);
+            if (p_v_again) {
+              const uint16_t *v_host =
+                static_cast<const uint16_t *>(p_v_again);
+              std::fprintf(stderr,
+                           "  V[head_kv=0] first 8 ref:");
+              for (int i = 0; i < 8; ++i)
+                std::fprintf(stderr, " %g", h2f(v_host[i]));
+              std::fprintf(stderr, "\n  O[head_q=0] first 8 actual:");
+              for (int i = 0; i < 8; ++i)
+                std::fprintf(stderr, " %g", h2f(o[i]));
+              std::fprintf(stderr, "\n");
+              clEnqueueUnmapMemObject(cl_q_, y_v, p_v_again, 0, nullptr,
+                                      nullptr);
+            }
+          }
+          clEnqueueSVMUnmap(cl_q_, o_svm, 0, nullptr, nullptr);
+          ok_attn = finite;
+        } else {
+          ok_attn = false;
+        }
+      } else {
+        ok_attn = false;
+      }
+    }
+    if (q_svm) clSVMFree(cl_ctx_, q_svm);
+    if (o_svm) clSVMFree(cl_ctx_, o_svm);
+  }
+
   clReleaseMemObject(y_v);
   clReleaseMemObject(y_k);
   clReleaseMemObject(y_q);
@@ -878,7 +1031,7 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
   clReleaseMemObject(act_i8);
   clReleaseMemObject(rmsnorm_out_buf);
   clReleaseMemObject(in_buf);
-  return ok_q && ok_k && ok_v;
+  return ok_q && ok_k && ok_v && ok_attn;
 }
 
 // Inline fp16 RoPE kernel for the GPU-native runtime. Operates in place
@@ -1009,6 +1162,50 @@ bool Qwen3Forward::run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k) {
   if (!dispatch_one(y_q, cfg_.num_heads_Q, "Q")) return false;
   if (!dispatch_one(y_k, cfg_.num_heads_KV, "K")) return false;
   clFinish(cl_q_);
+  return true;
+}
+
+bool Qwen3Forward::allocate_layer0_kv_cache_svm() {
+  if (layer0_cache_k_svm_ != nullptr && layer0_cache_v_svm_ != nullptr)
+    return true;
+  if (cl_ctx_ == nullptr) return false;
+  // [max_seq_len * hKV * d] fp16 — concat layout (same as the
+  // existing CausalLM KVCacheManager for the non-OHWI path).
+  const size_t cache_bytes =
+    (size_t)cfg_.max_seq_len * cfg_.num_heads_KV * cfg_.head_dim *
+    sizeof(uint16_t);
+
+  auto alloc_one = [this, cache_bytes](void **dst, const char *tag) -> bool {
+    if (*dst != nullptr) return true;
+    *dst = clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, cache_bytes, 0);
+    if (*dst == nullptr) {
+      std::fprintf(stderr, "[qwen3-gpu] %s SVMAlloc(%zu B) failed\n", tag,
+                   cache_bytes);
+      return false;
+    }
+    // Zero-init via SVM map + memset (clEnqueueSVMMemFill is OpenCL 2.0
+    // but unavailable through some Adreno OpenCL loaders; map+memset
+    // works universally on coarse-grained SVM).
+    cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, *dst,
+                                 cache_bytes, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+      std::fprintf(stderr, "[qwen3-gpu] %s SVMMap zero err=%d\n", tag, err);
+      return false;
+    }
+    std::memset(*dst, 0, cache_bytes);
+    err = clEnqueueSVMUnmap(cl_q_, *dst, 0, nullptr, nullptr);
+    clFinish(cl_q_);
+    return err == CL_SUCCESS;
+  };
+  if (!alloc_one(&layer0_cache_k_svm_, "cache_K") ||
+      !alloc_one(&layer0_cache_v_svm_, "cache_V"))
+    return false;
+
+  std::fprintf(stderr,
+               "[qwen3-gpu] KV cache SVM allocated: each %zu MB "
+               "(max_seq=%u, hKV=%u, d=%u, fp16)\n",
+               cache_bytes / (1024 * 1024), cfg_.max_seq_len,
+               cfg_.num_heads_KV, cfg_.head_dim);
   return true;
 }
 

@@ -25,6 +25,16 @@
 #include <cstdlib>
 #include <string>
 
+// Bypass the production safety gate in two_conv_attention_prefill_f16_cl:
+// the existing CausalLM defaults to CPU fallback when NNTR_MHA_GPU=1 (to
+// avoid chain drift on Qwen3-0.6B). NNTR_MHA_VERIFY=1 is the documented
+// opt-in to actually run the GPU kernel. The from-scratch runtime is the
+// intended consumer (paper §3.6 same-numerics chain — we accept GPU
+// baseline as the reference, not bit-equality to CPU).
+static struct EnvSetup {
+  EnvSetup() { setenv("NNTR_MHA_VERIFY", "1", 1); }
+} _env_setup;
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     std::fprintf(stderr,
@@ -93,21 +103,26 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
     return 7;
   }
-  // Pre-arm RoPE at a non-zero position so we actually exercise the
-  // rotation math (position 0 is identity — cos=1, sin=0). 5 is a
-  // small but non-trivial position; the precise value doesn't matter
-  // for the kernel-validation goal here, only that cos/sin != 1/0.
-  if (!fwd.precompute_rope_for_position(5)) {
+  // Step 5 attention check: position=0 makes N_kv=1 in the cache, which
+  // is degenerate single-token attention (softmax of one element = 1.0).
+  // The expected output per head_q is exactly V[head_q / gqa] — easy
+  // bit-pattern check vs the post-projection V values.
+  if (!fwd.precompute_rope_for_position(0)) {
     std::fprintf(stderr, "[main] precompute_rope_for_position failed\n");
     return 8;
   }
-  if (!fwd.run_layer0_qkv_projection()) {
-    std::fprintf(stderr, "[main] run_layer0_qkv_projection failed\n");
+  if (!fwd.allocate_layer0_kv_cache_svm()) {
+    std::fprintf(stderr, "[main] allocate_layer0_kv_cache_svm failed\n");
     return 9;
+  }
+  if (!fwd.run_layer0_qkv_projection()) {
+    std::fprintf(stderr,
+                 "[main] run_layer0_qkv_projection failed (attention path)\n");
+    return 10;
   }
 
   std::fprintf(stderr,
-               "[main] step 4c OK (Q/K post q_norm + RoPE). Next: KV cache "
-               "write + attention.\n");
+               "[main] step 5 OK (KV cache SVM + attention dispatch). "
+               "Next: wo + ffn block.\n");
   return 0;
 }

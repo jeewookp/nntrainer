@@ -131,6 +131,15 @@ public:
   /// preconfigured; otherwise skipped.
   bool run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k);
 
+  /// Allocate layer 0's K and V caches as SVM cl_mem buffers, sized
+  /// for the full max_seq_len. Both zeroed at allocation so any
+  /// position we haven't written reads as 0 (causal-mask-friendly).
+  /// Cache layout (concat / row-major): [max_seq_len, hKV * head_dim]
+  /// fp16 — same as the existing CausalLM KVCacheManager for the
+  /// non-OHWI path. SVM-allocated so the attention kernel can read
+  /// them with svm_inputs=true (no upload).
+  bool allocate_layer0_kv_cache_svm();
+
   /// Run the full QKV projection pipeline for layer 0 on the same
   /// deterministic input pattern as step 2/3: rmsnorm.cl ONCE against
   /// the SVM attention_norm gamma, then quantize_act_v8c_fp32_cl ONCE
@@ -177,6 +186,13 @@ private:
   void *layer0_rope_cos_svm_fp16_ = nullptr;
   void *layer0_rope_sin_svm_fp16_ = nullptr;
   int   layer0_rope_position_ = -1; // -1 = no position configured
+
+  // Layer 0 K and V caches (SVM cl_mem), [max_seq_len * hKV * d] fp16
+  // each. Concat row-major layout: cache[pos * hKV*d + hkv*d + k]. Both
+  // zero-initialized at allocation so unwritten positions read as 0
+  // (clean under the causal mask).
+  void *layer0_cache_k_svm_ = nullptr;
+  void *layer0_cache_v_svm_ = nullptr;
 
   /// Bundled v8c-ready state for one int4 GEMM weight. Built once by
   /// load_qint4_weight_at() from a mmap'd KAI Section A payload via
