@@ -229,6 +229,19 @@ public:
                      cl_uint num_events_in_wait_list = 0,
                      const cl_event *event_wait_list = nullptr,
                      cl_event *event = nullptr);
+
+  /**
+   * @brief Finish the queue, then accumulate per-kernel GPU execution time
+   * (from CL_PROFILING_COMMAND_START/END of events captured during
+   * enqueueKernel) by kernel name and print a sorted breakdown. No-op unless
+   * NNTR_OPENCL_PROFILING is set. Releases and clears captured events.
+   *
+   * Unlike clFinish-bracketed host stage timing (which measures out-of-order
+   * queue catch-up, not real work), this reports true on-device kernel time.
+   *
+   * @param tag short label printed in the report header (e.g. "PREFILL").
+   */
+  void dumpProfile(const char *tag);
 };
 } // namespace nntrainer::opencl
 

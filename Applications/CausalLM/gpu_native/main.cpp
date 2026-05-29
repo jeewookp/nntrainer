@@ -324,6 +324,16 @@ int main(int argc, char **argv) {
                    tt.wo_ms,              pct(tt.wo_ms),
                    tt.ffn_ms,             pct(tt.ffn_ms));
     }
+    // True on-device per-kernel GPU time (no-op unless NNTR_OPENCL_PROFILING
+    // is set). Unlike the clFinish-bracketed stage timings above, this is
+    // immune to out-of-order queue catch-up — it reads each kernel's own
+    // CL_PROFILING_COMMAND_START/END. dumpProfile clears its event log each
+    // call, so this captures exactly this M_test chain.
+    {
+      char ptag[32];
+      std::snprintf(ptag, sizeof(ptag), "M=%d", M_test);
+      cl->command_queue_inst_.dumpProfile(ptag);
+    }
   }
   clReleaseMemObject(pf_in);
   clReleaseMemObject(pf_out);

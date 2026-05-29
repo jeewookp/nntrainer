@@ -17,11 +17,36 @@
 #include "opencl_loader.h"
 
 #include <cstdlib>
+#include <algorithm>
+#include <cstdio>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <nntrainer_error.h>
 #include <nntrainer_log.h>
 
 namespace nntrainer::opencl {
+
+namespace {
+// Per-kernel GPU profiling registry, populated by enqueueKernel when
+// NNTR_OPENCL_PROFILING is set. Each entry owns one cl_event reference that
+// dumpProfile() releases. Single-threaded dispatch path, so no lock needed.
+struct ProfRec {
+  std::string name;
+  cl_event evt;
+};
+
+std::vector<ProfRec> &profRecs() {
+  static std::vector<ProfRec> v;
+  return v;
+}
+
+bool profEnabled() {
+  static const int e = std::getenv("NNTR_OPENCL_PROFILING") ? 1 : 0;
+  return e != 0;
+}
+} // namespace
 
 /**
  * @brief Create a Command Queue object
@@ -416,13 +441,86 @@ void CommandQueueManager::enqueueKernel(const cl_kernel kernel,
                                         const cl_event *event_wait_list,
                                         cl_event *event) {
 
+  // When profiling and the caller did not request its own event, capture a
+  // tracked event so dumpProfile() can read true per-kernel GPU time. We own
+  // the single reference and release it in dumpProfile(). (Calls that pass
+  // their own event — e.g. the act-quant path — are left untracked to avoid
+  // event-ownership complexity; they are a negligible slice anyway.)
+  cl_event local_evt = nullptr;
+  cl_event *evt_arg = event;
+  const bool track = profEnabled() && evt_arg == nullptr;
+  if (track)
+    evt_arg = &local_evt;
+
   const auto error_code = clEnqueueNDRangeKernel(
     command_queue_, kernel, work_dim, nullptr, global_work_size,
-    local_work_size, num_events_in_wait_list, event_wait_list, event);
+    local_work_size, num_events_in_wait_list, event_wait_list, evt_arg);
 
   NNTR_THROW_IF(error_code != CL_SUCCESS, std::runtime_error)
     << "clEnqueueNDRangeKernel failed. OpenCL error code: " << error_code
     << ", error: " << OpenCLErrorCodeToString(error_code);
+
+  if (track && local_evt != nullptr) {
+    char nm[128] = {0};
+    if (clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, sizeof(nm) - 1, nm,
+                        nullptr) != CL_SUCCESS)
+      nm[0] = '\0';
+    profRecs().push_back({std::string(nm), local_evt});
+  }
+}
+
+void CommandQueueManager::dumpProfile(const char *tag) {
+  if (!profEnabled())
+    return;
+  auto &recs = profRecs();
+  if (command_queue_)
+    clFinish(command_queue_);
+
+  struct Agg {
+    double total_ns = 0.0;
+    unsigned long count = 0;
+  };
+  std::unordered_map<std::string, Agg> agg;
+  double grand_ns = 0.0;
+  for (auto &r : recs) {
+    cl_ulong start = 0, end = 0;
+    if (r.evt) {
+      clGetEventProfilingInfo(r.evt, CL_PROFILING_COMMAND_START,
+                              sizeof(start), &start, nullptr);
+      clGetEventProfilingInfo(r.evt, CL_PROFILING_COMMAND_END, sizeof(end),
+                              &end, nullptr);
+      if (end > start) {
+        double ns = (double)(end - start);
+        agg[r.name].total_ns += ns;
+        grand_ns += ns;
+      }
+      agg[r.name].count++;
+      clReleaseEvent(r.evt);
+    }
+  }
+  recs.clear();
+
+  std::vector<std::pair<std::string, Agg>> sorted(agg.begin(), agg.end());
+  std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b) {
+    return a.second.total_ns > b.second.total_ns;
+  });
+
+  printf("\n==== GPU kernel profile [%s] : true on-device time ====\n",
+         tag ? tag : "");
+  printf("  %-34s %10s %8s %10s %7s\n", "kernel", "total_ms", "calls",
+         "avg_us", "%%");
+  for (auto &kv : sorted) {
+    double tot_ms = kv.second.total_ns / 1e6;
+    double avg_us = kv.second.count
+                      ? (kv.second.total_ns / 1e3) / (double)kv.second.count
+                      : 0.0;
+    double pct = grand_ns > 0.0 ? 100.0 * kv.second.total_ns / grand_ns : 0.0;
+    printf("  %-34s %10.2f %8lu %10.2f %6.1f%%\n", kv.first.c_str(), tot_ms,
+           kv.second.count, avg_us, pct);
+  }
+  printf("  %-34s %10.2f\n", "TOTAL (sum of kernel GPU time)", grand_ns / 1e6);
+  printf("=========================================================\n\n");
+  fflush(stdout);
 }
 
 } // namespace nntrainer::opencl
