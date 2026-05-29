@@ -29,3 +29,50 @@ rmsnorm_cl_fp16(__global const half *input, // Input tensor
     output[index + w] = (input[index + w] / rms_norm) * alpha[w];
   }
 }
+
+// Cooperative RMSNorm: one workgroup (RMSN_LWS WIs) per row, fp32
+// accumulation, half8-vectorized. Replaces the 1-WI-per-row scalar kernel
+// above which, for W=1024 with only n_rows work-items total, was both
+// low-occupancy and serial (266 ms / 23%% of M=1024 GPU time). Requires
+// W % 8 == 0 (head_dim=128 and hidden=1024 both qualify). gws = RMSN_LWS *
+// n_rows (1-D), lws = RMSN_LWS; get_group_id(0) selects the row.
+#ifndef RMSN_LWS
+#define RMSN_LWS 64
+#endif
+__attribute__((reqd_work_group_size(RMSN_LWS, 1, 1)))
+__kernel void rmsnorm_cl_fp16_coop(__global const half *input,
+                                   __global half *output,
+                                   __global const half *alpha, half epsilon,
+                                   int n_rows, int W) {
+  const int row = get_group_id(0);
+  const int tid = get_local_id(0);
+  if (row >= n_rows)
+    return;
+  const long base = (long)row * (long)W;
+  const int W8 = W >> 3;
+  __global const half8 *in8 = (__global const half8 *)(input + base);
+
+  float partial = 0.0f;
+  for (int i = tid; i < W8; i += RMSN_LWS) {
+    const float8 v = convert_float8(in8[i]);
+    partial += dot(v.lo, v.lo) + dot(v.hi, v.hi);
+  }
+
+  __local float lsum[RMSN_LWS];
+  lsum[tid] = partial;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = RMSN_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s)
+      lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  const float mean = lsum[0] / (float)W;
+  const float scale = rsqrt(mean + (float)epsilon);
+  __global half8 *out8 = (__global half8 *)(output + base);
+  __global const half8 *a8 = (__global const half8 *)(alpha);
+  for (int i = tid; i < W8; i += RMSN_LWS) {
+    const half8 hv = convert_half8(convert_float8(in8[i]) * scale);
+    out8[i] = hv * a8[i];
+  }
+}

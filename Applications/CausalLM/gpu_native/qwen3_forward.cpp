@@ -2970,20 +2970,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   }
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16");
+                                   "rmsnorm_cl_fp16_coop");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-    int B = (int)M_pad, C = 1, H = 1, W = (int)K_h;
+    int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
     kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm_fp16);
     kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
-    kp->SetKernelArguments(4, &B, sizeof(int));
-    kp->SetKernelArguments(5, &C, sizeof(int));
-    kp->SetKernelArguments(6, &H, sizeof(int));
-    kp->SetKernelArguments(7, &W, sizeof(int));
-    std::array<size_t, 2> gws = {(size_t)M_pad, 1};
-    std::array<size_t, 2> lws = {1, 1};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+    kp->SetKernelArguments(4, &n_rows, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    constexpr size_t RMSN_LWS = 64;
+    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {RMSN_LWS};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
   stage_end_add(timings_.pad_attn_norm_ms);
@@ -3044,20 +3043,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     each WI covers one (token, head) head_dim-row.
   auto disp_qk_norm = [&](cl_mem io, void *gamma, unsigned int num_heads) {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16");
+                                   "rmsnorm_cl_fp16_coop");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-    int B = (int)M, C = (int)num_heads, H = 1, W = (int)cfg_.head_dim;
+    int n_rows = (int)M * (int)num_heads, W = (int)cfg_.head_dim;
     kp->SetKernelArguments(0, &io, sizeof(cl_mem));
     kp->SetKernelArguments(1, &io, sizeof(cl_mem));
     kp->SetKernelSVMArguments(2, gamma);
     kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
-    kp->SetKernelArguments(4, &B, sizeof(int));
-    kp->SetKernelArguments(5, &C, sizeof(int));
-    kp->SetKernelArguments(6, &H, sizeof(int));
-    kp->SetKernelArguments(7, &W, sizeof(int));
-    std::array<size_t, 2> gws = {(size_t)M * num_heads, 1};
-    std::array<size_t, 2> lws = {1, 1};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+    kp->SetKernelArguments(4, &n_rows, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    constexpr size_t RMSN_LWS = 64;
+    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {RMSN_LWS};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
   stage_begin();
@@ -3326,20 +3324,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                       nullptr);
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16");
+                                   "rmsnorm_cl_fp16_coop");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-    int B = (int)M_pad, C = 1, H = 1, W = (int)K_h;
+    int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.ffn_in_padded, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.ffn_normed, sizeof(cl_mem));
     kp->SetKernelSVMArguments(2, lw.ffn_norm_gamma_svm_fp16);
     kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
-    kp->SetKernelArguments(4, &B, sizeof(int));
-    kp->SetKernelArguments(5, &C, sizeof(int));
-    kp->SetKernelArguments(6, &H, sizeof(int));
-    kp->SetKernelArguments(7, &W, sizeof(int));
-    std::array<size_t, 2> gws = {(size_t)M_pad, 1};
-    std::array<size_t, 2> lws = {1, 1};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+    kp->SetKernelArguments(4, &n_rows, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    constexpr size_t RMSN_LWS = 64;
+    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {RMSN_LWS};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
   nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
