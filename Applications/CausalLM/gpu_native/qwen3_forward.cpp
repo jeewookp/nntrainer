@@ -111,6 +111,69 @@ __kernel void v_scatter_ohwi_t(__global const half *src,
 // SwiGLU element-wise: out[i] = silu(gate[i]) * up[i]
 //   silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
 // fp32 throughout (matches the residual stream dtype). One WI per element.
+// #46m: fp16 helpers for residual stream refactor.
+static const std::string kAddFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void add_fp16(__global const half *a,
+                       __global const half *b,
+                       __global       half *out,
+                       const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  out[i] = a[i] + b[i];
+}
+)CL";
+
+static const std::string kCvtF2hKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void cvt_f2h(__global const float *in, __global half *out,
+                      const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  out[i] = (half)in[i];
+}
+)CL";
+
+static const std::string kAddFp16ToFp32Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void add_fp16_to_fp32(__global const half *a,
+                               __global const half *b,
+                               __global       float *out,
+                               const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  out[i] = (float)a[i] + (float)b[i];
+}
+)CL";
+
+static const std::string kFusedSwigluFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void fused_swiglu_fp16(__global const half *gate,
+                                __global const half *up,
+                                __global       half *out,
+                                const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  float g = (float)gate[i];
+  float u = (float)up[i];
+  float s = g / (1.0f + native_exp(-g));
+  out[i] = (half)(s * u);
+}
+)CL";
+
+// #46m: SVM fp16 → cl_mem fp16 GPU copy. Used to bridge attention
+// output (SVM) into quantize_act_v8c_fp16_cl input (cl_mem).
+static const std::string kCopySvmFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void copy_svm_to_clmem_fp16(__global const half *src,
+                                     __global       half *dst,
+                                     const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  dst[i] = src[i];
+}
+)CL";
+
 // Fused cvt h2f + add fp32 (#46j). out_fp32[i] = a_fp32[i] + (float)b_fp16[i].
 // Replaces (cvt b_fp16 → b_fp32) + (add a_fp32 + b_fp32 → out_fp32) used
 // at the end of wo and ffn-down. Saves 1 dispatch per occurrence × 2 ×
@@ -249,16 +312,22 @@ Qwen3Forward::~Qwen3Forward() {
   }
   if (output_norm_gamma_svm_ && cl_ctx_)
     clSVMFree(cl_ctx_, output_norm_gamma_svm_);
+  if (output_norm_gamma_svm_fp16_ && cl_ctx_)
+    clSVMFree(cl_ctx_, output_norm_gamma_svm_fp16_);
   // Generic per-layer state (loaded via load_layer).
   for (auto &lw : layers_) {
     if (lw.attn_norm_gamma_svm && cl_ctx_)
       clSVMFree(cl_ctx_, lw.attn_norm_gamma_svm);
+    if (lw.attn_norm_gamma_svm_fp16 && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.attn_norm_gamma_svm_fp16);
     if (lw.q_norm_gamma_svm_fp16 && cl_ctx_)
       clSVMFree(cl_ctx_, lw.q_norm_gamma_svm_fp16);
     if (lw.k_norm_gamma_svm_fp16 && cl_ctx_)
       clSVMFree(cl_ctx_, lw.k_norm_gamma_svm_fp16);
     if (lw.ffn_norm_gamma_svm && cl_ctx_)
       clSVMFree(cl_ctx_, lw.ffn_norm_gamma_svm);
+    if (lw.ffn_norm_gamma_svm_fp16 && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.ffn_norm_gamma_svm_fp16);
     if (lw.cache_k_svm && cl_ctx_)
       clSVMFree(cl_ctx_, lw.cache_k_svm);
     if (lw.cache_v_svm && cl_ctx_)
@@ -2074,6 +2143,28 @@ static bool load_norm_to_svm_fp32(cl_context cl_ctx, cl_command_queue q,
   return true;
 }
 
+// #46m Phase 1: Same as load_norm_to_svm_fp32 but stores fp16 (for
+// rmsnorm_cl_fp16 kernel). Used for attn_norm / ffn_norm / output_norm.
+static bool load_hidden_norm_to_svm_fp16(cl_context cl_ctx, cl_command_queue q,
+                                         const float *src_fp32,
+                                         unsigned int hidden, void **dst_svm,
+                                         const char *tag) {
+  const size_t bytes = (size_t)hidden * sizeof(uint16_t);
+  *dst_svm = clSVMAlloc(cl_ctx, CL_MEM_READ_ONLY, bytes, 0);
+  if (*dst_svm == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] %s (fp16) SVMAlloc failed\n", tag);
+    return false;
+  }
+  if (clEnqueueSVMMap(q, CL_TRUE, CL_MAP_WRITE, *dst_svm, bytes, 0,
+                      nullptr, nullptr) != CL_SUCCESS)
+    return false;
+  uint16_t *p = static_cast<uint16_t *>(*dst_svm);
+  for (unsigned int i = 0; i < hidden; ++i) p[i] = f2h(src_fp32[i]);
+  clEnqueueSVMUnmap(q, *dst_svm, 0, nullptr, nullptr);
+  clFinish(q);
+  return true;
+}
+
 bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
                               unsigned int max_seq_len_used) {
   if (weight_mmap_ == nullptr || cl_ctx_ == nullptr) return false;
@@ -2102,11 +2193,15 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
 
   size_t off = *offset_inout;
 
-  // attn_norm gamma -> SVM fp32
+  // attn_norm gamma -> SVM fp32 AND fp16 (#46m)
   if (!load_norm_to_svm_fp32(
         cl_ctx_, cl_q_,
         reinterpret_cast<const float *>(weight_mmap_ + off), K_h,
         &lw.attn_norm_gamma_svm, "attn_norm")) return false;
+  if (!load_hidden_norm_to_svm_fp16(
+        cl_ctx_, cl_q_,
+        reinterpret_cast<const float *>(weight_mmap_ + off), K_h,
+        &lw.attn_norm_gamma_svm_fp16, "attn_norm")) return false;
   off += norm_bytes;
 
   // wq -> v8c backing
@@ -2139,11 +2234,15 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   if (!load_qint4_weight_at(off, N_q, K_h, &lw.wo, "wo")) return false;
   off += wo_bytes;
 
-  // ffn_norm gamma -> SVM fp32
+  // ffn_norm gamma -> SVM fp32 AND fp16 (#46m)
   if (!load_norm_to_svm_fp32(
         cl_ctx_, cl_q_,
         reinterpret_cast<const float *>(weight_mmap_ + off), K_h,
         &lw.ffn_norm_gamma_svm, "ffn_norm")) return false;
+  if (!load_hidden_norm_to_svm_fp16(
+        cl_ctx_, cl_q_,
+        reinterpret_cast<const float *>(weight_mmap_ + off), K_h,
+        &lw.ffn_norm_gamma_svm_fp16, "ffn_norm")) return false;
   off += norm_bytes;
 
   // ffn_up, ffn_gate, ffn_down -> v8c backings
@@ -2748,8 +2847,9 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
     return true;
   };
 
-  if (!alloc(scratch_.in_padded,    CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float), "in_padded"))    return false;
-  if (!alloc(scratch_.attn_normed,  CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float), "attn_normed"))  return false;
+  // #46m: residual stream is fp16 throughout (paper-aligned).
+  if (!alloc(scratch_.in_padded,    CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t), "in_padded"))    return false;
+  if (!alloc(scratch_.attn_normed,  CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t), "attn_normed"))  return false;
   if (!alloc(scratch_.qkv_act_i8,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                 "qkv_act_i8"))   return false;
   if (!alloc(scratch_.qkv_act_scale,CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "qkv_act_scale"))return false;
   if (!alloc(scratch_.qkv_act_zp,   CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "qkv_act_zp"))   return false;
@@ -2764,16 +2864,18 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
     std::fprintf(stderr, "[qwen3-gpu] scratch SVM alloc failed\n");
     return false;
   }
-  if (!alloc(scratch_.o_fp32,       CL_MEM_READ_WRITE, (size_t)M_pad * N_q * sizeof(float), "o_fp32"))       return false;
+  // #46m: o_fp32 now holds fp16 (kept name for back-compat).
+  if (!alloc(scratch_.o_fp32,       CL_MEM_READ_WRITE, (size_t)M_pad * N_q * sizeof(uint16_t), "o_fp32"))       return false;
   if (!alloc(scratch_.wo_act_i8,    CL_MEM_READ_WRITE, (size_t)M_pad * N_q,                  "wo_act_i8"))   return false;
   if (!alloc(scratch_.wo_act_scale, CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "wo_act_scale"))return false;
   if (!alloc(scratch_.wo_act_zp,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_zp"))   return false;
   if (!alloc(scratch_.wo_act_rs,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_rs"))   return false;
   if (!alloc(scratch_.wo_y_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"wo_y_fp16"))   return false;
-  if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "wo_fp32"))     return false;
-  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "residual_1"))  return false;
-  if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_in_padded"))return false;
-  if (!alloc(scratch_.ffn_normed,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_normed"))   return false;
+  // #46m: residual fp16.
+  if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"wo_fp32"))     return false;
+  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"residual_1"))  return false;
+  if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"ffn_in_padded"))return false;
+  if (!alloc(scratch_.ffn_normed,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"ffn_normed"))   return false;
   if (!alloc(scratch_.fa_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                  "fa_i8"))       return false;
   if (!alloc(scratch_.fa_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "fa_sc"))       return false;
   if (!alloc(scratch_.fa_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "fa_zp"))       return false;
@@ -2782,13 +2884,13 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   if (!alloc(scratch_.gate_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "gate_fp16"))   return false;
   if (!alloc(scratch_.up_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "up_fp32"))     return false;
   if (!alloc(scratch_.gate_fp32,    CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "gate_fp32"))   return false;
-  if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "swiglu_out"))  return false;
+  if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(uint16_t), "swiglu_out"))  return false;
   if (!alloc(scratch_.dn_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * I,                    "dn_i8"))       return false;
   if (!alloc(scratch_.dn_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "dn_sc"))       return false;
   if (!alloc(scratch_.dn_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_zp"))       return false;
   if (!alloc(scratch_.dn_rs,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_rs"))       return false;
   if (!alloc(scratch_.dn_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"dn_fp16"))     return false;
-  if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "dn_fp32"))     return false;
+  if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"dn_fp32"))     return false;
 
   scratch_max_M_ = M_pad;
   std::fprintf(stderr,
@@ -2845,34 +2947,50 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     if (profile_stages_) { clFinish(cl_q_); accum += MS(NOW(), t_stage); }
   };
 
-  // (a) pad in_fp32 [M*K_h] -> scratch_.in_padded [M_pad*K_h], attn_norm.
+  // (a) pad in_fp32 -> in_padded fp16 (cvt at boundary, #46m), then
+  // attn_norm fp16. Residual stream is fp16 throughout (paper §3.7).
   stage_begin();
   float zero = 0.0f;
-  clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero, sizeof(float), 0,
-                      (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
+  const uint16_t zero_h = 0;
+  clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero_h, sizeof(uint16_t), 0,
+                      (size_t)M_pad * K_h * sizeof(uint16_t), 0, nullptr,
                       nullptr);
-  clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
-                      (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
+  // Boundary cvt: in_fp32 -> in_padded (first M rows). Padded rows
+  // beyond M stay zero from the fill above.
   {
-    auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
-    float eps = cfg_.rms_norm_eps;
-    int H = (int)M_pad, W = (int)K_h;
-    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
-    kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm);
-    kp->SetKernelArguments(3, &eps, sizeof(float));
-    kp->SetKernelArguments(4, &H, sizeof(int));
-    kp->SetKernelArguments(5, &W, sizeof(int));
-    std::array<size_t, 1> gws = {(size_t)M_pad * 64};
+    auto kp = cl->registerClKernel(kCvtF2hKernel, "cvt_f2h");
+    int n = (int)(M * K_h);
+    kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.in_padded, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &n, sizeof(int));
+    std::array<size_t, 1> gws = {(((size_t)n + 63) / 64) * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
+  {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                   "rmsnorm_cl_fp16");
+    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+    int B = (int)M_pad, C = 1, H = 1, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
+    kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(4, &B, sizeof(int));
+    kp->SetKernelArguments(5, &C, sizeof(int));
+    kp->SetKernelArguments(6, &H, sizeof(int));
+    kp->SetKernelArguments(7, &W, sizeof(int));
+    std::array<size_t, 2> gws = {(size_t)M_pad, 1};
+    std::array<size_t, 2> lws = {1, 1};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
   stage_end_add(timings_.pad_attn_norm_ms);
 
-  // (b) shared act quant Q/K/V.
+  // (b) shared act quant Q/K/V (fp16 act, #46m).
   stage_begin();
-  nntrainer::quantize_act_v8c_fp32_cl(scratch_.attn_normed, scratch_.qkv_act_i8,
+  nntrainer::quantize_act_v8c_fp16_cl(scratch_.attn_normed, scratch_.qkv_act_i8,
                                       scratch_.qkv_act_scale,
                                       scratch_.qkv_act_zp, scratch_.qkv_act_rs,
                                       M_pad, K_h);
@@ -3141,24 +3259,24 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     return false;
   }
 
-  // (g) wo: cvt_h2f(o_svm) -> o_fp32, then v8c FC, then cvt -> wo_fp32,
-  //     then add_fp32(in, wo) -> residual_1.
+  // (g) wo (#46m): o_svm is fp16 SVM; quantize directly without cvt.
+  //     Then v8c FC -> wo_y_fp16, then add_fp16(in_padded + wo_y) -> residual_1.
   stage_begin();
-  clEnqueueFillBuffer(cl_q_, scratch_.o_fp32, &zero, sizeof(float), 0,
-                      (size_t)M_pad * N_q * sizeof(float), 0, nullptr,
-                      nullptr);
+  // GPU copy o_svm (fp16 SVM, attention output) → scratch_.o_fp32
+  // (fp16 cl_mem, name kept). Async on the queue, no host stall.
   {
-    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+    auto kp =
+      cl->registerClKernel(kCopySvmFp16Kernel, "copy_svm_to_clmem_fp16");
     int n = (int)(M * N_q);
     kp->SetKernelSVMArguments(0, scratch_.o_svm);
     kp->SetKernelArguments(1, &scratch_.o_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &n, sizeof(int));
-    std::array<size_t, 1> gws = {(((size_t)M * N_q) + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)n + 63) / 64) * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  nntrainer::quantize_act_v8c_fp32_cl(scratch_.o_fp32, scratch_.wo_act_i8,
+  nntrainer::quantize_act_v8c_fp16_cl(scratch_.o_fp32, scratch_.wo_act_i8,
                                       scratch_.wo_act_scale,
                                       scratch_.wo_act_zp, scratch_.wo_act_rs,
                                       M_pad, N_q);
@@ -3176,13 +3294,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
                               K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  // #46j: fused (cvt wo_y_fp16 → fp32) + (add in_fp32 + that → residual_1)
-  // = 2 dispatches → 1.
+  // #46m: add_fp16 (in_padded[0..M*K_h] + wo_y_fp16 → residual_1, all fp16).
+  // in_padded holds the fp16 residual input from stage (a).
   {
-    auto kp =
-      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
+    auto kp = cl->registerClKernel(kAddFp16Kernel, "add_fp16");
     int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
@@ -3197,27 +3314,32 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     shared quant, ffn_up + ffn_gate, cvt fp16->fp32, swiglu, quant,
   //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
   stage_begin();
-  clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero, sizeof(float), 0,
-                      (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
+  // #46m: residual_1 is fp16; copy directly to ffn_in_padded fp16.
+  clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero_h, sizeof(uint16_t),
+                      0, (size_t)M_pad * K_h * sizeof(uint16_t), 0, nullptr,
                       nullptr);
   clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
-                      0, (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
+                      0, (size_t)M * K_h * sizeof(uint16_t), 0, nullptr,
+                      nullptr);
   {
-    auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
-    float eps = cfg_.rms_norm_eps;
-    int H = (int)M_pad, W = (int)K_h;
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                   "rmsnorm_cl_fp16");
+    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+    int B = (int)M_pad, C = 1, H = 1, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.ffn_in_padded, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.ffn_normed, sizeof(cl_mem));
-    kp->SetKernelSVMArguments(2, lw.ffn_norm_gamma_svm);
-    kp->SetKernelArguments(3, &eps, sizeof(float));
-    kp->SetKernelArguments(4, &H, sizeof(int));
-    kp->SetKernelArguments(5, &W, sizeof(int));
-    std::array<size_t, 1> gws = {(size_t)M_pad * 64};
-    std::array<size_t, 1> lws = {64};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+    kp->SetKernelSVMArguments(2, lw.ffn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(4, &B, sizeof(int));
+    kp->SetKernelArguments(5, &C, sizeof(int));
+    kp->SetKernelArguments(6, &H, sizeof(int));
+    kp->SetKernelArguments(7, &W, sizeof(int));
+    std::array<size_t, 2> gws = {(size_t)M_pad, 1};
+    std::array<size_t, 2> lws = {1, 1};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  nntrainer::quantize_act_v8c_fp32_cl(scratch_.ffn_normed, scratch_.fa_i8,
+  nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
                                       scratch_.fa_sc, scratch_.fa_zp,
                                       scratch_.fa_rs, M_pad, K_h);
   cl_image_desc fa_adesc{};
@@ -3252,13 +3374,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
-  // #46j: fused (cvt h2f up) + (cvt h2f gate) + (swiglu fp32). 3
-  // dispatches → 1; reads fp16 inputs directly, writes fp32 output.
-  // The up_fp32 / gate_fp32 scratch buffers are now unused — kept
-  // in the scratch struct for back-compat with the legacy path.
+  // #46m: fp16 swiglu (input/output both fp16, paper-aligned).
   {
     auto kp =
-      cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
+      cl->registerClKernel(kFusedSwigluFp16Kernel, "fused_swiglu_fp16");
     int n = (int)(M * I);
     kp->SetKernelArguments(0, &scratch_.gate_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.up_fp16, sizeof(cl_mem));
@@ -3269,7 +3388,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
+  nntrainer::quantize_act_v8c_fp16_cl(scratch_.swiglu_out, scratch_.dn_i8,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
   cl_image_desc dn_adesc{};
@@ -3286,11 +3405,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  // #46j: fused (cvt dn_fp16 → fp32) + (add residual_1 + that → out_fp32)
-  // = 2 dispatches → 1.
+  // #46m: end-of-layer boundary. residual_1 (fp16) + dn_fp16 → out_fp32.
+  // Once main.cpp ping-pong switches to fp16 we replace with add_fp16.
   {
-    auto kp =
-      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
+    auto kp = cl->registerClKernel(kAddFp16ToFp32Kernel, "add_fp16_to_fp32");
     int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));
@@ -3330,6 +3448,11 @@ bool Qwen3Forward::load_output_norm(size_t file_offset) {
                src[4], src[5], src[6], src[7]);
   if (!load_norm_to_svm_fp32(cl_ctx_, cl_q_, src, cfg_.hidden_size,
                              &output_norm_gamma_svm_, "output_norm"))
+    return false;
+  // #46m: also load fp16 version for rmsnorm_cl_fp16.
+  if (!load_hidden_norm_to_svm_fp16(cl_ctx_, cl_q_, src, cfg_.hidden_size,
+                                    &output_norm_gamma_svm_fp16_,
+                                    "output_norm"))
     return false;
   std::fprintf(stderr,
                "[qwen3-gpu] output_norm gamma -> SVM (fp32, %zu B)\n", bytes);

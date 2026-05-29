@@ -376,9 +376,11 @@ private:
   /// Populated by load_layer(); consumed by forward_one_layer().
   struct LayerWeights {
     void *attn_norm_gamma_svm = nullptr;     // fp32 [hidden]
+    void *attn_norm_gamma_svm_fp16 = nullptr;// fp16 [hidden] (#46m)
     void *q_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
     void *k_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
     void *ffn_norm_gamma_svm = nullptr;      // fp32 [hidden]
+    void *ffn_norm_gamma_svm_fp16 = nullptr; // fp16 [hidden] (#46m)
     V8cFcWeight wq, wk, wv, wo;
     V8cFcWeight ffn_up, ffn_gate, ffn_down;
     void *cache_k_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
@@ -403,6 +405,7 @@ private:
 
   // Final output_norm gamma (fp32, [hidden]) in SVM.
   void *output_norm_gamma_svm_ = nullptr;
+  void *output_norm_gamma_svm_fp16_ = nullptr;  // #46m
 
   // Per-layer KV cache stride (max_seq_len that was passed to
   // load_layer); needed by the OHWI K attention wrapper to compute
