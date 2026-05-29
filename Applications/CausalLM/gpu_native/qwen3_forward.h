@@ -86,10 +86,27 @@ public:
   /// Print the first `n` bytes of the mmap'd weight file as hex.
   void dump_weight_header(size_t n);
 
+  /// Load layer 0's attention_norm gamma (fp32, [hidden_size]) into an
+  /// SVM cl_mem. Computes the offset manually: embedding tensor is
+  /// first in the weight file (Q6_K, [vocab, hidden] = vocab*hidden/256
+  /// blocks * 210 bytes/block), then layer 0 attention_norm gamma. The
+  /// allocated SVM pointer is owned by the class and freed in the
+  /// destructor.
+  bool load_layer0_attention_norm_to_svm();
+
+  /// Dispatch rmsnorm.cl on a known input pattern using the previously
+  /// loaded attention_norm gamma. Prints a summary of input + output
+  /// (first/last few values) and a quick sanity check on the rms norm
+  /// math. Returns true if the kernel ran and produced finite output.
+  bool run_rmsnorm_layer0();
+
   const Qwen3Config &config() const { return cfg_; }
   size_t weight_file_size() const { return weight_bytes_; }
 
 private:
+  /// Byte size of the embedding tensor on disk (Q6_K).
+  size_t embed_table_bytes() const;
+
   Qwen3Config cfg_{};
   std::string weight_path_;
   const uint8_t *weight_mmap_ = nullptr; // mmap'd, read-only
@@ -99,6 +116,9 @@ private:
   cl_context cl_ctx_ = nullptr;        // borrowed from ClContext
   cl_command_queue cl_q_ = nullptr;    // borrowed from ClContext
   cl_device_id cl_dev_ = nullptr;      // borrowed
+
+  // Layer 0 attention_norm gamma (fp32, [hidden_size]) in SVM.
+  void *layer0_attn_norm_gamma_svm_ = nullptr;
 };
 
 } // namespace causallm_gpu

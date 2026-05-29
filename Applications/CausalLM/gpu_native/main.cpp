@@ -62,7 +62,20 @@ int main(int argc, char **argv) {
     return 3;
   }
 
+  // Step 2: load layer 0 attention_norm gamma into SVM + run rmsnorm.cl
+  // on a deterministic input pattern + verify output is finite. Proves
+  // the (weight-mmap -> SVM -> GPU kernel -> read back) data path works
+  // end-to-end with a single op.
+  if (!fwd.load_layer0_attention_norm_to_svm()) {
+    std::fprintf(stderr, "[main] load_layer0_attention_norm failed\n");
+    return 4;
+  }
+  if (!fwd.run_rmsnorm_layer0()) {
+    std::fprintf(stderr, "[main] run_rmsnorm_layer0 failed\n");
+    return 5;
+  }
+
   std::fprintf(stderr,
-               "[main] skeleton OK. Next commit: layer-0 forward.\n");
+               "[main] step 2 OK. Next commit: Q/K/V FCs on SVM.\n");
   return 0;
 }
