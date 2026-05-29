@@ -89,5 +89,3 @@
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
