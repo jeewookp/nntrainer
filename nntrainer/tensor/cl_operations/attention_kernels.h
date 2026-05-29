@@ -160,6 +160,31 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal, bool svm_inputs = false);
 
+/// §3.8 + paper-style image2d_from_buffer V variant. Same pipeline as
+/// _ohwi_full_cl but the SV kernel reads V via image2d_from_buffer
+/// (sv_matmul_f16_ohwi_img), exploiting the same texture-cache pattern
+/// that gives v8c FC 87% of Adreno 830 peak. V must already be in
+/// OHWI-reversed [H_kv, d, S_max] layout in a regular cl_mem (NOT SVM
+/// — image2d_from_buffer requires a cl_mem-backed buffer). Q and K
+/// are still SVM (qk_matmul_f16_ohwi unchanged); only V uses image2d.
+///
+///   V_buf_ohwi: cl_mem holding the per-batch OHWI-reversed V slab,
+///               H_kv * d * max_seq_len halves, row_pitch = max_seq_len.
+bool two_conv_attention_prefill_f16_ohwi_img_cl(
+  const uint16_t *Q_svm, const uint16_t *K_svm, cl_mem V_buf_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal);
+
+/// Variant of _ohwi_img_cl that takes a pre-built cl_mem image2d view
+/// over the OHWI-reversed V buffer. Saves one clCreateImage per call
+/// when the caller can cache the view (e.g. once per layer at load).
+bool two_conv_attention_prefill_f16_ohwi_img_view_cl(
+  const uint16_t *Q_svm, const uint16_t *K_svm, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal);
+
 /// Single-kernel flash-attention prefill (paper §3.6 fusion +
 /// Dao et al. 2022 online softmax). Replaces the three-kernel
 /// two_conv_attention pipeline with one kernel that does QK · softmax

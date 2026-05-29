@@ -78,6 +78,15 @@ struct TcaScratch {
   cl_mem v_image = nullptr;
   unsigned int img_M = 0, img_N_kv = 0;
   unsigned int img_HD_Q = 0, img_HD_KV = 0;
+
+  // OHWI-reversed V image2d_from_buffer cache keyed by underlying cl_mem
+  // pointer + (num_heads_KV, head_dim, max_seq_len). Each caller layer
+  // tends to use its own V buffer; size is identical so we keep one
+  // image and recreate when the buffer pointer changes.
+  cl_mem v_ohwi_image = nullptr;
+  cl_mem v_ohwi_buf = nullptr;          // underlying cl_mem (key)
+  unsigned int v_ohwi_HD_KV = 0;        // num_heads_KV * head_dim
+  unsigned int v_ohwi_S_max = 0;
 };
 inline TcaScratch &tca_scratch() {
   static TcaScratch s;
@@ -1457,6 +1466,200 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
                             nullptr, nullptr) != CL_SUCCESS)
       return false;
   }
+  return true;
+}
+
+// Core implementation shared by _img_cl (buf input → create image inside)
+// and _img_view_cl (caller-cached image). When `v_image_in` is non-null
+// we use it directly; otherwise we build/cache an image2d from
+// `v_buf_in`.
+static bool two_conv_attention_prefill_f16_ohwi_img_impl(
+  const uint16_t *Q_svm, const uint16_t *K_svm,
+  cl_mem v_buf_in, cl_mem v_image_in,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal);
+
+bool two_conv_attention_prefill_f16_ohwi_img_cl(
+  const uint16_t *Q_svm, const uint16_t *K_svm, cl_mem V_buf_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal) {
+  return two_conv_attention_prefill_f16_ohwi_img_impl(
+    Q_svm, K_svm, V_buf_ohwi, /*v_image_in=*/nullptr, O_svm, M, N_kv,
+    num_heads_Q, num_heads_KV, head_dim, max_seq_len, causal);
+}
+
+bool two_conv_attention_prefill_f16_ohwi_img_view_cl(
+  const uint16_t *Q_svm, const uint16_t *K_svm, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal) {
+  if (!V_image_ohwi) return false;
+  return two_conv_attention_prefill_f16_ohwi_img_impl(
+    Q_svm, K_svm, /*v_buf_in=*/nullptr, V_image_ohwi, O_svm, M, N_kv,
+    num_heads_Q, num_heads_KV, head_dim, max_seq_len, causal);
+}
+
+// =============================================================================
+// §3.8 + image2d_from_buffer V variant. Q/K stay SVM (qk_matmul_f16_ohwi
+// reused unchanged); V is wrapped as image2d_from_buffer (either built
+// here from a cl_mem buffer, or passed in pre-built by the caller). We
+// dispatch the new sv_matmul_f16_ohwi_img kernel. Same Adreno-image-
+// cache mechanism that v8c FC exploits for 87% peak.
+// =============================================================================
+static bool two_conv_attention_prefill_f16_ohwi_img_impl(
+  const uint16_t *Q_svm, const uint16_t *K_svm,
+  cl_mem v_buf_in, cl_mem v_image_in,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal) {
+  if (head_dim == 0 || M == 0 || N_kv == 0 || max_seq_len == 0) return false;
+  if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
+  if (N_kv > max_seq_len) return false;
+  if (!v_buf_in && !v_image_in) return false;
+  if (max_seq_len % 8 != 0) return false;
+  if (head_dim % 8 != 0) return false;
+
+  constexpr unsigned int TM_QK = 4, TN_QK = 8;
+  constexpr unsigned int TM_SV_OHWI = 4;  // must match kernel #define
+  constexpr unsigned int SOFTMAX_LWS = 64;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t HD_Q = (size_t)num_heads_Q * head_dim;
+  const size_t HD_KV = (size_t)num_heads_KV * head_dim;
+  const size_t scores_bytes =
+    (size_t)num_heads_Q * M * N_kv * sizeof(uint16_t);
+
+  std::lock_guard<std::mutex> lock(tca_mtx());
+  TcaScratch &sc = tca_scratch();
+  if (!tca_ensure(ctx, &sc.scores, &sc.scores_bytes, scores_bytes,
+                  CL_MEM_READ_WRITE))
+    return false;
+
+  // ---- Resolve V image2d: either caller-provided, or build / reuse a
+  //      cached one keyed on V_buf_in + shape. ----
+  cl_mem v_image = v_image_in;
+  if (v_image == nullptr) {
+    const bool v_changed = sc.v_ohwi_image == nullptr ||
+                           sc.v_ohwi_buf != v_buf_in ||
+                           sc.v_ohwi_HD_KV != HD_KV ||
+                           sc.v_ohwi_S_max != max_seq_len;
+    if (v_changed) {
+      if (sc.v_ohwi_image) {
+        clReleaseMemObject(sc.v_ohwi_image);
+        sc.v_ohwi_image = nullptr;
+      }
+      cl_image_format img_fmt{CL_RGBA, CL_UNSIGNED_INT32};
+      cl_image_desc vd{};
+      vd.image_type = CL_MEM_OBJECT_IMAGE2D;
+      vd.image_width = max_seq_len / 8;
+      vd.image_height = (size_t)num_heads_KV * head_dim;
+      vd.image_row_pitch = (size_t)max_seq_len * sizeof(uint16_t);
+      vd.buffer = v_buf_in;
+      cl_int err = CL_SUCCESS;
+      sc.v_ohwi_image =
+        clCreateImage(ctx, CL_MEM_READ_ONLY, &img_fmt, &vd, nullptr, &err);
+      if (err != CL_SUCCESS || !sc.v_ohwi_image) {
+        sc.v_ohwi_image = nullptr;
+        return false;
+      }
+      sc.v_ohwi_buf = v_buf_in;
+      sc.v_ohwi_HD_KV = HD_KV;
+      sc.v_ohwi_S_max = max_seq_len;
+    }
+    v_image = sc.v_ohwi_image;
+  }
+
+  clFinish(q);
+
+  // ---- K1: QK matmul OHWI (Q SVM, K SVM, scores cl_mem) ----
+  {
+    ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+      two_conv_attention_kernel, "qk_matmul_f16_ohwi");
+    if (!kp) return false;
+    if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_svm)) ||
+        !kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_svm)) ||
+        !kp->SetKernelArguments(2, &sc.scores, sizeof(cl_mem)))
+      return false;
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, smax = (int)max_seq_len;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    int causal_i = causal ? 1 : 0;
+    float scale = 1.0f / std::sqrt((float)head_dim);
+    if (!kp->SetKernelArguments(3, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &smax, sizeof(int)) ||
+        !kp->SetKernelArguments(8, &gqa, sizeof(int)) ||
+        !kp->SetKernelArguments(9, &causal_i, sizeof(int)) ||
+        !kp->SetKernelArguments(10, &scale, sizeof(float)))
+      return false;
+    const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
+    const size_t mx = (M + TM_QK - 1) / TM_QK;
+    constexpr size_t LWS_QK_X = 64;
+    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  // ---- K2: row softmax (scores cl_mem, in-place) ----
+  {
+    ClContext::SharedPtrClKernel kp =
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
+    int Mi = (int)M, Nkvi = (int)N_kv;
+    if (!kp->SetKernelArguments(1, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(2, &Nkvi, sizeof(int)))
+      return false;
+    std::array<size_t, 3> gws = {SOFTMAX_LWS, M, num_heads_Q};
+    std::array<size_t, 3> lws = {SOFTMAX_LWS, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  // ---- K3: scores @ V_image -> O via sv_matmul_f16_ohwi_img ----
+  {
+    ClContext::SharedPtrClKernel kp =
+      blas_cc->registerClKernel(two_conv_attention_kernel,
+                                "sv_matmul_f16_ohwi_img");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &v_image, sizeof(cl_mem)) ||
+        !kp->SetKernelSVMArguments(2, O_svm))
+      return false;
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, smax = (int)max_seq_len;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    if (!kp->SetKernelArguments(3, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &smax, sizeof(int)) ||
+        !kp->SetKernelArguments(8, &gqa, sizeof(int)))
+      return false;
+    // 1 WI per output element O[m, head_q*d + x]. Workgroup tiled as
+    // (LWS_X=16 x's, LWS_Y=4 m's): 4 WIs share each V row read → image
+    // cache hit on the same texel row.
+    constexpr size_t LWS_X = 16;
+    constexpr size_t LWS_Y = 4;
+    const size_t dx_pad = ((head_dim + LWS_X - 1) / LWS_X) * LWS_X;
+    const size_t mx_pad = ((M + LWS_Y - 1) / LWS_Y) * LWS_Y;
+    std::array<size_t, 3> gws = {dx_pad, mx_pad, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  clFinish(q);
   return true;
 }
 

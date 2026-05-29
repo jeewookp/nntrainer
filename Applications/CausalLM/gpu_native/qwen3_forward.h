@@ -362,6 +362,15 @@ private:
     V8cFcWeight ffn_up, ffn_gate, ffn_down;
     void *cache_k_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
     void *cache_v_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
+    // §3.8 image2d V experiment (NNTR_OHWI_IMG=1): mirror V cache in
+    // a regular cl_mem laid out OHWI-reversed [hKV, d, max_seq_len_used]
+    // so image2d_from_buffer can wrap it for sv_matmul_f16_ohwi_img.
+    // The image2d view is built once at layer load and reused every
+    // forward call (so the 28 attention dispatches don't each pay
+    // clCreateImage overhead).
+    cl_mem cache_v_buf_ohwi = nullptr;
+    size_t cache_v_buf_ohwi_bytes = 0;
+    cl_mem cache_v_image_ohwi = nullptr;  // image2d_from_buffer over above
   };
   std::vector<LayerWeights> layers_;
 

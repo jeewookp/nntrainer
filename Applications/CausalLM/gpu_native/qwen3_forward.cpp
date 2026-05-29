@@ -171,6 +171,14 @@ Qwen3Forward::~Qwen3Forward() {
       clSVMFree(cl_ctx_, lw.cache_k_svm);
     if (lw.cache_v_svm && cl_ctx_)
       clSVMFree(cl_ctx_, lw.cache_v_svm);
+    if (lw.cache_v_image_ohwi) {
+      clReleaseMemObject(lw.cache_v_image_ohwi);
+      lw.cache_v_image_ohwi = nullptr;
+    }
+    if (lw.cache_v_buf_ohwi) {
+      clReleaseMemObject(lw.cache_v_buf_ohwi);
+      lw.cache_v_buf_ohwi = nullptr;
+    }
     release_v8c_weight(&lw.wq);
     release_v8c_weight(&lw.wk);
     release_v8c_weight(&lw.wv);
@@ -1954,6 +1962,46 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   }
   clFinish(cl_q_);
 
+  // OHWI image2d V experiment mirror buffer (#46f). cl_mem (not SVM) so
+  // it can be wrapped via image2d_from_buffer; same size as cache_v_svm.
+  // Layout: OHWI-reversed [hKV, d, max_seq_len_used] fp16.
+  cl_int img_err = CL_SUCCESS;
+  lw.cache_v_buf_ohwi =
+    clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE, cache_bytes, nullptr, &img_err);
+  if (img_err != CL_SUCCESS || lw.cache_v_buf_ohwi == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] layer %u: clCreateBuffer(cache_v_buf_ohwi) "
+                 "err=%d (image2d V experiment disabled)\n",
+                 layer_id, img_err);
+    lw.cache_v_buf_ohwi = nullptr;
+  } else {
+    lw.cache_v_buf_ohwi_bytes = cache_bytes;
+    // Zero-init via clEnqueueFillBuffer.
+    const uint16_t zero = 0;
+    clEnqueueFillBuffer(cl_q_, lw.cache_v_buf_ohwi, &zero, sizeof(uint16_t), 0,
+                        cache_bytes, 0, nullptr, nullptr);
+    clFinish(cl_q_);
+    // Build the image2d_from_buffer view once; sv_matmul_f16_ohwi_img
+    // takes the image directly so no per-call clCreateImage cost.
+    cl_image_format img_fmt{CL_RGBA, CL_UNSIGNED_INT32};
+    cl_image_desc vd{};
+    vd.image_type = CL_MEM_OBJECT_IMAGE2D;
+    vd.image_width = (size_t)max_seq_len_used / 8;        // 8 halves/texel
+    vd.image_height = (size_t)cfg_.num_heads_KV * cfg_.head_dim;
+    vd.image_row_pitch = (size_t)max_seq_len_used * sizeof(uint16_t);
+    vd.buffer = lw.cache_v_buf_ohwi;
+    cl_int ie = CL_SUCCESS;
+    lw.cache_v_image_ohwi =
+      clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &img_fmt, &vd, nullptr, &ie);
+    if (ie != CL_SUCCESS || lw.cache_v_image_ohwi == nullptr) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: clCreateImage(cache_v_image_ohwi) "
+                   "err=%d (image2d V experiment disabled)\n",
+                   layer_id, ie);
+      lw.cache_v_image_ohwi = nullptr;
+    }
+  }
+
   *offset_inout = off;
   // Record the cache stride so the OHWI attention wrapper can pass it
   // as `max_seq_len` (the per-head index stride in the OHWI layout).
@@ -2682,13 +2730,16 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
   }
-  // V: concat copy (single sequential memcpy). The naive
-  // sv_matmul_f16_ohwi V layout proved slower at large M due to
-  // uncoalesced intra-iteration reads (kernel exists in
-  // attention_kernels.cpp as `two_conv_attention_prefill_f16_ohwi_full_cl`
-  // for future redesign; not used here). Half-OHWI (K only, V concat)
-  // is the current production setting until V kernel is redesigned.
-  {
+  // V: two scatter paths.
+  //   default               → concat copy into cache_v_svm (sv_matmul_f16)
+  //   NNTR_OHWI_IMG=1 (#46f)→ OHWI-reversed [hKV, d, S_max] scatter into
+  //                           cache_v_buf_ohwi (cl_mem) for image2d wrap.
+  // The two layouts are exclusive per run; we read the env once.
+  static const bool use_ohwi_img = []() {
+    const char *e = std::getenv("NNTR_OHWI_IMG");
+    return e && std::atoi(e) != 0;
+  }();
+  if (!use_ohwi_img) {
     cl_int e;
     void *p_v = clEnqueueMapBuffer(cl_q_, scratch_.y_v, CL_TRUE, CL_MAP_READ,
                                    0, kv_total_bytes, 0, nullptr, nullptr,
@@ -2700,6 +2751,51 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     std::memcpy(dst, p_v, kv_total_bytes);
     clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_v, p_v, 0, nullptr, nullptr);
+  } else {
+    if (lw.cache_v_buf_ohwi == nullptr) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: NNTR_OHWI_IMG=1 but "
+                   "cache_v_buf_ohwi is null\n", layer_id);
+      clReleaseMemObject(act_image);
+      return false;
+    }
+    // GPU scatter via v_scatter_ohwi_t: 1 WI per (t, h, x).
+    auto *cl =
+      static_cast<nntrainer::ClContext *>(
+        nntrainer::Engine::Global().getRegisteredContext("gpu"));
+    auto kp = cl->registerClKernel(kVScatterOhwiTKernel, "v_scatter_ohwi_t");
+    if (!kp) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: v_scatter_ohwi_t register failed\n",
+                   layer_id);
+      clReleaseMemObject(act_image);
+      return false;
+    }
+    cl_mem src_mem = scratch_.y_v;
+    cl_mem dst_mem = lw.cache_v_buf_ohwi;
+    int Mi = (int)M;
+    int hKVi = (int)cfg_.num_heads_KV;
+    int di = (int)cfg_.head_dim;
+    int max_Si = (int)max_S;
+    int pos_i = (int)position;
+    if (!kp->SetKernelArguments(0, &src_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &dst_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(2, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(3, &hKVi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &max_Si, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &pos_i, sizeof(int))) {
+      clReleaseMemObject(act_image);
+      return false;
+    }
+    constexpr size_t LWS_X = 4, LWS_Y = 1, LWS_Z = 16;
+    const size_t gws_x = ((size_t)Mi + LWS_X - 1) / LWS_X * LWS_X;
+    const size_t gws_y = (size_t)hKVi;
+    const size_t gws_z = ((size_t)di + LWS_Z - 1) / LWS_Z * LWS_Z;
+    std::array<size_t, 3> gws = {gws_x, gws_y, gws_z};
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
   }
   clFinish(cl_q_);
   stage_end_add(timings_.kv_write_ms);
@@ -2719,17 +2815,26 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
   }
-  // Paper §3.8 K OHWI (half-OHWI): K is OHWI [hKV, S_max, d]
-  // (sequential per-head reads in qk_matmul_f16_ohwi). V stays
-  // concat — full OHWI proved slower due to V kernel's intra-
-  // iteration uncoalesced reads; redesign tracked as a sub-task.
-  bool attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
-    static_cast<const uint16_t *>(scratch_.q_svm),
-    static_cast<const uint16_t *>(lw.cache_k_svm),
-    static_cast<const uint16_t *>(lw.cache_v_svm),
-    static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
-    cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
-    kv_cache_max_seq_len_, true, /*svm_inputs=*/true);
+  // Attention dispatch:
+  //   default        → _ohwi_cl   (K OHWI, V concat — half-OHWI, 192 TPS@1K)
+  //   NNTR_OHWI_IMG  → _ohwi_img_cl (K OHWI SVM, V cl_mem→image2d, #46f)
+  bool attn_ok;
+  if (use_ohwi_img) {
+    attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_img_view_cl(
+      static_cast<const uint16_t *>(scratch_.q_svm),
+      static_cast<const uint16_t *>(lw.cache_k_svm), lw.cache_v_image_ohwi,
+      static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+      cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+      kv_cache_max_seq_len_, true);
+  } else {
+    attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
+      static_cast<const uint16_t *>(scratch_.q_svm),
+      static_cast<const uint16_t *>(lw.cache_k_svm),
+      static_cast<const uint16_t *>(lw.cache_v_svm),
+      static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+      cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+      kv_cache_max_seq_len_, true, /*svm_inputs=*/true);
+  }
   stage_end_add(timings_.attn_dispatch_ms);
   if (!attn_ok) {
     std::fprintf(stderr,
