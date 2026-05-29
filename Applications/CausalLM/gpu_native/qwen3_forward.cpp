@@ -38,12 +38,65 @@ constexpr size_t Q6_K_BLOCK_ELTS = 256;
 constexpr size_t Q6_K_BLOCK_BYTES = 210;
 } // namespace
 
+// =============================================================================
+// Inline OpenCL kernels for the GPU-native runtime. Strings are passed to
+// ClContext::registerClKernel which caches by string identity, so each one
+// only compiles once per process. Kept at file scope so any dispatch method
+// can reference them regardless of declaration order.
+// =============================================================================
+
+// fp16 -> fp32 element-wise convert. One WI per element; gws = (N).
+static const std::string kConvertFp16ToFp32Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void cvt_h2f(__global const half *in, __global float *out,
+                      const int n) {
+  int i = get_global_id(0);
+  if (i < n) out[i] = (float)in[i];
+}
+)CL";
+
+// fp32 element-wise add. out[i] = a[i] + b[i]. One WI per element.
+static const std::string kAddFp32Kernel = R"CL(
+__kernel void add_fp32(__global const float *a, __global const float *b,
+                       __global float *out, const int n) {
+  int i = get_global_id(0);
+  if (i < n) out[i] = a[i] + b[i];
+}
+)CL";
+
+// fp16 RoPE: in-place rotation of [num_heads, head_dim] fp16 buffer.
+// cos/sin tables are doubled-half (cos[k+half] = cos[k], sin[k+half] =
+// sin[k]) to match the CPU mha_core convention. GWS = (num_heads,
+// head_dim/2); one WI per rotation pair (writes positions k and k+half).
+static const std::string kRopeFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void rope_fp16(__global half *xy,
+                        __global const half *cos_tbl,
+                        __global const half *sin_tbl,
+                        const int num_heads,
+                        const int half_d) {
+  int h = get_global_id(0);
+  int k = get_global_id(1);
+  if (h >= num_heads || k >= half_d) return;
+  int base = h * (half_d * 2);
+  half c = cos_tbl[k];
+  half s = sin_tbl[k];
+  half x_lo = xy[base + k];
+  half x_hi = xy[base + k + half_d];
+  xy[base + k]          = x_lo * c - x_hi * s;
+  xy[base + k + half_d] = x_hi * c + x_lo * s;
+}
+)CL";
+
 Qwen3Forward::Qwen3Forward() = default;
 
 Qwen3Forward::~Qwen3Forward() {
+  if (layer0_residual1_fp32_ != nullptr)
+    clReleaseMemObject(layer0_residual1_fp32_);
   release_v8c_weight(&layer0_wq_);
   release_v8c_weight(&layer0_wk_);
   release_v8c_weight(&layer0_wv_);
+  release_v8c_weight(&layer0_wo_);
   if (layer0_cache_k_svm_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_cache_k_svm_);
   if (layer0_cache_v_svm_ != nullptr && cl_ctx_ != nullptr)
@@ -644,6 +697,35 @@ bool Qwen3Forward::load_layer0_qkv_weights() {
          load_qint4_weight_at(wv_off, K_hidden, N_kv, &layer0_wv_, "wv");
 }
 
+bool Qwen3Forward::load_layer0_wo() {
+  // wo immediately follows wv (no norm in between). See layer save
+  // order in load_layer0_qkv_weights for the running offsets.
+  const size_t embed_bytes = embed_table_bytes();
+  const size_t attn_norm_bytes =
+    static_cast<size_t>(cfg_.hidden_size) * sizeof(float);
+  const size_t head_dim_bytes =
+    static_cast<size_t>(cfg_.head_dim) * sizeof(float);
+  const unsigned int K_hidden = cfg_.hidden_size;
+  const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
+  const size_t wq_bytes =
+    sizeof(uint16_t) + (size_t)K_hidden * N_q / 2 + (size_t)N_q * 2;
+  const size_t wk_bytes =
+    sizeof(uint16_t) + (size_t)K_hidden * N_kv / 2 + (size_t)N_kv * 2;
+  const size_t wv_bytes = wk_bytes; // same K, N
+  const size_t wq_off = embed_bytes + attn_norm_bytes;
+  const size_t wk_off = wq_off + wq_bytes + head_dim_bytes;
+  const size_t wv_off = wk_off + wk_bytes + head_dim_bytes;
+  const size_t wo_off = wv_off + wv_bytes;
+
+  // wo: [K=hQ*d, N=hidden] in the saved tensor (createTransformerDecoder
+  // sets the FC unit to DIM=hidden). After v8c packing, K and N match
+  // the on-disk save dim.
+  const unsigned int wo_K = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int wo_N = cfg_.hidden_size;
+  return load_qint4_weight_at(wo_off, wo_K, wo_N, &layer0_wo_, "wo");
+}
+
 namespace {
 // fp16-bits -> fp32 (host-side decode), used for printing GPU outputs.
 inline float h2f(uint16_t h) {
@@ -1017,6 +1099,158 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
         ok_attn = false;
       }
     }
+
+    // (i) wo (attention output projection): O_svm (fp16) -> wo_out fp16
+    //     -> residual_1 = x + wo_out (fp32). Inline cvt_h2f + add_fp32
+    //     bridge keeps the residual stream in fp32 (matches the existing
+    //     rmsnorm.cl dtype). x is in_buf (fp32 ramp pattern).
+    if (ok_attn && layer0_wo_.backing != nullptr && o_svm != nullptr) {
+      const unsigned int wo_K = N_q;             // hQ * d = 2048
+      const unsigned int wo_N = cfg_.hidden_size; // 1024
+      // (i.1) Convert attention output O_svm (fp16, [M_pad*hQ*d]) into
+      //       a fresh cl_mem fp32 buffer so quantize_act_v8c_fp32_cl
+      //       can consume it. Only M=1 valid row is meaningful; we
+      //       still allocate M_pad rows of padding (v8c kernel tile).
+      const size_t o_fp32_bytes =
+        (size_t)M_pad * wo_K * sizeof(float);
+      cl_mem o_fp32 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                     o_fp32_bytes, nullptr, &err);
+      // Pre-zero padded rows.
+      float zero = 0.0f;
+      clEnqueueFillBuffer(cl_q_, o_fp32, &zero, sizeof(float), 0,
+                          o_fp32_bytes, 0, nullptr, nullptr);
+      {
+        auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel,
+                                       "cvt_h2f");
+        int n = (int)wo_K;
+        if (!kp ||
+            !kp->SetKernelSVMArguments(0, o_svm) ||
+            !kp->SetKernelArguments(1, &o_fp32, sizeof(cl_mem)) ||
+            !kp->SetKernelArguments(2, &n, sizeof(int))) {
+          std::fprintf(stderr,
+                       "[qwen3-gpu] wo cvt_h2f args failed\n");
+          ok_attn = false;
+        } else {
+          std::array<size_t, 1> gws = {(size_t)wo_K};
+          std::array<size_t, 1> lws = {64};
+          // pad gws[0] up to multiple of lws[0]
+          gws[0] = ((gws[0] + lws[0] - 1) / lws[0]) * lws[0];
+          cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1,
+                                                gws.data(), lws.data(), 0,
+                                                nullptr, nullptr);
+          clFinish(cl_q_);
+        }
+      }
+      // (i.2) v8c FC on (M_pad=4, K=2048) input -> (M_pad, N=1024)
+      //       output. Fresh scratch (separate from QKV's act_i8 etc
+      //       because K is different).
+      cl_mem wo_act_i8 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                        (size_t)M_pad * wo_K, nullptr, &err);
+      cl_mem wo_act_scale = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                           sizeof(float) * M_pad, nullptr,
+                                           &err);
+      cl_mem wo_act_zp = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                        sizeof(int) * M_pad, nullptr, &err);
+      cl_mem wo_act_rs = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                        sizeof(int) * M_pad, nullptr, &err);
+      cl_mem wo_y_fp16 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                        sizeof(uint16_t) * (size_t)M_pad *
+                                          wo_N,
+                                        nullptr, &err);
+      nntrainer::quantize_act_v8c_fp32_cl(o_fp32, wo_act_i8, wo_act_scale,
+                                          wo_act_zp, wo_act_rs, M_pad, wo_K);
+      cl_image_format wo_afmt{CL_RGBA, CL_UNSIGNED_INT32};
+      cl_image_desc wo_adesc{};
+      wo_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+      wo_adesc.image_width = wo_K / 16;
+      wo_adesc.image_height = M_pad;
+      wo_adesc.image_row_pitch = wo_K;
+      wo_adesc.buffer = wo_act_i8;
+      cl_mem wo_act_image = clCreateImage(cl_ctx_, CL_MEM_READ_ONLY,
+                                          &wo_afmt, &wo_adesc, nullptr,
+                                          &err);
+      nntrainer::gemm_int8_v8c_cl(wo_act_image, layer0_wo_.weight_image,
+                                  wo_act_scale, layer0_wo_.scale_buf,
+                                  wo_act_rs, wo_act_zp,
+                                  layer0_wo_.row_sum_w_int4, wo_y_fp16,
+                                  M_pad, wo_N, wo_K);
+      clFinish(cl_q_);
+      bool ok_wo = summarize_fp16_buf(cl_q_, wo_y_fp16, wo_N, "wo (att->h)");
+      // (i.3) Convert wo_out fp16 -> fp32, then add to x (in_buf) to form
+      //       the post-attention residual. Allocate the persistent
+      //       residual_1 cl_mem on first use.
+      cl_mem wo_out_fp32 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                          (size_t)wo_N * sizeof(float),
+                                          nullptr, &err);
+      {
+        auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+        int n = (int)wo_N;
+        kp->SetKernelArguments(0, &wo_y_fp16, sizeof(cl_mem));
+        kp->SetKernelArguments(1, &wo_out_fp32, sizeof(cl_mem));
+        kp->SetKernelArguments(2, &n, sizeof(int));
+        std::array<size_t, 1> gws = {(size_t)wo_N};
+        std::array<size_t, 1> lws = {64};
+        gws[0] = ((gws[0] + lws[0] - 1) / lws[0]) * lws[0];
+        cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                              lws.data(), 0, nullptr,
+                                              nullptr);
+        clFinish(cl_q_);
+      }
+      if (layer0_residual1_fp32_ == nullptr) {
+        layer0_residual1_fp32_ =
+          clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                         (size_t)wo_N * sizeof(float), nullptr, &err);
+      }
+      {
+        auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+        int n = (int)wo_N;
+        kp->SetKernelArguments(0, &in_buf, sizeof(cl_mem));
+        kp->SetKernelArguments(1, &wo_out_fp32, sizeof(cl_mem));
+        kp->SetKernelArguments(2, &layer0_residual1_fp32_, sizeof(cl_mem));
+        kp->SetKernelArguments(3, &n, sizeof(int));
+        std::array<size_t, 1> gws = {(size_t)wo_N};
+        std::array<size_t, 1> lws = {64};
+        gws[0] = ((gws[0] + lws[0] - 1) / lws[0]) * lws[0];
+        cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                              lws.data(), 0, nullptr,
+                                              nullptr);
+        clFinish(cl_q_);
+      }
+      // Custom fp32 summary for residual_1 (post wo + residual add).
+      {
+        std::vector<float> r(wo_N);
+        clEnqueueReadBuffer(cl_q_, layer0_residual1_fp32_, CL_TRUE, 0,
+                            (size_t)wo_N * sizeof(float), r.data(), 0,
+                            nullptr, nullptr);
+        bool finite = true;
+        float mn = std::numeric_limits<float>::infinity();
+        float mx = -mn;
+        for (unsigned int i = 0; i < wo_N; ++i) {
+          if (!std::isfinite(r[i])) finite = false;
+          if (r[i] < mn) mn = r[i];
+          if (r[i] > mx) mx = r[i];
+        }
+        std::fprintf(stderr,
+                     "[qwen3-gpu] residual_1 fp32 N=%u first 8:", wo_N);
+        for (int i = 0; i < 8; ++i)
+          std::fprintf(stderr, " %g", r[i]);
+        std::fprintf(stderr, "\n  last 4:");
+        for (int i = 0; i < 4; ++i)
+          std::fprintf(stderr, " %g", r[wo_N - 4 + i]);
+        std::fprintf(stderr,
+                     "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
+        ok_attn = ok_attn && ok_wo && finite;
+      }
+      clReleaseMemObject(wo_out_fp32);
+      clReleaseMemObject(wo_act_image);
+      clReleaseMemObject(wo_y_fp16);
+      clReleaseMemObject(wo_act_rs);
+      clReleaseMemObject(wo_act_zp);
+      clReleaseMemObject(wo_act_scale);
+      clReleaseMemObject(wo_act_i8);
+      clReleaseMemObject(o_fp32);
+    }
+
     if (q_svm) clSVMFree(cl_ctx_, q_svm);
     if (o_svm) clSVMFree(cl_ctx_, o_svm);
   }
@@ -1043,26 +1277,6 @@ bool Qwen3Forward::run_layer0_qkv_projection() {
 //   xy[h, k + half] = x_hi * cos[k] + x_lo * sin[k]
 // (compute_rotary_emb_value's transformed_value sign convention).
 // GWS = (num_heads, half); one WI per rotation pair.
-static const std::string kRopeFp16Kernel = R"CL(
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-__kernel void rope_fp16(__global half *xy,
-                        __global const half *cos_tbl,
-                        __global const half *sin_tbl,
-                        const int num_heads,
-                        const int half_d) {
-  int h = get_global_id(0);
-  int k = get_global_id(1);
-  if (h >= num_heads || k >= half_d) return;
-  int base = h * (half_d * 2);
-  half c = cos_tbl[k];
-  half s = sin_tbl[k];
-  half x_lo = xy[base + k];
-  half x_hi = xy[base + k + half_d];
-  xy[base + k]          = x_lo * c - x_hi * s;
-  xy[base + k + half_d] = x_hi * c + x_lo * s;
-}
-)CL";
-
 bool Qwen3Forward::precompute_rope_for_position(unsigned int position) {
   if (cl_ctx_ == nullptr) return false;
   const unsigned int d = cfg_.head_dim;

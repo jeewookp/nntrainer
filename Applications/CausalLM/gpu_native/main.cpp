@@ -99,6 +99,10 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] load_layer0_qkv_weights failed\n");
     return 6;
   }
+  if (!fwd.load_layer0_wo()) {
+    std::fprintf(stderr, "[main] load_layer0_wo failed\n");
+    return 11;
+  }
   if (!fwd.load_layer0_qk_norm_gammas()) {
     std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
     return 7;
@@ -122,7 +126,8 @@ int main(int argc, char **argv) {
   }
 
   std::fprintf(stderr,
-               "[main] step 5 OK (KV cache SVM + attention dispatch). "
-               "Next: wo + ffn block.\n");
+               "[main] step 6a OK (wo + residual_1 fp32). "
+               "Next: ffn block (ffn_norm + ffn_up/gate + swiglu + ffn_down "
+               "+ residual_2).\n");
   return 0;
 }
