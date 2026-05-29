@@ -128,6 +128,19 @@ else
     log_success "Android binary up to date"
 fi
 
+# Rebuild libnntrainer.so if any OpenCL kernel source is newer than the
+# prebuilt.  CL sources are embedded as C++ strings at meson build time, so
+# they require a full ninja rebuild — ndk-build alone won't update them.
+_PREBUILT_SO="$BUILD_DIR/android_build_result/lib/arm64-v8a/libnntrainer.so"
+if [ -f "$BUILD_DIR/build.ninja" ] && [ -f "$_PREBUILT_SO" ] && \
+   find "$NNTRAINER_ROOT/nntrainer/tensor/cl_operations/cl_kernels" -name "*.cl" \
+        -newer "$_PREBUILT_SO" 2>/dev/null | grep -q .; then
+    log_info "OpenCL kernel sources changed — rebuilding libnntrainer.so..."
+    ninja -C "$BUILD_DIR" install
+    log_success "libnntrainer.so rebuilt"
+fi
+unset _PREBUILT_SO
+
 # Linux meson build for nntr_quantize using a dedicated x86 builddir
 # (arm-arch=none → AVX path; avoids ARM NEON recompile of libnntrainer)
 QUANTIZE_BUILDDIR="$NNTRAINER_ROOT/builddir_quantize"
@@ -267,11 +280,14 @@ log_success "  nntrainer_causallm"
 push_if_changed() {
     local src="$1" dst="$2"
     local h_md5 d_md5
+    if [ ! -f "$src" ]; then
+        log_error "  $(basename "$src") not found on host: $src"; return 1
+    fi
     h_md5=$(md5sum "$src" | cut -d' ' -f1)
     d_md5=$(adb shell "md5sum '$dst' 2>/dev/null" | awk '{print $1}' | tr -d '[:space:]')
     if [ "$h_md5" != "$d_md5" ]; then
         log_info "  Pushing $(basename "$src") ($(du -h "$src" | cut -f1))..."
-        adb push "$src" "$dst"
+        adb push "$src" "$dst" || { log_error "  adb push failed for $(basename "$src")"; return 1; }
     fi
     log_success "  $(basename "$src")"
 }
