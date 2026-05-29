@@ -316,6 +316,80 @@ __kernel void sv_matmul_f16(
 }
 
 // =============================================================
+// §3.8 V OHWI-reversed variant of sv_matmul_f16.
+// V is laid out as [H_kv, d, S_max] (per-head, per-d sequential
+// over the S/cache axis) — the OHWI "reversed" form so the inner
+// reduction over n reads V at stride-1 (cache-friendly) instead of
+// stride HD_KV (concat layout).
+//
+// Element index: V[(long)head_kv * d * S_max + x * S_max + n]
+//
+// Trade-off: per-iteration we still read TD_SV halves with stride
+// S_max (not coalesced within one n), but cross-n reads are
+// sequential at stride 1 — the dominant pattern at large N_kv
+// where the cache miss matters.
+// =============================================================
+__kernel void sv_matmul_f16_ohwi(
+    __global const half *scores,      // [H, M, N_kv] fp16, post-softmax
+    __global const half *V,           // [H_kv, d, S_max] fp16 OHWI-reversed
+    __global       half *O,           // [M, HD_Q] fp16, row-major
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int S_max, const int gqa) {
+  const int x0 = get_global_id(0) * TD_SV;
+  const int m0 = get_global_id(1) * TM_SV;
+  const int head_q = get_global_id(2);
+  const int head_kv = head_q / gqa;
+
+  if (m0 >= M || x0 >= d) return;
+
+  float acc[TM_SV][TD_SV];
+  #pragma unroll
+  for (int i = 0; i < TM_SV; i++)
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) acc[i][j] = 0.0f;
+
+  const long score_base = (long)head_q * (long)M * (long)N_kv;
+  const long v_head_base = (long)head_kv * (long)d * (long)S_max;
+
+  for (int n = 0; n < N_kv; n++) {
+    half s_col[TM_SV];
+    half v_col[TD_SV];
+    #pragma unroll
+    for (int i = 0; i < TM_SV; i++) {
+      const int m = m0 + i;
+      s_col[i] = (m < M)
+                   ? scores[score_base + (long)m * N_kv + n]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) {
+      const int x = x0 + j;
+      v_col[j] = (x < d)
+                   ? V[v_head_base + (long)x * S_max + n]
+                   : (half)0.0f;
+    }
+    #pragma unroll
+    for (int i = 0; i < TM_SV; i++) {
+      const float sf = (float)s_col[i];
+      #pragma unroll
+      for (int j = 0; j < TD_SV; j++) acc[i][j] += sf * (float)v_col[j];
+    }
+  }
+
+  #pragma unroll
+  for (int i = 0; i < TM_SV; i++) {
+    const int m = m0 + i;
+    if (m >= M) continue;
+    #pragma unroll
+    for (int j = 0; j < TD_SV; j++) {
+      const int x = x0 + j;
+      if (x >= d) continue;
+      O[(long)m * HD_Q + head_q * d + x] = (half)acc[i][j];
+    }
+  }
+}
+
+// =============================================================
 // int8-KV variants (paper §3.7 int8 KV path).
 // K/V cache is stored as signed int8 bytes; a per-(token, head)
 // FP16 amax scale lifts the int8 values back to fp16 range.

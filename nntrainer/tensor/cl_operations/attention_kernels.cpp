@@ -1297,6 +1297,170 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
 }
 
 // =============================================================================
+// §3.8 FULL OHWI variant: K = OHWI [H_kv, S_max, d], V = OHWI-reversed
+// [H_kv, d, S_max]. K1 uses qk_matmul_f16_ohwi (same as _ohwi_cl), K3
+// uses sv_matmul_f16_ohwi (new). softmax_row_f16 unchanged — scores
+// layout is independent of K/V layout.
+// =============================================================================
+bool two_conv_attention_prefill_f16_ohwi_full_cl(
+  const uint16_t *Q_host, const uint16_t *K_host, const uint16_t *V_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal, bool svm_inputs) {
+  if (head_dim == 0 || M == 0 || N_kv == 0 || max_seq_len == 0) return false;
+  if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
+  if (N_kv > max_seq_len) return false;
+  constexpr unsigned int TM_QK = 4, TN_QK = 8;
+  constexpr unsigned int TM_SV = 4, TD_SV = 8;
+  constexpr unsigned int SOFTMAX_LWS = 64;
+  if (head_dim % TD_SV != 0) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+
+  const size_t HD_Q = (size_t)num_heads_Q * head_dim;
+  const size_t q_bytes = (size_t)M * HD_Q * sizeof(uint16_t);
+  // K and V buffers BOTH the full per-batch slab.
+  const size_t kv_slab_bytes =
+    (size_t)num_heads_KV * max_seq_len * head_dim * sizeof(uint16_t);
+  const size_t o_bytes = (size_t)M * HD_Q * sizeof(uint16_t);
+  const size_t scores_bytes =
+    (size_t)num_heads_Q * M * N_kv * sizeof(uint16_t);
+
+  std::lock_guard<std::mutex> lock(tca_mtx());
+  TcaScratch &sc = tca_scratch();
+  if (!tca_ensure(ctx, &sc.scores, &sc.scores_bytes, scores_bytes,
+                  CL_MEM_READ_WRITE))
+    return false;
+
+  cl_mem q_arg = nullptr, k_arg = nullptr, v_arg = nullptr, o_arg = nullptr;
+  if (!svm_inputs) {
+    if (!tca_ensure(ctx, &sc.q_buf, &sc.q_bytes, q_bytes, CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.k_buf, &sc.k_bytes, kv_slab_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.v_buf, &sc.v_bytes, kv_slab_bytes,
+                    CL_MEM_READ_ONLY) ||
+        !tca_ensure(ctx, &sc.o_buf, &sc.o_bytes, o_bytes, CL_MEM_WRITE_ONLY))
+      return false;
+    if (clEnqueueWriteBuffer(q, sc.q_buf, CL_FALSE, 0, q_bytes, Q_host, 0,
+                             nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.k_buf, CL_FALSE, 0, kv_slab_bytes, K_host,
+                             0, nullptr, nullptr) != CL_SUCCESS ||
+        clEnqueueWriteBuffer(q, sc.v_buf, CL_FALSE, 0, kv_slab_bytes, V_host,
+                             0, nullptr, nullptr) != CL_SUCCESS)
+      return false;
+    q_arg = sc.q_buf;
+    k_arg = sc.k_buf;
+    v_arg = sc.v_buf;
+    o_arg = sc.o_buf;
+  }
+
+  clFinish(q);
+
+  // ---- K1: QK matmul OHWI (same as half-OHWI variant) ----
+  {
+    ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+      two_conv_attention_kernel, "qk_matmul_f16_ohwi");
+    if (!kp) return false;
+    if (svm_inputs) {
+      if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
+          !kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_host)))
+        return false;
+    } else {
+      if (!kp->SetKernelArguments(0, &q_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(1, &k_arg, sizeof(cl_mem)))
+        return false;
+    }
+    if (!kp->SetKernelArguments(2, &sc.scores, sizeof(cl_mem))) return false;
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, smax = (int)max_seq_len;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    int causal_i = causal ? 1 : 0;
+    float scale = 1.0f / std::sqrt((float)head_dim);
+    if (!kp->SetKernelArguments(3, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &smax, sizeof(int)) ||
+        !kp->SetKernelArguments(8, &gqa, sizeof(int)) ||
+        !kp->SetKernelArguments(9, &causal_i, sizeof(int)) ||
+        !kp->SetKernelArguments(10, &scale, sizeof(float)))
+      return false;
+    const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
+    const size_t mx = (M + TM_QK - 1) / TM_QK;
+    constexpr size_t LWS_QK_X = 64;
+    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  // ---- K2: row softmax (unchanged) ----
+  {
+    ClContext::SharedPtrClKernel kp =
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
+    int Mi = (int)M, Nkvi = (int)N_kv;
+    if (!kp->SetKernelArguments(1, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(2, &Nkvi, sizeof(int)))
+      return false;
+    std::array<size_t, 3> gws = {SOFTMAX_LWS, M, num_heads_Q};
+    std::array<size_t, 3> lws = {SOFTMAX_LWS, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  // ---- K3: scores @ V (V OHWI-reversed) -> O via sv_matmul_f16_ohwi ----
+  {
+    ClContext::SharedPtrClKernel kp =
+      blas_cc->registerClKernel(two_conv_attention_kernel,
+                                "sv_matmul_f16_ohwi");
+    if (!kp) return false;
+    if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
+    if (svm_inputs) {
+      if (!kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(V_host)) ||
+          !kp->SetKernelSVMArguments(2, O_host))
+        return false;
+    } else {
+      if (!kp->SetKernelArguments(1, &v_arg, sizeof(cl_mem)) ||
+          !kp->SetKernelArguments(2, &o_arg, sizeof(cl_mem)))
+        return false;
+    }
+    int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+    int hdq = (int)HD_Q, smax = (int)max_seq_len;
+    int gqa = (int)(num_heads_Q / num_heads_KV);
+    if (!kp->SetKernelArguments(3, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &Nkvi, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &hdq, sizeof(int)) ||
+        !kp->SetKernelArguments(7, &smax, sizeof(int)) || // S_max for V stride
+        !kp->SetKernelArguments(8, &gqa, sizeof(int)))
+      return false;
+    const size_t dx = (head_dim + TD_SV - 1) / TD_SV;
+    const size_t mx = (M + TM_SV - 1) / TM_SV;
+    constexpr size_t LWS_SV_X = 64;
+    const size_t dx_pad = ((dx + LWS_SV_X - 1) / LWS_SV_X) * LWS_SV_X;
+    std::array<size_t, 3> gws = {dx_pad, mx, num_heads_Q};
+    std::array<size_t, 3> lws = {LWS_SV_X, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                               lws.data(), 0, nullptr, nullptr);
+  }
+
+  if (svm_inputs) {
+    clFinish(q);
+  } else {
+    if (clEnqueueReadBuffer(q, sc.o_buf, CL_TRUE, 0, o_bytes, O_host, 0,
+                            nullptr, nullptr) != CL_SUCCESS)
+      return false;
+  }
+  return true;
+}
+
+// =============================================================================
 // Step #1 (skeleton) of the GPU mha migration. flash-attention single-
 // kernel prefill. See attention_kernels.h declaration + flash_attention.cl
 // for the kernel-side design + memory budget. This wrapper is the host

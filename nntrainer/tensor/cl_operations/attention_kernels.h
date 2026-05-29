@@ -147,6 +147,19 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal, bool svm_inputs = false);
 
+/// §3.8 FULL-OHWI variant: K is OHWI [H_kv, S_max, d] AND V is OHWI-
+/// reversed [H_kv, d, S_max]. Same three-kernel pipeline as the
+/// half-OHWI variant; only K3 (sv_matmul) changes — uses
+/// sv_matmul_f16_ohwi which reads V at stride-1 per n (cache-
+/// friendly across the reduction). Caller must scatter both K and V
+/// caches into their respective OHWI layouts. Same SVM input
+/// semantics as _ohwi_cl.
+bool two_conv_attention_prefill_f16_ohwi_full_cl(
+  const uint16_t *Q_host, const uint16_t *K_host, const uint16_t *V_host,
+  uint16_t *O_host, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal, bool svm_inputs = false);
+
 /// Single-kernel flash-attention prefill (paper §3.6 fusion +
 /// Dao et al. 2022 online softmax). Replaces the three-kernel
 /// two_conv_attention pipeline with one kernel that does QK · softmax

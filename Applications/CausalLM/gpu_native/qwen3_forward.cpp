@@ -65,6 +65,29 @@ __kernel void add_fp32(__global const float *a, __global const float *b,
 }
 )CL";
 
+// §3.8 V OHWI-reversed scatter: copy fp16 V from concat layout
+// [M, hKV*d] to OHWI-reversed [hKV, d, max_S] at position offset.
+// One WI per (t, h, x) destination element. Reads are strided in
+// source (hKV*d apart per t), writes are scattered in dest — but
+// the destination is what the sv_matmul_f16_ohwi kernel reads
+// sequentially, so this write-side cost is amortized by attention.
+// GWS = (M, hKV, d). For typical sizes 1024 * 8 * 128 = 1M WIs.
+static const std::string kVScatterOhwiTKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void v_scatter_ohwi_t(__global const half *src,
+                               __global half *dst,
+                               const int M, const int hKV,
+                               const int d, const int max_S,
+                               const int position) {
+  int t = get_global_id(0);
+  int h = get_global_id(1);
+  int x = get_global_id(2);
+  if (t >= M || h >= hKV || x >= d) return;
+  dst[(long)h * d * max_S + (long)x * max_S + position + t] =
+    src[(long)t * hKV * d + (long)h * d + x];
+}
+)CL";
+
 // SwiGLU element-wise: out[i] = silu(gate[i]) * up[i]
 //   silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
 // fp32 throughout (matches the residual stream dtype). One WI per element.
@@ -2659,7 +2682,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
   }
-  // V: concat copy (unchanged).
+  // V: concat copy (single sequential memcpy). The naive
+  // sv_matmul_f16_ohwi V layout proved slower at large M due to
+  // uncoalesced intra-iteration reads (kernel exists in
+  // attention_kernels.cpp as `two_conv_attention_prefill_f16_ohwi_full_cl`
+  // for future redesign; not used here). Half-OHWI (K only, V concat)
+  // is the current production setting until V kernel is redesigned.
   {
     cl_int e;
     void *p_v = clEnqueueMapBuffer(cl_q_, scratch_.y_v, CL_TRUE, CL_MAP_READ,
@@ -2691,11 +2719,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
   }
-  // Paper §3.8 K OHWI: per-head sequential K reads inside qk_matmul,
-  // cache-friendly. V stays concat (sv_matmul reuses the original
-  // sv_matmul_f16 kernel via this wrapper). The OHWI wrapper takes
-  // an extra max_seq_len argument = the per-head index stride in the
-  // K SVM buffer (matches what we used when allocating cache_k_svm).
+  // Paper §3.8 K OHWI (half-OHWI): K is OHWI [hKV, S_max, d]
+  // (sequential per-head reads in qk_matmul_f16_ohwi). V stays
+  // concat — full OHWI proved slower due to V kernel's intra-
+  // iteration uncoalesced reads; redesign tracked as a sub-task.
   bool attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_cl(
     static_cast<const uint16_t *>(scratch_.q_svm),
     static_cast<const uint16_t *>(lw.cache_k_svm),
