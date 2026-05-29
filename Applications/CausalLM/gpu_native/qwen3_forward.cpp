@@ -64,6 +64,22 @@ __kernel void add_fp32(__global const float *a, __global const float *b,
 }
 )CL";
 
+// SwiGLU element-wise: out[i] = silu(gate[i]) * up[i]
+//   silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
+// fp32 throughout (matches the residual stream dtype). One WI per element.
+static const std::string kSwigluFp32Kernel = R"CL(
+__kernel void swiglu_fp32(__global const float *gate,
+                          __global const float *up,
+                          __global float *out, const int n) {
+  int i = get_global_id(0);
+  if (i < n) {
+    float g = gate[i];
+    float s = g / (1.0f + exp(-g));
+    out[i] = s * up[i];
+  }
+}
+)CL";
+
 // fp16 RoPE: in-place rotation of [num_heads, head_dim] fp16 buffer.
 // cos/sin tables are doubled-half (cos[k+half] = cos[k], sin[k+half] =
 // sin[k]) to match the CPU mha_core convention. GWS = (num_heads,
@@ -91,12 +107,19 @@ __kernel void rope_fp16(__global half *xy,
 Qwen3Forward::Qwen3Forward() = default;
 
 Qwen3Forward::~Qwen3Forward() {
+  if (layer0_output_fp32_ != nullptr)
+    clReleaseMemObject(layer0_output_fp32_);
   if (layer0_residual1_fp32_ != nullptr)
     clReleaseMemObject(layer0_residual1_fp32_);
+  if (layer0_ffn_norm_gamma_svm_ != nullptr && cl_ctx_ != nullptr)
+    clSVMFree(cl_ctx_, layer0_ffn_norm_gamma_svm_);
   release_v8c_weight(&layer0_wq_);
   release_v8c_weight(&layer0_wk_);
   release_v8c_weight(&layer0_wv_);
   release_v8c_weight(&layer0_wo_);
+  release_v8c_weight(&layer0_ffn_up_);
+  release_v8c_weight(&layer0_ffn_gate_);
+  release_v8c_weight(&layer0_ffn_down_);
   if (layer0_cache_k_svm_ != nullptr && cl_ctx_ != nullptr)
     clSVMFree(cl_ctx_, layer0_cache_k_svm_);
   if (layer0_cache_v_svm_ != nullptr && cl_ctx_ != nullptr)
@@ -1376,6 +1399,333 @@ bool Qwen3Forward::run_layer0_rope_on_qk(cl_mem y_q, cl_mem y_k) {
   if (!dispatch_one(y_q, cfg_.num_heads_Q, "Q")) return false;
   if (!dispatch_one(y_k, cfg_.num_heads_KV, "K")) return false;
   clFinish(cl_q_);
+  return true;
+}
+
+bool Qwen3Forward::load_layer0_ffn_weights() {
+  // After wo there are NO weights for decoder_add. ffn_norm gamma is
+  // the next slab, then ffn_up, ffn_gate, ffn_down.
+  const size_t embed_bytes = embed_table_bytes();
+  const size_t attn_norm_bytes =
+    static_cast<size_t>(cfg_.hidden_size) * sizeof(float);
+  const size_t head_dim_bytes =
+    static_cast<size_t>(cfg_.head_dim) * sizeof(float);
+  const unsigned int K_h = cfg_.hidden_size;
+  const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
+  const size_t wq_bytes =
+    sizeof(uint16_t) + (size_t)K_h * N_q / 2 + (size_t)N_q * 2;
+  const size_t wk_bytes =
+    sizeof(uint16_t) + (size_t)K_h * N_kv / 2 + (size_t)N_kv * 2;
+  const size_t wv_bytes = wk_bytes;
+  const size_t wo_K = N_q;
+  const size_t wo_N = K_h;
+  const size_t wo_bytes =
+    sizeof(uint16_t) + wo_K * wo_N / 2 + (size_t)wo_N * 2;
+
+  const size_t wq_off = embed_bytes + attn_norm_bytes;
+  const size_t wk_off = wq_off + wq_bytes + head_dim_bytes;
+  const size_t wv_off = wk_off + wk_bytes + head_dim_bytes;
+  const size_t wo_off = wv_off + wv_bytes;
+  const size_t ffn_norm_off = wo_off + wo_bytes;
+  // ffn_norm gamma fp32 [hidden] = hidden * 4 bytes
+  const size_t ffn_norm_bytes =
+    (size_t)cfg_.hidden_size * sizeof(float);
+  // ffn_up: K=hidden, N=intermediate
+  const unsigned int up_K = cfg_.hidden_size;
+  const unsigned int up_N = cfg_.intermediate_size;
+  const size_t up_bytes =
+    sizeof(uint16_t) + (size_t)up_K * up_N / 2 + (size_t)up_N * 2;
+  // ffn_gate: same shape as ffn_up
+  const size_t gate_bytes = up_bytes;
+  // ffn_down: K=intermediate, N=hidden
+  const unsigned int dn_K = cfg_.intermediate_size;
+  const unsigned int dn_N = cfg_.hidden_size;
+
+  const size_t ffn_up_off = ffn_norm_off + ffn_norm_bytes;
+  const size_t ffn_gate_off = ffn_up_off + up_bytes;
+  const size_t ffn_down_off = ffn_gate_off + gate_bytes;
+
+  // (a) ffn_norm gamma load to SVM (fp32 path matches rmsnorm.cl).
+  if (layer0_ffn_norm_gamma_svm_ == nullptr) {
+    if (ffn_norm_off + ffn_norm_bytes > weight_bytes_) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] ffn_norm gamma offset out of range\n");
+      return false;
+    }
+    const float *gp =
+      reinterpret_cast<const float *>(weight_mmap_ + ffn_norm_off);
+    std::fprintf(stderr,
+                 "[qwen3-gpu] ffn_norm off=%zu (~%zu KB) first 8:",
+                 ffn_norm_off, ffn_norm_off / 1024);
+    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", gp[i]);
+    std::fprintf(stderr, "\n");
+    layer0_ffn_norm_gamma_svm_ =
+      clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, ffn_norm_bytes, 0);
+    if (layer0_ffn_norm_gamma_svm_ == nullptr) {
+      std::fprintf(stderr, "[qwen3-gpu] ffn_norm SVMAlloc failed\n");
+      return false;
+    }
+    cl_int err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE,
+                                 layer0_ffn_norm_gamma_svm_, ffn_norm_bytes,
+                                 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) return false;
+    std::memcpy(layer0_ffn_norm_gamma_svm_, gp, ffn_norm_bytes);
+    clEnqueueSVMUnmap(cl_q_, layer0_ffn_norm_gamma_svm_, 0, nullptr,
+                      nullptr);
+    clFinish(cl_q_);
+  }
+
+  // (b) Three QINT4 FCs: ffn_up, ffn_gate, ffn_down.
+  return load_qint4_weight_at(ffn_up_off, up_K, up_N, &layer0_ffn_up_,
+                              "ffn_up") &&
+         load_qint4_weight_at(ffn_gate_off, up_K, up_N, &layer0_ffn_gate_,
+                              "ffn_gate") &&
+         load_qint4_weight_at(ffn_down_off, dn_K, dn_N, &layer0_ffn_down_,
+                              "ffn_down");
+}
+
+bool Qwen3Forward::run_layer0_ffn() {
+  if (layer0_residual1_fp32_ == nullptr ||
+      layer0_ffn_norm_gamma_svm_ == nullptr ||
+      layer0_ffn_up_.backing == nullptr ||
+      layer0_ffn_gate_.backing == nullptr ||
+      layer0_ffn_down_.backing == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] run_layer0_ffn: residual_1 or weights not "
+                 "loaded\n");
+    return false;
+  }
+  cl_int err = CL_SUCCESS;
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+
+  const unsigned int M_pad = 4;
+  const unsigned int K_h = cfg_.hidden_size;        // 1024
+  const unsigned int I = cfg_.intermediate_size;    // 3072
+
+  // (a) ffn_norm.cl on residual_1 (fp32 [K_h]) -> ffn_normed (fp32).
+  //     Need M_pad rows for the v8c quantize/GEMM tile alignment, so
+  //     allocate a [M_pad * K_h] buffer with residual_1 in row 0 and
+  //     zeros elsewhere. residual_1_fp32_ is [K_h]; clEnqueueCopyBuffer
+  //     into row 0.
+  const size_t row_h_bytes = (size_t)K_h * sizeof(float);
+  cl_mem ffn_in_padded =
+    clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                   (size_t)M_pad * row_h_bytes, nullptr, &err);
+  float zero = 0.0f;
+  clEnqueueFillBuffer(cl_q_, ffn_in_padded, &zero, sizeof(float), 0,
+                      (size_t)M_pad * row_h_bytes, 0, nullptr, nullptr);
+  clEnqueueCopyBuffer(cl_q_, layer0_residual1_fp32_, ffn_in_padded, 0, 0,
+                      row_h_bytes, 0, nullptr, nullptr);
+  cl_mem ffn_normed = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                     (size_t)M_pad * row_h_bytes, nullptr,
+                                     &err);
+  {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
+    float eps = cfg_.rms_norm_eps;
+    int H = (int)M_pad, W = (int)K_h;
+    if (!kp ||
+        !kp->SetKernelArguments(0, &ffn_in_padded, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &ffn_normed, sizeof(cl_mem)) ||
+        !kp->SetKernelSVMArguments(2, layer0_ffn_norm_gamma_svm_) ||
+        !kp->SetKernelArguments(3, &eps, sizeof(float)) ||
+        !kp->SetKernelArguments(4, &H, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &W, sizeof(int))) {
+      std::fprintf(stderr, "[qwen3-gpu] ffn rmsnorm args failed\n");
+      return false;
+    }
+    std::array<size_t, 1> gws = {(size_t)M_pad * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(cl_q_);
+  }
+
+  // (b) Shared activation quant for ffn_up + ffn_gate.
+  cl_mem act_i8 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                 (size_t)M_pad * K_h, nullptr, &err);
+  cl_mem act_scale = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    sizeof(float) * M_pad, nullptr, &err);
+  cl_mem act_zp = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                 sizeof(int) * M_pad, nullptr, &err);
+  cl_mem act_rs = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                 sizeof(int) * M_pad, nullptr, &err);
+  nntrainer::quantize_act_v8c_fp32_cl(ffn_normed, act_i8, act_scale, act_zp,
+                                      act_rs, M_pad, K_h);
+  cl_image_format afmt{CL_RGBA, CL_UNSIGNED_INT32};
+  cl_image_desc adesc{};
+  adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  adesc.image_width = K_h / 16;
+  adesc.image_height = M_pad;
+  adesc.image_row_pitch = K_h;
+  adesc.buffer = act_i8;
+  cl_mem act_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
+
+  // (c) GEMM ffn_up -> up_fp16, GEMM ffn_gate -> gate_fp16.
+  cl_mem up_fp16 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                  sizeof(uint16_t) * (size_t)M_pad * I,
+                                  nullptr, &err);
+  cl_mem gate_fp16 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    sizeof(uint16_t) * (size_t)M_pad * I,
+                                    nullptr, &err);
+  nntrainer::gemm_int8_v8c_cl(act_image, layer0_ffn_up_.weight_image,
+                              act_scale, layer0_ffn_up_.scale_buf, act_rs,
+                              act_zp, layer0_ffn_up_.row_sum_w_int4,
+                              up_fp16, M_pad, I, K_h);
+  nntrainer::gemm_int8_v8c_cl(act_image, layer0_ffn_gate_.weight_image,
+                              act_scale, layer0_ffn_gate_.scale_buf, act_rs,
+                              act_zp, layer0_ffn_gate_.row_sum_w_int4,
+                              gate_fp16, M_pad, I, K_h);
+  clFinish(cl_q_);
+
+  // (d) Convert up/gate fp16 -> fp32 (for swiglu in fp32) and swiglu.
+  cl_mem up_fp32 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                  (size_t)I * sizeof(float), nullptr, &err);
+  cl_mem gate_fp32 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    (size_t)I * sizeof(float), nullptr,
+                                    &err);
+  auto dispatch_cvt = [&](cl_mem in_fp16, cl_mem out_fp32, unsigned int n,
+                          const char *tag) -> bool {
+    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+    int ni = (int)n;
+    if (!kp ||
+        !kp->SetKernelArguments(0, &in_fp16, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &out_fp32, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(2, &ni, sizeof(int))) {
+      std::fprintf(stderr, "[qwen3-gpu] ffn %s cvt args failed\n", tag);
+      return false;
+    }
+    std::array<size_t, 1> gws = {((size_t)n + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    return true;
+  };
+  dispatch_cvt(up_fp16, up_fp32, I, "up");
+  dispatch_cvt(gate_fp16, gate_fp32, I, "gate");
+  clFinish(cl_q_);
+
+  cl_mem swiglu_out = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                     (size_t)M_pad * I * sizeof(float),
+                                     nullptr, &err);
+  clEnqueueFillBuffer(cl_q_, swiglu_out, &zero, sizeof(float), 0,
+                      (size_t)M_pad * I * sizeof(float), 0, nullptr, nullptr);
+  {
+    auto kp = cl->registerClKernel(kSwigluFp32Kernel, "swiglu_fp32");
+    int n = (int)I;
+    kp->SetKernelArguments(0, &gate_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &up_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &swiglu_out, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)I + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(cl_q_);
+  }
+
+  // (e) quantize swiglu_out + v8c(ffn_down) -> ffn_down_out fp16.
+  cl_mem dn_act_i8 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    (size_t)M_pad * I, nullptr, &err);
+  cl_mem dn_act_scale = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                       sizeof(float) * M_pad, nullptr, &err);
+  cl_mem dn_act_zp = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    sizeof(int) * M_pad, nullptr, &err);
+  cl_mem dn_act_rs = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                    sizeof(int) * M_pad, nullptr, &err);
+  nntrainer::quantize_act_v8c_fp32_cl(swiglu_out, dn_act_i8, dn_act_scale,
+                                      dn_act_zp, dn_act_rs, M_pad, I);
+  cl_image_desc dn_adesc{};
+  dn_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dn_adesc.image_width = I / 16;
+  dn_adesc.image_height = M_pad;
+  dn_adesc.image_row_pitch = I;
+  dn_adesc.buffer = dn_act_i8;
+  cl_mem dn_act_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &dn_adesc, nullptr,
+                  &err);
+  cl_mem dn_fp16 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                  sizeof(uint16_t) * (size_t)M_pad * K_h,
+                                  nullptr, &err);
+  nntrainer::gemm_int8_v8c_cl(dn_act_image, layer0_ffn_down_.weight_image,
+                              dn_act_scale, layer0_ffn_down_.scale_buf,
+                              dn_act_rs, dn_act_zp,
+                              layer0_ffn_down_.row_sum_w_int4, dn_fp16,
+                              M_pad, K_h, I);
+  clFinish(cl_q_);
+  summarize_fp16_buf(cl_q_, dn_fp16, K_h, "ffn_down");
+
+  // (f) cvt dn_fp16 -> fp32, then residual_2 = residual_1 + dn_fp32.
+  cl_mem dn_fp32 = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                  (size_t)K_h * sizeof(float), nullptr,
+                                  &err);
+  dispatch_cvt(dn_fp16, dn_fp32, K_h, "dn");
+  clFinish(cl_q_);
+
+  if (layer0_output_fp32_ == nullptr) {
+    layer0_output_fp32_ = clCreateBuffer(cl_ctx_, CL_MEM_READ_WRITE,
+                                         (size_t)K_h * sizeof(float),
+                                         nullptr, &err);
+  }
+  {
+    auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+    int n = (int)K_h;
+    kp->SetKernelArguments(0, &layer0_residual1_fp32_, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &dn_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &layer0_output_fp32_, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(cl_q_);
+  }
+
+  // (g) Custom fp32 summary for layer 0 output.
+  {
+    std::vector<float> r(K_h);
+    clEnqueueReadBuffer(cl_q_, layer0_output_fp32_, CL_TRUE, 0,
+                        (size_t)K_h * sizeof(float), r.data(), 0, nullptr,
+                        nullptr);
+    bool finite = true;
+    float mn = std::numeric_limits<float>::infinity();
+    float mx = -mn;
+    for (unsigned int i = 0; i < K_h; ++i) {
+      if (!std::isfinite(r[i])) finite = false;
+      if (r[i] < mn) mn = r[i];
+      if (r[i] > mx) mx = r[i];
+    }
+    std::fprintf(stderr,
+                 "[qwen3-gpu] layer0 output fp32 N=%u first 8:", K_h);
+    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", r[i]);
+    std::fprintf(stderr, "\n  last 4:");
+    for (int i = 0; i < 4; ++i) std::fprintf(stderr, " %g", r[K_h - 4 + i]);
+    std::fprintf(stderr,
+                 "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
+    if (!finite) return false;
+  }
+
+  clReleaseMemObject(dn_fp32);
+  clReleaseMemObject(dn_fp16);
+  clReleaseMemObject(dn_act_image);
+  clReleaseMemObject(dn_act_rs);
+  clReleaseMemObject(dn_act_zp);
+  clReleaseMemObject(dn_act_scale);
+  clReleaseMemObject(dn_act_i8);
+  clReleaseMemObject(swiglu_out);
+  clReleaseMemObject(gate_fp32);
+  clReleaseMemObject(up_fp32);
+  clReleaseMemObject(gate_fp16);
+  clReleaseMemObject(up_fp16);
+  clReleaseMemObject(act_image);
+  clReleaseMemObject(act_rs);
+  clReleaseMemObject(act_zp);
+  clReleaseMemObject(act_scale);
+  clReleaseMemObject(act_i8);
+  clReleaseMemObject(ffn_normed);
+  clReleaseMemObject(ffn_in_padded);
   return true;
 }
 

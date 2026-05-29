@@ -117,6 +117,22 @@ public:
   /// calculation just chains off load_layer0_qkv_weights's layout.
   bool load_layer0_wo();
 
+  /// Load layer 0's FFN block weights: ffn_norm gamma (fp32 [hidden]
+  /// pushed to SVM), ffn_up + ffn_gate (QINT4 K=hidden, N=intermediate),
+  /// ffn_down (QINT4 K=intermediate, N=hidden). Save order (per
+  /// transformer.cpp::createMlp): ffn_up, ffn_gate, ffn_down — and
+  /// they sit right after the ffn_norm gamma which itself sits right
+  /// after wo + decoder_add (no weights).
+  bool load_layer0_ffn_weights();
+
+  /// Run the FFN block on the post-attention residual:
+  ///   ffn_norm.cl -> quantize_act -> v8c(ffn_up), v8c(ffn_gate)
+  ///   -> swiglu -> quantize_act -> v8c(ffn_down) -> add residual_1
+  ///   -> layer0_output.
+  /// Requires layer0_residual1_fp32_ to be populated (run after
+  /// run_layer0_qkv_projection in step 6a). Prints summary stats.
+  bool run_layer0_ffn();
+
   /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
   /// the mmap'd weights. They sit between wq/wk and wk/wv in the
   /// save order. Pushed into SVM as fp16 (the rmsnorm_cl_fp16 kernel
@@ -218,11 +234,18 @@ private:
   V8cFcWeight layer0_wk_{};
   V8cFcWeight layer0_wv_{};
   V8cFcWeight layer0_wo_{};
+  // Layer 0 FFN block weights.
+  V8cFcWeight layer0_ffn_up_{};
+  V8cFcWeight layer0_ffn_gate_{};
+  V8cFcWeight layer0_ffn_down_{};
+  // ffn_norm gamma (fp32, [hidden]) in SVM.
+  void *layer0_ffn_norm_gamma_svm_ = nullptr;
 
   // Persistent buffers for the layer-0 residual stream. Allocated lazily
   // by the forward step that needs them; lives for the layer-0 forward
   // pass (subsequent steps in this layer read them; freed in destructor).
   cl_mem layer0_residual1_fp32_ = nullptr; // [hidden] = x + wo(O)
+  cl_mem layer0_output_fp32_    = nullptr; // [hidden] = residual_1 + ffn(.)
 
   /// Generic loader: parses one Int4QTensor blob at the given file
   /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates

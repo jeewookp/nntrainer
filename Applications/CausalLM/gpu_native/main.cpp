@@ -103,6 +103,10 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[main] load_layer0_wo failed\n");
     return 11;
   }
+  if (!fwd.load_layer0_ffn_weights()) {
+    std::fprintf(stderr, "[main] load_layer0_ffn_weights failed\n");
+    return 12;
+  }
   if (!fwd.load_layer0_qk_norm_gammas()) {
     std::fprintf(stderr, "[main] load_layer0_qk_norm_gammas failed\n");
     return 7;
@@ -125,9 +129,16 @@ int main(int argc, char **argv) {
     return 10;
   }
 
+  if (!fwd.run_layer0_ffn()) {
+    std::fprintf(stderr, "[main] run_layer0_ffn failed\n");
+    return 13;
+  }
+
   std::fprintf(stderr,
-               "[main] step 6a OK (wo + residual_1 fp32). "
-               "Next: ffn block (ffn_norm + ffn_up/gate + swiglu + ffn_down "
-               "+ residual_2).\n");
+               "[main] step 6 OK (layer 0 full forward complete: rmsnorm -> "
+               "QKV -> q_norm/k_norm -> RoPE -> KV cache -> attention -> "
+               "wo + residual_1 -> ffn_norm -> ffn_up/gate -> swiglu -> "
+               "ffn_down -> residual_2 -> layer 0 output).\n"
+               "Next: chain 28 layers + lm_head + first token sampling.\n");
   return 0;
 }
