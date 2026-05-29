@@ -108,6 +108,30 @@ __kernel void rope_fp16(__global half *xy,
 Qwen3Forward::Qwen3Forward() = default;
 
 Qwen3Forward::~Qwen3Forward() {
+  // ForwardScratch persistent cl_mems / SVM
+  {
+    auto rel = [&](cl_mem &m) { if (m) { clReleaseMemObject(m); m = nullptr; } };
+    auto svm = [&](void *&p) { if (p && cl_ctx_) { clSVMFree(cl_ctx_, p); p = nullptr; } };
+    rel(scratch_.in_padded);    rel(scratch_.attn_normed);
+    rel(scratch_.qkv_act_i8);   rel(scratch_.qkv_act_scale);
+    rel(scratch_.qkv_act_zp);   rel(scratch_.qkv_act_rs);
+    rel(scratch_.y_q);          rel(scratch_.y_k);          rel(scratch_.y_v);
+    svm(scratch_.q_svm);        svm(scratch_.o_svm);
+    rel(scratch_.o_fp32);
+    rel(scratch_.wo_act_i8);    rel(scratch_.wo_act_scale);
+    rel(scratch_.wo_act_zp);    rel(scratch_.wo_act_rs);
+    rel(scratch_.wo_y_fp16);    rel(scratch_.wo_fp32);
+    rel(scratch_.residual_1);
+    rel(scratch_.ffn_in_padded);rel(scratch_.ffn_normed);
+    rel(scratch_.fa_i8);        rel(scratch_.fa_sc);
+    rel(scratch_.fa_zp);        rel(scratch_.fa_rs);
+    rel(scratch_.up_fp16);      rel(scratch_.gate_fp16);
+    rel(scratch_.up_fp32);      rel(scratch_.gate_fp32);
+    rel(scratch_.swiglu_out);
+    rel(scratch_.dn_i8);        rel(scratch_.dn_sc);
+    rel(scratch_.dn_zp);        rel(scratch_.dn_rs);
+    rel(scratch_.dn_fp16);      rel(scratch_.dn_fp32);
+  }
   if (output_norm_gamma_svm_ && cl_ctx_)
     clSVMFree(cl_ctx_, output_norm_gamma_svm_);
   // Generic per-layer state (loaded via load_layer).
@@ -2344,6 +2368,403 @@ cl_mem Qwen3Forward::forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
   clReleaseMemObject(in_padded);
 
   return out_fp32; // caller owns
+}
+
+bool Qwen3Forward::ensure_forward_scratch_allocated() {
+  if (scratch_.in_padded != nullptr) return true; // already allocated
+  if (cl_ctx_ == nullptr) return false;
+
+  const unsigned int M_pad = 4;
+  const unsigned int K_h = cfg_.hidden_size;
+  const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
+  const unsigned int I = cfg_.intermediate_size;
+
+  cl_int err = CL_SUCCESS;
+  auto alloc = [&](cl_mem &m, cl_mem_flags flags, size_t bytes,
+                   const char *tag) -> bool {
+    m = clCreateBuffer(cl_ctx_, flags, bytes, nullptr, &err);
+    if (err != CL_SUCCESS || m == nullptr) {
+      std::fprintf(stderr, "[qwen3-gpu] scratch alloc %s (%zu B) err=%d\n",
+                   tag, bytes, err);
+      return false;
+    }
+    return true;
+  };
+
+  if (!alloc(scratch_.in_padded,    CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float), "in_padded"))    return false;
+  if (!alloc(scratch_.attn_normed,  CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float), "attn_normed"))  return false;
+  if (!alloc(scratch_.qkv_act_i8,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                 "qkv_act_i8"))   return false;
+  if (!alloc(scratch_.qkv_act_scale,CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "qkv_act_scale"))return false;
+  if (!alloc(scratch_.qkv_act_zp,   CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "qkv_act_zp"))   return false;
+  if (!alloc(scratch_.qkv_act_rs,   CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "qkv_act_rs"))   return false;
+  if (!alloc(scratch_.y_q,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_q,  "y_q"))       return false;
+  if (!alloc(scratch_.y_k,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_kv, "y_k"))       return false;
+  if (!alloc(scratch_.y_v,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_kv, "y_v"))       return false;
+  scratch_.q_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, (size_t)N_q * sizeof(uint16_t), 0);
+  scratch_.o_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, (size_t)N_q * sizeof(uint16_t), 0);
+  if (!scratch_.q_svm || !scratch_.o_svm) {
+    std::fprintf(stderr, "[qwen3-gpu] scratch SVM alloc failed\n");
+    return false;
+  }
+  if (!alloc(scratch_.o_fp32,       CL_MEM_READ_WRITE, (size_t)M_pad * N_q * sizeof(float), "o_fp32"))       return false;
+  if (!alloc(scratch_.wo_act_i8,    CL_MEM_READ_WRITE, (size_t)M_pad * N_q,                  "wo_act_i8"))   return false;
+  if (!alloc(scratch_.wo_act_scale, CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "wo_act_scale"))return false;
+  if (!alloc(scratch_.wo_act_zp,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_zp"))   return false;
+  if (!alloc(scratch_.wo_act_rs,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_rs"))   return false;
+  if (!alloc(scratch_.wo_y_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"wo_y_fp16"))   return false;
+  if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "wo_fp32"))     return false;
+  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "residual_1"))  return false;
+  if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_in_padded"))return false;
+  if (!alloc(scratch_.ffn_normed,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_normed"))   return false;
+  if (!alloc(scratch_.fa_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                  "fa_i8"))       return false;
+  if (!alloc(scratch_.fa_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "fa_sc"))       return false;
+  if (!alloc(scratch_.fa_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "fa_zp"))       return false;
+  if (!alloc(scratch_.fa_rs,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "fa_rs"))       return false;
+  if (!alloc(scratch_.up_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "up_fp16"))     return false;
+  if (!alloc(scratch_.gate_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "gate_fp16"))   return false;
+  if (!alloc(scratch_.up_fp32,      CL_MEM_READ_WRITE, (size_t)I * sizeof(float),            "up_fp32"))     return false;
+  if (!alloc(scratch_.gate_fp32,    CL_MEM_READ_WRITE, (size_t)I * sizeof(float),            "gate_fp32"))   return false;
+  if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "swiglu_out"))  return false;
+  if (!alloc(scratch_.dn_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * I,                    "dn_i8"))       return false;
+  if (!alloc(scratch_.dn_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "dn_sc"))       return false;
+  if (!alloc(scratch_.dn_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_zp"))       return false;
+  if (!alloc(scratch_.dn_rs,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_rs"))       return false;
+  if (!alloc(scratch_.dn_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"dn_fp16"))     return false;
+  if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "dn_fp32"))     return false;
+
+  std::fprintf(stderr,
+               "[qwen3-gpu] forward scratch pool allocated "
+               "(hidden=%u inter=%u hQ=%u hKV=%u d=%u M_pad=%u)\n",
+               K_h, I, cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+               M_pad);
+  return true;
+}
+
+bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
+                                        cl_mem in_fp32, cl_mem out_fp32,
+                                        unsigned int position) {
+  if (!ensure_forward_scratch_allocated()) return false;
+  if (layer_id >= layers_.size() || layers_[layer_id].wq.backing == nullptr) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] forward_one_layer_v2(%u): not loaded\n",
+                 layer_id);
+    return false;
+  }
+  LayerWeights &lw = layers_[layer_id];
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  cl_int err = CL_SUCCESS;
+
+  const unsigned int M_pad = 4;
+  const unsigned int K_h = cfg_.hidden_size;
+  const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
+  const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
+  const unsigned int I = cfg_.intermediate_size;
+
+  // (a) pad in_fp32 -> scratch_.in_padded, attn_norm -> scratch_.attn_normed.
+  float zero = 0.0f;
+  clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero, sizeof(float), 0,
+                      (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
+                      nullptr);
+  clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
+                      (size_t)K_h * sizeof(float), 0, nullptr, nullptr);
+  {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
+    float eps = cfg_.rms_norm_eps;
+    int H = (int)M_pad, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
+    kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm);
+    kp->SetKernelArguments(3, &eps, sizeof(float));
+    kp->SetKernelArguments(4, &H, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    std::array<size_t, 1> gws = {(size_t)M_pad * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+
+  // (b) shared act quant Q/K/V.
+  nntrainer::quantize_act_v8c_fp32_cl(scratch_.attn_normed, scratch_.qkv_act_i8,
+                                      scratch_.qkv_act_scale,
+                                      scratch_.qkv_act_zp, scratch_.qkv_act_rs,
+                                      M_pad, K_h);
+  cl_image_format afmt{CL_RGBA, CL_UNSIGNED_INT32};
+  cl_image_desc adesc{};
+  adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  adesc.image_width = K_h / 16;
+  adesc.image_height = M_pad;
+  adesc.image_row_pitch = K_h;
+  adesc.buffer = scratch_.qkv_act_i8;
+  cl_mem act_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
+  // (c) Q/K/V GEMMs against persistent y_q/y_k/y_v.
+  nntrainer::gemm_int8_v8c_cl(act_image, lw.wq.weight_image,
+                              scratch_.qkv_act_scale, lw.wq.scale_buf,
+                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+                              lw.wq.row_sum_w_int4, scratch_.y_q, M_pad, N_q,
+                              K_h);
+  nntrainer::gemm_int8_v8c_cl(act_image, lw.wk.weight_image,
+                              scratch_.qkv_act_scale, lw.wk.scale_buf,
+                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+                              lw.wk.row_sum_w_int4, scratch_.y_k, M_pad, N_kv,
+                              K_h);
+  nntrainer::gemm_int8_v8c_cl(act_image, lw.wv.weight_image,
+                              scratch_.qkv_act_scale, lw.wv.scale_buf,
+                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+                              lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv,
+                              K_h);
+  clFinish(cl_q_);
+
+  // (d) q_norm / k_norm in place.
+  auto disp_qk_norm = [&](cl_mem io, void *gamma, unsigned int num_heads) {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                   "rmsnorm_cl_fp16");
+    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+    int B = 1, C = 1, H = (int)num_heads, W = (int)cfg_.head_dim;
+    kp->SetKernelArguments(0, &io, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &io, sizeof(cl_mem));
+    kp->SetKernelSVMArguments(2, gamma);
+    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(4, &B, sizeof(int));
+    kp->SetKernelArguments(5, &C, sizeof(int));
+    kp->SetKernelArguments(6, &H, sizeof(int));
+    kp->SetKernelArguments(7, &W, sizeof(int));
+    std::array<size_t, 2> gws = {1, (size_t)num_heads};
+    std::array<size_t, 2> lws = {1, 1};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  };
+  disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
+  disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
+
+  // RoPE on Q/K.
+  if (layer0_rope_position_ != (int)position) {
+    if (!precompute_rope_for_position(position)) return false;
+  }
+  run_layer0_rope_on_qk(scratch_.y_q, scratch_.y_k);
+  clFinish(cl_q_);
+
+  // (e) Write K, V to this layer's SVM cache at `position`.
+  const size_t kv_row_bytes = (size_t)N_kv * sizeof(uint16_t);
+  auto copy_cl_to_svm = [&](cl_mem src, void *dst_svm_base,
+                            size_t offset_bytes) {
+    cl_int e;
+    void *p = clEnqueueMapBuffer(cl_q_, src, CL_TRUE, CL_MAP_READ, 0,
+                                 kv_row_bytes, 0, nullptr, nullptr, &e);
+    if (!p) return false;
+    void *dst = static_cast<uint8_t *>(dst_svm_base) + offset_bytes;
+    if (clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, kv_row_bytes, 0,
+                        nullptr, nullptr) != CL_SUCCESS)
+      return false;
+    std::memcpy(dst, p, kv_row_bytes);
+    clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
+    clEnqueueUnmapMemObject(cl_q_, src, p, 0, nullptr, nullptr);
+    return true;
+  };
+  copy_cl_to_svm(scratch_.y_k, lw.cache_k_svm, (size_t)position * kv_row_bytes);
+  copy_cl_to_svm(scratch_.y_v, lw.cache_v_svm, (size_t)position * kv_row_bytes);
+  clFinish(cl_q_);
+
+  // (f) attention via SVM. Q SVM buffer is also persistent.
+  const size_t q_row_bytes = (size_t)N_q * sizeof(uint16_t);
+  {
+    cl_int e;
+    void *p = clEnqueueMapBuffer(cl_q_, scratch_.y_q, CL_TRUE, CL_MAP_READ, 0,
+                                 q_row_bytes, 0, nullptr, nullptr, &e);
+    clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, scratch_.q_svm, q_row_bytes,
+                    0, nullptr, nullptr);
+    std::memcpy(scratch_.q_svm, p, q_row_bytes);
+    clEnqueueSVMUnmap(cl_q_, scratch_.q_svm, 0, nullptr, nullptr);
+    clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
+    clFinish(cl_q_);
+  }
+  bool attn_ok = nntrainer::two_conv_attention_prefill_f16_cl(
+    static_cast<const uint16_t *>(scratch_.q_svm),
+    static_cast<const uint16_t *>(lw.cache_k_svm),
+    static_cast<const uint16_t *>(lw.cache_v_svm),
+    static_cast<uint16_t *>(scratch_.o_svm), 1, position + 1, cfg_.num_heads_Q,
+    cfg_.num_heads_KV, cfg_.head_dim, true, true);
+  if (!attn_ok) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] layer %u attention failed\n", layer_id);
+    clReleaseMemObject(act_image);
+    return false;
+  }
+
+  // (g) wo: cvt_h2f(o_svm) -> o_fp32, then v8c FC, then cvt -> wo_fp32,
+  //     then add_fp32(in, wo) -> residual_1.
+  clEnqueueFillBuffer(cl_q_, scratch_.o_fp32, &zero, sizeof(float), 0,
+                      (size_t)M_pad * N_q * sizeof(float), 0, nullptr,
+                      nullptr);
+  {
+    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+    int n = (int)N_q;
+    kp->SetKernelSVMArguments(0, scratch_.o_svm);
+    kp->SetKernelArguments(1, &scratch_.o_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)N_q + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  nntrainer::quantize_act_v8c_fp32_cl(scratch_.o_fp32, scratch_.wo_act_i8,
+                                      scratch_.wo_act_scale,
+                                      scratch_.wo_act_zp, scratch_.wo_act_rs,
+                                      M_pad, N_q);
+  cl_image_desc wo_adesc{};
+  wo_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  wo_adesc.image_width = N_q / 16;
+  wo_adesc.image_height = M_pad;
+  wo_adesc.image_row_pitch = N_q;
+  wo_adesc.buffer = scratch_.wo_act_i8;
+  cl_mem wo_act_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &wo_adesc, nullptr, &err);
+  nntrainer::gemm_int8_v8c_cl(wo_act_image, lw.wo.weight_image,
+                              scratch_.wo_act_scale, lw.wo.scale_buf,
+                              scratch_.wo_act_rs, scratch_.wo_act_zp,
+                              lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
+                              K_h, N_q);
+  clFinish(cl_q_);
+  {
+    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+    int n = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.wo_y_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  {
+    auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+    int n = (int)K_h;
+    kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  clFinish(cl_q_);
+
+  // (h) ffn block: pad residual_1 -> ffn_in_padded, rmsnorm -> ffn_normed,
+  //     shared quant, ffn_up + ffn_gate, cvt fp16->fp32, swiglu, quant,
+  //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
+  clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero, sizeof(float), 0,
+                      (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
+                      nullptr);
+  clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
+                      0, (size_t)K_h * sizeof(float), 0, nullptr, nullptr);
+  {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
+    float eps = cfg_.rms_norm_eps;
+    int H = (int)M_pad, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.ffn_in_padded, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.ffn_normed, sizeof(cl_mem));
+    kp->SetKernelSVMArguments(2, lw.ffn_norm_gamma_svm);
+    kp->SetKernelArguments(3, &eps, sizeof(float));
+    kp->SetKernelArguments(4, &H, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    std::array<size_t, 1> gws = {(size_t)M_pad * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  nntrainer::quantize_act_v8c_fp32_cl(scratch_.ffn_normed, scratch_.fa_i8,
+                                      scratch_.fa_sc, scratch_.fa_zp,
+                                      scratch_.fa_rs, M_pad, K_h);
+  cl_image_desc fa_adesc{};
+  fa_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  fa_adesc.image_width = K_h / 16;
+  fa_adesc.image_height = M_pad;
+  fa_adesc.image_row_pitch = K_h;
+  fa_adesc.buffer = scratch_.fa_i8;
+  cl_mem fa_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &fa_adesc, nullptr, &err);
+  nntrainer::gemm_int8_v8c_cl(fa_image, lw.ffn_up.weight_image, scratch_.fa_sc,
+                              lw.ffn_up.scale_buf, scratch_.fa_rs,
+                              scratch_.fa_zp, lw.ffn_up.row_sum_w_int4,
+                              scratch_.up_fp16, M_pad, I, K_h);
+  nntrainer::gemm_int8_v8c_cl(fa_image, lw.ffn_gate.weight_image,
+                              scratch_.fa_sc, lw.ffn_gate.scale_buf,
+                              scratch_.fa_rs, scratch_.fa_zp,
+                              lw.ffn_gate.row_sum_w_int4, scratch_.gate_fp16,
+                              M_pad, I, K_h);
+  clFinish(cl_q_);
+  auto disp_cvt = [&](cl_mem hin, cl_mem fout, unsigned int n) {
+    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
+    int ni = (int)n;
+    kp->SetKernelArguments(0, &hin, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &fout, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &ni, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)n + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  };
+  disp_cvt(scratch_.up_fp16,   scratch_.up_fp32,   I);
+  disp_cvt(scratch_.gate_fp16, scratch_.gate_fp32, I);
+  clFinish(cl_q_);
+  clEnqueueFillBuffer(cl_q_, scratch_.swiglu_out, &zero, sizeof(float), 0,
+                      (size_t)M_pad * I * sizeof(float), 0, nullptr, nullptr);
+  {
+    auto kp = cl->registerClKernel(kSwigluFp32Kernel, "swiglu_fp32");
+    int n = (int)I;
+    kp->SetKernelArguments(0, &scratch_.gate_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.up_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)I + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
+                                      scratch_.dn_sc, scratch_.dn_zp,
+                                      scratch_.dn_rs, M_pad, I);
+  cl_image_desc dn_adesc{};
+  dn_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  dn_adesc.image_width = I / 16;
+  dn_adesc.image_height = M_pad;
+  dn_adesc.image_row_pitch = I;
+  dn_adesc.buffer = scratch_.dn_i8;
+  cl_mem dn_image =
+    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &dn_adesc, nullptr, &err);
+  nntrainer::gemm_int8_v8c_cl(dn_image, lw.ffn_down.weight_image,
+                              scratch_.dn_sc, lw.ffn_down.scale_buf,
+                              scratch_.dn_rs, scratch_.dn_zp,
+                              lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
+                              M_pad, K_h, I);
+  clFinish(cl_q_);
+  disp_cvt(scratch_.dn_fp16, scratch_.dn_fp32, K_h);
+  clFinish(cl_q_);
+  // Final residual add → out_fp32 (caller-managed).
+  {
+    auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+    int n = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.dn_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  clFinish(cl_q_);
+
+  // Only image2d views were freshly created this call; release them.
+  // Their backing buffers (scratch_.qkv_act_i8 etc.) persist.
+  clReleaseMemObject(dn_image);
+  clReleaseMemObject(fa_image);
+  clReleaseMemObject(wo_act_image);
+  clReleaseMemObject(act_image);
+  return true;
 }
 
 bool Qwen3Forward::load_output_norm(size_t file_offset) {

@@ -132,28 +132,48 @@ int main(int argc, char **argv) {
     }
     auto t_embed_done = NOW();
 
+    // Ping-pong output buffers (persistent across the chain).
+    // forward_one_layer_v2 takes caller-managed in/out — both
+    // [hidden] fp32 cl_mems. Alternate which is "in" each layer.
+    cl_int e;
+    cl_context ctx2 = cl->context_inst_.GetContext();
+    static cl_mem buf_a = nullptr, buf_b = nullptr;
+    if (buf_a == nullptr) {
+      buf_a = clCreateBuffer(ctx2, CL_MEM_READ_WRITE, H * sizeof(float),
+                             nullptr, &e);
+      buf_b = clCreateBuffer(ctx2, CL_MEM_READ_WRITE, H * sizeof(float),
+                             nullptr, &e);
+    }
+    // Copy embedding-lookup `cur` into buf_a as the layer-0 input,
+    // then release the per-iter `cur` (the lookup allocates fresh).
+    clEnqueueCopyBuffer(q, cur, buf_a, 0, 0, H * sizeof(float), 0, nullptr,
+                        nullptr);
+    clReleaseMemObject(cur);
+    cur = nullptr;
+
     auto t_chain_start = NOW();
+    cl_mem layer_in = buf_a;
+    cl_mem layer_out = buf_b;
     for (unsigned int L = 0; L < cfg.num_layers; ++L) {
-      cl_mem nxt = fwd.forward_one_layer(L, cur, /*position=*/0);
-      if (nxt == nullptr) {
-        std::fprintf(stderr, "[main] forward_one_layer(%u) failed\n", L);
-        clReleaseMemObject(cur);
+      if (!fwd.forward_one_layer_v2(L, layer_in, layer_out, /*position=*/0)) {
+        std::fprintf(stderr, "[main] forward_one_layer_v2(%u) failed\n", L);
         return 100 + (int)L;
       }
-      clReleaseMemObject(cur);
-      cur = nxt;
+      std::swap(layer_in, layer_out);
     }
+    // After the loop layer_in holds the final layer's output (swap ran 28x).
+    cur = layer_in;
     auto t_chain_done = NOW();
 
     if (!fwd.run_output_norm(cur)) {
       std::fprintf(stderr, "[main] run_output_norm failed\n");
-      clReleaseMemObject(cur);
       return 61;
     }
     auto t_norm_done = NOW();
 
     int next_token = fwd.run_lm_head_and_argmax_cpu(cur);
-    clReleaseMemObject(cur);
+    // cur points into the persistent buf_a/buf_b ping-pong pool —
+    // intentionally NOT released here so the next iteration reuses it.
     if (next_token < 0) {
       std::fprintf(stderr, "[main] lm_head failed\n");
       return 70;

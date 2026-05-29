@@ -147,8 +147,20 @@ public:
   /// Caller owns the output. Position is the RoPE / KV cache
   /// position for the single token being processed (single-token
   /// forward only for now — prefill comes later).
+  /// (Original implementation; per-call alloc/release of ~32 scratch
+  /// buffers per layer. forward_one_layer_v2 below replaces this
+  /// with persistent scratch — task #44 / Phase A #1.)
   cl_mem forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
                            unsigned int position);
+
+  /// Same as forward_one_layer but uses persistent `scratch_` for
+  /// all intermediate cl_mems (no per-call alloc/release). Caller-
+  /// managed output: pass a cl_mem fp32 [hidden] out_fp32 (typically
+  /// ping-pong via two persistent buffers in the chain loop). Returns
+  /// true on success. Image2d views are still recreated per call
+  /// (cheap; the underlying scratch buffers are persistent).
+  bool forward_one_layer_v2(unsigned int layer_id, cl_mem in_fp32,
+                            cl_mem out_fp32, unsigned int position);
 
   /// Load the model's final output_norm gamma (fp32 [hidden]) from
   /// the tail of the weight file. Caller passes the file offset
@@ -316,6 +328,65 @@ private:
 
   // Final output_norm gamma (fp32, [hidden]) in SVM.
   void *output_norm_gamma_svm_ = nullptr;
+
+  /// Per-forward scratch. All 28 layers use identical shapes (model
+  /// constants), so a single set of these is reused across every
+  /// layer of every forward call. Allocated once on first
+  /// forward_one_layer call via `ensure_forward_scratch_allocated()`,
+  /// released in destructor. Replaces the ~32 clCreateBuffer +
+  /// clReleaseMemObject calls per layer per token that used to
+  /// dominate per-layer wall time (see [[perf-analysis-2026-05-29]]
+  /// Phase A #1).
+  struct ForwardScratch {
+    // (a) input pad + attn_normed: both [M_pad * hidden] fp32
+    cl_mem in_padded = nullptr;
+    cl_mem attn_normed = nullptr;
+    // (b) QKV shared activation quant: [M_pad * hidden] int8 + scales
+    cl_mem qkv_act_i8 = nullptr;
+    cl_mem qkv_act_scale = nullptr;
+    cl_mem qkv_act_zp = nullptr;
+    cl_mem qkv_act_rs = nullptr;
+    // (c) QKV outputs (fp16): y_q [M_pad*N_q], y_k/y_v [M_pad*N_kv]
+    cl_mem y_q = nullptr;
+    cl_mem y_k = nullptr;
+    cl_mem y_v = nullptr;
+    // (d) attention SVM bridge (fp16, [N_q] each)
+    void *q_svm = nullptr;
+    void *o_svm = nullptr;
+    // (e) wo: O fp32 + act scratch + output + residual_1 (fp32 [K_h])
+    cl_mem o_fp32 = nullptr;       // [M_pad * N_q]
+    cl_mem wo_act_i8 = nullptr;    // [M_pad * N_q]
+    cl_mem wo_act_scale = nullptr;
+    cl_mem wo_act_zp = nullptr;
+    cl_mem wo_act_rs = nullptr;
+    cl_mem wo_y_fp16 = nullptr;    // [M_pad * K_h]
+    cl_mem wo_fp32 = nullptr;      // [K_h]
+    cl_mem residual_1 = nullptr;   // [K_h]
+    // (f) ffn block: padded + normed + shared quant + up/gate + swiglu
+    cl_mem ffn_in_padded = nullptr;  // [M_pad * K_h]
+    cl_mem ffn_normed = nullptr;     // [M_pad * K_h]
+    cl_mem fa_i8 = nullptr;          // [M_pad * K_h]
+    cl_mem fa_sc = nullptr;
+    cl_mem fa_zp = nullptr;
+    cl_mem fa_rs = nullptr;
+    cl_mem up_fp16 = nullptr;        // [M_pad * I]
+    cl_mem gate_fp16 = nullptr;      // [M_pad * I]
+    cl_mem up_fp32 = nullptr;        // [I]
+    cl_mem gate_fp32 = nullptr;      // [I]
+    cl_mem swiglu_out = nullptr;     // [M_pad * I]
+    // (g) ffn_down: act scratch + output
+    cl_mem dn_i8 = nullptr;          // [M_pad * I]
+    cl_mem dn_sc = nullptr;
+    cl_mem dn_zp = nullptr;
+    cl_mem dn_rs = nullptr;
+    cl_mem dn_fp16 = nullptr;        // [M_pad * K_h]
+    cl_mem dn_fp32 = nullptr;        // [K_h]
+  };
+  ForwardScratch scratch_{};
+
+  /// One-time allocation of all scratch_ cl_mems + SVM bridge buffers.
+  /// Idempotent (returns true immediately if already allocated).
+  bool ensure_forward_scratch_allocated();
 
   /// Generic loader: parses one Int4QTensor blob at the given file
   /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates
