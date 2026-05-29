@@ -91,6 +91,42 @@ __kernel void v_scatter_ohwi_t(__global const half *src,
 // SwiGLU element-wise: out[i] = silu(gate[i]) * up[i]
 //   silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
 // fp32 throughout (matches the residual stream dtype). One WI per element.
+// Fused cvt h2f + add fp32 (#46j). out_fp32[i] = a_fp32[i] + (float)b_fp16[i].
+// Replaces (cvt b_fp16 → b_fp32) + (add a_fp32 + b_fp32 → out_fp32) used
+// at the end of wo and ffn-down. Saves 1 dispatch per occurrence × 2 ×
+// 28 layers ≈ 50-100 ms at M=1024.
+static const std::string kFusedAddH2fFp32Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void fused_add_h2f_fp32(__global const float *a,
+                                 __global const half *b,
+                                 __global       float *out,
+                                 const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  out[i] = a[i] + (float)b[i];
+}
+)CL";
+
+// Fused cvt+swiglu (#46j). Replaces 3 dispatches (cvt up_fp16->up_fp32,
+// cvt gate_fp16->gate_fp32, swiglu(gate,up)->out_fp32) with one. Saves
+// ~2 dispatch overheads per layer × 28 layers ≈ 100-150 ms at M=1024.
+//   out[i] = silu(gate[i]) * up[i],  silu(x) = x / (1 + exp(-x))
+// Inputs are read as fp16 directly; output is fp32. 1 WI per element.
+static const std::string kFusedSwigluH2fFp32Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void fused_swiglu_h2f_fp32(__global const half *gate,
+                                    __global const half *up,
+                                    __global       float *out,
+                                    const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  float g = (float)gate[i];
+  float u = (float)up[i];
+  float s = g / (1.0f + native_exp(-g));
+  out[i] = s * u;
+}
+)CL";
+
 static const std::string kSwigluFp32Kernel = R"CL(
 __kernel void swiglu_fp32(__global const float *gate,
                           __global const float *up,
@@ -3111,22 +3147,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
                               K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  // #46j: fused (cvt wo_y_fp16 → fp32) + (add in_fp32 + that → residual_1)
+  // = 2 dispatches → 1.
   {
-    auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
-    int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &scratch_.wo_y_fp16, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
-    kp->SetKernelArguments(2, &n, sizeof(int));
-    std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
-    std::array<size_t, 1> lws = {64};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
-                                          lws.data(), 0, nullptr, nullptr);
-  }
-  {
-    auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+    auto kp =
+      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
     int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
@@ -3195,16 +3223,16 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
-  disp_cvt(scratch_.up_fp16,   scratch_.up_fp32,   M * I);
-  disp_cvt(scratch_.gate_fp16, scratch_.gate_fp32, M * I);
-  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  clEnqueueFillBuffer(cl_q_, scratch_.swiglu_out, &zero, sizeof(float), 0,
-                      (size_t)M_pad * I * sizeof(float), 0, nullptr, nullptr);
+  // #46j: fused (cvt h2f up) + (cvt h2f gate) + (swiglu fp32). 3
+  // dispatches → 1; reads fp16 inputs directly, writes fp32 output.
+  // The up_fp32 / gate_fp32 scratch buffers are now unused — kept
+  // in the scratch struct for back-compat with the legacy path.
   {
-    auto kp = cl->registerClKernel(kSwigluFp32Kernel, "swiglu_fp32");
+    auto kp =
+      cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
     int n = (int)(M * I);
-    kp->SetKernelArguments(0, &scratch_.gate_fp32, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.up_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(0, &scratch_.gate_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.up_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
@@ -3229,14 +3257,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  disp_cvt(scratch_.dn_fp16, scratch_.dn_fp32, M * K_h);
-  clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  // Final residual add → out_fp32 (caller-managed).
+  // #46j: fused (cvt dn_fp16 → fp32) + (add residual_1 + that → out_fp32)
+  // = 2 dispatches → 1.
   {
-    auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
+    auto kp =
+      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
     int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.dn_fp32, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
