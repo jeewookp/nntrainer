@@ -155,12 +155,25 @@ public:
 
   /// Same as forward_one_layer but uses persistent `scratch_` for
   /// all intermediate cl_mems (no per-call alloc/release). Caller-
-  /// managed output: pass a cl_mem fp32 [hidden] out_fp32 (typically
+  /// managed output: pass a cl_mem fp32 [M*hidden] out_fp32 (typically
   /// ping-pong via two persistent buffers in the chain loop). Returns
-  /// true on success. Image2d views are still recreated per call
-  /// (cheap; the underlying scratch buffers are persistent).
+  /// true on success.
+  ///
+  /// `M` = number of token rows in the input. M=1 is decode/single
+  /// token; M>1 is prefill. Scratch must already be sized for at
+  /// least this M via ensure_forward_scratch_allocated(M). Image2d
+  /// views are recreated per call (cheap; backing buffers persist).
+  ///
+  /// LIMITATION (task #45b): RoPE is currently applied with a single
+  /// position (whatever was set by precompute_rope_for_position) to
+  /// all M token rows. Correct for M=1 (decode); for M>1 (prefill)
+  /// this gives bogus output because each token row needs its OWN
+  /// (start_pos + i) rotation. Pipeline still runs end-to-end so
+  /// perf measurements at any M are valid; output correctness for
+  /// prefill needs a batched RoPE kernel.
   bool forward_one_layer_v2(unsigned int layer_id, cl_mem in_fp32,
-                            cl_mem out_fp32, unsigned int position);
+                            cl_mem out_fp32, unsigned int position,
+                            unsigned int M = 1);
 
   /// Load the model's final output_norm gamma (fp32 [hidden]) from
   /// the tail of the weight file. Caller passes the file offset
@@ -243,6 +256,13 @@ public:
   /// the generic load_layer + forward_one_layer path) can take layer
   /// 0's output as its starting input.
   cl_mem layer0_output_fp32() const { return layer0_output_fp32_; }
+
+  /// Allocate (or grow) scratch_ to support up to `max_M` token rows.
+  /// Idempotent if current allocation already covers max_M; otherwise
+  /// frees and re-allocates. Public so main can pre-warm to the max M
+  /// any subsequent prefill/decode call will use (avoids realloc on
+  /// the timed path).
+  bool ensure_forward_scratch_allocated(unsigned int max_M);
 
 private:
   /// Byte size of the embedding tensor on disk (Q6_K).
@@ -384,9 +404,8 @@ private:
   };
   ForwardScratch scratch_{};
 
-  /// One-time allocation of all scratch_ cl_mems + SVM bridge buffers.
-  /// Idempotent (returns true immediately if already allocated).
-  bool ensure_forward_scratch_allocated();
+  /// The max_M scratch is currently sized for. 0 = unallocated.
+  unsigned int scratch_max_M_ = 0;
 
   /// Generic loader: parses one Int4QTensor blob at the given file
   /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates

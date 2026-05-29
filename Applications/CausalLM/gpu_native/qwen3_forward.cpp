@@ -2370,11 +2370,38 @@ cl_mem Qwen3Forward::forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
   return out_fp32; // caller owns
 }
 
-bool Qwen3Forward::ensure_forward_scratch_allocated() {
-  if (scratch_.in_padded != nullptr) return true; // already allocated
+bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   if (cl_ctx_ == nullptr) return false;
+  // v8c kernel tile alignment: round up to multiple of 4.
+  const unsigned int M_pad = ((max_M + 3) / 4) * 4;
+  if (scratch_max_M_ >= M_pad && scratch_.in_padded != nullptr) {
+    return true; // already big enough
+  }
+  // Free existing scratch (if any) before re-allocating to larger size.
+  if (scratch_.in_padded != nullptr) {
+    auto rel = [&](cl_mem &m) { if (m) { clReleaseMemObject(m); m = nullptr; } };
+    auto svm = [&](void *&p) { if (p && cl_ctx_) { clSVMFree(cl_ctx_, p); p = nullptr; } };
+    rel(scratch_.in_padded);    rel(scratch_.attn_normed);
+    rel(scratch_.qkv_act_i8);   rel(scratch_.qkv_act_scale);
+    rel(scratch_.qkv_act_zp);   rel(scratch_.qkv_act_rs);
+    rel(scratch_.y_q);          rel(scratch_.y_k);          rel(scratch_.y_v);
+    svm(scratch_.q_svm);        svm(scratch_.o_svm);
+    rel(scratch_.o_fp32);
+    rel(scratch_.wo_act_i8);    rel(scratch_.wo_act_scale);
+    rel(scratch_.wo_act_zp);    rel(scratch_.wo_act_rs);
+    rel(scratch_.wo_y_fp16);    rel(scratch_.wo_fp32);
+    rel(scratch_.residual_1);
+    rel(scratch_.ffn_in_padded);rel(scratch_.ffn_normed);
+    rel(scratch_.fa_i8);        rel(scratch_.fa_sc);
+    rel(scratch_.fa_zp);        rel(scratch_.fa_rs);
+    rel(scratch_.up_fp16);      rel(scratch_.gate_fp16);
+    rel(scratch_.up_fp32);      rel(scratch_.gate_fp32);
+    rel(scratch_.swiglu_out);
+    rel(scratch_.dn_i8);        rel(scratch_.dn_sc);
+    rel(scratch_.dn_zp);        rel(scratch_.dn_rs);
+    rel(scratch_.dn_fp16);      rel(scratch_.dn_fp32);
+  }
 
-  const unsigned int M_pad = 4;
   const unsigned int K_h = cfg_.hidden_size;
   const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
   const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
@@ -2401,8 +2428,9 @@ bool Qwen3Forward::ensure_forward_scratch_allocated() {
   if (!alloc(scratch_.y_q,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_q,  "y_q"))       return false;
   if (!alloc(scratch_.y_k,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_kv, "y_k"))       return false;
   if (!alloc(scratch_.y_v,          CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * N_kv, "y_v"))       return false;
-  scratch_.q_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, (size_t)N_q * sizeof(uint16_t), 0);
-  scratch_.o_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, (size_t)N_q * sizeof(uint16_t), 0);
+  // SVM bridge sized for M_pad rows of Q (largest per-call attention input).
+  scratch_.q_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_ONLY, (size_t)M_pad * N_q * sizeof(uint16_t), 0);
+  scratch_.o_svm = clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, (size_t)M_pad * N_q * sizeof(uint16_t), 0);
   if (!scratch_.q_svm || !scratch_.o_svm) {
     std::fprintf(stderr, "[qwen3-gpu] scratch SVM alloc failed\n");
     return false;
@@ -2413,8 +2441,8 @@ bool Qwen3Forward::ensure_forward_scratch_allocated() {
   if (!alloc(scratch_.wo_act_zp,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_zp"))   return false;
   if (!alloc(scratch_.wo_act_rs,    CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "wo_act_rs"))   return false;
   if (!alloc(scratch_.wo_y_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"wo_y_fp16"))   return false;
-  if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "wo_fp32"))     return false;
-  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "residual_1"))  return false;
+  if (!alloc(scratch_.wo_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "wo_fp32"))     return false;
+  if (!alloc(scratch_.residual_1,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "residual_1"))  return false;
   if (!alloc(scratch_.ffn_in_padded,CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_in_padded"))return false;
   if (!alloc(scratch_.ffn_normed,   CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "ffn_normed"))   return false;
   if (!alloc(scratch_.fa_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * K_h,                  "fa_i8"))       return false;
@@ -2423,28 +2451,31 @@ bool Qwen3Forward::ensure_forward_scratch_allocated() {
   if (!alloc(scratch_.fa_rs,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "fa_rs"))       return false;
   if (!alloc(scratch_.up_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "up_fp16"))     return false;
   if (!alloc(scratch_.gate_fp16,    CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * I, "gate_fp16"))   return false;
-  if (!alloc(scratch_.up_fp32,      CL_MEM_READ_WRITE, (size_t)I * sizeof(float),            "up_fp32"))     return false;
-  if (!alloc(scratch_.gate_fp32,    CL_MEM_READ_WRITE, (size_t)I * sizeof(float),            "gate_fp32"))   return false;
+  if (!alloc(scratch_.up_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "up_fp32"))     return false;
+  if (!alloc(scratch_.gate_fp32,    CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "gate_fp32"))   return false;
   if (!alloc(scratch_.swiglu_out,   CL_MEM_READ_WRITE, (size_t)M_pad * I * sizeof(float),    "swiglu_out"))  return false;
   if (!alloc(scratch_.dn_i8,        CL_MEM_READ_WRITE, (size_t)M_pad * I,                    "dn_i8"))       return false;
   if (!alloc(scratch_.dn_sc,        CL_MEM_READ_WRITE, sizeof(float) * M_pad,                "dn_sc"))       return false;
   if (!alloc(scratch_.dn_zp,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_zp"))       return false;
   if (!alloc(scratch_.dn_rs,        CL_MEM_READ_WRITE, sizeof(int) * M_pad,                  "dn_rs"))       return false;
   if (!alloc(scratch_.dn_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"dn_fp16"))     return false;
-  if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)K_h * sizeof(float),          "dn_fp32"))     return false;
+  if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(float),  "dn_fp32"))     return false;
 
+  scratch_max_M_ = M_pad;
   std::fprintf(stderr,
-               "[qwen3-gpu] forward scratch pool allocated "
-               "(hidden=%u inter=%u hQ=%u hKV=%u d=%u M_pad=%u)\n",
-               K_h, I, cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
-               M_pad);
+               "[qwen3-gpu] forward scratch pool allocated for max_M=%u "
+               "(hidden=%u inter=%u hQ=%u hKV=%u d=%u)\n",
+               M_pad, K_h, I, cfg_.num_heads_Q, cfg_.num_heads_KV,
+               cfg_.head_dim);
   return true;
 }
 
 bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                         cl_mem in_fp32, cl_mem out_fp32,
-                                        unsigned int position) {
-  if (!ensure_forward_scratch_allocated()) return false;
+                                        unsigned int position,
+                                        unsigned int M) {
+  if (M == 0) return false;
+  if (!ensure_forward_scratch_allocated(M)) return false;
   if (layer_id >= layers_.size() || layers_[layer_id].wq.backing == nullptr) {
     std::fprintf(stderr,
                  "[qwen3-gpu] forward_one_layer_v2(%u): not loaded\n",
@@ -2456,19 +2487,20 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   cl_int err = CL_SUCCESS;
 
-  const unsigned int M_pad = 4;
+  // v8c tile alignment: M_pad >= M, multiple of 4.
+  const unsigned int M_pad = ((M + 3) / 4) * 4;
   const unsigned int K_h = cfg_.hidden_size;
   const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
   const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
   const unsigned int I = cfg_.intermediate_size;
 
-  // (a) pad in_fp32 -> scratch_.in_padded, attn_norm -> scratch_.attn_normed.
+  // (a) pad in_fp32 [M*K_h] -> scratch_.in_padded [M_pad*K_h], attn_norm.
   float zero = 0.0f;
   clEnqueueFillBuffer(cl_q_, scratch_.in_padded, &zero, sizeof(float), 0,
                       (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
                       nullptr);
   clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
-                      (size_t)K_h * sizeof(float), 0, nullptr, nullptr);
+                      (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
     float eps = cfg_.rms_norm_eps;
@@ -2517,12 +2549,15 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               K_h);
   clFinish(cl_q_);
 
-  // (d) q_norm / k_norm in place.
+  // (d) q_norm / k_norm in place. Multi-token: M token rows × num_heads
+  //     heads × head_dim. Kernel iterates (B*C, H) where index is
+  //     ((n*C+c)*H + h)*W. Set B=M, C=num_heads, H=1, W=head_dim →
+  //     each WI covers one (token, head) head_dim-row.
   auto disp_qk_norm = [&](cl_mem io, void *gamma, unsigned int num_heads) {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
                                    "rmsnorm_cl_fp16");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-    int B = 1, C = 1, H = (int)num_heads, W = (int)cfg_.head_dim;
+    int B = (int)M, C = (int)num_heads, H = 1, W = (int)cfg_.head_dim;
     kp->SetKernelArguments(0, &io, sizeof(cl_mem));
     kp->SetKernelArguments(1, &io, sizeof(cl_mem));
     kp->SetKernelSVMArguments(2, gamma);
@@ -2531,7 +2566,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     kp->SetKernelArguments(5, &C, sizeof(int));
     kp->SetKernelArguments(6, &H, sizeof(int));
     kp->SetKernelArguments(7, &W, sizeof(int));
-    std::array<size_t, 2> gws = {1, (size_t)num_heads};
+    std::array<size_t, 2> gws = {(size_t)M * num_heads, 1};
     std::array<size_t, 2> lws = {1, 1};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
@@ -2539,43 +2574,56 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
   disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
 
-  // RoPE on Q/K.
-  if (layer0_rope_position_ != (int)position) {
-    if (!precompute_rope_for_position(position)) return false;
+  // RoPE on Q/K.  Task #45b: for M>1 each token needs its own
+  // (start_pos + i) rotation. The current rope_fp16 kernel only
+  // handles a single position; per-token loop at M=1024 costs ~28
+  // seconds in dispatch overhead alone. Until #45b lands a batched
+  // RoPE kernel, SKIP RoPE entirely for M>1 (output not semantically
+  // valid for prefill anyway). For M=1 (decode), apply normally.
+  if (M == 1) {
+    if (layer0_rope_position_ != (int)position) {
+      if (!precompute_rope_for_position(position)) return false;
+    }
+    run_layer0_rope_on_qk(scratch_.y_q, scratch_.y_k);
+    clFinish(cl_q_);
   }
-  run_layer0_rope_on_qk(scratch_.y_q, scratch_.y_k);
-  clFinish(cl_q_);
 
-  // (e) Write K, V to this layer's SVM cache at `position`.
+  // (e) Write K, V (M rows) to this layer's SVM cache starting at
+  //     `position`. y_k/y_v are [M_pad * N_kv] fp16; we copy only the
+  //     valid M*N_kv prefix.
   const size_t kv_row_bytes = (size_t)N_kv * sizeof(uint16_t);
+  const size_t kv_total_bytes = (size_t)M * kv_row_bytes;
   auto copy_cl_to_svm = [&](cl_mem src, void *dst_svm_base,
-                            size_t offset_bytes) {
+                            size_t offset_bytes, size_t bytes) {
     cl_int e;
     void *p = clEnqueueMapBuffer(cl_q_, src, CL_TRUE, CL_MAP_READ, 0,
-                                 kv_row_bytes, 0, nullptr, nullptr, &e);
+                                 bytes, 0, nullptr, nullptr, &e);
     if (!p) return false;
     void *dst = static_cast<uint8_t *>(dst_svm_base) + offset_bytes;
-    if (clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, kv_row_bytes, 0,
+    if (clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, dst, bytes, 0,
                         nullptr, nullptr) != CL_SUCCESS)
       return false;
-    std::memcpy(dst, p, kv_row_bytes);
+    std::memcpy(dst, p, bytes);
     clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, src, p, 0, nullptr, nullptr);
     return true;
   };
-  copy_cl_to_svm(scratch_.y_k, lw.cache_k_svm, (size_t)position * kv_row_bytes);
-  copy_cl_to_svm(scratch_.y_v, lw.cache_v_svm, (size_t)position * kv_row_bytes);
+  copy_cl_to_svm(scratch_.y_k, lw.cache_k_svm,
+                 (size_t)position * kv_row_bytes, kv_total_bytes);
+  copy_cl_to_svm(scratch_.y_v, lw.cache_v_svm,
+                 (size_t)position * kv_row_bytes, kv_total_bytes);
   clFinish(cl_q_);
 
-  // (f) attention via SVM. Q SVM buffer is also persistent.
-  const size_t q_row_bytes = (size_t)N_q * sizeof(uint16_t);
+  // (f) attention via SVM. Upload all M Q rows. N_kv (cache_to) =
+  //     position + M (all rows just written are visible to attention).
+  const size_t q_total_bytes = (size_t)M * N_q * sizeof(uint16_t);
   {
     cl_int e;
-    void *p = clEnqueueMapBuffer(cl_q_, scratch_.y_q, CL_TRUE, CL_MAP_READ, 0,
-                                 q_row_bytes, 0, nullptr, nullptr, &e);
-    clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, scratch_.q_svm, q_row_bytes,
-                    0, nullptr, nullptr);
-    std::memcpy(scratch_.q_svm, p, q_row_bytes);
+    void *p = clEnqueueMapBuffer(cl_q_, scratch_.y_q, CL_TRUE, CL_MAP_READ,
+                                 0, q_total_bytes, 0, nullptr, nullptr, &e);
+    clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_WRITE, scratch_.q_svm,
+                    q_total_bytes, 0, nullptr, nullptr);
+    std::memcpy(scratch_.q_svm, p, q_total_bytes);
     clEnqueueSVMUnmap(cl_q_, scratch_.q_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
@@ -2584,8 +2632,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     static_cast<const uint16_t *>(scratch_.q_svm),
     static_cast<const uint16_t *>(lw.cache_k_svm),
     static_cast<const uint16_t *>(lw.cache_v_svm),
-    static_cast<uint16_t *>(scratch_.o_svm), 1, position + 1, cfg_.num_heads_Q,
-    cfg_.num_heads_KV, cfg_.head_dim, true, true);
+    static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+    cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim, true, true);
   if (!attn_ok) {
     std::fprintf(stderr,
                  "[qwen3-gpu] layer %u attention failed\n", layer_id);
@@ -2600,11 +2648,11 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                       nullptr);
   {
     auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
-    int n = (int)N_q;
+    int n = (int)(M * N_q);
     kp->SetKernelSVMArguments(0, scratch_.o_svm);
     kp->SetKernelArguments(1, &scratch_.o_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &n, sizeof(int));
-    std::array<size_t, 1> gws = {((size_t)N_q + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)M * N_q) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
@@ -2629,23 +2677,23 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   clFinish(cl_q_);
   {
     auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
-    int n = (int)K_h;
+    int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &scratch_.wo_y_fp16, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &n, sizeof(int));
-    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
   {
     auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
-    int n = (int)K_h;
+    int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &in_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.wo_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
-    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
@@ -2659,7 +2707,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                       (size_t)M_pad * K_h * sizeof(float), 0, nullptr,
                       nullptr);
   clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
-                      0, (size_t)K_h * sizeof(float), 0, nullptr, nullptr);
+                      0, (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
     float eps = cfg_.rms_norm_eps;
@@ -2707,19 +2755,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
-  disp_cvt(scratch_.up_fp16,   scratch_.up_fp32,   I);
-  disp_cvt(scratch_.gate_fp16, scratch_.gate_fp32, I);
+  disp_cvt(scratch_.up_fp16,   scratch_.up_fp32,   M * I);
+  disp_cvt(scratch_.gate_fp16, scratch_.gate_fp32, M * I);
   clFinish(cl_q_);
   clEnqueueFillBuffer(cl_q_, scratch_.swiglu_out, &zero, sizeof(float), 0,
                       (size_t)M_pad * I * sizeof(float), 0, nullptr, nullptr);
   {
     auto kp = cl->registerClKernel(kSwigluFp32Kernel, "swiglu_fp32");
-    int n = (int)I;
+    int n = (int)(M * I);
     kp->SetKernelArguments(0, &scratch_.gate_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.up_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
-    std::array<size_t, 1> gws = {((size_t)I + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
@@ -2741,17 +2789,17 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clFinish(cl_q_);
-  disp_cvt(scratch_.dn_fp16, scratch_.dn_fp32, K_h);
+  disp_cvt(scratch_.dn_fp16, scratch_.dn_fp32, M * K_h);
   clFinish(cl_q_);
   // Final residual add → out_fp32 (caller-managed).
   {
     auto kp = cl->registerClKernel(kAddFp32Kernel, "add_fp32");
-    int n = (int)K_h;
+    int n = (int)(M * K_h);
     kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.dn_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
     kp->SetKernelArguments(3, &n, sizeof(int));
-    std::array<size_t, 1> gws = {((size_t)K_h + 63) / 64 * 64};
+    std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);

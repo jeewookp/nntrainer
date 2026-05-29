@@ -79,9 +79,11 @@ int main(int argc, char **argv) {
   }
 
   // Walk the weight file, loading all 28 layers. Per-layer KV cache
-  // sized for max_seq_len_used = 8 (we only test position 0 today; 8
-  // is round-up safety for future short prefills).
-  const unsigned int max_seq_len_used = 8;
+  // sized for max_seq_len_used = 1024 so that the prefill measurement
+  // at M=1024 doesn't overrun the cache (each layer writes M rows).
+  // Per-layer cache memory at this size = 2 * 1024 * 8 * 128 * 2 =
+  // 4 MB; 28 layers => 112 MB total SVM (fine on SD8 Elite).
+  const unsigned int max_seq_len_used = 1024;
   auto NOW = []() { return std::chrono::steady_clock::now(); };
   auto MS = [](auto t1, auto t0) {
     return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
@@ -200,13 +202,98 @@ int main(int argc, char **argv) {
   }
 
   std::fprintf(stderr,
-               "\n[main] step 9 — coherence + perf summary:\n"
+               "\n[main] decode (M=1) summary:\n"
                "  predicted token over %d runs: %d (deterministic=%d)\n"
                "  baseline reference: CausalLM ~6.7 decode TPS "
-               "(== ~150 ms/decode token) on the same SD8 Elite.\n"
-               "  Pipeline: real BOS embedding lookup (CPU Q6_K dequant) "
-               "-> 28-layer GPU chain (all SVM/cl_mem resident) "
-               "-> output_norm -> CPU Q6_K lm_head + argmax.\n",
+               "(== ~150 ms/decode token) on the same SD8 Elite.\n",
                NUM_RUNS, prev_token, deterministic ? 1 : 0);
+
+  // ===== Phase A #2: multi-token prefill timing (task #45) =====
+  // Measure 28-layer chain at various M values. Initial input is the
+  // BOS embedding replicated M times — semantically wrong for prefill
+  // (real prefill needs M distinct tokens + per-position RoPE = task
+  // #45b) but the kernel chain runs end-to-end so per-op wall time
+  // is valid. Compare to baseline 1K prefill 460 TPS.
+  std::fprintf(stderr,
+               "\n[main] === Phase A #2: prefill timing (M>1) ===\n"
+               "  NOTE: per-token RoPE not yet implemented (task #45b);\n"
+               "  output token id is not meaningful for M>1 but per-op\n"
+               "  timing is.\n");
+
+  constexpr int PREFILL_MS[] = {2, 8, 64, 256, 512, 1024};
+  // Allocate bigger ping-pong buffers + warm the scratch up to M=1024.
+  const unsigned int M_max = 1024;
+  if (!fwd.ensure_forward_scratch_allocated(M_max)) {
+    std::fprintf(stderr, "[main] ensure_forward_scratch_allocated(M=%u) failed\n",
+                 M_max);
+    return 80;
+  }
+  cl_context ctx3 = cl->context_inst_.GetContext();
+  cl_int e3 = CL_SUCCESS;
+  cl_mem pf_in = clCreateBuffer(ctx3, CL_MEM_READ_WRITE,
+                                (size_t)M_max * H * sizeof(float), nullptr,
+                                &e3);
+  cl_mem pf_out = clCreateBuffer(ctx3, CL_MEM_READ_WRITE,
+                                 (size_t)M_max * H * sizeof(float), nullptr,
+                                 &e3);
+  if (e3 != CL_SUCCESS) {
+    std::fprintf(stderr, "[main] prefill bufs alloc err=%d\n", e3);
+    return 81;
+  }
+  // Load BOS embedding once on host.
+  std::vector<float> bos_host(H);
+  {
+    cl_mem one = fwd.embedding_lookup_to_fp32_clmem(BOS_TOKEN);
+    clEnqueueReadBuffer(q, one, CL_TRUE, 0, H * sizeof(float),
+                        bos_host.data(), 0, nullptr, nullptr);
+    clReleaseMemObject(one);
+  }
+  // Replicate it M_max times in host buffer then upload once.
+  std::vector<float> rep_input((size_t)M_max * H);
+  for (unsigned int m = 0; m < M_max; ++m)
+    std::memcpy(rep_input.data() + (size_t)m * H, bos_host.data(),
+                H * sizeof(float));
+
+  for (int M_test : PREFILL_MS) {
+    clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0,
+                         (size_t)M_test * H * sizeof(float),
+                         rep_input.data(), 0, nullptr, nullptr);
+    // Time JUST the 28-layer chain.
+    auto t0 = NOW();
+    cl_mem in_b = pf_in, out_b = pf_out;
+    bool ok = true;
+    double t_layer_0 = 0, t_layer_last = 0;
+    for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+      auto tl0 = NOW();
+      if (!fwd.forward_one_layer_v2(L, in_b, out_b, 0,
+                                    (unsigned int)M_test)) {
+        std::fprintf(stderr,
+                     "[main] prefill M=%d layer %u failed\n", M_test, L);
+        ok = false;
+        break;
+      }
+      auto tl1 = NOW();
+      if (L == 0) t_layer_0 = MS(tl1, tl0);
+      if (L == cfg.num_layers - 1) t_layer_last = MS(tl1, tl0);
+      std::swap(in_b, out_b);
+    }
+    auto t1 = NOW();
+    if (!ok) continue;
+    const double t_ms = MS(t1, t0);
+    const double tps = (double)M_test * 1000.0 / t_ms;
+    const double ms_per_token = t_ms / M_test;
+    std::fprintf(stderr,
+                 "[prefill M=%4d] chain=%7.1f ms  %.3f ms/token  "
+                 "=> %7.1f TPS  (L0=%.1f ms, L27=%.1f ms)\n",
+                 M_test, t_ms, ms_per_token, tps,
+                 t_layer_0, t_layer_last);
+  }
+  clReleaseMemObject(pf_in);
+  clReleaseMemObject(pf_out);
+
+  std::fprintf(stderr,
+               "\n[main] step #45 OK — multi-token prefill chain runs.\n"
+               "  Compare to baseline CausalLM 1K prefill: 460 TPS.\n"
+               "  (RoPE per-position correctness pending task #45b.)\n");
   return 0;
 }
