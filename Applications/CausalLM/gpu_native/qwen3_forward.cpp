@@ -3217,15 +3217,18 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //   NNTR_OHWI_IMG  → _ohwi_img_cl (K OHWI SVM, V cl_mem→image2d, #46f)
   bool attn_ok;
   if (use_ohwi_img) {
-    // K image2d is built per-layer (cache_k_image_ohwi) but unused by
-    // default: K is already OHWI [H_kv, S_max, d_h] where d_h is the
-    // innermost (stride-1) axis matching qk_matmul_f16_ohwi's inner
-    // reduction. Buffer scalar reads are already coalesced; wrapping
-    // K as image2d gave no measurable speedup (#46h: 204→203 TPS at
-    // M=1024). NNTR_OHWI_KIMG=1 forces the K-image path for ablation.
+    // K image2d path (qk_matmul_f16_ohwi_img): default ON. The earlier
+    // #46h "NEUTRAL" verdict was a measurement artifact of clFinish-
+    // bracketed stage timing (queue catch-up). CL-event per-kernel
+    // profiling (NNTR_OPENCL_PROFILING) shows the buffer qk_matmul does
+    // SCALAR fp32 FMA + uncoalesced cross-WI K reads = 1381 ms at M=1024,
+    // while the image2d variant does vectorized dot(float4) over texture-
+    // cached K = 222 ms — a 6.2× kernel speedup and +35% prefill wall
+    // (224→303 TPS @ M=1024), token-identical (758, logit 3.20271).
+    // Opt out with NNTR_OHWI_KIMG=0 for ablation.
     const bool use_k_image = []() {
       const char *e = std::getenv("NNTR_OHWI_KIMG");
-      return e && std::atoi(e) != 0;
+      return e ? (std::atoi(e) != 0) : true;
     }();
     if (use_k_image && lw.cache_k_image_ohwi != nullptr) {
       attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
