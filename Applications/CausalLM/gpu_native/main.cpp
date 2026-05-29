@@ -36,14 +36,20 @@ int main(int argc, char **argv) {
   }
   const std::string weight_path = argv[1];
 
-  // Qwen3-4B QINT4 hardcoded (from config.json on device).
+  // Qwen3-0.6B QINT4 hardcoded (from config.json on device). The 4B
+  // file `nntr_qwen3-4b-...idx3-fp32-arm.bin` was preferred but it
+  // currently fails the production load path with "QINT4 Dot on CPU
+  // only supports PER_CHANNEL_AFFINE or KAI_QSI4CXP_4x4x32 scheme"
+  // — invalid qscheme bytes. The 0.6B model is the verified production
+  // QINT4 path and the same kernels target both, so the chain we build
+  // here transfers to the 4B model once it's re-quantized properly.
   causallm_gpu::Qwen3Config cfg;
-  cfg.hidden_size = 2560;
-  cfg.intermediate_size = 9728;
+  cfg.hidden_size = 1024;
+  cfg.intermediate_size = 3072;
   cfg.head_dim = 128;
-  cfg.num_heads_Q = 32;
+  cfg.num_heads_Q = 16;
   cfg.num_heads_KV = 8;
-  cfg.num_layers = 36;
+  cfg.num_layers = 28;
   cfg.vocab_size = 151936;
   cfg.max_seq_len = 20480;
   cfg.rms_norm_eps = 1e-6f;
@@ -75,7 +81,20 @@ int main(int argc, char **argv) {
     return 5;
   }
 
+  // Step 3: full per-FC pipeline for layer 0 wq. Loads the KAI Section A
+  // QINT4 weight from disk, builds the v8c weight backing, then runs:
+  // rmsnorm.cl -> quantize_act_v8c -> gemm_int8_v8c -> read back, verify
+  // output is finite. Just wq this commit; wk/wv/wo come next.
+  if (!fwd.load_layer0_wq()) {
+    std::fprintf(stderr, "[main] load_layer0_wq failed\n");
+    return 6;
+  }
+  if (!fwd.run_layer0_wq_v8c()) {
+    std::fprintf(stderr, "[main] run_layer0_wq_v8c failed\n");
+    return 7;
+  }
+
   std::fprintf(stderr,
-               "[main] step 2 OK. Next commit: Q/K/V FCs on SVM.\n");
+               "[main] step 3 OK. Next: wk/wv/q_norm/k_norm.\n");
   return 0;
 }

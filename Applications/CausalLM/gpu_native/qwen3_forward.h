@@ -100,6 +100,25 @@ public:
   /// math. Returns true if the kernel ran and produced finite output.
   bool run_rmsnorm_layer0();
 
+  /// Load layer 0's wq (QINT4 KAI Section A, [K=hidden, N=H_Q*head_dim])
+  /// from the mmap'd weight file, build a v8c-ready weight backing
+  /// (cl_mem buffer + image2d view + per-channel fp32 scales + per-
+  /// channel int32 weight row-sums) via the existing nntrainer helper
+  /// make_v8c_weight_backing_from_kai_section_a, and stash it for the
+  /// dispatch call below. The mmap region stays alive until the
+  /// destructor; the GPU buffers are owned by this class.
+  bool load_layer0_wq();
+
+  /// Dispatch the full v8c FC pipeline on the wq weight: rmsnorm.cl on
+  /// a known deterministic input (cl_mem) → quantize_act_v8c_fp32_cl
+  /// (cl_mem int8 + scale + zp + row-sum) → image2d view of the int8
+  /// activation → gemm_int8_v8c_cl → fp16 output [1, N]. Reads the
+  /// output back to host, prints a summary (first/last few values,
+  /// finite check). The point is to prove the full per-FC GPU pipeline
+  /// (act-quant → image2d → int8×int4 GEMM → fp16) works against
+  /// real loaded weights, on a single token.
+  bool run_layer0_wq_v8c();
+
   const Qwen3Config &config() const { return cfg_; }
   size_t weight_file_size() const { return weight_bytes_; }
 
@@ -119,6 +138,15 @@ private:
 
   // Layer 0 attention_norm gamma (fp32, [hidden_size]) in SVM.
   void *layer0_attn_norm_gamma_svm_ = nullptr;
+
+  // Layer 0 wq (v8c-ready weight backing + per-channel scale + row-sum).
+  // Built once by load_layer0_wq() from the mmap'd KAI Section A nibbles.
+  // The TensorBacking is held opaquely so this header doesn't depend on
+  // cl_tensor_view.h; the dispatch site casts back to access the cl_mem.
+  void *layer0_wq_backing_ = nullptr;   // tv::TensorBacking* (owning)
+  cl_mem layer0_wq_weight_image_ = nullptr; // image2d view (owned by backing)
+  cl_mem layer0_wq_scale_buf_ = nullptr;    // fp32 [N=hQ*d]
+  cl_mem layer0_wq_row_sum_w_int4_ = nullptr; // int32 [N]
 };
 
 } // namespace causallm_gpu
