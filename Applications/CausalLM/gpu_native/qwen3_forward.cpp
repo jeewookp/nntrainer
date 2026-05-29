@@ -107,6 +107,8 @@ __kernel void rope_fp16(__global half *xy,
 Qwen3Forward::Qwen3Forward() = default;
 
 Qwen3Forward::~Qwen3Forward() {
+  if (output_norm_gamma_svm_ && cl_ctx_)
+    clSVMFree(cl_ctx_, output_norm_gamma_svm_);
   // Generic per-layer state (loaded via load_layer).
   for (auto &lw : layers_) {
     if (lw.attn_norm_gamma_svm && cl_ctx_)
@@ -2341,6 +2343,59 @@ cl_mem Qwen3Forward::forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
   clReleaseMemObject(in_padded);
 
   return out_fp32; // caller owns
+}
+
+bool Qwen3Forward::load_output_norm(size_t file_offset) {
+  if (output_norm_gamma_svm_ != nullptr) return true;
+  const size_t bytes = (size_t)cfg_.hidden_size * sizeof(float);
+  if (file_offset + bytes > weight_bytes_) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] output_norm offset %zu + %zu > file %zu\n",
+                 file_offset, bytes, weight_bytes_);
+    return false;
+  }
+  const float *src =
+    reinterpret_cast<const float *>(weight_mmap_ + file_offset);
+  std::fprintf(stderr,
+               "[qwen3-gpu] output_norm off=%zu first 8: %g %g %g %g %g %g "
+               "%g %g\n", file_offset, src[0], src[1], src[2], src[3],
+               src[4], src[5], src[6], src[7]);
+  if (!load_norm_to_svm_fp32(cl_ctx_, cl_q_, src, cfg_.hidden_size,
+                             &output_norm_gamma_svm_, "output_norm"))
+    return false;
+  std::fprintf(stderr,
+               "[qwen3-gpu] output_norm gamma -> SVM (fp32, %zu B)\n", bytes);
+  return true;
+}
+
+bool Qwen3Forward::run_output_norm(cl_mem inout_fp32) {
+  if (output_norm_gamma_svm_ == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] output_norm gamma not loaded\n");
+    return false;
+  }
+  // Wrap inout in a [M_pad=1, hidden] view; rmsnorm.cl expects H rows
+  // of W columns and we just need one row.
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  auto kp = cl->registerClKernel(nntrainer::rmsnorm_kernel, "rmsnorm_cl");
+  float eps = cfg_.rms_norm_eps;
+  int H = 1, W = (int)cfg_.hidden_size;
+  if (!kp ||
+      !kp->SetKernelArguments(0, &inout_fp32, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(1, &inout_fp32, sizeof(cl_mem)) ||
+      !kp->SetKernelSVMArguments(2, output_norm_gamma_svm_) ||
+      !kp->SetKernelArguments(3, &eps, sizeof(float)) ||
+      !kp->SetKernelArguments(4, &H, sizeof(int)) ||
+      !kp->SetKernelArguments(5, &W, sizeof(int))) {
+    std::fprintf(stderr, "[qwen3-gpu] output_norm args failed\n");
+    return false;
+  }
+  std::array<size_t, 1> gws = {64};
+  std::array<size_t, 1> lws = {64};
+  cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                        lws.data(), 0, nullptr, nullptr);
+  clFinish(cl_q_);
+  return true;
 }
 
 bool Qwen3Forward::allocate_layer0_kv_cache_svm() {

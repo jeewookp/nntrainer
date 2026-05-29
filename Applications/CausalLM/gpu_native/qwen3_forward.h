@@ -150,6 +150,16 @@ public:
   cl_mem forward_one_layer(unsigned int layer_id, cl_mem in_fp32,
                            unsigned int position);
 
+  /// Load the model's final output_norm gamma (fp32 [hidden]) from
+  /// the tail of the weight file. Caller passes the file offset
+  /// right after the last layer's bytes; this method reads the gamma
+  /// and pushes it to SVM. Returns true on success.
+  bool load_output_norm(size_t file_offset);
+
+  /// Apply the output_norm (rmsnorm.cl) to a cl_mem fp32 [hidden]
+  /// input, in place. Caller's buffer is modified.
+  bool run_output_norm(cl_mem inout_fp32);
+
   /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
   /// the mmap'd weights. They sit between wq/wk and wk/wv in the
   /// save order. Pushed into SVM as fp16 (the rmsnorm_cl_fp16 kernel
@@ -288,6 +298,9 @@ private:
     void *cache_v_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]
   };
   std::vector<LayerWeights> layers_;
+
+  // Final output_norm gamma (fp32, [hidden]) in SVM.
+  void *output_norm_gamma_svm_ = nullptr;
 
   /// Generic loader: parses one Int4QTensor blob at the given file
   /// offset ([qscheme u16][packed K*N/2][scales N*u16]) and populates

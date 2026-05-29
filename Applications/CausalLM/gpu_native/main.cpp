@@ -143,11 +143,47 @@ int main(int argc, char **argv) {
                    L, r[0], r[1], r[2], r[3], mn, mx, finite);
     }
   }
+
+  // Step 7c: output_norm. Loads the final gamma at the tail of the
+  // weight file (right after layer 27's last byte; `off` was advanced
+  // by the load loop) and applies rmsnorm.cl in place. Post-norm the
+  // residual stream magnitude collapses from ~10^4 back to ~[-2, +2]
+  // (RMS-normalized) — that's the shape lm_head expects.
+  if (!fwd.load_output_norm(off)) {
+    std::fprintf(stderr, "[main] load_output_norm failed\n");
+    clReleaseMemObject(cur);
+    return 60;
+  }
+  if (!fwd.run_output_norm(cur)) {
+    std::fprintf(stderr, "[main] run_output_norm failed\n");
+    clReleaseMemObject(cur);
+    return 61;
+  }
+  {
+    std::vector<float> r(H);
+    clEnqueueReadBuffer(q, cur, CL_TRUE, 0, H * sizeof(float), r.data(), 0,
+                        nullptr, nullptr);
+    bool finite = true;
+    float mn = std::numeric_limits<float>::infinity();
+    float mx = -mn;
+    for (float v : r) {
+      if (!std::isfinite(v)) finite = false;
+      if (v < mn) mn = v;
+      if (v > mx) mx = v;
+    }
+    std::fprintf(stderr,
+                 "[qwen3-gpu] POST output_norm fp32 N=%u first 8:", H);
+    for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", r[i]);
+    std::fprintf(stderr, "\n  last 4:");
+    for (int i = 0; i < 4; ++i) std::fprintf(stderr, " %g", r[H - 4 + i]);
+    std::fprintf(stderr,
+                 "\n  min=%g max=%g all_finite=%d\n", mn, mx, finite);
+  }
   clReleaseMemObject(cur);
 
   std::fprintf(stderr,
-               "[main] step 7b OK (28-layer chain via new path; final "
-               "hidden finite). Next: output_norm + lm_head + first "
-               "token sampling.\n");
+               "[main] step 7c OK (28-layer chain + output_norm). "
+               "Next: lm_head (Q6_K tied embedding) + first-token "
+               "argmax for end-to-end inference.\n");
   return 0;
 }
