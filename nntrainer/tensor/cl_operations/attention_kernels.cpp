@@ -96,6 +96,22 @@ inline std::mutex &tca_mtx() {
   static std::mutex m;
   return m;
 }
+
+// Device-specialization gate (paper §3.4), shared with the v8c FC path via
+// the same NNTR_V8C_BUF env flag. When set, the two_conv_attention program is
+// built with -DTCA_BUFFER_ONLY so its image-sampling kernel bodies are
+// excluded (Intel NEO cannot compile integer-coord read_imageui; the whole
+// program build would otherwise fail, taking the image-FREE attention kernels
+// down with it). Default "" keeps the Adreno image path bit-identical.
+static const std::string &tca_copts() {
+  static const std::string opts = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return (e && std::atoi(e) != 0) ? std::string("-DTCA_BUFFER_ONLY")
+                                    : std::string();
+  }();
+  return opts;
+}
+
 static bool tca_ensure(cl_context ctx, cl_mem *buf, size_t *cap, size_t bytes,
                        cl_mem_flags flags) {
   if (*buf && *cap >= bytes) return true;
@@ -577,7 +593,7 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
   // ---- K1: QK matmul ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "qk_matmul_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "qk_matmul_f16", tca_copts());
     if (!kp) return false;
     if (svm_inputs) {
       if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
@@ -637,7 +653,7 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
   // ---- K2: row softmax over N_kv ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv;
@@ -666,7 +682,7 @@ bool two_conv_attention_prefill_f16_cl(const uint16_t *Q_host,
   // ---- K3: scores @ V -> O ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "sv_matmul_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "sv_matmul_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     if (svm_inputs) {
@@ -821,7 +837,7 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
   // ---- K1: QK matmul (int8 K + scale) ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "qk_matmul_f16_kvi8");
+      two_conv_attention_kernel, "qk_matmul_f16_kvi8", tca_copts());
     if (!kp) return false;
     if (svm_inputs) {
       if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
@@ -864,7 +880,7 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
   // ---- K2: row softmax over N_kv (shared with fp16 path) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv;
@@ -880,7 +896,7 @@ bool two_conv_attention_prefill_f16_kvi8_cl(
   // ---- K3: scores @ V (int8 V + scale) -> O ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "sv_matmul_f16_kvi8");
+      two_conv_attention_kernel, "sv_matmul_f16_kvi8", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     if (svm_inputs) {
@@ -1034,7 +1050,7 @@ bool two_conv_attention_prefill_f16_img_cl(
   // ---- K1: QK matmul (image2d Q, K) ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "qk_matmul_f16_img");
+      two_conv_attention_kernel, "qk_matmul_f16_img", tca_copts());
     if (!kp) { cleanup(); return false; }
     if (!kp->SetKernelArguments(0, &q_image, sizeof(cl_mem)) ||
         !kp->SetKernelArguments(1, &k_image, sizeof(cl_mem)) ||
@@ -1073,7 +1089,7 @@ bool two_conv_attention_prefill_f16_img_cl(
   // ---- K2: softmax (shared with the scalar fp16 path) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) { cleanup(); return false; }
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) {
       cleanup(); return false;
@@ -1092,7 +1108,7 @@ bool two_conv_attention_prefill_f16_img_cl(
   // ---- K3: SV matmul (image2d V) ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "sv_matmul_f16_img");
+      two_conv_attention_kernel, "sv_matmul_f16_img", tca_copts());
     if (!kp) { cleanup(); return false; }
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem)) ||
         !kp->SetKernelArguments(1, &v_image, sizeof(cl_mem)) ||
@@ -1208,7 +1224,7 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
   // ---- K1: QK matmul OHWI ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "qk_matmul_f16_ohwi");
+      two_conv_attention_kernel, "qk_matmul_f16_ohwi", tca_copts());
     if (!kp) return false;
     if (svm_inputs) {
       if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
@@ -1247,7 +1263,7 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
   // ---- K2: row softmax (unchanged, scores layout unaffected by OHWI) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv;
@@ -1263,7 +1279,7 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
   // ---- K3: scores @ V -> O (V still concat; reuse sv_matmul_f16) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "sv_matmul_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "sv_matmul_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     if (svm_inputs) {
@@ -1371,7 +1387,7 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
   // ---- K1: QK matmul OHWI (same as half-OHWI variant) ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, "qk_matmul_f16_ohwi");
+      two_conv_attention_kernel, "qk_matmul_f16_ohwi", tca_copts());
     if (!kp) return false;
     if (svm_inputs) {
       if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
@@ -1410,7 +1426,7 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
   // ---- K2: row softmax (unchanged) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv;
@@ -1427,7 +1443,7 @@ bool two_conv_attention_prefill_f16_ohwi_full_cl(
   {
     ClContext::SharedPtrClKernel kp =
       blas_cc->registerClKernel(two_conv_attention_kernel,
-                                "sv_matmul_f16_ohwi");
+                                "sv_matmul_f16_ohwi", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     if (svm_inputs) {
@@ -1601,7 +1617,7 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
                             ? "qk_matmul_f16_ohwi_img"
                             : "qk_matmul_f16_ohwi";
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-      two_conv_attention_kernel, k1_name);
+      two_conv_attention_kernel, k1_name, tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_svm)))
       return false;
@@ -1674,7 +1690,7 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
   // ---- K2: row softmax (scores cl_mem, in-place) ----
   {
     ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16");
+      blas_cc->registerClKernel(two_conv_attention_kernel, "softmax_row_f16", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem))) return false;
     int Mi = (int)M, Nkvi = (int)N_kv;
@@ -1691,7 +1707,7 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
   {
     ClContext::SharedPtrClKernel kp =
       blas_cc->registerClKernel(two_conv_attention_kernel,
-                                "sv_matmul_f16_ohwi_img");
+                                "sv_matmul_f16_ohwi_img", tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem)) ||
         !kp->SetKernelArguments(1, &v_image, sizeof(cl_mem)) ||

@@ -300,6 +300,19 @@ __kernel void v8c_act_quant_f16_par(
 #ifndef V8C_TN
 #define V8C_TN 8
 #endif
+// M=1 (decode) n-tile width. Defined here (outside the V8C_BUFFER_ONLY guard)
+// so the _m1_buf kernels can use it when the image kernels are compiled out.
+#ifndef V8C_TN_M1
+#define V8C_TN_M1 8
+#endif
+
+// Image-sampling kernel bodies. Compiled out with -DV8C_BUFFER_ONLY on
+// runtimes (e.g. Intel NEO) whose SPIR-V backend cannot compile
+// integer-coordinate read_imageui — otherwise clBuildProgram fails for the
+// whole program and even the buffer kernels below would not register.
+// The buffer-load siblings (further down) are ALWAYS compiled. Adreno builds
+// with no option, so this path stays bit-identical there.
+#ifndef V8C_BUFFER_ONLY
 
 __kernel void v8c_gemm_int8_int4(
     __read_only image2d_t  Ximg,            // act image view (RGBA UINT32, K/16 × M)
@@ -661,6 +674,369 @@ __kernel void v8c_gemm_int8_int8_v_ohwi(
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) {
       uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k16, n0 + j));
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_ss_int(a[i].x, w.x)
+                   + dot_4x8packed_ss_int(a[i].y, w.y)
+                   + dot_4x8packed_ss_int(a[i].z, w.z)
+                   + dot_4x8packed_ss_int(a[i].w, w.w);
+      }
+    }
+  }
+  const int head = n0 / d;
+  const int x_base = n0 - head * d;
+  const long head_off = (long)head * (long)d * (long)S_max;
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    const int m = m0 + i;
+    if (m >= M_real) continue;
+    int zp = zp_act[m];
+    float s_i = scale_act[m];
+    const long t_off = (long)(position + m);
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - zp * row_sum_w[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      V_ohwi[head_off + (long)(x_base + j) * (long)S_max + t_off] = (half)v;
+    }
+  }
+}
+
+#endif // V8C_BUFFER_ONLY (image-sampling kernels)
+
+// ============================================================
+// BUFFER-LOAD variants (paper §3.4 device specialization).
+//
+// Some OpenCL runtimes (e.g. Intel NEO) advertise cl_khr_image2d_from_buffer
+// yet cannot COMPILE integer-coordinate read_imageui(img, sampler, (int2)(x,y))
+// — they require __spirv_ImageSampleExplicitLod_Ruint4(...iif) which the NEO
+// SPIR-V backend lacks, so the whole program fails CL_BUILD_PROGRAM_FAILURE.
+// The dot_4x8packed_*_int builtins themselves ARE supported on Intel
+// (cl_khr_integer_dot_product v2.0). Only the sampled-image read blocks.
+//
+// KEY EQUIVALENCE: an image2d-from-buffer with RGBA UINT32 texels (16 bytes
+// each) viewed row-major over a cl_mem buffer is byte-identical to indexing
+// that same buffer as `((__global const uint4*)buf)[row*W + col]`, where W is
+// the texel width of the image (row_pitch_bytes / 16). So these kernels read
+// the EXACT same bytes as the image variants, with identical math.
+//   - Activation buffer width  W_act = K/16  (16 int8 per texel)
+//   - int4 weight buffer width W_wgt = K/32  (32 int4 per texel)
+//   - int8 weight buffer width W_wgt = K/16  (16 int8 per texel)
+// Gated host-side (NNTR_V8C_BUF=1) so the Adreno image path is untouched.
+// ============================================================
+
+__kernel void v8c_gemm_int8_int4_buf(
+    __global const uint4 *Xbuf,             // act buffer (uint4 texels, W_act × M)
+    __global const uint4 *Wbuf,             // weight buffer (uint4 texels, W_wgt × N)
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *Y,
+    const int M, const int N, const int K,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K32 = K >> 5;
+
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    uint4 a_lo[V8C_TM], a_hi[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++) {
+      a_lo[i] = Xbuf[(long)(m0 + i) * W_act + (2*k32  )];
+      a_hi[i] = Xbuf[(long)(m0 + i) * W_act + (2*k32+1)];
+    }
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k32];
+      const uint M4 = 0x0F0F0F0Fu;
+      uint w0lo =  w.x        & M4;
+      uint w0hi = (w.x >> 4)  & M4;
+      uint w1lo =  w.y        & M4;
+      uint w1hi = (w.y >> 4)  & M4;
+      uint w2lo =  w.z        & M4;
+      uint w2hi = (w.z >> 4)  & M4;
+      uint w3lo =  w.w        & M4;
+      uint w3hi = (w.w >> 4)  & M4;
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_su_int(a_lo[i].x, w0lo)
+                   + dot_4x8packed_su_int(a_lo[i].y, w0hi)
+                   + dot_4x8packed_su_int(a_lo[i].z, w1lo)
+                   + dot_4x8packed_su_int(a_lo[i].w, w1hi)
+                   + dot_4x8packed_su_int(a_hi[i].x, w2lo)
+                   + dot_4x8packed_su_int(a_hi[i].y, w2hi)
+                   + dot_4x8packed_su_int(a_hi[i].z, w3lo)
+                   + dot_4x8packed_su_int(a_hi[i].w, w3hi);
+      }
+    }
+  }
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    int rs = row_sum_act[m0 + i];
+    int zp = zp_act[m0 + i];
+    float s_i = scale_act[m0 + i];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      Y[(long)(m0 + i) * N + (n0 + j)] = (half)v;
+    }
+  }
+}
+
+__kernel void v8c_gemm_int8_int4_m1_buf(
+    __global const uint4 *Xbuf,
+    __global const uint4 *Wbuf,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *Y,
+    const int M, const int N, const int K,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN_M1;
+  const int K32 = K >> 5;
+
+  int acc[V8C_TN_M1];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) acc[j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    uint4 a_lo = Xbuf[(long)0 * W_act + (2*k32  )];
+    uint4 a_hi = Xbuf[(long)0 * W_act + (2*k32+1)];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN_M1; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k32];
+      const uint M4 = 0x0F0F0F0Fu;
+      uint w0lo =  w.x        & M4;
+      uint w0hi = (w.x >> 4)  & M4;
+      uint w1lo =  w.y        & M4;
+      uint w1hi = (w.y >> 4)  & M4;
+      uint w2lo =  w.z        & M4;
+      uint w2hi = (w.z >> 4)  & M4;
+      uint w3lo =  w.w        & M4;
+      uint w3hi = (w.w >> 4)  & M4;
+      acc[j] += dot_4x8packed_su_int(a_lo.x, w0lo)
+              + dot_4x8packed_su_int(a_lo.y, w0hi)
+              + dot_4x8packed_su_int(a_lo.z, w1lo)
+              + dot_4x8packed_su_int(a_lo.w, w1hi)
+              + dot_4x8packed_su_int(a_hi.x, w2lo)
+              + dot_4x8packed_su_int(a_hi.y, w2hi)
+              + dot_4x8packed_su_int(a_hi.z, w3lo)
+              + dot_4x8packed_su_int(a_hi.w, w3hi);
+    }
+  }
+  const int rs = row_sum_act[0];
+  const int zp = zp_act[0];
+  const float s_i = scale_act[0];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) {
+    int corrected = acc[j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+    float v = (float)corrected * s_i * scale_wgt[n0 + j];
+    Y[n0 + j] = (half)v;
+  }
+}
+
+__kernel void v8c_gemm_int8_int4_v_ohwi_buf(
+    __global const uint4 *Xbuf,
+    __global const uint4 *Wbuf,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *V_ohwi,
+    const int M, const int N, const int K,
+    const int d, const int S_max, const int position,
+    const int M_real,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K32 = K >> 5;
+
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    uint4 a_lo[V8C_TM], a_hi[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++) {
+      a_lo[i] = Xbuf[(long)(m0 + i) * W_act + (2*k32  )];
+      a_hi[i] = Xbuf[(long)(m0 + i) * W_act + (2*k32+1)];
+    }
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k32];
+      const uint M4 = 0x0F0F0F0Fu;
+      uint w0lo =  w.x        & M4;
+      uint w0hi = (w.x >> 4)  & M4;
+      uint w1lo =  w.y        & M4;
+      uint w1hi = (w.y >> 4)  & M4;
+      uint w2lo =  w.z        & M4;
+      uint w2hi = (w.z >> 4)  & M4;
+      uint w3lo =  w.w        & M4;
+      uint w3hi = (w.w >> 4)  & M4;
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_su_int(a_lo[i].x, w0lo)
+                   + dot_4x8packed_su_int(a_lo[i].y, w0hi)
+                   + dot_4x8packed_su_int(a_lo[i].z, w1lo)
+                   + dot_4x8packed_su_int(a_lo[i].w, w1hi)
+                   + dot_4x8packed_su_int(a_hi[i].x, w2lo)
+                   + dot_4x8packed_su_int(a_hi[i].y, w2hi)
+                   + dot_4x8packed_su_int(a_hi[i].z, w3lo)
+                   + dot_4x8packed_su_int(a_hi[i].w, w3hi);
+      }
+    }
+  }
+  const int head = n0 / d;
+  const int x_base = n0 - head * d;
+  const long head_off = (long)head * (long)d * (long)S_max;
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    const int m = m0 + i;
+    if (m >= M_real) continue;
+    int rs = row_sum_act[m];
+    int zp = zp_act[m];
+    float s_i = scale_act[m];
+    const long t_off = (long)(position + m);
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      V_ohwi[head_off + (long)(x_base + j) * (long)S_max + t_off] = (half)v;
+    }
+  }
+}
+
+// int8×int8 buffer variants (W_wgt = K/16 for int8 weight texels).
+__kernel void v8c_gemm_int8_int8_buf(
+    __global const uint4 *Xbuf,
+    __global const uint4 *Wbuf,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,     // UNUSED (ABI parity)
+    __global const int    *zp_act,
+    __global const int    *row_sum_w,
+    __global       half   *Y,
+    const int M, const int N, const int K,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K16 = K >> 4;
+
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++)
+      a[i] = Xbuf[(long)(m0 + i) * W_act + k16];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k16];
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_ss_int(a[i].x, w.x)
+                   + dot_4x8packed_ss_int(a[i].y, w.y)
+                   + dot_4x8packed_ss_int(a[i].z, w.z)
+                   + dot_4x8packed_ss_int(a[i].w, w.w);
+      }
+    }
+  }
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    int zp = zp_act[m0 + i];
+    float s_i = scale_act[m0 + i];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - zp * row_sum_w[n0 + j];
+      Y[(long)(m0 + i) * N + (n0 + j)] = (half)((float)corrected * s_i * scale_wgt[n0 + j]);
+    }
+  }
+}
+
+__kernel void v8c_gemm_int8_int8_m1_buf(
+    __global const uint4 *Xbuf,
+    __global const uint4 *Wbuf,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,     // UNUSED
+    __global const int    *zp_act,
+    __global const int    *row_sum_w,
+    __global       half   *Y,
+    const int M, const int N, const int K,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN_M1;
+  const int K16 = K >> 4;
+  int acc[V8C_TN_M1];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) acc[j] = 0;
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a = Xbuf[(long)0 * W_act + k16];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN_M1; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k16];
+      acc[j] += dot_4x8packed_ss_int(a.x, w.x)
+              + dot_4x8packed_ss_int(a.y, w.y)
+              + dot_4x8packed_ss_int(a.z, w.z)
+              + dot_4x8packed_ss_int(a.w, w.w);
+    }
+  }
+  const int zp = zp_act[0];
+  const float s_i = scale_act[0];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) {
+    int corrected = acc[j] - zp * row_sum_w[n0 + j];
+    Y[n0 + j] = (half)((float)corrected * s_i * scale_wgt[n0 + j]);
+  }
+}
+
+__kernel void v8c_gemm_int8_int8_v_ohwi_buf(
+    __global const uint4 *Xbuf,
+    __global const uint4 *Wbuf,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,     // UNUSED
+    __global const int    *zp_act,
+    __global const int    *row_sum_w,
+    __global       half   *V_ohwi,
+    const int M, const int N, const int K,
+    const int d, const int S_max, const int position,
+    const int M_real,
+    const int W_act, const int W_wgt) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K16 = K >> 4;
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++)
+      a[i] = Xbuf[(long)(m0 + i) * W_act + k16];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = Wbuf[(long)(n0 + j) * W_wgt + k16];
       #pragma unroll
       for (int i = 0; i < V8C_TM; i++) {
         acc[i][j] += dot_4x8packed_ss_int(a[i].x, w.x)

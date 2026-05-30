@@ -361,6 +361,7 @@ private:
   struct V8cFcWeight {
     void *backing = nullptr;       // tv::TensorBacking* (owning)
     cl_mem weight_image = nullptr; // image2d view (owned by backing)
+    cl_mem weight_buf = nullptr;   // raw cl_mem backing buffer (NNTR_V8C_BUF path)
     cl_mem scale_buf = nullptr;    // fp32 [N]
     cl_mem row_sum_w_int4 = nullptr; // int32 [N] (= Σ int4, or Σ int8 if is_int8)
     unsigned int K = 0, N = 0;

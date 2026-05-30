@@ -261,6 +261,14 @@ if get_option('enable-opencl')
     # Keep clblast_dep defined as an empty dependency for downstream use.
     clblast_dep = declare_dependency()
   endif
+
+  # On non-android platforms, link the host ICD loader directly so libnntrainer.so
+  # resolves clCreateContext/clBuildProgram/etc. (android links a staged libOpenCL).
+  if get_option('platform') != 'android'
+    opencl_loader_dep = cxx.find_library('OpenCL', required: true)
+  else
+    opencl_loader_dep = declare_dependency()
+  endif
 endif
 
 if get_option('opencl-kernel-path') != ''

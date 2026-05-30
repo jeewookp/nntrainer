@@ -385,4 +385,18 @@ void nntr_gemm_qai8dxp_qsi4cxp_packed(size_t m, size_t n, size_t k,
     idx_variant, transB, lower_bound, upper_bound);
 }
 
+template <>
+void nntr_gemm_qai8dxp_qsi4cxp_packed(size_t m, size_t n, size_t k,
+                                      void *lhs_native_mtx_f16,
+                                      void *rhs_packed_mtx_qs4cx,
+                                      _FP16 *dst_act_mtx_f16,
+                                      uint32_t idx_variant, bool transB,
+                                      _FP16 lower_bound, _FP16 upper_bound) {
+  // x86 has no KAI fp16 micro-kernel; forward to the fallback (NYI-throw).
+  // The GPU/v8c path is used at runtime, so this CPU branch is link-only.
+  __fallback_nntr_gemm_qai8dxp_qsi4cxp_packed(
+    m, n, k, lhs_native_mtx_f16, rhs_packed_mtx_qs4cx, dst_act_mtx_f16,
+    idx_variant, transB, lower_bound, upper_bound);
+}
+
 } /* namespace nntrainer */

@@ -185,6 +185,13 @@ __kernel void qk_matmul_f16_ohwi(
 // texture cache. Same TM_QK/TN_QK tiling as the buffer variant —
 // inner loop over d in 8-wide chunks via 1 K image read per (n, d).
 // =============================================================
+// Image-sampling kernel. Compiled out with -DTCA_BUFFER_ONLY on runtimes
+// (e.g. Intel NEO) whose SPIR-V backend cannot compile integer-coordinate
+// read_imageui — otherwise clBuildProgram fails for the whole program and the
+// image-FREE attention kernels (qk_matmul_f16_ohwi / softmax_row_f16 /
+// sv_matmul_f16) used by the NNTR_OHWI_IMG=0 path could not register either.
+// Default (Adreno) builds with no option, keeping that path bit-identical.
+#ifndef TCA_BUFFER_ONLY
 __kernel void qk_matmul_f16_ohwi_img(
     __global const half *Q,            // [M, HD_Q] fp16, row-major
     __read_only image2d_t K_img,       // see comment above
@@ -278,6 +285,7 @@ __kernel void qk_matmul_f16_ohwi_img(
     }
   }
 }
+#endif // TCA_BUFFER_ONLY (qk_matmul_f16_ohwi_img)
 
 // =============================================================
 // Row softmax (in-place): for each (h, m), softmax over N_kv axis.
@@ -651,7 +659,9 @@ __kernel void sv_matmul_f16_kvi8(
 // read via read_imageui returning uint4, reinterpret as half8 with
 // as_half8(). 8x fewer memory transactions than scalar half loads.
 // d, HD_Q, HD_KV must be multiples of 8.
+// Image-sampling kernels: compiled out with -DTCA_BUFFER_ONLY (Intel NEO).
 // =============================================================
+#ifndef TCA_BUFFER_ONLY
 
 // Smaller tile (TM_IMG=2, TN_IMG=4 = 8 acc) to keep register pressure low.
 // half8 staging × (TM_IMG+TN_IMG) = 6 half8 = 48 halves = 96 bytes plus
@@ -883,3 +893,5 @@ __kernel void sv_matmul_f16_ohwi_img(
     if (x < d) O[(long)m * HD_Q + head_q * d + x] = (half)acc[t];
   }
 }
+
+#endif // TCA_BUFFER_ONLY (image2d_from_buffer attention variants)

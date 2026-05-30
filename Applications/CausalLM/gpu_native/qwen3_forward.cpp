@@ -824,23 +824,37 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
     if (rsw_buf) clReleaseMemObject(rsw_buf);
     return false;
   }
-  nntrainer::tv::ViewSpec ws;
-  ws.kind = nntrainer::tv::ViewKind::IMAGE_2D;
-  ws.image_channel_order = CL_RGBA;
-  ws.image_channel_type = CL_UNSIGNED_INT32;
-  // int8: 16 int8/texel -> width K/16, pitch K. int4: 32 int4/texel -> K/32, K/2.
-  ws.width = is_int8 ? K / 16 : K / 32;
-  ws.height = N;
-  ws.row_pitch_bytes = is_int8 ? K : K / 2;
-  try {
-    out->weight_image = backing->imageView(ws);
-  } catch (const std::exception &e) {
-    std::fprintf(stderr, "[qwen3-gpu] %s imageView threw: %s\n", tag,
-                 e.what());
-    clReleaseMemObject(scale_buf);
-    clReleaseMemObject(rsw_buf);
-    return false;
+  // #v8c-buf: skip the image2d-from-buffer view when the buffer-load FC path
+  // is active (NNTR_V8C_BUF=1). On runtimes like Intel NEO the buffer kernel
+  // indexes the raw cl_mem directly; the image view is unused. Default builds
+  // (Adreno) still create the view, keeping that path bit-identical.
+  const bool buf_path = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return e && std::atoi(e) != 0;
+  }();
+  if (!buf_path) {
+    nntrainer::tv::ViewSpec ws;
+    ws.kind = nntrainer::tv::ViewKind::IMAGE_2D;
+    ws.image_channel_order = CL_RGBA;
+    ws.image_channel_type = CL_UNSIGNED_INT32;
+    // int8: 16 int8/texel -> width K/16, pitch K. int4: 32 int4/texel -> K/32, K/2.
+    ws.width = is_int8 ? K / 16 : K / 32;
+    ws.height = N;
+    ws.row_pitch_bytes = is_int8 ? K : K / 2;
+    try {
+      out->weight_image = backing->imageView(ws);
+    } catch (const std::exception &e) {
+      std::fprintf(stderr, "[qwen3-gpu] %s imageView threw: %s\n", tag,
+                   e.what());
+      clReleaseMemObject(scale_buf);
+      clReleaseMemObject(rsw_buf);
+      return false;
+    }
   }
+  // Raw backing buffer for the NNTR_V8C_BUF (buffer-load) device path.
+  // image2d-from-buffer reads the same bytes; the buffer variant indexes
+  // this cl_mem as uint4 texels directly.
+  out->weight_buf = backing->buffer();
   out->backing = backing.release();
   out->scale_buf = scale_buf;
   out->row_sum_w_int4 = rsw_buf;
@@ -2951,14 +2965,23 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   // Increment 2: cache the int8 activation image2d views once (sized for the
   // max M_pad). Reused every layer; reads only touch valid rows so a
   // max-height view serves any M<=M_pad. Routed through the tv factory.
-  scratch_.qkv_act_img = make_act_image2d(cl_ctx_, scratch_.qkv_act_i8, K_h, M_pad, img_caps_);
-  scratch_.wo_act_img  = make_act_image2d(cl_ctx_, scratch_.wo_act_i8,  N_q, M_pad, img_caps_);
-  scratch_.fa_act_img  = make_act_image2d(cl_ctx_, scratch_.fa_i8,      K_h, M_pad, img_caps_);
-  scratch_.dn_act_img  = make_act_image2d(cl_ctx_, scratch_.dn_i8,      I,   M_pad, img_caps_);
-  if (!scratch_.qkv_act_img || !scratch_.wo_act_img || !scratch_.fa_act_img ||
-      !scratch_.dn_act_img) {
-    std::fprintf(stderr, "[qwen3-gpu] scratch act-image cache create failed\n");
-    return false;
+  // #v8c-buf: when the buffer-load FC path is active (NNTR_V8C_BUF=1, e.g.
+  // Intel NEO) the GEMMs index the raw int8 scratch buffer directly, so no
+  // image2d views are needed — skip their creation entirely.
+  const bool skip_act_img = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return e && std::atoi(e) != 0;
+  }();
+  if (!skip_act_img) {
+    scratch_.qkv_act_img = make_act_image2d(cl_ctx_, scratch_.qkv_act_i8, K_h, M_pad, img_caps_);
+    scratch_.wo_act_img  = make_act_image2d(cl_ctx_, scratch_.wo_act_i8,  N_q, M_pad, img_caps_);
+    scratch_.fa_act_img  = make_act_image2d(cl_ctx_, scratch_.fa_i8,      K_h, M_pad, img_caps_);
+    scratch_.dn_act_img  = make_act_image2d(cl_ctx_, scratch_.dn_i8,      I,   M_pad, img_caps_);
+    if (!scratch_.qkv_act_img || !scratch_.wo_act_img || !scratch_.fa_act_img ||
+        !scratch_.dn_act_img) {
+      std::fprintf(stderr, "[qwen3-gpu] scratch act-image cache create failed\n");
+      return false;
+    }
   }
 
   scratch_max_M_ = M_pad;
@@ -2991,6 +3014,17 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // controls scatter / wv dispatch / attention call.
   static const bool use_ohwi_img = []() {
     const char *e = std::getenv("NNTR_OHWI_IMG");
+    return e && std::atoi(e) != 0;
+  }();
+
+  // #v8c-buf (paper §3.4 device specialization): NNTR_V8C_BUF=1 selects the
+  // buffer-load v8c FC kernels (no sampled-image reads) for runtimes like
+  // Intel NEO that cannot compile integer-coord read_imageui. When set we pass
+  // the raw cl_mem buffers (scratch int8 act + weight backing buffer) into the
+  // act_image/weight_image arg slots; the wrapper dispatches the _buf kernel.
+  // Default 0 keeps the Adreno image2d path bit-identical.
+  static const bool use_v8c_buf = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
     return e && std::atoi(e) != 0;
   }();
 
@@ -3067,10 +3101,15 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               : &nntrainer::gemm_int8_v8c_cl;
   auto *kgemm = lw.wk.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
                               : &nntrainer::gemm_int8_v8c_cl;
-  qgemm(act_image, lw.wq.weight_image, scratch_.qkv_act_scale, lw.wq.scale_buf,
+  // Buffer path: act arg = raw int8 scratch buffer; weight arg = backing buffer.
+  cl_mem qkv_act_arg = use_v8c_buf ? scratch_.qkv_act_i8 : act_image;
+  cl_mem wq_arg = use_v8c_buf ? lw.wq.weight_buf : lw.wq.weight_image;
+  cl_mem wk_arg = use_v8c_buf ? lw.wk.weight_buf : lw.wk.weight_image;
+  cl_mem wv_arg = use_v8c_buf ? lw.wv.weight_buf : lw.wv.weight_image;
+  qgemm(qkv_act_arg, wq_arg, scratch_.qkv_act_scale, lw.wq.scale_buf,
         scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wq.row_sum_w_int4,
         scratch_.y_q, M_pad, N_q, K_h);
-  kgemm(act_image, lw.wk.weight_image, scratch_.qkv_act_scale, lw.wk.scale_buf,
+  kgemm(qkv_act_arg, wk_arg, scratch_.qkv_act_scale, lw.wk.scale_buf,
         scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wk.row_sum_w_int4,
         scratch_.y_k, M_pad, N_kv, K_h);
   // #46l: when OHWI_IMG path is active, wv writes outputs directly into
@@ -3080,14 +3119,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   if (use_ohwi_img && lw.cache_v_buf_ohwi != nullptr) {
     auto *vohwi = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_v_ohwi_cl
                                 : &nntrainer::gemm_int8_v8c_v_ohwi_cl;
-    vohwi(act_image, lw.wv.weight_image, scratch_.qkv_act_scale,
+    vohwi(qkv_act_arg, wv_arg, scratch_.qkv_act_scale,
           lw.wv.scale_buf, scratch_.qkv_act_rs, scratch_.qkv_act_zp,
           lw.wv.row_sum_w_int4, lw.cache_v_buf_ohwi, M_pad, N_kv, K_h,
           cfg_.head_dim, kv_cache_max_seq_len_, position, /*M_real=*/M);
   } else {
     auto *vgemm = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
                                 : &nntrainer::gemm_int8_v8c_cl;
-    vgemm(act_image, lw.wv.weight_image, scratch_.qkv_act_scale,
+    vgemm(qkv_act_arg, wv_arg, scratch_.qkv_act_scale,
           lw.wv.scale_buf, scratch_.qkv_act_rs, scratch_.qkv_act_zp,
           lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv, K_h);
   }
@@ -3346,7 +3385,9 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   cl_mem wo_act_image = scratch_.wo_act_img; // increment 2: cached view
   auto *ogemm = lw.wo.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
                               : &nntrainer::gemm_int8_v8c_cl;
-  ogemm(wo_act_image, lw.wo.weight_image, scratch_.wo_act_scale,
+  cl_mem wo_act_arg = use_v8c_buf ? scratch_.wo_act_i8 : wo_act_image;
+  cl_mem wo_arg = use_v8c_buf ? lw.wo.weight_buf : lw.wo.weight_image;
+  ogemm(wo_act_arg, wo_arg, scratch_.wo_act_scale,
         lw.wo.scale_buf, scratch_.wo_act_rs, scratch_.wo_act_zp,
         lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad, K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
@@ -3403,11 +3444,15 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                       scratch_.fa_sc, scratch_.fa_zp,
                                       scratch_.fa_rs, M_pad, K_h);
   cl_mem fa_image = scratch_.fa_act_img; // increment 2: cached view
-  nntrainer::gemm_int8_v8c_cl(fa_image, lw.ffn_up.weight_image, scratch_.fa_sc,
+  cl_mem fa_act_arg = use_v8c_buf ? scratch_.fa_i8 : fa_image;
+  cl_mem fup_arg = use_v8c_buf ? lw.ffn_up.weight_buf : lw.ffn_up.weight_image;
+  cl_mem fgate_arg =
+    use_v8c_buf ? lw.ffn_gate.weight_buf : lw.ffn_gate.weight_image;
+  nntrainer::gemm_int8_v8c_cl(fa_act_arg, fup_arg, scratch_.fa_sc,
                               lw.ffn_up.scale_buf, scratch_.fa_rs,
                               scratch_.fa_zp, lw.ffn_up.row_sum_w_int4,
                               scratch_.up_fp16, M_pad, I, K_h);
-  nntrainer::gemm_int8_v8c_cl(fa_image, lw.ffn_gate.weight_image,
+  nntrainer::gemm_int8_v8c_cl(fa_act_arg, fgate_arg,
                               scratch_.fa_sc, lw.ffn_gate.scale_buf,
                               scratch_.fa_rs, scratch_.fa_zp,
                               lw.ffn_gate.row_sum_w_int4, scratch_.gate_fp16,
@@ -3450,7 +3495,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
   cl_mem dn_image = scratch_.dn_act_img; // increment 2: cached view
-  nntrainer::gemm_int8_v8c_cl(dn_image, lw.ffn_down.weight_image,
+  cl_mem dn_act_arg = use_v8c_buf ? scratch_.dn_i8 : dn_image;
+  cl_mem fdown_arg =
+    use_v8c_buf ? lw.ffn_down.weight_buf : lw.ffn_down.weight_image;
+  nntrainer::gemm_int8_v8c_cl(dn_act_arg, fdown_arg,
                               scratch_.dn_sc, lw.ffn_down.scale_buf,
                               scratch_.dn_rs, scratch_.dn_zp,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,

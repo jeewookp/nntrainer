@@ -1396,6 +1396,27 @@ static bool v8c_pick_lws(size_t gws_x, size_t gws_y, std::array<size_t, 2> &out)
   return ok;
 }
 
+// Device-specialization gate (paper §3.4). NNTR_V8C_BUF=1 selects the
+// BUFFER-LOAD v8c GEMM kernels (no sampled-image reads) for runtimes that
+// advertise cl_khr_image2d_from_buffer but cannot compile integer-coordinate
+// read_imageui (e.g. Intel NEO). Default 0 = image path (Adreno BIT-identical).
+// Queried once per process.
+static bool v8c_use_buffer_path() {
+  static const bool use_buf = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return e && std::atoi(e) != 0;
+  }();
+  return use_buf;
+}
+
+// Compile options for the buffer-load v8c program. -DV8C_BUFFER_ONLY excludes
+// the image-sampling kernel bodies; -cl-std=CL3.0 exposes the core OpenCL C
+// 3.0 dot_4x8packed_* builtins (Intel NEO does not declare them under the
+// default CL1.2 std, and the legacy cl_khr_integer_dot_product #pragma is
+// ignored by its front-end). All v8c registration sites on the buffer path
+// must pass the IDENTICAL string so the same cached program is reused.
+static const char *kV8cBufCompileOpts = "-DV8C_BUFFER_ONLY -cl-std=CL3.0";
+
 void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
                       cl_mem scale_wgt, cl_mem row_sum_act, cl_mem zp_act,
                       cl_mem row_sum_w_int4, cl_mem output_fp16, unsigned int M,
@@ -1407,10 +1428,17 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   // instead. The caller passes M_pad here, not M, so M_pad <= 4 means
   // "the real input had 1 valid row" (no QINT4 model has padded prefill
   // with M_pad <= 4 except via the M=1 decode rounding).
+  // Buffer path (NNTR_V8C_BUF=1): act_image/weight_image carry the raw cl_mem
+  // buffers; widths derived from K (int4 weight texel = 32 K, act texel = 16 K).
+  const bool use_buf = v8c_use_buffer_path();
   const char *kname =
-    (M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4";
+    use_buf ? ((M <= 4) ? "v8c_gemm_int8_int4_m1_buf" : "v8c_gemm_int8_int4_buf")
+            : ((M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4");
+  // Buffer path compiles the program with -DV8C_BUFFER_ONLY so the
+  // image-sampling kernel bodies are excluded (Intel NEO can't compile them).
+  const std::string copts = use_buf ? kV8cBufCompileOpts : "";
   ClContext::SharedPtrClKernel kp =
-    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname);
+    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)
     throw std::runtime_error(std::string("v8c_gemm: registerClKernel failed: ") +
                              kname);
@@ -1439,6 +1467,13 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     throw std::runtime_error("v8c gemm arg 9 (N)");
   if (!kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
     throw std::runtime_error("v8c gemm arg 10 (K)");
+  if (use_buf) {
+    int W_act = (int)(K / 16), W_wgt = (int)(K / 32);
+    if (!kp->SetKernelArguments(arg++, &W_act, sizeof(int)))
+      throw std::runtime_error("v8c gemm arg 11 (W_act)");
+    if (!kp->SetKernelArguments(arg++, &W_wgt, sizeof(int)))
+      throw std::runtime_error("v8c gemm arg 12 (W_wgt)");
+  }
 
   // V8C_TM=4, V8C_TN=8 (defaults in the .cl). global = (N/TN, M/TM); kernel
   // requires M%4=0, N%8=0, K%32=0. The historic 4×16 LWS is only valid when
@@ -1494,8 +1529,11 @@ void gemm_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
     throw std::runtime_error("gemm_int8_v8c_v_ohwi: N % head_dim != 0");
   if (M_real > M_pad) M_real = M_pad;
 
+  const bool use_buf = v8c_use_buffer_path();
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    int8_int4_gemm_v8c_kernel, "v8c_gemm_int8_int4_v_ohwi");
+    int8_int4_gemm_v8c_kernel,
+    use_buf ? "v8c_gemm_int8_int4_v_ohwi_buf" : "v8c_gemm_int8_int4_v_ohwi",
+    use_buf ? kV8cBufCompileOpts : "");
   if (!kp)
     throw std::runtime_error("v8c_v_ohwi: registerClKernel failed");
 
@@ -1520,6 +1558,12 @@ void gemm_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
       !kp->SetKernelArguments(arg++, &pi, sizeof(int)) ||
       !kp->SetKernelArguments(arg++, &Mr, sizeof(int)))
     throw std::runtime_error("v8c_v_ohwi: int arg failed");
+  if (use_buf) {
+    int W_act = (int)(K / 16), W_wgt = (int)(K / 32);
+    if (!kp->SetKernelArguments(arg++, &W_act, sizeof(int)) ||
+        !kp->SetKernelArguments(arg++, &W_wgt, sizeof(int)))
+      throw std::runtime_error("v8c_v_ohwi: width arg failed");
+  }
   std::array<size_t, 3> gws = {(size_t)N / V8C_TN, (size_t)M_pad / V8C_TM, 1};
   blas_cc->command_queue_inst_.enqueueKernel(
     kp->GetKernel(), 2, gws.data(), nullptr, 0, nullptr, nullptr);
@@ -1532,8 +1576,14 @@ static void quantize_act_v8c_cl_impl(cl_mem act_in, cl_mem out_int8,
                                      bool parallel) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  // The act-quant kernels are image-free, but they live in the same program
+  // string as the image GEMMs. On the buffer path we must build that program
+  // with -DV8C_BUFFER_ONLY too, otherwise this (option-less) build compiles
+  // the image kernels and fails on Intel NEO. Matches the GEMM wrappers so the
+  // same cached program is reused.
+  const std::string copts = v8c_use_buffer_path() ? kV8cBufCompileOpts : "";
   ClContext::SharedPtrClKernel kp =
-    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kernel_name);
+    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kernel_name, copts);
   if (!kp)
     throw std::runtime_error(std::string("v8c quant: registerClKernel failed: ") +
                              kernel_name);
@@ -1861,10 +1911,14 @@ void gemm_int8_int8_v8c_cl(cl_mem act_image, cl_mem weight_image,
                            unsigned int K) {
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  // Buffer path (NNTR_V8C_BUF=1): int8 weight texel = 16 K, act texel = 16 K.
+  const bool use_buf = v8c_use_buffer_path();
   const char *kname =
-    (M <= 4) ? "v8c_gemm_int8_int8_m1" : "v8c_gemm_int8_int8";
+    use_buf ? ((M <= 4) ? "v8c_gemm_int8_int8_m1_buf" : "v8c_gemm_int8_int8_buf")
+            : ((M <= 4) ? "v8c_gemm_int8_int8_m1" : "v8c_gemm_int8_int8");
+  const std::string copts = use_buf ? kV8cBufCompileOpts : "";
   ClContext::SharedPtrClKernel kp =
-    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname);
+    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)
     throw std::runtime_error(
       std::string("v8c_gemm_int8_int8: registerClKernel failed: ") + kname);
@@ -1884,6 +1938,12 @@ void gemm_int8_int8_v8c_cl(cl_mem act_image, cl_mem weight_image,
       !kp->SetKernelArguments(arg++, &Ni, sizeof(int)) ||
       !kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
     throw std::runtime_error("v8c_gemm_int8_int8: int arg failed");
+  if (use_buf) {
+    int W_act = (int)(K / 16), W_wgt = (int)(K / 16);
+    if (!kp->SetKernelArguments(arg++, &W_act, sizeof(int)) ||
+        !kp->SetKernelArguments(arg++, &W_wgt, sizeof(int)))
+      throw std::runtime_error("v8c_gemm_int8_int8: width arg failed");
+  }
 
   if (M <= 4) {
     constexpr size_t TN_M1 = 8;
@@ -1923,8 +1983,11 @@ void gemm_int8_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
     throw std::runtime_error("gemm_int8_int8_v8c_v_ohwi: head_dim constraint");
   if (M_real > M_pad) M_real = M_pad;
 
+  const bool use_buf = v8c_use_buffer_path();
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    int8_int4_gemm_v8c_kernel, "v8c_gemm_int8_int8_v_ohwi");
+    int8_int4_gemm_v8c_kernel,
+    use_buf ? "v8c_gemm_int8_int8_v_ohwi_buf" : "v8c_gemm_int8_int8_v_ohwi",
+    use_buf ? kV8cBufCompileOpts : "");
   if (!kp)
     throw std::runtime_error("v8c_int8_v_ohwi: registerClKernel failed");
 
@@ -1948,6 +2011,12 @@ void gemm_int8_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
       !kp->SetKernelArguments(arg++, &pi, sizeof(int)) ||
       !kp->SetKernelArguments(arg++, &Mr, sizeof(int)))
     throw std::runtime_error("v8c_int8_v_ohwi: int arg failed");
+  if (use_buf) {
+    int W_act = (int)(K / 16), W_wgt = (int)(K / 16);
+    if (!kp->SetKernelArguments(arg++, &W_act, sizeof(int)) ||
+        !kp->SetKernelArguments(arg++, &W_wgt, sizeof(int)))
+      throw std::runtime_error("v8c_int8_v_ohwi: width arg failed");
+  }
   std::array<size_t, 3> gws = {(size_t)N / V8C_TN, (size_t)M_pad / V8C_TM, 1};
   blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
                                              nullptr, 0, nullptr, nullptr);
