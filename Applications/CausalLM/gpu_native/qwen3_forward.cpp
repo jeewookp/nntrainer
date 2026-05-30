@@ -462,6 +462,15 @@ bool Qwen3Forward::init(const Qwen3Config &cfg, const std::string &weight_path) 
     return false;
   }
 
+  // Device specialization (paper §3.4 / increment 3): query image2d caps once
+  // so packed activation views are validated against real device limits.
+  img_caps_ = nntrainer::tv::queryDeviceImageCaps(cl_dev_);
+  std::fprintf(stderr,
+               "[qwen3-gpu] device image caps: support=%d max=%zux%zu "
+               "pitch_align=%u\n",
+               (int)img_caps_.image_support, img_caps_.max_width,
+               img_caps_.max_height, img_caps_.pitch_align);
+
   std::fprintf(stderr,
                "[qwen3-gpu] init OK: weights=%s size=%zu MB cl_ctx=%p\n",
                weight_path.c_str(), weight_bytes_ / (1024 * 1024), cl_ctx_);
@@ -771,8 +780,12 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
   }
   if (out->backing != nullptr) return true; // already loaded
 
-  // [qscheme u16][packed K*N/2 bytes][scales N*u16 bytes].
-  const size_t packed_bytes = (size_t)K * N / 2;
+  // [qscheme u16][packed bytes][scales N*u16 bytes]. Packed = K*N/2 for int4
+  // KAI, or K*N for int8 (qscheme tag 8 = paper 8/4/4 attention weight).
+  const uint16_t qscheme =
+    *reinterpret_cast<const uint16_t *>(weight_mmap_ + file_offset);
+  const bool is_int8 = (qscheme == 8);
+  const size_t packed_bytes = is_int8 ? (size_t)K * N : (size_t)K * N / 2;
   const size_t scales_bytes = (size_t)N * sizeof(uint16_t);
   const size_t total_bytes = sizeof(uint16_t) + packed_bytes + scales_bytes;
   if (file_offset + total_bytes > weight_bytes_) {
@@ -781,24 +794,26 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
                  file_offset, total_bytes, weight_bytes_);
     return false;
   }
-  const uint16_t qscheme =
-    *reinterpret_cast<const uint16_t *>(weight_mmap_ + file_offset);
   const uint8_t *section_a = weight_mmap_ + file_offset + sizeof(uint16_t);
   const uint16_t *scales_fp16 =
     reinterpret_cast<const uint16_t *>(section_a + packed_bytes);
 
   std::fprintf(stderr,
-               "[qwen3-gpu] %s off=%zu (~%zu MB) qscheme=%u K=%u N=%u "
+               "[qwen3-gpu] %s off=%zu (~%zu MB) qscheme=%u%s K=%u N=%u "
                "packed=%zu KB scales=%zu B\n", tag, file_offset,
-               file_offset / (1024 * 1024), qscheme, K, N,
-               packed_bytes / 1024, scales_bytes);
+               file_offset / (1024 * 1024), qscheme, is_int8 ? "(int8)" : "",
+               K, N, packed_bytes / 1024, scales_bytes);
 
   cl_mem scale_buf = nullptr;
   cl_mem rsw_buf = nullptr;
   std::unique_ptr<nntrainer::tv::TensorBacking> backing;
   try {
-    backing = nntrainer::make_v8c_weight_backing_from_kai_section_a(
-      section_a, scales_fp16, N, K, &scale_buf, &rsw_buf);
+    backing = is_int8
+                ? nntrainer::make_v8c_int8_weight_backing(
+                    reinterpret_cast<const int8_t *>(section_a), scales_fp16, N,
+                    K, &scale_buf, &rsw_buf)
+                : nntrainer::make_v8c_weight_backing_from_kai_section_a(
+                    section_a, scales_fp16, N, K, &scale_buf, &rsw_buf);
   } catch (const std::exception &e) {
     std::fprintf(stderr,
                  "[qwen3-gpu] %s make_v8c_weight_backing threw: %s\n",
@@ -811,9 +826,10 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
   ws.kind = nntrainer::tv::ViewKind::IMAGE_2D;
   ws.image_channel_order = CL_RGBA;
   ws.image_channel_type = CL_UNSIGNED_INT32;
-  ws.width = K / 32;
+  // int8: 16 int8/texel -> width K/16, pitch K. int4: 32 int4/texel -> K/32, K/2.
+  ws.width = is_int8 ? K / 16 : K / 32;
   ws.height = N;
-  ws.row_pitch_bytes = K / 2;
+  ws.row_pitch_bytes = is_int8 ? K : K / 2;
   try {
     out->weight_image = backing->imageView(ws);
   } catch (const std::exception &e) {
@@ -828,6 +844,7 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
   out->row_sum_w_int4 = rsw_buf;
   out->K = K;
   out->N = N;
+  out->is_int8 = is_int8;
   return true;
 }
 
@@ -858,6 +875,43 @@ static uint16_t f2h(float f) {
   uint16_t r = (uint16_t)(s | (uint16_t)(e << 10) | (uint16_t)(m >> 13));
   if (m & 0x1000) r += 1; // round-to-nearest-even (simplified)
   return r;
+}
+
+// Build a v8c int8 activation image2d view of a row-major [rows][row_bytes]
+// scratch buffer, routing the packing decision through the tensor-virtualization
+// layer (paper §3.1: tv::make_image2d_rgba_uint32 = 16 int8 per RGBA UINT32
+// texel). Centralizes what used to be 4 hand-rolled clCreateImage blocks so the
+// layout choice lives in one place. Increment 3 (paper §3.4 device
+// specialization): the spec is pre-validated against the device's image2d caps,
+// so an oversized/unsupported view is reported clearly instead of failing
+// opaquely inside clCreateImage. Returns null on failure.
+static cl_mem make_act_image2d(cl_context ctx, cl_mem buf, unsigned int row_bytes,
+                               unsigned int rows,
+                               const nntrainer::tv::DeviceImageCaps &caps) {
+  const nntrainer::tv::ViewSpec s =
+    nntrainer::tv::make_image2d_rgba_uint32(row_bytes, rows);
+  if (!nntrainer::tv::image2dViewFits(s, caps)) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] make_act_image2d: %zux%zu texel view exceeds "
+                 "device image caps (max %zux%zu, support=%d)\n",
+                 s.width, s.height, caps.max_width, caps.max_height,
+                 (int)caps.image_support);
+    return nullptr;
+  }
+  cl_image_format fmt{s.image_channel_order, s.image_channel_type};
+  cl_image_desc desc{};
+  desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+  desc.image_width = s.width;
+  desc.image_height = s.height;
+  desc.image_row_pitch = s.row_pitch_bytes;
+  desc.buffer = buf;
+  cl_int err = CL_SUCCESS;
+  cl_mem img = clCreateImage(ctx, CL_MEM_READ_ONLY, &fmt, &desc, nullptr, &err);
+  if (err != CL_SUCCESS || img == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] make_act_image2d err=%d\n", err);
+    return nullptr;
+  }
+  return img;
 }
 
 bool Qwen3Forward::load_layer0_qk_norm_gammas() {
@@ -2176,20 +2230,17 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   const unsigned int N_q = cfg_.num_heads_Q * cfg_.head_dim;
   const unsigned int N_kv = cfg_.num_heads_KV * cfg_.head_dim;
   const unsigned int I = cfg_.intermediate_size;
-  const size_t wq_bytes =
-    sizeof(uint16_t) + (size_t)K_h * N_q / 2 + (size_t)N_q * 2;
-  const size_t wk_bytes =
-    sizeof(uint16_t) + (size_t)K_h * N_kv / 2 + (size_t)N_kv * 2;
-  const size_t wv_bytes = wk_bytes;
-  const size_t wo_bytes =
-    sizeof(uint16_t) + (size_t)N_q * K_h / 2 + (size_t)K_h * 2;
-  const size_t up_bytes =
-    sizeof(uint16_t) + (size_t)K_h * I / 2 + (size_t)I * 2;
-  const size_t gate_bytes = up_bytes;
-  const size_t down_bytes =
-    sizeof(uint16_t) + (size_t)I * K_h / 2 + (size_t)K_h * 2;
   const size_t norm_bytes = (size_t)K_h * sizeof(float);
   const size_t head_norm_bytes = (size_t)cfg_.head_dim * sizeof(float);
+  // FC record size is dtype-dependent: int8 (qscheme tag 8) = K*N bytes,
+  // int4 KAI = K*N/2 bytes. Peek the tag at the record start so the offset
+  // walk works for int4-all AND mixed 8/4/4 models.
+  auto fc_bytes = [this](size_t at, unsigned int K, unsigned int N) -> size_t {
+    const uint16_t qs =
+      *reinterpret_cast<const uint16_t *>(weight_mmap_ + at);
+    const size_t packed = (qs == 8) ? (size_t)K * N : (size_t)K * N / 2;
+    return sizeof(uint16_t) + packed + (size_t)N * 2;
+  };
 
   size_t off = *offset_inout;
 
@@ -2206,7 +2257,7 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
 
   // wq -> v8c backing
   if (!load_qint4_weight_at(off, K_h, N_q, &lw.wq, "wq")) return false;
-  off += wq_bytes;
+  off += fc_bytes(off, K_h, N_q);
 
   // q_norm gamma -> SVM fp16
   if (!load_qk_norm_to_svm_fp16(
@@ -2217,7 +2268,7 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
 
   // wk -> v8c backing
   if (!load_qint4_weight_at(off, K_h, N_kv, &lw.wk, "wk")) return false;
-  off += wk_bytes;
+  off += fc_bytes(off, K_h, N_kv);
 
   // k_norm gamma -> SVM fp16
   if (!load_qk_norm_to_svm_fp16(
@@ -2228,11 +2279,11 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
 
   // wv -> v8c backing
   if (!load_qint4_weight_at(off, K_h, N_kv, &lw.wv, "wv")) return false;
-  off += wv_bytes;
+  off += fc_bytes(off, K_h, N_kv);
 
   // wo -> v8c backing
   if (!load_qint4_weight_at(off, N_q, K_h, &lw.wo, "wo")) return false;
-  off += wo_bytes;
+  off += fc_bytes(off, N_q, K_h);
 
   // ffn_norm gamma -> SVM fp32 AND fp16 (#46m)
   if (!load_norm_to_svm_fp32(
@@ -2248,13 +2299,13 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   // ffn_up, ffn_gate, ffn_down -> v8c backings
   if (!load_qint4_weight_at(off, K_h, I, &lw.ffn_up, "ffn_up"))
     return false;
-  off += up_bytes;
+  off += fc_bytes(off, K_h, I);
   if (!load_qint4_weight_at(off, K_h, I, &lw.ffn_gate, "ffn_gate"))
     return false;
-  off += gate_bytes;
+  off += fc_bytes(off, K_h, I);
   if (!load_qint4_weight_at(off, I, K_h, &lw.ffn_down, "ffn_down"))
     return false;
-  off += down_bytes;
+  off += fc_bytes(off, I, K_h);
 
   // K, V cache SVM, sized for max_seq_len_used.
   const size_t cache_bytes =
@@ -2828,6 +2879,9 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
     rel(scratch_.dn_i8);        rel(scratch_.dn_sc);
     rel(scratch_.dn_zp);        rel(scratch_.dn_rs);
     rel(scratch_.dn_fp16);      rel(scratch_.dn_fp32);
+    // Increment 2: cached activation image views (must die with their buffers).
+    rel(scratch_.qkv_act_img);  rel(scratch_.wo_act_img);
+    rel(scratch_.fa_act_img);   rel(scratch_.dn_act_img);
   }
 
   const unsigned int K_h = cfg_.hidden_size;
@@ -2892,6 +2946,19 @@ bool Qwen3Forward::ensure_forward_scratch_allocated(unsigned int max_M) {
   if (!alloc(scratch_.dn_fp16,      CL_MEM_READ_WRITE, sizeof(uint16_t) * (size_t)M_pad * K_h,"dn_fp16"))     return false;
   if (!alloc(scratch_.dn_fp32,      CL_MEM_READ_WRITE, (size_t)M_pad * K_h * sizeof(uint16_t),"dn_fp32"))     return false;
 
+  // Increment 2: cache the int8 activation image2d views once (sized for the
+  // max M_pad). Reused every layer; reads only touch valid rows so a
+  // max-height view serves any M<=M_pad. Routed through the tv factory.
+  scratch_.qkv_act_img = make_act_image2d(cl_ctx_, scratch_.qkv_act_i8, K_h, M_pad, img_caps_);
+  scratch_.wo_act_img  = make_act_image2d(cl_ctx_, scratch_.wo_act_i8,  N_q, M_pad, img_caps_);
+  scratch_.fa_act_img  = make_act_image2d(cl_ctx_, scratch_.fa_i8,      K_h, M_pad, img_caps_);
+  scratch_.dn_act_img  = make_act_image2d(cl_ctx_, scratch_.dn_i8,      I,   M_pad, img_caps_);
+  if (!scratch_.qkv_act_img || !scratch_.wo_act_img || !scratch_.fa_act_img ||
+      !scratch_.dn_act_img) {
+    std::fprintf(stderr, "[qwen3-gpu] scratch act-image cache create failed\n");
+    return false;
+  }
+
   scratch_max_M_ = M_pad;
   std::fprintf(stderr,
                "[qwen3-gpu] forward scratch pool allocated for max_M=%u "
@@ -2916,7 +2983,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   LayerWeights &lw = layers_[layer_id];
   auto *cl = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
-  cl_int err = CL_SUCCESS;
 
   // #46f/h/l: NNTR_OHWI_IMG=1 enables the V image2d path (and the wv FC
   // fused-OHWI-scatter from #46l). Read once per process; same flag
@@ -2988,45 +3054,40 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                       scratch_.qkv_act_scale,
                                       scratch_.qkv_act_zp, scratch_.qkv_act_rs,
                                       M_pad, K_h);
-  cl_image_format afmt{CL_RGBA, CL_UNSIGNED_INT32};
-  cl_image_desc adesc{};
-  adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
-  adesc.image_width = K_h / 16;
-  adesc.image_height = M_pad;
-  adesc.image_row_pitch = K_h;
-  adesc.buffer = scratch_.qkv_act_i8;
-  cl_mem act_image =
-    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &adesc, nullptr, &err);
+  cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
   stage_end_add(timings_.qkv_quant_image_ms);
 
-  // (c) Q/K/V GEMMs against persistent y_q/y_k/y_v.
+  // (c) Q/K/V GEMMs against persistent y_q/y_k/y_v. 8/4/4: int8 weights for
+  // q/k/v (is_int8) dispatch the int8×int8 kernel; int4 keeps v8c int8×int4.
+  // Both wrappers share the same signature, so a function pointer selects.
   stage_begin();
-  nntrainer::gemm_int8_v8c_cl(act_image, lw.wq.weight_image,
-                              scratch_.qkv_act_scale, lw.wq.scale_buf,
-                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
-                              lw.wq.row_sum_w_int4, scratch_.y_q, M_pad, N_q,
-                              K_h);
-  nntrainer::gemm_int8_v8c_cl(act_image, lw.wk.weight_image,
-                              scratch_.qkv_act_scale, lw.wk.scale_buf,
-                              scratch_.qkv_act_rs, scratch_.qkv_act_zp,
-                              lw.wk.row_sum_w_int4, scratch_.y_k, M_pad, N_kv,
-                              K_h);
+  auto *qgemm = lw.wq.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
+                              : &nntrainer::gemm_int8_v8c_cl;
+  auto *kgemm = lw.wk.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
+                              : &nntrainer::gemm_int8_v8c_cl;
+  qgemm(act_image, lw.wq.weight_image, scratch_.qkv_act_scale, lw.wq.scale_buf,
+        scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wq.row_sum_w_int4,
+        scratch_.y_q, M_pad, N_q, K_h);
+  kgemm(act_image, lw.wk.weight_image, scratch_.qkv_act_scale, lw.wk.scale_buf,
+        scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wk.row_sum_w_int4,
+        scratch_.y_k, M_pad, N_kv, K_h);
   // #46l: when OHWI_IMG path is active, wv writes outputs directly into
   // cache_v_buf_ohwi at OHWI-reversed positions (paper §3.6 reorder
   // fusion). Eliminates the separate v_scatter_ohwi_t pass below.
   // Fallback: original concat write to scratch_.y_v.
   if (use_ohwi_img && lw.cache_v_buf_ohwi != nullptr) {
-    nntrainer::gemm_int8_v8c_v_ohwi_cl(
-      act_image, lw.wv.weight_image, scratch_.qkv_act_scale, lw.wv.scale_buf,
-      scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wv.row_sum_w_int4,
-      lw.cache_v_buf_ohwi, M_pad, N_kv, K_h, cfg_.head_dim,
-      kv_cache_max_seq_len_, position, /*M_real=*/M);
+    auto *vohwi = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_v_ohwi_cl
+                                : &nntrainer::gemm_int8_v8c_v_ohwi_cl;
+    vohwi(act_image, lw.wv.weight_image, scratch_.qkv_act_scale,
+          lw.wv.scale_buf, scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+          lw.wv.row_sum_w_int4, lw.cache_v_buf_ohwi, M_pad, N_kv, K_h,
+          cfg_.head_dim, kv_cache_max_seq_len_, position, /*M_real=*/M);
   } else {
-    nntrainer::gemm_int8_v8c_cl(act_image, lw.wv.weight_image,
-                                scratch_.qkv_act_scale, lw.wv.scale_buf,
-                                scratch_.qkv_act_rs, scratch_.qkv_act_zp,
-                                lw.wv.row_sum_w_int4, scratch_.y_v, M_pad,
-                                N_kv, K_h);
+    auto *vgemm = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
+                                : &nntrainer::gemm_int8_v8c_cl;
+    vgemm(act_image, lw.wv.weight_image, scratch_.qkv_act_scale,
+          lw.wv.scale_buf, scratch_.qkv_act_rs, scratch_.qkv_act_zp,
+          lw.wv.row_sum_w_int4, scratch_.y_v, M_pad, N_kv, K_h);
   }
   // stage_end_add does its own clFinish when profiling; skip the
   // unconditional host stall in production. #46i.
@@ -3065,7 +3126,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   if (!precompute_rope_full_lut(cfg_.max_seq_len)) return false;
   if (!dispatch_rope_batched(scratch_.y_q, M, cfg_.num_heads_Q, position) ||
       !dispatch_rope_batched(scratch_.y_k, M, cfg_.num_heads_KV, position)) {
-    clReleaseMemObject(act_image);
     return false;
   }
   stage_end_add(timings_.qk_norm_rope_ms);  // #46i: no extra clFinish
@@ -3112,7 +3172,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
       std::fprintf(stderr,
                    "[qwen3-gpu] layer %u: k_scatter_ohwi register failed\n",
                    layer_id);
-      clReleaseMemObject(act_image);
       return false;
     }
     cl_mem src_mem = scratch_.y_k;
@@ -3129,7 +3188,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
         !kp->SetKernelArguments(4, &di, sizeof(int)) ||
         !kp->SetKernelArguments(5, &max_Si, sizeof(int)) ||
         !kp->SetKernelArguments(6, &pos_i, sizeof(int))) {
-      clReleaseMemObject(act_image);
       return false;
     }
     // x in stride-1, coalesce on innermost dim.
@@ -3251,7 +3309,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   if (!attn_ok) {
     std::fprintf(stderr,
                  "[qwen3-gpu] layer %u attention failed\n", layer_id);
-    clReleaseMemObject(act_image);
     return false;
   }
 
@@ -3276,19 +3333,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                       scratch_.wo_act_scale,
                                       scratch_.wo_act_zp, scratch_.wo_act_rs,
                                       M_pad, N_q);
-  cl_image_desc wo_adesc{};
-  wo_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
-  wo_adesc.image_width = N_q / 16;
-  wo_adesc.image_height = M_pad;
-  wo_adesc.image_row_pitch = N_q;
-  wo_adesc.buffer = scratch_.wo_act_i8;
-  cl_mem wo_act_image =
-    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &wo_adesc, nullptr, &err);
-  nntrainer::gemm_int8_v8c_cl(wo_act_image, lw.wo.weight_image,
-                              scratch_.wo_act_scale, lw.wo.scale_buf,
-                              scratch_.wo_act_rs, scratch_.wo_act_zp,
-                              lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad,
-                              K_h, N_q);
+  cl_mem wo_act_image = scratch_.wo_act_img; // increment 2: cached view
+  auto *ogemm = lw.wo.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
+                              : &nntrainer::gemm_int8_v8c_cl;
+  ogemm(wo_act_image, lw.wo.weight_image, scratch_.wo_act_scale,
+        lw.wo.scale_buf, scratch_.wo_act_rs, scratch_.wo_act_zp,
+        lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad, K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
   // accumulated in fp32 because the last layer's massive activations exceed
@@ -3342,14 +3392,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
                                       scratch_.fa_sc, scratch_.fa_zp,
                                       scratch_.fa_rs, M_pad, K_h);
-  cl_image_desc fa_adesc{};
-  fa_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
-  fa_adesc.image_width = K_h / 16;
-  fa_adesc.image_height = M_pad;
-  fa_adesc.image_row_pitch = K_h;
-  fa_adesc.buffer = scratch_.fa_i8;
-  cl_mem fa_image =
-    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &fa_adesc, nullptr, &err);
+  cl_mem fa_image = scratch_.fa_act_img; // increment 2: cached view
   nntrainer::gemm_int8_v8c_cl(fa_image, lw.ffn_up.weight_image, scratch_.fa_sc,
                               lw.ffn_up.scale_buf, scratch_.fa_rs,
                               scratch_.fa_zp, lw.ffn_up.row_sum_w_int4,
@@ -3396,14 +3439,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
-  cl_image_desc dn_adesc{};
-  dn_adesc.image_type = CL_MEM_OBJECT_IMAGE2D;
-  dn_adesc.image_width = I / 16;
-  dn_adesc.image_height = M_pad;
-  dn_adesc.image_row_pitch = I;
-  dn_adesc.buffer = scratch_.dn_i8;
-  cl_mem dn_image =
-    clCreateImage(cl_ctx_, CL_MEM_READ_ONLY, &afmt, &dn_adesc, nullptr, &err);
+  cl_mem dn_image = scratch_.dn_act_img; // increment 2: cached view
   nntrainer::gemm_int8_v8c_cl(dn_image, lw.ffn_down.weight_image,
                               scratch_.dn_sc, lw.ffn_down.scale_buf,
                               scratch_.dn_rs, scratch_.dn_zp,
@@ -3427,12 +3463,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_end_add(timings_.ffn_ms);  // #46i: no extra clFinish
   if (profile_stages_) timings_.calls += 1;
 
-  // Only image2d views were freshly created this call; release them.
-  // Their backing buffers (scratch_.qkv_act_i8 etc.) persist.
-  clReleaseMemObject(dn_image);
-  clReleaseMemObject(fa_image);
-  clReleaseMemObject(wo_act_image);
-  clReleaseMemObject(act_image);
+  // increment 2: act images are cached in scratch_ (freed with the scratch
+  // buffers in ensure_forward_scratch_allocated/destructor); no release here.
   return true;
 }
 

@@ -137,6 +137,38 @@ ViewSpec make_image2d_ohwi_kcache_fp16(size_t cache_size, size_t dh);
 ViewSpec make_image2d_ohwi_vcache_fp16(size_t dh, size_t cache_size);
 
 /**
+ * @brief Device image2d capabilities (paper §3.4 device specialization:
+ *        runtime analysis of the target GPU's storage-type support). Queried
+ *        once and consulted before building image2d_from_buffer views so an
+ *        unsupported / oversized view is caught with a clear diagnostic and a
+ *        buffer fallback, instead of an opaque clCreateImage runtime failure.
+ *        Generic (not model-specific) — any LLM/op that builds packed image
+ *        views can validate against this.
+ */
+struct DeviceImageCaps {
+  bool image_support = false;  ///< CL_DEVICE_IMAGE_SUPPORT
+  size_t max_width = 0;        ///< CL_DEVICE_IMAGE2D_MAX_WIDTH (in texels)
+  size_t max_height = 0;       ///< CL_DEVICE_IMAGE2D_MAX_HEIGHT (in texels)
+  cl_uint pitch_align = 0;     ///< CL_DEVICE_IMAGE_PITCH_ALIGNMENT (pixels),
+                               ///< the row-pitch granularity for from-buffer
+  bool queried = false;        ///< true once a real query succeeded
+};
+
+/**
+ * @brief Query a device's image2d capabilities. On failure returns a
+ *        default (image_support=false) caps — callers then fall back to BUFFER.
+ */
+DeviceImageCaps queryDeviceImageCaps(cl_device_id device);
+
+/**
+ * @brief True if an IMAGE_2D ViewSpec can be realized on the given device:
+ *        image support present, width ≤ max_width, height ≤ max_height. A
+ *        BUFFER spec always fits. If caps were never queried (queried=false),
+ *        returns true (assume OK — preserves legacy behavior).
+ */
+bool image2dViewFits(const ViewSpec &spec, const DeviceImageCaps &caps);
+
+/**
  * @brief One physical cl_mem allocation + metadata + cache of zero-copy views.
  *        Buffer view is always available; image views are created on first
  *        request via image2d_from_buffer and cached.

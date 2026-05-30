@@ -139,4 +139,50 @@ ViewSpec make_image2d_ohwi_vcache_fp16(size_t dh, size_t cache_size) {
   return s;
 }
 
+// =============================================================================
+// Device specialization (paper §3.4): query image2d storage capabilities so
+// packed image views can be validated up front instead of failing opaquely.
+// =============================================================================
+DeviceImageCaps queryDeviceImageCaps(cl_device_id device) {
+  DeviceImageCaps caps;
+  if (device == nullptr)
+    return caps;
+
+  cl_bool img_support = CL_FALSE;
+  if (clGetDeviceInfo(device, CL_DEVICE_IMAGE_SUPPORT, sizeof(img_support),
+                      &img_support, nullptr) != CL_SUCCESS)
+    return caps;
+  caps.image_support = (img_support == CL_TRUE);
+  if (!caps.image_support) {
+    caps.queried = true;
+    return caps;
+  }
+
+  // These three may legitimately be absent on some stacks; treat a failed
+  // query as "unknown" (0) rather than aborting — image2dViewFits ignores a
+  // zero bound.
+  clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t),
+                  &caps.max_width, nullptr);
+  clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t),
+                  &caps.max_height, nullptr);
+  clGetDeviceInfo(device, CL_DEVICE_IMAGE_PITCH_ALIGNMENT, sizeof(cl_uint),
+                  &caps.pitch_align, nullptr);
+  caps.queried = true;
+  return caps;
+}
+
+bool image2dViewFits(const ViewSpec &spec, const DeviceImageCaps &caps) {
+  if (spec.kind == ViewKind::BUFFER)
+    return true;
+  if (!caps.queried)
+    return true; // never queried → assume OK (legacy behavior preserved)
+  if (!caps.image_support)
+    return false;
+  if (caps.max_width && spec.width > caps.max_width)
+    return false;
+  if (caps.max_height && spec.height > caps.max_height)
+    return false;
+  return true;
+}
+
 } // namespace nntrainer::tv

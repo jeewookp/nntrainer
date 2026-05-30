@@ -1827,4 +1827,170 @@ make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
   return backing;
 }
 
+// ---------------------------------------------------------------------------
+// 8/4/4 paper attention path: int8(act) × int8(weight) channel-wise GEMM.
+// ---------------------------------------------------------------------------
+void gemm_int8_int8_v8c_cl(cl_mem act_image, cl_mem weight_image,
+                           cl_mem scale_act, cl_mem scale_wgt,
+                           cl_mem row_sum_act, cl_mem zp_act, cl_mem row_sum_w,
+                           cl_mem output_fp16, unsigned int M, unsigned int N,
+                           unsigned int K) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  const char *kname =
+    (M <= 4) ? "v8c_gemm_int8_int8_m1" : "v8c_gemm_int8_int8";
+  ClContext::SharedPtrClKernel kp =
+    blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname);
+  if (!kp)
+    throw std::runtime_error(
+      std::string("v8c_gemm_int8_int8: registerClKernel failed: ") + kname);
+
+  int arg = 0;
+  if (!kp->SetKernelArguments(arg++, &act_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &weight_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_wgt, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &zp_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_w, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &output_fp16, sizeof(cl_mem)))
+    throw std::runtime_error("v8c_gemm_int8_int8: cl_mem arg failed");
+  int Mi = (int)M, Ni = (int)N, Ki = (int)K;
+  if (!kp->SetKernelArguments(arg++, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ni, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ki, sizeof(int)))
+    throw std::runtime_error("v8c_gemm_int8_int8: int arg failed");
+
+  if (M <= 4) {
+    constexpr size_t TN_M1 = 8;
+    std::array<size_t, 3> gws = {(size_t)N / TN_M1, 1, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                               nullptr, 0, nullptr, nullptr);
+  } else {
+    constexpr size_t TM = 4, TN = 8;
+    std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
+    static const std::array<size_t, 2> v8c_lws = []() {
+      const char *e = std::getenv("NNTR_V8C_LWS");
+      size_t lx = 4, ly = 16;
+      if (e) {
+        long a = 0, b = 0;
+        if (std::sscanf(e, "%ld,%ld", &a, &b) == 2 && a > 0 && b > 0) {
+          lx = (size_t)a;
+          ly = (size_t)b;
+        }
+      }
+      return std::array<size_t, 2>{lx, ly};
+    }();
+    const bool lws_ok = (v8c_lws[0] && v8c_lws[1] && gws[0] % v8c_lws[0] == 0 &&
+                         gws[1] % v8c_lws[1] == 0);
+    std::array<size_t, 3> lws = {v8c_lws[0], v8c_lws[1], 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 2, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
+      nullptr);
+  }
+}
+
+void gemm_int8_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
+                                  cl_mem scale_act, cl_mem scale_wgt,
+                                  cl_mem row_sum_act, cl_mem zp_act,
+                                  cl_mem row_sum_w, cl_mem v_ohwi,
+                                  unsigned int M_pad, unsigned int N,
+                                  unsigned int K, unsigned int head_dim,
+                                  unsigned int S_max, unsigned int position,
+                                  unsigned int M_real) {
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  if (M_pad == 0 || N == 0 || K == 0 || head_dim == 0 || S_max == 0)
+    throw std::runtime_error("gemm_int8_int8_v8c_v_ohwi: zero dim");
+  constexpr unsigned int V8C_TM = 4, V8C_TN = 8;
+  if (M_pad % V8C_TM != 0 || N % V8C_TN != 0 || K % 32 != 0)
+    throw std::runtime_error("gemm_int8_int8_v8c_v_ohwi: M/N/K not aligned");
+  if (head_dim % V8C_TN != 0 || N % head_dim != 0)
+    throw std::runtime_error("gemm_int8_int8_v8c_v_ohwi: head_dim constraint");
+  if (M_real > M_pad) M_real = M_pad;
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    int8_int4_gemm_v8c_kernel, "v8c_gemm_int8_int8_v_ohwi");
+  if (!kp)
+    throw std::runtime_error("v8c_int8_v_ohwi: registerClKernel failed");
+
+  int arg = 0;
+  if (!kp->SetKernelArguments(arg++, &act_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &weight_image, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &scale_wgt, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &zp_act, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &row_sum_w, sizeof(cl_mem)) ||
+      !kp->SetKernelArguments(arg++, &v_ohwi, sizeof(cl_mem)))
+    throw std::runtime_error("v8c_int8_v_ohwi: cl_mem arg failed");
+  int Mi = (int)M_pad, Ni = (int)N, Ki = (int)K;
+  int di = (int)head_dim, Si = (int)S_max, pi = (int)position, Mr = (int)M_real;
+  if (!kp->SetKernelArguments(arg++, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ni, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Ki, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &di, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Si, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &pi, sizeof(int)) ||
+      !kp->SetKernelArguments(arg++, &Mr, sizeof(int)))
+    throw std::runtime_error("v8c_int8_v_ohwi: int arg failed");
+  std::array<size_t, 3> gws = {(size_t)N / V8C_TN, (size_t)M_pad / V8C_TM, 1};
+  blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 2, gws.data(),
+                                             nullptr, 0, nullptr, nullptr);
+}
+
+std::unique_ptr<tv::TensorBacking>
+make_v8c_int8_weight_backing(const int8_t *int8_weights,
+                             const uint16_t *fp16_scales, unsigned int N,
+                             unsigned int K, cl_mem *out_scale_buf,
+                             cl_mem *out_row_sum_w_buf) {
+  if (K % 16 != 0)
+    throw std::invalid_argument("make_v8c_int8_weight_backing: K%16!=0");
+  if (N % 4 != 0)
+    throw std::invalid_argument("make_v8c_int8_weight_backing: N%4!=0");
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_context ctx = blas_cc->context_inst_.GetContext();
+  const size_t nbytes = (size_t)N * K; // 1 byte/int8 weight, plain row-major
+
+  cl_int err = CL_SUCCESS;
+  cl_mem w_buf =
+    clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, nbytes,
+                   const_cast<int8_t *>(int8_weights), &err);
+  if (err != CL_SUCCESS || !w_buf)
+    throw std::runtime_error(
+      "make_v8c_int8_weight_backing: clCreateBuffer (weight) failed: " +
+      std::to_string(err));
+  auto backing = std::make_unique<tv::TensorBacking>(
+    ctx, w_buf, tv::Encoding::INT8, tv::Layout::ROW_MAJOR, nbytes,
+    /*owned=*/true);
+
+  std::vector<float> per_channel_scale(N);
+  for (unsigned int n = 0; n < N; ++n)
+    per_channel_scale[n] = compute_fp16_to_fp32(fp16_scales[n]);
+  cl_mem sb = clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                             sizeof(float) * N, per_channel_scale.data(), &err);
+  if (err != CL_SUCCESS || !sb)
+    throw std::runtime_error(
+      "make_v8c_int8_weight_backing: clCreateBuffer (scale) failed");
+  *out_scale_buf = sb;
+
+  std::vector<int32_t> row_sum_w(N, 0);
+  for (unsigned int n = 0; n < N; ++n) {
+    const int8_t *row = int8_weights + (size_t)n * K;
+    int32_t s = 0;
+    for (unsigned int k = 0; k < K; ++k) s += (int)row[k];
+    row_sum_w[n] = s;
+  }
+  cl_mem rb = clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                             sizeof(int32_t) * N, row_sum_w.data(), &err);
+  if (err != CL_SUCCESS || !rb)
+    throw std::runtime_error(
+      "make_v8c_int8_weight_backing: clCreateBuffer (row_sum_w) failed");
+  *out_row_sum_w_buf = rb;
+
+  return backing;
+}
+
 } // namespace nntrainer

@@ -24,6 +24,7 @@
 #define __QWEN3_FORWARD_H__
 
 #include <CL/cl.h>
+#include <cl_tensor_view.h>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -309,6 +310,9 @@ private:
   cl_context cl_ctx_ = nullptr;        // borrowed from ClContext
   cl_command_queue cl_q_ = nullptr;    // borrowed from ClContext
   cl_device_id cl_dev_ = nullptr;      // borrowed
+  // Device specialization (paper §3.4): image2d caps queried once at init and
+  // consulted when building packed activation image views (increment 3).
+  nntrainer::tv::DeviceImageCaps img_caps_{};
 
   // Layer 0 attention_norm gamma (fp32, [hidden_size]) in SVM.
   void *layer0_attn_norm_gamma_svm_ = nullptr;
@@ -350,8 +354,9 @@ private:
     void *backing = nullptr;       // tv::TensorBacking* (owning)
     cl_mem weight_image = nullptr; // image2d view (owned by backing)
     cl_mem scale_buf = nullptr;    // fp32 [N]
-    cl_mem row_sum_w_int4 = nullptr; // int32 [N]
+    cl_mem row_sum_w_int4 = nullptr; // int32 [N] (= Σ int4, or Σ int8 if is_int8)
     unsigned int K = 0, N = 0;
+    bool is_int8 = false;          // true = 8/4/4 int8 weight (qscheme tag 8)
   };
 
   // Layer 0 Q/K/V projection weights + attention output projection wo.
@@ -464,6 +469,15 @@ private:
     cl_mem dn_rs = nullptr;
     cl_mem dn_fp16 = nullptr;        // [M_pad * K_h]
     cl_mem dn_fp32 = nullptr;        // [K_h]
+    // Increment 2 (tensor-virtualization): cached image2d views over the
+    // four int8 activation buffers above. Created once with the buffers
+    // (sized for max M_pad) and reused every layer/every forward, replacing
+    // the per-layer clCreateImage+release. Reads only touch the valid
+    // [0, current M_pad) rows, so a max-height view is safe for any M<=max.
+    cl_mem qkv_act_img = nullptr;    // view of qkv_act_i8 (row=K_h)
+    cl_mem wo_act_img = nullptr;     // view of wo_act_i8  (row=N_q)
+    cl_mem fa_act_img = nullptr;     // view of fa_i8      (row=K_h)
+    cl_mem dn_act_img = nullptr;     // view of dn_i8      (row=I)
   };
   ForwardScratch scratch_{};
 

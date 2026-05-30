@@ -533,3 +533,158 @@ __kernel void v8c_gemm_int8_int4_v_ohwi(
     }
   }
 }
+
+// ============================================================
+// 8/4/4 paper ATTENTION path: int8(act) × int8(weight) channel-wise GEMM.
+// Weight format (cl_mem viewed as image2d): plain ROW-MAJOR signed int8 [N][K],
+//   image RGBA + UNSIGNED_INT32, width=K/16, height=N, row_pitch=K (16 int8/texel).
+// Activation: identical int8 image as the int4 path (width K/16, 16 int8/texel).
+// Math: acc(i,j) = Σ_k act_q[i,k]·w_q[j,k]   (dot_4x8packed_ss_int, both signed).
+//   corrected = acc − zp_act[i]·row_sum_w[j]   (NO −8 term: int8 weight is signed,
+//                                               not offset-encoded like int4+8)
+//   y[i,j]    = corrected · scale_act[i] · scale_wgt[j]
+// Signature is byte-identical to v8c_gemm_int8_int4 (row_sum_act arg ignored) so
+// the host wrapper is shared; only the kernel name + weight image width differ.
+// ============================================================
+__kernel void v8c_gemm_int8_int8(
+    __read_only image2d_t  Ximg,            // act image (RGBA UINT32, K/16 × M)
+    __read_only image2d_t  Wimg,            // weight image (RGBA UINT32, K/16 × N)
+    __global const float  *scale_act,       // [M]
+    __global const float  *scale_wgt,       // [N]
+    __global const int    *row_sum_act,     // [M] UNUSED (kept for ABI parity)
+    __global const int    *zp_act,          // [M]
+    __global const int    *row_sum_w,       // [N] = Σ_k int8 w[n,k]
+    __global       half   *Y,               // [M, N] fp16
+    const int M, const int N, const int K) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K16 = K >> 4;
+
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++)
+      a[i] = read_imageui(Ximg, SMP_v8c, (int2)(k16, m0 + i));
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k16, n0 + j));
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_ss_int(a[i].x, w.x)
+                   + dot_4x8packed_ss_int(a[i].y, w.y)
+                   + dot_4x8packed_ss_int(a[i].z, w.z)
+                   + dot_4x8packed_ss_int(a[i].w, w.w);
+      }
+    }
+  }
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    int zp = zp_act[m0 + i];
+    float s_i = scale_act[m0 + i];
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - zp * row_sum_w[n0 + j];
+      Y[(long)(m0 + i) * N + (n0 + j)] = (half)((float)corrected * s_i * scale_wgt[n0 + j]);
+    }
+  }
+}
+
+// M=1 (decode) specialization of v8c_gemm_int8_int8. gws=(N/V8C_TN_M1,1,1).
+__kernel void v8c_gemm_int8_int8_m1(
+    __read_only image2d_t  Ximg,
+    __read_only image2d_t  Wimg,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,     // UNUSED
+    __global const int    *zp_act,
+    __global const int    *row_sum_w,
+    __global       half   *Y,
+    const int M, const int N, const int K) {
+  const int n0 = get_global_id(0) * V8C_TN_M1;
+  const int K16 = K >> 4;
+  int acc[V8C_TN_M1];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) acc[j] = 0;
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a = read_imageui(Ximg, SMP_v8c, (int2)(k16, 0));
+    #pragma unroll
+    for (int j = 0; j < V8C_TN_M1; j++) {
+      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k16, n0 + j));
+      acc[j] += dot_4x8packed_ss_int(a.x, w.x)
+              + dot_4x8packed_ss_int(a.y, w.y)
+              + dot_4x8packed_ss_int(a.z, w.z)
+              + dot_4x8packed_ss_int(a.w, w.w);
+    }
+  }
+  const int zp = zp_act[0];
+  const float s_i = scale_act[0];
+  #pragma unroll
+  for (int j = 0; j < V8C_TN_M1; j++) {
+    int corrected = acc[j] - zp * row_sum_w[n0 + j];
+    Y[n0 + j] = (half)((float)corrected * s_i * scale_wgt[n0 + j]);
+  }
+}
+
+// int8×int8 variant of v8c_gemm_int8_int4_v_ohwi (fused OHWI-reversed V scatter
+// for the wv projection). Same OHWI write math, int8 weight + ss dot.
+__kernel void v8c_gemm_int8_int8_v_ohwi(
+    __read_only image2d_t  Ximg,
+    __read_only image2d_t  Wimg,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,     // UNUSED
+    __global const int    *zp_act,
+    __global const int    *row_sum_w,
+    __global       half   *V_ohwi,          // [hKV, d, S_max] fp16
+    const int M, const int N, const int K,
+    const int d, const int S_max, const int position,
+    const int M_real) {
+  const int n0 = get_global_id(0) * V8C_TN;
+  const int m0 = get_global_id(1) * V8C_TM;
+  const int K16 = K >> 4;
+  int acc[V8C_TM][V8C_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
+  for (int k16 = 0; k16 < K16; k16++) {
+    uint4 a[V8C_TM];
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++)
+      a[i] = read_imageui(Ximg, SMP_v8c, (int2)(k16, m0 + i));
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k16, n0 + j));
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += dot_4x8packed_ss_int(a[i].x, w.x)
+                   + dot_4x8packed_ss_int(a[i].y, w.y)
+                   + dot_4x8packed_ss_int(a[i].z, w.z)
+                   + dot_4x8packed_ss_int(a[i].w, w.w);
+      }
+    }
+  }
+  const int head = n0 / d;
+  const int x_base = n0 - head * d;
+  const long head_off = (long)head * (long)d * (long)S_max;
+  #pragma unroll
+  for (int i = 0; i < V8C_TM; i++) {
+    const int m = m0 + i;
+    if (m >= M_real) continue;
+    int zp = zp_act[m];
+    float s_i = scale_act[m];
+    const long t_off = (long)(position + m);
+    #pragma unroll
+    for (int j = 0; j < V8C_TN; j++) {
+      int corrected = acc[i][j] - zp * row_sum_w[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      V_ohwi[head_off + (long)(x_base + j) * (long)S_max + t_off] = (half)v;
+    }
+  }
+}

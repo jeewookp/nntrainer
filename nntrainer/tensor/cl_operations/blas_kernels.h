@@ -491,5 +491,39 @@ make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
                                            cl_mem *out_scale_buf,
                                            cl_mem *out_row_sum_w_int4_buf);
 
+/**
+ * @brief 8/4/4 paper attention path: int8(act) × int8(weight) channel-wise GEMM.
+ *        Signature mirrors gemm_int8_v8c_cl (row_sum_act ignored). Weight image
+ *        must be the plain row-major int8 view (width K/16). Dispatches the
+ *        v8c_gemm_int8_int8 kernel (or _m1 for M<=4).
+ */
+void gemm_int8_int8_v8c_cl(cl_mem act_image, cl_mem weight_image,
+                           cl_mem scale_act, cl_mem scale_wgt,
+                           cl_mem row_sum_act, cl_mem zp_act, cl_mem row_sum_w,
+                           cl_mem output_fp16, unsigned int M, unsigned int N,
+                           unsigned int K);
+
+/** @brief int8×int8 variant of gemm_int8_v8c_v_ohwi_cl (fused OHWI V scatter). */
+void gemm_int8_int8_v8c_v_ohwi_cl(cl_mem act_image, cl_mem weight_image,
+                                  cl_mem scale_act, cl_mem scale_wgt,
+                                  cl_mem row_sum_act, cl_mem zp_act,
+                                  cl_mem row_sum_w, cl_mem v_ohwi,
+                                  unsigned int M_pad, unsigned int N,
+                                  unsigned int K, unsigned int head_dim,
+                                  unsigned int S_max, unsigned int position,
+                                  unsigned int M_real);
+
+/**
+ * @brief Build a v8c int8-weight backing from a plain row-major int8 weight
+ *        buffer + per-channel fp16 scales. Computes the fp32 scale buffer and
+ *        per-channel signed int8 row sums (row_sum_w[n] = Σ_k int8 w[n,k]).
+ *        Caller creates the image2d view (width=K/16, CL_UNSIGNED_INT32).
+ */
+std::unique_ptr<tv::TensorBacking>
+make_v8c_int8_weight_backing(const int8_t *int8_weights,
+                             const uint16_t *fp16_scales, unsigned int N,
+                             unsigned int K, cl_mem *out_scale_buf,
+                             cl_mem *out_row_sum_w_buf);
+
 } // namespace nntrainer
 #endif /* __BLAS_KERNELS_H__ */
