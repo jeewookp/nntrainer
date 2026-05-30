@@ -167,6 +167,8 @@ DeviceImageCaps queryDeviceImageCaps(cl_device_id device) {
                   &caps.max_height, nullptr);
   clGetDeviceInfo(device, CL_DEVICE_IMAGE_PITCH_ALIGNMENT, sizeof(cl_uint),
                   &caps.pitch_align, nullptr);
+  clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t),
+                  &caps.max_work_group_size, nullptr);
   caps.queried = true;
   return caps;
 }
@@ -182,6 +184,40 @@ bool image2dViewFits(const ViewSpec &spec, const DeviceImageCaps &caps) {
     return false;
   if (caps.max_height && spec.height > caps.max_height)
     return false;
+  return true;
+}
+
+bool select2dLws(size_t gws_x, size_t gws_y, size_t pref_x, size_t pref_y,
+                 const DeviceImageCaps &caps, size_t *out_x, size_t *out_y) {
+  *out_x = 0;
+  *out_y = 0;
+  if (!pref_x || !pref_y || !gws_x || !gws_y)
+    return false;
+  // Device max work-group size: 0 = unknown → don't cap (legacy behavior).
+  const size_t max_wg =
+    caps.max_work_group_size ? caps.max_work_group_size : (size_t)-1;
+
+  size_t lx = pref_x, ly = pref_y;
+  // Shrink the preferred LWS until lx*ly fits the device's max work-group size,
+  // halving the larger axis first. (Halving keeps power-of-two divisibility,
+  // which is what the v8c sweet spot 4x16 uses.)
+  while (lx * ly > max_wg) {
+    if (ly >= lx && ly > 1)
+      ly >>= 1;
+    else if (lx > 1)
+      lx >>= 1;
+    else
+      break; // 1x1 still over max_wg (pathological) → give up
+  }
+  // The kernel has no cross-WI sync, so any LWS dividing the global size on
+  // both axes is valid. If the (shrunk) preferred LWS does not divide gws,
+  // report failure so the caller passes NULL (driver picks).
+  if (lx * ly > max_wg)
+    return false;
+  if (gws_x % lx != 0 || gws_y % ly != 0)
+    return false;
+  *out_x = lx;
+  *out_y = ly;
   return true;
 }
 

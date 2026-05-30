@@ -1628,12 +1628,47 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
       return false;
     const size_t nx = (N_kv + TN_QK - 1) / TN_QK;
     const size_t mx = (M + TM_QK - 1) / TM_QK;
-    constexpr size_t LWS_QK_X = 64;
-    const size_t nx_pad = ((nx + LWS_QK_X - 1) / LWS_QK_X) * LWS_QK_X;
+    // The LWS is env-overridable + measured (NNTR_QK_LWS="x,y,z"); default
+    // {16,4,1} won a fair A/B/A/B sweep at M=1024 on Adreno 830 (SD8 Elite):
+    // qk_matmul_f16_ohwi_img 76.5 ms vs 110.2 ms for the prior {64,1,1}
+    // (-30.6%; thermal pair: 76.49/76.55 vs 110.21/110.21), token 7212
+    // match=1 (self+causal) unchanged. Runner-up {32,2,1} = 89.9 ms (-18%);
+    // {32,1,1} REGRESSED to 144 ms; {128,1,1}/{256,1,1}/{64,2,1} were neutral
+    // (~108-110 ms). The 2-D workgroup (16 n-cols x 4 m-rows) feeds the
+    // 64-wide Adreno subgroup while reusing the m-row Q loads across the WG.
+    // We compute the workgroup first, then pad gws.x (= nx_pad) up to a
+    // multiple of the chosen lws.x so the divisibility guard holds, mirroring
+    // the NNTR_SV_LWS pattern in the sv_matmul block below (re-pad +
+    // NULL-fallback). If any gws[i] % lws[i] != 0 (e.g. an lws.y that does not
+    // divide mx) we fall back to NULL (driver-chosen workgroup); the log's
+    // kernel time reveals it.
+    // Parse NNTR_QK_LWS once. Unset/garbage => default {16,4,1}.
+    static const std::array<size_t, 3> qk_lws_env = []() {
+      std::array<size_t, 3> v = {16, 4, 1}; // default (measured best, see above)
+      const char *s = std::getenv("NNTR_QK_LWS");
+      if (s != nullptr) {
+        int a = 0, b = 0, c = 0;
+        if (std::sscanf(s, "%d,%d,%d", &a, &b, &c) == 3) {
+          v = {(size_t)a, (size_t)b, (size_t)c};
+        }
+      }
+      return v;
+    }();
+    const size_t LWS_X = qk_lws_env[0];
+    const size_t LWS_Y = qk_lws_env[1];
+    const size_t LWS_Z = qk_lws_env[2];
+    // Pad x up to the chosen lws.x so the kernel's clamps cover the pad cols.
+    const size_t lx = LWS_X > 0 ? LWS_X : 1;
+    const size_t nx_pad = ((nx + lx - 1) / lx) * lx;
     std::array<size_t, 3> gws = {nx_pad, mx, num_heads_Q};
-    std::array<size_t, 3> lws = {LWS_QK_X, 1, 1};
-    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               lws.data(), 0, nullptr, nullptr);
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
+    // Divisibility guard: all three dims must divide, and all lws>0, else NULL.
+    const bool lws_ok = LWS_X > 0 && LWS_Y > 0 && LWS_Z > 0 &&
+                        (gws[0] % LWS_X == 0) && (gws[1] % LWS_Y == 0) &&
+                        (gws[2] % LWS_Z == 0);
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 3, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
+      nullptr);
   }
 
   // ---- K2: row softmax (scores cl_mem, in-place) ----
@@ -1674,16 +1709,47 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
       return false;
     // TDX=8 tiled: each WI computes 8 output channels, so the x grid is
     // head_dim/8 work-items. Workgroup (LWS_X x's, LWS_Y=4 m's).
+    // The LWS is env-overridable + measured (NNTR_SV_LWS="x,y,z"); default
+    // {8,8,1} won a fair A/B/A/B sweep at M=1024 on Adreno 830 (SD8 Elite):
+    // sv_matmul_f16_ohwi_img 108.2 ms vs 150.6 ms for the prior {16,4,1}
+    // (-28%; ~166 ms for driver NULL lws), token 7212 match=1 unchanged.
+    // {16,4,1} (prior hardcoded constexpr) is the runner-up. The padded gws
+    // guarantees
+    // divisibility for the default, but for an arbitrary env override we
+    // re-pad to the chosen LWS and re-apply a divisibility guard (mirrors the
+    // v8c_pick_lws + NULL-fallback pattern in blas_kernels.cpp): if any
+    // gws[i] % lws[i] != 0 we fall back to NULL (driver-chosen workgroup).
     constexpr size_t TDX = 8;
-    constexpr size_t LWS_X = 16;
-    constexpr size_t LWS_Y = 4;
+    // Parse NNTR_SV_LWS once. "0,0,0" (or unset/garbage) => NULL lws.
+    static const std::array<size_t, 3> sv_lws_env = []() {
+      std::array<size_t, 3> v = {8, 8, 1}; // default (measured best, see above)
+      const char *s = std::getenv("NNTR_SV_LWS");
+      if (s != nullptr) {
+        int a = 0, b = 0, c = 0;
+        if (std::sscanf(s, "%d,%d,%d", &a, &b, &c) == 3) {
+          v = {(size_t)a, (size_t)b, (size_t)c};
+        }
+      }
+      return v;
+    }();
+    const size_t LWS_X = sv_lws_env[0];
+    const size_t LWS_Y = sv_lws_env[1];
+    const size_t LWS_Z = sv_lws_env[2];
     const size_t dx = (head_dim + TDX - 1) / TDX;
-    const size_t dx_pad = ((dx + LWS_X - 1) / LWS_X) * LWS_X;
-    const size_t mx_pad = ((M + LWS_Y - 1) / LWS_Y) * LWS_Y;
+    // Pad x/y up to the chosen LWS so the kernel's clamps cover the pad rows.
+    const size_t lx = LWS_X > 0 ? LWS_X : 1;
+    const size_t ly = LWS_Y > 0 ? LWS_Y : 1;
+    const size_t dx_pad = ((dx + lx - 1) / lx) * lx;
+    const size_t mx_pad = ((M + ly - 1) / ly) * ly;
     std::array<size_t, 3> gws = {dx_pad, mx_pad, num_heads_Q};
-    std::array<size_t, 3> lws = {LWS_X, LWS_Y, 1};
-    blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
-                                               lws.data(), 0, nullptr, nullptr);
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
+    // Divisibility guard: all three dims must divide, and all lws>0, else NULL.
+    const bool lws_ok = LWS_X > 0 && LWS_Y > 0 && LWS_Z > 0 &&
+                        (gws[0] % LWS_X == 0) && (gws[1] % LWS_Y == 0) &&
+                        (gws[2] % LWS_Z == 0);
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 3, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
+      nullptr);
   }
 
   clFinish(q);

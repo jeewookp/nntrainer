@@ -14,6 +14,7 @@
 #include "blas_kernels_templates.h"
 #include <cl_kernels/cl_kernels.h>
 
+#include "cl_tensor_view.h"
 #include "util_func.h"
 #include <array>
 #include <cstdio>
@@ -1358,6 +1359,43 @@ void transpose_16(void *input, void *output, int width, int height,
 // All inputs are plain cl_mem (image2d_from_buffer or buffer), no SVM.
 // =============================================================================
 
+// Device caps for v8c dispatch (paper §3.4 device specialization), queried once.
+// Used to cap the LWS work-group product to the device's max — so the tuned
+// 4×16 sweet spot is honored on Adreno 830 (max 1024) yet auto-reduced on a
+// device with a smaller max work-group instead of silently dropping to NULL.
+static const tv::DeviceImageCaps &v8c_device_caps() {
+  static const tv::DeviceImageCaps caps = []() {
+    auto *cc =
+      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+    cl_device_id dev = cc ? cc->context_inst_.GetDeviceId() : nullptr;
+    return tv::queryDeviceImageCaps(dev);
+  }();
+  return caps;
+}
+
+// Shared v8c LWS policy: preferred 4×16 (env NNTR_V8C_LWS overrides), capped to
+// the device max work-group size and required to divide gws. Returns whether a
+// valid LWS was chosen; out is filled when true.
+static bool v8c_pick_lws(size_t gws_x, size_t gws_y, std::array<size_t, 2> &out) {
+  static const std::array<size_t, 2> pref = []() {
+    const char *e = std::getenv("NNTR_V8C_LWS");
+    size_t lx = 4, ly = 16; // swept sweet spot @ M=1024 (WG=64), 8.9× vs NULL.
+    if (e) {
+      long a = 0, b = 0;
+      if (std::sscanf(e, "%ld,%ld", &a, &b) == 2 && a > 0 && b > 0) {
+        lx = (size_t)a;
+        ly = (size_t)b;
+      }
+    }
+    return std::array<size_t, 2>{lx, ly};
+  }();
+  size_t ox = 0, oy = 0;
+  bool ok = tv::select2dLws(gws_x, gws_y, pref[0], pref[1], v8c_device_caps(),
+                            &ox, &oy);
+  out = {ox, oy};
+  return ok;
+}
+
 void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
                       cl_mem scale_wgt, cl_mem row_sum_act, cl_mem zp_act,
                       cl_mem row_sum_w_int4, cl_mem output_fp16, unsigned int M,
@@ -1423,27 +1461,13 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
     // CL-event profiling showed the historic NULL lws (driver-chosen
     // workgroup) lands the GEMM at ~14% of dp4a peak in-forward, vs 87%
-    // in the standalone microbench which used a tuned LWS. Set an explicit
-    // LWS that divides gws (the kernel has no cross-WI sync, so any divisor
-    // is valid); fall back to NULL when it does not divide (small-M prefill).
-    // NNTR_V8C_LWS="lx,ly" overrides for sweeping; default tuned below.
-    static const std::array<size_t, 2> v8c_lws = []() {
-      const char *e = std::getenv("NNTR_V8C_LWS");
-      size_t lx = 4, ly = 16; // swept sweet spot @ M=1024 (WG=64): v8c_gemm
-                              // 1704ms(NULL)->192ms = 8.9x; matches the
-                              // standalone microbench's tuned LWS 4x16.
-      if (e) {
-        long a = 0, b = 0;
-        if (std::sscanf(e, "%ld,%ld", &a, &b) == 2 && a > 0 && b > 0) {
-          lx = (size_t)a;
-          ly = (size_t)b;
-        }
-      }
-      return std::array<size_t, 2>{lx, ly};
-    }();
-    const bool lws_ok = (v8c_lws[0] && v8c_lws[1] && gws[0] % v8c_lws[0] == 0 &&
-                         gws[1] % v8c_lws[1] == 0);
-    std::array<size_t, 3> lws = {v8c_lws[0], v8c_lws[1], 1};
+    // in the standalone microbench which used a tuned LWS. Pick a device-
+    // specialized LWS (4×16 sweet spot, capped to the device max work-group
+    // size and required to divide gws); fall back to NULL when none fits
+    // (small-M prefill). NNTR_V8C_LWS="lx,ly" overrides.
+    std::array<size_t, 2> picked{};
+    const bool lws_ok = v8c_pick_lws(gws[0], gws[1], picked);
+    std::array<size_t, 3> lws = {picked[0], picked[1], 1};
     blas_cc->command_queue_inst_.enqueueKernel(
       kp->GetKernel(), 2, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
       nullptr);
@@ -1869,21 +1893,11 @@ void gemm_int8_int8_v8c_cl(cl_mem act_image, cl_mem weight_image,
   } else {
     constexpr size_t TM = 4, TN = 8;
     std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
-    static const std::array<size_t, 2> v8c_lws = []() {
-      const char *e = std::getenv("NNTR_V8C_LWS");
-      size_t lx = 4, ly = 16;
-      if (e) {
-        long a = 0, b = 0;
-        if (std::sscanf(e, "%ld,%ld", &a, &b) == 2 && a > 0 && b > 0) {
-          lx = (size_t)a;
-          ly = (size_t)b;
-        }
-      }
-      return std::array<size_t, 2>{lx, ly};
-    }();
-    const bool lws_ok = (v8c_lws[0] && v8c_lws[1] && gws[0] % v8c_lws[0] == 0 &&
-                         gws[1] % v8c_lws[1] == 0);
-    std::array<size_t, 3> lws = {v8c_lws[0], v8c_lws[1], 1};
+    // Device-specialized LWS (shared with the int4 path): 4×16 sweet spot
+    // capped to device max work-group size + must divide gws, else NULL.
+    std::array<size_t, 2> picked{};
+    const bool lws_ok = v8c_pick_lws(gws[0], gws[1], picked);
+    std::array<size_t, 3> lws = {picked[0], picked[1], 1};
     blas_cc->command_queue_inst_.enqueueKernel(
       kp->GetKernel(), 2, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
       nullptr);

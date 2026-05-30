@@ -151,6 +151,7 @@ struct DeviceImageCaps {
   size_t max_height = 0;       ///< CL_DEVICE_IMAGE2D_MAX_HEIGHT (in texels)
   cl_uint pitch_align = 0;     ///< CL_DEVICE_IMAGE_PITCH_ALIGNMENT (pixels),
                                ///< the row-pitch granularity for from-buffer
+  size_t max_work_group_size = 0; ///< CL_DEVICE_MAX_WORK_GROUP_SIZE (0=unknown)
   bool queried = false;        ///< true once a real query succeeded
 };
 
@@ -167,6 +168,24 @@ DeviceImageCaps queryDeviceImageCaps(cl_device_id device);
  *        returns true (assume OK — preserves legacy behavior).
  */
 bool image2dViewFits(const ViewSpec &spec, const DeviceImageCaps &caps);
+
+/**
+ * @brief Device-specialized 2D local-work-group selection (paper §3.4).
+ *        Picks an LWS for a 2D GEMM dispatch that (a) divides the global size
+ *        on both axes and (b) fits the device's max work-group size. Starts
+ *        from a preferred (px, py) and, if px*py exceeds the device max work-
+ *        group size, halves py then px until it fits. Returns {0,0} if no valid
+ *        divisor-LWS exists (caller then passes NULL lws = driver chooses).
+ *        With caps.max_work_group_size==0 (unknown) the preferred LWS is used
+ *        as-is when it divides gws — preserving the prior hardcoded behavior.
+ * @param gws_x global size, dim 0      @param gws_y global size, dim 1
+ * @param pref_x preferred local, dim 0 @param pref_y preferred local, dim 1
+ * @param caps device caps (max_work_group_size consulted)
+ * @param[out] out_x chosen local dim 0 @param[out] out_y chosen local dim 1
+ * @return true if a valid LWS was chosen, false → use NULL lws
+ */
+bool select2dLws(size_t gws_x, size_t gws_y, size_t pref_x, size_t pref_y,
+                 const DeviceImageCaps &caps, size_t *out_x, size_t *out_y);
 
 /**
  * @brief One physical cl_mem allocation + metadata + cache of zero-copy views.
