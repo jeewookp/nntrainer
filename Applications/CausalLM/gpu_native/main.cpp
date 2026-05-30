@@ -52,16 +52,34 @@ int main(int argc, char **argv) {
   const std::string weight_path = argv[1];
 
   causallm_gpu::Qwen3Config cfg;
-  cfg.hidden_size = 1024;
-  cfg.intermediate_size = 3072;
-  cfg.head_dim = 128;
-  cfg.num_heads_Q = 16;
-  cfg.num_heads_KV = 8;
-  cfg.num_layers = 28;
+  // Default: Qwen3-0.6B. NNTR_MODEL_4B=1 selects Qwen3-4B dims (hidden 2560,
+  // 36 layers, 32 Q / 8 KV heads, inter 9728) — for the 8/4/4 coherence demo.
+  const bool model_4b = []() {
+    const char *e = std::getenv("NNTR_MODEL_4B");
+    return e && std::atoi(e) != 0;
+  }();
+  if (model_4b) {
+    cfg.hidden_size = 2560;
+    cfg.intermediate_size = 9728;
+    cfg.head_dim = 128;
+    cfg.num_heads_Q = 32;
+    cfg.num_heads_KV = 8;
+    cfg.num_layers = 36;
+  } else {
+    cfg.hidden_size = 1024;
+    cfg.intermediate_size = 3072;
+    cfg.head_dim = 128;
+    cfg.num_heads_Q = 16;
+    cfg.num_heads_KV = 8;
+    cfg.num_layers = 28;
+  }
   cfg.vocab_size = 151936;
   cfg.max_seq_len = 20480;
   cfg.rms_norm_eps = 1e-6f;
   cfg.rope_theta = 1e6f;
+  std::fprintf(stderr, "[main] model=%s hidden=%u L=%u hQ=%u\n",
+               model_4b ? "Qwen3-4B" : "Qwen3-0.6B", cfg.hidden_size,
+               cfg.num_layers, cfg.num_heads_Q);
 
   causallm_gpu::Qwen3Forward fwd;
   if (!fwd.init(cfg, weight_path)) {
@@ -323,6 +341,23 @@ int main(int argc, char **argv) {
                    tt.attn_dispatch_ms,   pct(tt.attn_dispatch_ms),
                    tt.wo_ms,              pct(tt.wo_ms),
                    tt.ffn_ms,             pct(tt.ffn_ms));
+    }
+    // ALWAYS-ON host-bridge timing (env-gated print). The host_*_ms fields
+    // accumulate the host wall-clock stalls of the SVM<->cl_mem bridges
+    // across all layer calls of this forward. They are reset along with the
+    // stage timings (timings_.reset() at the start of each profile M), so
+    // the printed value is the clean per-forward total at this M.
+    if (profile && std::getenv("NNTR_HOST_TIMING")) {
+      const auto &tt = fwd.timings_;
+      const double host_total =
+        tt.host_kv_ms + tt.host_q_ms + tt.host_copy_svm_ms;
+      std::fprintf(stderr,
+                   "  [host-timing M=%d, %d layer-calls]: "
+                   "kv_bridge=%.2f ms  q_bridge=%.2f ms  copy_svm=%.2f ms  "
+                   "=> host_total=%.2f ms (%.1f%% of chain=%.1f ms)\n",
+                   M_test, tt.calls, tt.host_kv_ms, tt.host_q_ms,
+                   tt.host_copy_svm_ms, host_total,
+                   t_ms > 0 ? 100.0 * host_total / t_ms : 0.0, t_ms);
     }
     // True on-device per-kernel GPU time (no-op unless NNTR_OPENCL_PROFILING
     // is set). Unlike the clFinish-bracketed stage timings above, this is

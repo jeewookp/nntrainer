@@ -168,6 +168,14 @@ public:
     double wo_ms = 0;                // (g) wo: cvt+quant+image+GEMM+cvt+add
     double ffn_ms = 0;               // (h) ffn block (full)
     int    calls = 0;
+    // ALWAYS-ON host-blocking bridge timers (NOT gated by profile_stages_).
+    // Accumulated across all layer calls of a forward window. These measure
+    // the host wall-clock stalls of the SVM<->cl_mem bridges (clEnqueueMap
+    // Buffer(CL_TRUE)+memcpy+SVM map/unmap, which block the host). Used to
+    // quantify the host-overhead "prize" recoverable by bridge elimination.
+    double host_kv_ms = 0;     // K scatter CPU map path + V write bridge
+    double host_q_ms = 0;      // Q SVM-upload bridge (+ its trailing clFinish)
+    double host_copy_svm_ms = 0; // o_svm->o_fp32 copy_svm dispatch host time
     void reset() { *this = ForwardTimings{}; }
   };
   ForwardTimings timings_{};

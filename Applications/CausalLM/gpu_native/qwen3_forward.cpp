@@ -19,8 +19,10 @@
 #include <rmsnorm_fp16.h>
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <memory>
@@ -3205,6 +3207,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     // CPU-side scatter path: writes cache_k_svm (and, in legacy NNTR_OHWI
     // _IMG-without-KIMG mode, also keeps SVM in sync for the SVM-K
     // attention kernel).
+    auto _h0 = NOW();  // [host-timing] K scatter CPU map bridge (BLOCKS host)
     cl_int e;
     void *p_k = clEnqueueMapBuffer(cl_q_, scratch_.y_k, CL_TRUE, CL_MAP_READ,
                                    0, kv_total_bytes, 0, nullptr, nullptr,
@@ -3226,12 +3229,14 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     }
     clEnqueueSVMUnmap(cl_q_, lw.cache_k_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_k, p_k, 0, nullptr, nullptr);
+    timings_.host_kv_ms += MS(NOW(), _h0);  // [host-timing] K bridge
   }
   // V scatter:
   //   default               → concat copy into cache_v_svm (sv_matmul_f16)
   //   NNTR_OHWI_IMG=1 (#46l)→ NO-OP: wv FC already wrote OHWI-reversed
   //                           directly into cache_v_buf_ohwi.
   if (!use_ohwi_img) {
+    auto _h0 = NOW();  // [host-timing] V write bridge (BLOCKS host)
     cl_int e;
     void *p_v = clEnqueueMapBuffer(cl_q_, scratch_.y_v, CL_TRUE, CL_MAP_READ,
                                    0, kv_total_bytes, 0, nullptr, nullptr,
@@ -3243,6 +3248,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     std::memcpy(dst, p_v, kv_total_bytes);
     clEnqueueSVMUnmap(cl_q_, dst, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_v, p_v, 0, nullptr, nullptr);
+    timings_.host_kv_ms += MS(NOW(), _h0);  // [host-timing] V bridge
   }
   // #46l NNTR_OHWI_IMG=1: wv FC already wrote OHWI-reversed into
   // cache_v_buf_ohwi (gemm_int8_v8c_v_ohwi_cl). No separate scatter.
@@ -3253,6 +3259,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_begin();
   const size_t q_total_bytes = (size_t)M * N_q * sizeof(uint16_t);
   {
+    auto _h0 = NOW();  // [host-timing] Q SVM-upload bridge (BLOCKS host)
     cl_int e;
     void *p = clEnqueueMapBuffer(cl_q_, scratch_.y_q, CL_TRUE, CL_MAP_READ,
                                  0, q_total_bytes, 0, nullptr, nullptr, &e);
@@ -3262,6 +3269,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueSVMUnmap(cl_q_, scratch_.q_svm, 0, nullptr, nullptr);
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
+    timings_.host_q_ms += MS(NOW(), _h0);  // [host-timing] Q bridge
   }
   // Attention dispatch:
   //   default        → _ohwi_cl   (K OHWI, V concat — half-OHWI, 192 TPS@1K)
@@ -3318,6 +3326,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // GPU copy o_svm (fp16 SVM, attention output) → scratch_.o_fp32
   // (fp16 cl_mem, name kept). Async on the queue, no host stall.
   {
+    auto _h0 = NOW();  // [host-timing] o_svm->o_fp32 copy_svm bridge (host enqueue)
     auto kp =
       cl->registerClKernel(kCopySvmFp16Kernel, "copy_svm_to_clmem_fp16");
     int n = (int)(M * N_q);
@@ -3328,6 +3337,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     std::array<size_t, 1> lws = {64};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
+    timings_.host_copy_svm_ms += MS(NOW(), _h0);  // [host-timing] copy_svm
   }
   nntrainer::quantize_act_v8c_fp16_cl(scratch_.o_fp32, scratch_.wo_act_i8,
                                       scratch_.wo_act_scale,
@@ -3603,6 +3613,10 @@ int Qwen3Forward::run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32) {
   const uint8_t *embed_base = weight_mmap_;
 
   std::vector<float> dequant_row(H);
+  // Optional full fp32 logit dump (first call only): NNTR_DUMP_LOGITS=<path>.
+  const char *dump_path = std::getenv("NNTR_DUMP_LOGITS");
+  std::vector<float> all_logits;
+  if (dump_path != nullptr) all_logits.resize((size_t)V);
   float best_logit = -std::numeric_limits<float>::infinity();
   int best_token = -1;
   for (unsigned int v = 0; v < V; ++v) {
@@ -3611,9 +3625,27 @@ int Qwen3Forward::run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32) {
     float dot = 0.0f;
     for (unsigned int i = 0; i < H; ++i)
       dot += dequant_row[i] * hidden[i];
+    if (dump_path != nullptr) all_logits[(size_t)v] = dot;
     if (dot > best_logit) {
       best_logit = dot;
       best_token = (int)v;
+    }
+  }
+  if (dump_path != nullptr) {
+    static bool dumped = false;
+    if (!dumped) {
+      std::FILE *fp = std::fopen(dump_path, "wb");
+      if (fp != nullptr) {
+        std::fwrite(all_logits.data(), sizeof(float), (size_t)V, fp);
+        std::fclose(fp);
+        dumped = true;
+        std::fprintf(stderr,
+                     "[NNTR_DUMP_LOGITS] wrote %u fp32 logits to %s\n", V,
+                     dump_path);
+      } else {
+        std::fprintf(stderr, "[NNTR_DUMP_LOGITS] failed to open %s\n",
+                     dump_path);
+      }
     }
   }
   std::fprintf(stderr,
