@@ -3193,6 +3193,18 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_begin();
   disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
   disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
+  // Intel NEO (OOO queue): q_norm/k_norm write y_q/y_k in place, and the
+  // RoPE kernels below read+write the SAME y_q/y_k in place. These are four
+  // data-dependent kernels enqueued back-to-back inside ONE stage; the
+  // stage-boundary barrier (after RoPE) does not order WITHIN the stage. On
+  // the OOO queue RoPE can start before its q_norm/k_norm producer finishes
+  // → it reads the un-normalized (or partially written) head row, corrupting
+  // Q/K. At the small, growing prefill M of the greedy loop the per-position
+  // RoPE + per-row norm contention window actually opens (the decode M=1 and
+  // the position-0 / repeated-row sweep masked it), so this surfaces as the
+  // step~13 inf/NaN. bar() is pure ordering, no math; no-op on Adreno
+  // (gated by NNTR_V8C_BUF) which serializes same-buffer commands in practice.
+  bar();  // q_norm/k_norm(y_q,y_k) -> RoPE in-place reads
 
   // RoPE on Q/K via batched LUT kernel (#45b / Path 4). Single
   // dispatch covers all M tokens × num_heads × half_d, looking up
