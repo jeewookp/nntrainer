@@ -1221,6 +1221,21 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
   // Out-of-order queue barrier (same as concat variant).
   clFinish(q);
 
+  // Intel NEO honors CL_QUEUE_OUT_OF_ORDER literally: the K1→K2→K3 chain
+  // (data-dependent through `scores`) is NOT auto-serialized, so K3 can
+  // read an unwritten `scores` and emit all-zero O. Adreno's driver
+  // serializes same-buffer-dependent kernels in practice, so this gate
+  // (NNTR_V8C_BUF, the existing Intel device-specialization signal)
+  // keeps the Adreno path bit-identical. The barriers carry no math
+  // change — pure ordering.
+  static const bool ooo_barriers = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return e && std::atoi(e) != 0;
+  }();
+  auto serialize = [&]() {
+    if (ooo_barriers) clEnqueueBarrierWithWaitList(q, 0, nullptr, nullptr);
+  };
+
   // ---- K1: QK matmul OHWI ----
   {
     ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
@@ -1260,6 +1275,8 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
                                                lws.data(), 0, nullptr, nullptr);
   }
 
+  serialize();
+
   // ---- K2: row softmax (unchanged, scores layout unaffected by OHWI) ----
   {
     ClContext::SharedPtrClKernel kp =
@@ -1275,6 +1292,8 @@ bool two_conv_attention_prefill_f16_ohwi_cl(
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                                lws.data(), 0, nullptr, nullptr);
   }
+
+  serialize();
 
   // ---- K3: scores @ V -> O (V still concat; reuse sv_matmul_f16) ----
   {

@@ -3045,12 +3045,46 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   auto stage_begin = [&]() {
     if (profile_stages_) { clFinish(cl_q_); t_stage = NOW(); }
   };
+  // Intel NEO: the command queue is CL_QUEUE_OUT_OF_ORDER and does NOT
+  // auto-serialize data-dependent kernels across stages the way Adreno's
+  // driver does in practice. Each stage here writes scratch buffers the
+  // next stage reads (e.g. rmsnorm→quant→GEMM→...), and the cross-stage
+  // bridges (KV/Q SVM map) read with no event dependency — so a later
+  // stage can consume a not-yet-written buffer, producing inf/NaN. Insert
+  // an ordering barrier at every stage boundary on Intel (gated by the
+  // existing device-specialization signal NNTR_V8C_BUF). Barriers carry
+  // NO math change and add no host stall (unlike clFinish); Adreno keeps
+  // the original barrier-free fast path bit-for-bit.
+  static const bool ooo_stage_barrier = []() {
+    const char *e = std::getenv("NNTR_V8C_BUF");
+    return e && std::atoi(e) != 0;
+  }();
   auto stage_end_add = [&](double &accum) {
     if (profile_stages_) { clFinish(cl_q_); accum += MS(NOW(), t_stage); }
+    else if (ooo_stage_barrier)
+      clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  };
+  // Intel NEO intra-stage ordering: the wo/ffn blocks chain several
+  // dependent kernels (copy→rmsnorm→quant→GEMM→elementwise) inside a
+  // single profiling "stage". The stage-boundary barrier above does not
+  // order WITHIN a stage, and the lib quant/GEMM wrappers enqueue without
+  // a trailing barrier, so on the OOO queue a consumer can read a buffer
+  // its producer has not finished writing → inf/NaN. bar() inserts a pure
+  // ordering barrier; no-op on Adreno (gated by NNTR_V8C_BUF).
+  auto bar = [&]() {
+    if (ooo_stage_barrier)
+      clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   };
 
   // (a) pad in_fp32 -> in_padded fp16 (cvt at boundary, #46m), then
   // attn_norm fp16. Residual stream is fp16 throughout (paper §3.7).
+  // Intel NEO (OOO queue): the caller (main.cpp / prefill loop) enqueues the
+  // input copy into in_fp32 WITHOUT a finish before calling us. On an
+  // out-of-order queue our in_fp32->in_padded copy below can run before that
+  // input copy lands → in_padded copies stale zeros → whole layer zero.
+  // Order the caller's writes before our first read. Adreno-gated off.
+  if (ooo_stage_barrier)
+    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   stage_begin();
   float zero = 0.0f;
   const uint16_t zero_h = 0;
@@ -3065,6 +3099,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                         nullptr, nullptr);
   clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
                       (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
+  bar();  // fill/copy(in_padded) -> attn rmsnorm
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
                                    "rmsnorm_f32in_f16out_coop");
@@ -3169,6 +3204,17 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
       !dispatch_rope_batched(scratch_.y_k, M, cfg_.num_heads_KV, position)) {
     return false;
   }
+  // Intel NEO (OOO queue): the q_norm/k_norm/RoPE kernels write y_q/y_k in
+  // place, but the following KV/Q bridges read y_q/y_k/y_v via blocking
+  // clEnqueueMapBuffer with NO event dependency on those kernels — on an
+  // out-of-order queue the map can run BEFORE the rmsnorm/rope completes,
+  // so the bridge copies PRE-norm (O(1900)) Q/K into the SVM caches → the
+  // QK dot overflows fp16 to +inf → softmax NaN → zero/NaN attention out.
+  // A barrier here orders the in-place writes before the bridge reads.
+  // Adreno serializes same-buffer commands in practice, so gate on the
+  // existing Intel device-specialization signal (NNTR_V8C_BUF).
+  if (use_v8c_buf)
+    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   stage_end_add(timings_.qk_norm_rope_ms);  // #46i: no extra clFinish
 
   // (e) Write K, V (M rows) to this layer's SVM cache starting at
@@ -3378,10 +3424,15 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
     timings_.host_copy_svm_ms += MS(NOW(), _h0);  // [host-timing] copy_svm
   }
+  // Intel NEO (OOO queue): order copy_svm_to_clmem_fp16 (writes o_fp32)
+  // before quantize_act reads it. Adreno-gated off via use_v8c_buf.
+  if (use_v8c_buf)
+    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   nntrainer::quantize_act_v8c_fp16_cl(scratch_.o_fp32, scratch_.wo_act_i8,
                                       scratch_.wo_act_scale,
                                       scratch_.wo_act_zp, scratch_.wo_act_rs,
                                       M_pad, N_q);
+  bar();  // quant(wo_act) -> wo GEMM
   cl_mem wo_act_image = scratch_.wo_act_img; // increment 2: cached view
   auto *ogemm = lw.wo.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
                               : &nntrainer::gemm_int8_v8c_cl;
@@ -3423,6 +3474,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
                       0, (size_t)M * K_h * sizeof(float), 0, nullptr,
                       nullptr);
+  bar();  // fill/copy(ffn_in_padded) -> ffn rmsnorm
   {
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
                                    "rmsnorm_f32in_f16out_coop");
@@ -3440,9 +3492,11 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
+  bar();  // ffn rmsnorm(ffn_normed) -> quant
   nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
                                       scratch_.fa_sc, scratch_.fa_zp,
                                       scratch_.fa_rs, M_pad, K_h);
+  bar();  // quant(fa) -> ffn_up/gate GEMM
   cl_mem fa_image = scratch_.fa_act_img; // increment 2: cached view
   cl_mem fa_act_arg = use_v8c_buf ? scratch_.fa_i8 : fa_image;
   cl_mem fup_arg = use_v8c_buf ? lw.ffn_up.weight_buf : lw.ffn_up.weight_image;
@@ -3491,9 +3545,11 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
+  bar();  // swiglu(swiglu_out) -> quant
   nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
+  bar();  // quant(dn) -> ffn_down GEMM
   cl_mem dn_image = scratch_.dn_act_img; // increment 2: cached view
   cl_mem dn_act_arg = use_v8c_buf ? scratch_.dn_i8 : dn_image;
   cl_mem fdown_arg =
