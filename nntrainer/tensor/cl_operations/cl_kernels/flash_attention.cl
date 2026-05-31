@@ -534,3 +534,179 @@ __kernel void flash_attention_prefill_f16_coop_vec(
   const FVHALF o_reg = FV_CVT_H(acc_reg * inv);
   FV_VSTORE(o_reg, (o_base + lane0) / VPL, O);
 }
+
+// ===========================================================================
+// BLOCK-Q vectorized flash prefill (#60) — reuse K/V across FBQ_TM query rows.
+// Same d-axis WG cooperation as flash_attention_prefill_f16_coop_vec (WI lid
+// owns contiguous lanes [lid*VPL, lid*VPL+VPL), VPL=d/LWS, vector vloads, fp32
+// tree-reduced score, online softmax) — but ONE workgroup owns a TILE of
+// FBQ_TM query rows of ONE head_q. Each K[n]/V[n] is loaded ONCE per WG and
+// FMA'd into ALL FBQ_TM rows => cuts global K+V traffic ~FBQ_TM x (the measured
+// Intel bottleneck: K/V are memory-bound, re-read ~gqa*(M-n) times by the
+// 1-row-per-WG vec kernel). Each row keeps its OWN m_i,l_i,acc and its OWN
+// causal cutoff (key n contributes only to rows m>=n). Reuses FLASH_VEC_LWS/
+// _BLOCK_KV/_D and all FV_* macros above (same translation unit).
+// NOTE register budget: acc+q = 2*FBQ_TM*VPL floats/WI. LWS=32/half4/TM4 = 56
+// (safe); LWS=16/half8/TM4 = 96 (SPILLS on Intel — use LWS>=32 with TM>=4).
+// ===========================================================================
+#ifndef FBQ_TM
+#define FBQ_TM 4
+#endif
+
+#ifdef FBQ_SG
+// Subgroup-reduce variant (#60b): LWS == subgroup size, so the cross-lane d-dot
+// reduction is a single sub_group_reduce_add per (key,row) — NO red_sh LDS, NO
+// barriers (vs the log-step tree below). Intel only; gated by NNTR_FLASH_SG, so
+// the attribute/pragma never reach the Adreno compile (which uses the image
+// path and never builds Block-Q).
+#pragma OPENCL EXTENSION cl_intel_subgroups : enable
+__attribute__((intel_reqd_sub_group_size(FLASH_VEC_LWS)))
+#else
+__attribute__((reqd_work_group_size(FLASH_VEC_LWS, 1, 1)))
+#endif
+__kernel void flash_attention_prefill_f16_blockq(
+    __global const half *Q,            // [M, HD_Q]
+    __global const half *K,            // OHWI [H_kv,S_max,d] (k_stride>0) or concat
+    __global const half *V,            // [N_kv, HD_KV]
+    __global       half *O,            // [M, HD_Q]
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int HD_KV, const int gqa,
+    const int is_causal, const float scale, const int k_stride) {
+  const int lid = get_local_id(0);
+  const int grp = get_group_id(0);                 // -> (head_q, row-tile)
+  const int n_row_tiles = (M + FBQ_TM - 1) / FBQ_TM;
+  const int head_q  = grp / n_row_tiles;
+  const int tile    = grp % n_row_tiles;
+  const int m0      = tile * FBQ_TM;
+  const int total_groups = (HD_Q / d) * n_row_tiles;
+  if (grp >= total_groups || m0 >= M)
+    return;
+
+  const int head_kv = head_q / gqa;
+  const long k_head_base =
+      (k_stride > 0) ? ((long)head_kv * (long)k_stride * (long)d)
+                     : ((long)head_kv * (long)d);
+  const long k_row_stride = (k_stride > 0) ? (long)d : (long)HD_KV;
+
+  const int VPL  = FLASH_VEC_VPL;
+  const int lane0 = lid * VPL;
+
+#ifndef FBQ_SG
+  __local float red_sh[FLASH_VEC_BLOCK_KV * FBQ_TM * FLASH_VEC_LWS];
+#endif
+
+  FVFLOAT q_reg[FBQ_TM];
+  FVFLOAT acc_reg[FBQ_TM];
+  float   m_i[FBQ_TM];
+  float   l_i[FBQ_TM];
+  int     row_valid[FBQ_TM];
+
+  #pragma unroll
+  for (int r = 0; r < FBQ_TM; ++r) {
+    const int m = m0 + r;
+    row_valid[r] = (m < M) ? 1 : 0;
+    m_i[r] = -INFINITY;
+    l_i[r] = 0.0f;
+    acc_reg[r] = (FVFLOAT)(0.0f);
+    const long q_base = (long)(row_valid[r] ? m : 0) * HD_Q + (long)head_q * d;
+    q_reg[r] = FV_CVT_F(FV_VLOAD(Q, (q_base + lane0) / VPL));
+  }
+
+  // Largest causal key any VALID row in this tile attends.
+  const int last_row = (m0 + FBQ_TM - 1 < M) ? (m0 + FBQ_TM - 1) : (M - 1);
+  const int n_last = is_causal ? min(N_kv - 1, last_row) : (N_kv - 1);
+
+#ifdef FBQ_SG
+  // Subgroup-reduce path: one key at a time, full d-dot = sub_group_reduce_add
+  // of each WI's fv_hsum partial (no LDS staging, no barriers). The reduce is
+  // called uniformly across lanes (m0/n/M are WG-uniform, r is the loop var),
+  // so the per-row causal `continue` does not break subgroup uniformity.
+  for (int n = 0; n <= n_last; ++n) {
+    const long k_base = k_head_base + (long)n * k_row_stride;
+    const FVFLOAT k_reg = FV_CVT_F(FV_VLOAD(K, (k_base + lane0) / VPL));
+    float sdot[FBQ_TM];
+    #pragma unroll
+    for (int r = 0; r < FBQ_TM; ++r)
+      sdot[r] = sub_group_reduce_add(fv_hsum(q_reg[r] * k_reg));
+    const long v_base = (long)n * HD_KV + (long)head_kv * d;
+    const FVFLOAT v_reg = FV_CVT_F(FV_VLOAD(V, (v_base + lane0) / VPL));
+    #pragma unroll
+    for (int r = 0; r < FBQ_TM; ++r) {
+      const int m = m0 + r;
+      if (!row_valid[r] || (is_causal && n > m))
+        continue;
+#ifdef FLASH_FP16_SCORE
+      const float s = (float)((half)(scale * sdot[r]));
+#else
+      const float s = scale * sdot[r];
+#endif
+      const float m_new = fmax(m_i[r], s);
+      const float alpha = exp(m_i[r] - m_new);
+      const float p     = exp(s - m_new);
+      acc_reg[r] = alpha * acc_reg[r] + p * v_reg;
+      l_i[r]     = alpha * l_i[r] + p;
+      m_i[r]     = m_new;
+    }
+  }
+#else
+  for (int n0 = 0; n0 <= n_last; n0 += FLASH_VEC_BLOCK_KV) {
+    const int nb = min(FLASH_VEC_BLOCK_KV, n_last - n0 + 1);
+
+    // (1) Load K[n] ONCE per key; partial d-dot for ALL TM rows -> red_sh.
+    for (int j = 0; j < nb; ++j) {
+      const long k_base = k_head_base + (long)(n0 + j) * k_row_stride;
+      const FVFLOAT k_reg = FV_CVT_F(FV_VLOAD(K, (k_base + lane0) / VPL));
+      #pragma unroll
+      for (int r = 0; r < FBQ_TM; ++r)
+        red_sh[(j * FBQ_TM + r) * FLASH_VEC_LWS + lid] =
+            fv_hsum(q_reg[r] * k_reg);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // (2) Tree-reduce all nb*TM columns (log2(LWS) rounds).
+    for (int off = FLASH_VEC_LWS >> 1; off > 0; off >>= 1) {
+      if (lid < off)
+        for (int c = 0; c < nb * FBQ_TM; ++c)
+          red_sh[c * FLASH_VEC_LWS + lid] +=
+              red_sh[c * FLASH_VEC_LWS + lid + off];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // (3) Online-softmax. V[n] loaded ONCE per key, applied to all TM rows.
+    for (int j = 0; j < nb; ++j) {
+      const int n = n0 + j;
+      const long v_base = (long)n * HD_KV + (long)head_kv * d;
+      const FVFLOAT v_reg = FV_CVT_F(FV_VLOAD(V, (v_base + lane0) / VPL));
+      #pragma unroll
+      for (int r = 0; r < FBQ_TM; ++r) {
+        const int m = m0 + r;
+        if (!row_valid[r] || (is_causal && n > m))
+          continue;                               // PER-ROW causal mask
+#ifdef FLASH_FP16_SCORE
+        const float s =
+            (float)((half)(scale * red_sh[(j * FBQ_TM + r) * FLASH_VEC_LWS]));
+#else
+        const float s = scale * red_sh[(j * FBQ_TM + r) * FLASH_VEC_LWS];
+#endif
+        const float m_new = fmax(m_i[r], s);
+        const float alpha = exp(m_i[r] - m_new);  // PER-ROW rescale
+        const float p     = exp(s - m_new);
+        acc_reg[r] = alpha * acc_reg[r] + p * v_reg;
+        l_i[r]     = alpha * l_i[r] + p;
+        m_i[r]     = m_new;
+      }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);   // protect red_sh before next tile's step (1)
+  }
+#endif  // FBQ_SG
+
+  // Normalize + write each valid row (single vstoreN per row).
+  #pragma unroll
+  for (int r = 0; r < FBQ_TM; ++r) {
+    if (!row_valid[r]) continue;
+    const float inv = (l_i[r] > 0.0f) ? (1.0f / l_i[r]) : 0.0f;
+    const long o_base = (long)(m0 + r) * HD_Q + (long)head_q * d;
+    const FVHALF o_reg = FV_CVT_H(acc_reg[r] * inv);
+    FV_VSTORE(o_reg, (o_base + lane0) / VPL, O);
+  }
+}

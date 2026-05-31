@@ -1960,6 +1960,40 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
     const char *e = std::getenv("NNTR_FLASH_VEC_STAGE");
     return (e && std::atoi(e) != 0) ? 1 : 0; // default off (lever A only)
   }();
+  // #60 NNTR_FLASH_BLOCKQ=1 selects the BLOCK-Q vectorized variant
+  // (flash_attention_prefill_f16_blockq): one workgroup owns FBQ_TM query rows
+  // of one head_q and loads each K[n]/V[n] ONCE for all TM rows -> cuts the
+  // K/V re-read traffic that bottlenecks the 1-row vec kernel on Intel.
+  static const int flash_blockq = []() {
+    const char *e = std::getenv("NNTR_FLASH_BLOCKQ");
+    if (e)
+      return std::atoi(e) != 0 ? 1 : 0;
+    // #60: default ON for the Intel/buffer path (NNTR_V8C_BUF) — Block-Q +
+    // subgroup-reduce is the measured-best Intel attention (M=1024 ~2075 TPS
+    // vs vec-flash ~1119, token-identical). Adreno (unset) uses the image path.
+    const char *b = std::getenv("NNTR_V8C_BUF");
+    return (b && std::atoi(b) != 0) ? 1 : 0;
+  }();
+  // FBQ_TM: query rows per workgroup. Default 4 (=> acc+q 2*TM*VPL floats stays
+  // in registers at LWS>=32). Only 1/2/4/8 supported.
+  static const int flash_blockq_tm = []() {
+    const char *e = std::getenv("NNTR_FLASH_BLOCKQ_TM");
+    int v = (e && std::atoi(e) > 0) ? std::atoi(e) : 2; // #60: TM=2 measured best
+    if (v != 1 && v != 2 && v != 4 && v != 8) v = 2;
+    return v;
+  }();
+  // #60b NNTR_FLASH_SG: Block-Q reduces the d-dot with sub_group_reduce_add
+  // (LWS == subgroup size) instead of the LDS tree -> no red_sh, no barriers
+  // (the dominant cost: ~512 barriers/WG). Intel only (cl_intel_subgroups).
+  // Default ON for the Intel/buffer path (the +85% lever; M=1024 attention
+  // 494->136 ms). Requires flash_blockq.
+  static const int flash_blockq_sg = []() {
+    const char *e = std::getenv("NNTR_FLASH_SG");
+    if (e)
+      return std::atoi(e) != 0 ? 1 : 0;
+    const char *b = std::getenv("NNTR_V8C_BUF");
+    return (b && std::atoi(b) != 0) ? 1 : 0;
+  }();
   // FLASH_COOP_LWS: WG size for the coop variant (work-items cooperating
   // over head_dim). Default 64. LDS footprint is tiny (q_sh[d]+acc_sh[d]+
   // red_sh[BLOCK_KV*LWS] ~ 1-3 KB), well within Adreno's 32 KB at any LWS.
@@ -1969,6 +2003,11 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
     int v;
     if (e && std::atoi(e) > 0) {
       v = std::atoi(e);
+    } else if (flash_blockq) {
+      // #60: Block-Q register budget = 2*TM*VPL acc/q floats per WI. TM<=2 keeps
+      // half8 (LWS=16, the Intel optimum + the SG subgroup size); TM>=4 needs
+      // half4 (LWS=32) to avoid spill (half8/TM>=4 = 96 floats spills).
+      v = (flash_blockq_tm >= 4) ? 32 : 16;
     } else {
       // #59: Intel/buffer path default LWS=16 => VPL = d/16 = 8 (half8 vloads),
       // the measured Intel-Arc optimum (1153 TPS @ M=1024 vs 981 at LWS=64).
@@ -1999,23 +2038,32 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
     std::string base = tca_copts();
     if (e && std::atoi(e) != 0)
       base += " -DFLASH_FP16_SCORE";
-    if (flash_coop || flash_vec) {
+    if (flash_coop || flash_vec || flash_blockq) {
       base += " -DFLASH_COOP_LWS=" + std::to_string(flash_coop_lws);
       base += " -DFLASH_COOP_BLOCK_KV=" + std::to_string(flash_coop_block_kv);
     }
-    if (flash_vec) {
+    if (flash_vec || flash_blockq) {
+      // Block-Q reuses the vec FV_* macros (VPL = d/LWS half2/4/8 vloads).
       base += " -DFLASH_VEC_LWS=" + std::to_string(flash_coop_lws);
       base += " -DFLASH_VEC_BLOCK_KV=" + std::to_string(flash_coop_block_kv);
+      // STAGE only affects the vec kernel (block-Q has no staging code); keep
+      // the vec A/B knob, default off (measured net loss).
       base += " -DFLASH_VEC_STAGE=" + std::to_string(flash_vec_stage);
       // head_dim is constant across a run; bake it in so the kernel's
       // compile-time VPL = head_dim / LWS picks the right half2/4/8 vload.
       base += " -DFLASH_VEC_D=" + std::to_string((int)head_dim);
     }
+    if (flash_blockq) {
+      base += " -DFBQ_TM=" + std::to_string(flash_blockq_tm);
+      if (flash_blockq_sg)
+        base += " -DFBQ_SG";
+    }
     return base;
   }();
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
     flash_attention_kernel,
-    flash_vec    ? "flash_attention_prefill_f16_coop_vec"
+    flash_blockq ? "flash_attention_prefill_f16_blockq"
+    : flash_vec  ? "flash_attention_prefill_f16_coop_vec"
     : flash_coop ? "flash_attention_prefill_f16_coop"
                  : "flash_attention_prefill_f16_skeleton",
     flash_copts);
@@ -2026,7 +2074,7 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
   // VPL = head_dim / LWS lanes — requires LWS | head_dim and VPL <= 8 (the
   // private half[8] block buffers). Qwen3 d=128 with LWS in {16,32,64} all
   // satisfy this; reject otherwise so the kernel never reads OOB.
-  if (flash_vec) {
+  if (flash_vec || flash_blockq) {
     if ((int)head_dim % flash_coop_lws != 0 ||
         (int)head_dim / flash_coop_lws > 8 ||
         (int)head_dim / flash_coop_lws < 1)
@@ -2056,12 +2104,20 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
 
   std::array<size_t, 1> gws;
   std::array<size_t, 1> lws;
-  if (flash_coop || flash_vec) {
-    // Coop / vec: ONE workgroup per (head_q, query_row). gws = groups * LWS,
-    // lws = LWS (the reqd_work_group_size in the kernel). No padding of
-    // the group count needed — the kernel's grp>=total_groups guard is a
-    // no-op here because gws/lws is an exact multiple.
-    const size_t groups = (size_t)num_heads_Q * M;
+  if (flash_coop || flash_vec || flash_blockq) {
+    // Coop / vec: ONE workgroup per (head_q, query_row). Block-Q: ONE workgroup
+    // per (head_q, row-tile of FBQ_TM rows) => TM x fewer groups. gws = groups
+    // * LWS, lws = LWS (the reqd_work_group_size in the kernel). The kernel
+    // recomputes n_row_tiles = ceil(M/FBQ_TM) from the compile-time FBQ_TM, so
+    // the host ceil(M/TM) below matches exactly (no stray groups dispatched).
+    size_t groups;
+    if (flash_blockq) {
+      const size_t TM = (size_t)flash_blockq_tm;
+      const size_t n_row_tiles = (M + TM - 1) / TM;
+      groups = (size_t)num_heads_Q * n_row_tiles;
+    } else {
+      groups = (size_t)num_heads_Q * M;
+    }
     const size_t L = (size_t)flash_coop_lws;
     gws = {groups * L};
     lws = {L};
