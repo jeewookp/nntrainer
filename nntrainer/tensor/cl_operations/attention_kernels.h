@@ -202,6 +202,21 @@ bool two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
   bool causal);
 
+/// Fused single-kernel attention over the SAME two OHWI images as
+/// _ohwi_kvimg_view_cl (K image [H_kv,S_max,d], reversed-V image
+/// [H_kv,d,S_max]). One workgroup per (head_q, query-row m) does QK +
+/// full-row softmax + S·V in-kernel with the score row in LDS, so the
+/// [H,M,N_kv] scores tensor is NEVER written to DRAM (kills the 3-kernel
+/// path's scores round-trip + L2 thrash) and 3 enqueues collapse to 1.
+/// Q stays SVM; O written SVM. Adreno image path only (read_imageui).
+/// Constraints: max_seq_len <= 1024, head_dim <= 128, both %8==0.
+/// Env-gated by NNTR_FLASH_IMG=1 in the gpu_native caller.
+bool fused_row_attention_f16_ohwi_img_cl(
+  const uint16_t *Q_svm, cl_mem K_image_ohwi, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal);
+
 /// Single-kernel flash-attention prefill (paper §3.6 fusion +
 /// Dao et al. 2022 online softmax). Replaces the three-kernel
 /// two_conv_attention pipeline with one kernel that does QK · softmax

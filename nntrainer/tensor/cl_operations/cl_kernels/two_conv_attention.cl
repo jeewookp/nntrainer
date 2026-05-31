@@ -894,4 +894,134 @@ __kernel void sv_matmul_f16_ohwi_img(
   }
 }
 
+// =============================================================
+// FUSED single-kernel attention (paper §4.2 compute-bound regime).
+// One workgroup per (head_q, query-row m) computes the WHOLE row in
+// three in-kernel phases, reusing BOTH existing OHWI images and
+// NEVER materializing the [H,M,N_kv] scores matrix to DRAM:
+//   (A) QK   : scores[n] = scale * dot(Q[m,hq,:], K[hkv,n,:]) into LDS,
+//              reading the K image (8 channels / texel) — same texels
+//              as qk_matmul_f16_ohwi_img.
+//   (B) soft : full-row fp32 softmax over the LDS scores (max, exp, sum;
+//              normalize deferred to (C) as acc*inv).
+//   (C) SV   : O[m,hq,x] = inv * sum_n p[n] * V[hkv,x,n], reading the
+//              reversed-V image (8 keys / texel) — same texels as
+//              sv_matmul_f16_ohwi_img, but scores come from LDS.
+// Kills the 3-kernel path's ~128 MB/layer scores round-trip (qk write +
+// softmax R/W + sv read) and the L2 thrash that caps it at large M, and
+// collapses 3 enqueues -> 1. LDS: q_sh[d] + sc_sh[<=S_max] + red[LWS].
+//
+// K image : texel(dt,        head_kv*S_max + n) = K[head_kv, n, dt*8..+7]
+// V image : texel(n>>3,      head_kv*d + x)     = V[head_kv, x, n0..n0+7]
+// gws = (FUSED_ATTN_LWS, M, num_heads_Q), lws = (FUSED_ATTN_LWS, 1, 1)
+// =============================================================
+#ifndef FUSED_ATTN_LWS
+#define FUSED_ATTN_LWS 64
+#endif
+#ifndef FUSED_ATTN_MAX_NKV
+#define FUSED_ATTN_MAX_NKV 1024
+#endif
+#ifndef FUSED_ATTN_MAX_D
+#define FUSED_ATTN_MAX_D 128
+#endif
+
+__attribute__((reqd_work_group_size(FUSED_ATTN_LWS, 1, 1)))
+__kernel void fused_row_attention_f16_ohwi_img(
+    __global const half *Q,            // [M, HD_Q] fp16, row-major (concat)
+    __read_only image2d_t K_img,       // OHWI [H_kv, S_max, d]
+    __read_only image2d_t V_img,       // reversed-dims [H_kv, d, S_max]
+    __global       half *O,            // [M, HD_Q] fp16, row-major (concat)
+    const int M, const int N_kv, const int d,
+    const int HD_Q, const int S_max, const int gqa,
+    const int causal, const float scale) {
+  const int lid = get_local_id(0);
+  const int m = get_global_id(1);
+  const int head_q = get_global_id(2);
+  if (m >= M) return;
+  const int head_kv = head_q / gqa;
+
+  const sampler_t smp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
+                        CLK_FILTER_NEAREST;
+
+  __local float q_sh[FUSED_ATTN_MAX_D];
+  __local float sc_sh[FUSED_ATTN_MAX_NKV];
+  __local float red[FUSED_ATTN_LWS];
+
+  // Causal: only keys n <= m contribute (matches the 3-kernel n>m -> -inf).
+  const int n_last = causal ? min(N_kv - 1, m) : (N_kv - 1);
+  const int n_tex_count = (n_last + 1 + 7) >> 3;   // ceil((n_last+1)/8)
+
+  // (0) cooperative load Q[m, head_q, :] into LDS (fp32 promotion).
+  const long q_base = (long)m * (long)HD_Q + (long)head_q * (long)d;
+  for (int x = lid; x < d; x += FUSED_ATTN_LWS)
+    q_sh[x] = (float)Q[q_base + x];
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // (A) QK: each WI fully reduces d for its keys n = lid, lid+LWS, ...
+  const int d_tex = d >> 3;
+  const int k_row_base = head_kv * S_max;
+  for (int n = lid; n <= n_last; n += FUSED_ATTN_LWS) {
+    float acc = 0.0f;
+    for (int dt = 0; dt < d_tex; dt++) {
+      const uint4 kv = read_imageui(K_img, smp, (int2)(dt, k_row_base + n));
+      const half8 kp = as_half8(kv);
+      const float8 q8 = vload8(dt, q_sh);
+      acc += dot(q8.s0123, convert_float4(kp.s0123)) +
+             dot(q8.s4567, convert_float4(kp.s4567));
+    }
+    sc_sh[n] = acc * scale;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // (B1) row max.
+  float pmax = -INFINITY;
+  for (int n = lid; n <= n_last; n += FUSED_ATTN_LWS)
+    pmax = fmax(pmax, sc_sh[n]);
+  red[lid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int off = FUSED_ATTN_LWS >> 1; off > 0; off >>= 1) {
+    if (lid < off) red[lid] = fmax(red[lid], red[lid + off]);
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  const float rowmax = red[0];
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // (B2) exp + sum (store un-normalized p into sc_sh; normalize in (C)).
+  float psum = 0.0f;
+  for (int n = lid; n <= n_last; n += FUSED_ATTN_LWS) {
+    const float e = exp(sc_sh[n] - rowmax);
+    sc_sh[n] = e;
+    psum += e;
+  }
+  red[lid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int off = FUSED_ATTN_LWS >> 1; off > 0; off >>= 1) {
+    if (lid < off) red[lid] += red[lid + off];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  const float inv = (red[0] > 0.0f) ? (1.0f / red[0]) : 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // Zero the last texel's tail (keys in (n_last, n_tex_count*8)) so (C)
+  // can vload8 the score row without a per-key causal mask.
+  for (int n = n_last + 1 + lid; n < n_tex_count * 8; n += FUSED_ATTN_LWS)
+    sc_sh[n] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // (C) SV: each WI computes output channels x = lid, lid+LWS, ...
+  //     reading the reversed-V image (8 keys per texel) and the LDS row.
+  for (int x = lid; x < d; x += FUSED_ATTN_LWS) {
+    const int v_row = head_kv * d + x;
+    float acc = 0.0f;
+    for (int nt = 0; nt < n_tex_count; nt++) {
+      const uint4 vv = read_imageui(V_img, smp, (int2)(nt, v_row));
+      const half8 vp = as_half8(vv);
+      const float8 p8 = vload8(nt, sc_sh);
+      acc += dot(p8.s0123, convert_float4(vp.s0123)) +
+             dot(p8.s4567, convert_float4(vp.s4567));
+    }
+    O[(long)m * (long)HD_Q + (long)head_q * (long)d + x] = (half)(acc * inv);
+  }
+}
+
 #endif // TCA_BUFFER_ONLY (image2d_from_buffer attention variants)

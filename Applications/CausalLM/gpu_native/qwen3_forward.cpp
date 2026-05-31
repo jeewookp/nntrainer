@@ -3395,8 +3395,25 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     const char *e = std::getenv("NNTR_FLASH");
     return e && std::atoi(e) != 0;
   }();
+  // #58: NNTR_FLASH_IMG=1 → fused single-kernel attention over the SAME two
+  // OHWI images as the default 3-kernel kvimg_view path (K image + reversed-V
+  // image), but with the score row kept in LDS instead of round-tripping the
+  // 32 MB [H,M,N_kv] scores tensor through DRAM. 3 enqueues -> 1. Requires the
+  // OHWI image path (both image views built). Falls through if unavailable.
+  static const bool use_flash_img = []() {
+    const char *e = std::getenv("NNTR_FLASH_IMG");
+    return e && std::atoi(e) != 0;
+  }();
   bool attn_ok;
-  if (use_flash) {
+  if (use_flash_img && use_ohwi_img && lw.cache_k_image_ohwi != nullptr &&
+      lw.cache_v_image_ohwi != nullptr) {
+    attn_ok = nntrainer::fused_row_attention_f16_ohwi_img_cl(
+      static_cast<const uint16_t *>(scratch_.q_svm),
+      lw.cache_k_image_ohwi, lw.cache_v_image_ohwi,
+      static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+      cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+      kv_cache_max_seq_len_, true);
+  } else if (use_flash) {
     // Fused flash path. K is cache_k_svm (OHWI [H_kv, max_S, d]) so we
     // pass max_seq_len as the OHWI row-stride; V is cache_v_svm (concat).
     attn_ok = nntrainer::flash_attention_prefill_f16_cl(

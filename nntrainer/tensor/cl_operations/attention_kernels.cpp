@@ -1794,6 +1794,69 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
 }
 
 // =============================================================================
+// Fused single-kernel attention over the SAME two OHWI images as the
+// 3-kernel _ohwi_kvimg_view path (K image [H_kv,S_max,d], reversed-V image
+// [H_kv,d,S_max]), but computing each (head_q, m) row entirely in-kernel via
+// LDS scores — the [H,M,N_kv] scores tensor is NEVER written to DRAM. One
+// enqueue replaces qk_matmul + softmax_row + sv_matmul. Kernel:
+// fused_row_attention_f16_ohwi_img (two_conv_attention.cl). NNTR_FLASH_IMG.
+// =============================================================================
+bool fused_row_attention_f16_ohwi_img_cl(
+  const uint16_t *Q_svm, cl_mem K_image_ohwi, cl_mem V_image_ohwi,
+  uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
+  unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
+  bool causal) {
+  if (!K_image_ohwi || !V_image_ohwi || !Q_svm || !O_svm) return false;
+  if (head_dim == 0 || M == 0 || N_kv == 0 || max_seq_len == 0) return false;
+  if (num_heads_KV == 0 || num_heads_Q % num_heads_KV != 0) return false;
+  if (N_kv > max_seq_len) return false;
+  if (head_dim % 8 != 0 || max_seq_len % 8 != 0) return false;
+  // LDS sizing limits baked into the kernel (FUSED_ATTN_MAX_NKV / _MAX_D).
+  if (max_seq_len > 1024 || head_dim > 128) return false;
+
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
+  const size_t HD_Q = (size_t)num_heads_Q * head_dim;
+
+  std::lock_guard<std::mutex> lock(tca_mtx());
+  // Drain prior q/k/v writes + scatter so the images and Q SVM are ready
+  // (mirrors the 3-kernel image wrappers' ordering).
+  clFinish(q);
+
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    two_conv_attention_kernel, "fused_row_attention_f16_ohwi_img", tca_copts());
+  if (!kp) return false;
+  if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_svm))) return false;
+  if (!kp->SetKernelArguments(1, &K_image_ohwi, sizeof(cl_mem))) return false;
+  if (!kp->SetKernelArguments(2, &V_image_ohwi, sizeof(cl_mem))) return false;
+  if (!kp->SetKernelSVMArguments(3, O_svm)) return false;
+  int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+  int hdq = (int)HD_Q, smax = (int)max_seq_len;
+  int gqa = (int)(num_heads_Q / num_heads_KV);
+  int causal_i = causal ? 1 : 0;
+  float scale = 1.0f / std::sqrt((float)head_dim);
+  if (!kp->SetKernelArguments(4, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(5, &Nkvi, sizeof(int)) ||
+      !kp->SetKernelArguments(6, &di, sizeof(int)) ||
+      !kp->SetKernelArguments(7, &hdq, sizeof(int)) ||
+      !kp->SetKernelArguments(8, &smax, sizeof(int)) ||
+      !kp->SetKernelArguments(9, &gqa, sizeof(int)) ||
+      !kp->SetKernelArguments(10, &causal_i, sizeof(int)) ||
+      !kp->SetKernelArguments(11, &scale, sizeof(float)))
+    return false;
+  // One workgroup of FUSED_ATTN_LWS (=64, matches reqd_work_group_size) per
+  // (head_q, m): gws.x == LWS, gws.y == M, gws.z == num_heads_Q.
+  constexpr size_t LWS = 64;
+  std::array<size_t, 3> gws = {LWS, M, num_heads_Q};
+  std::array<size_t, 3> lws = {LWS, 1, 1};
+  blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                             lws.data(), 0, nullptr, nullptr);
+  clFinish(q);
+  return true;
+}
+
+// =============================================================================
 // Step #2 of the GPU mha migration. Fused flash-attention prefill: ONE
 // kernel does QK -> online-softmax -> S*V inline, so the [H, M, N_kv]
 // scores tensor is NEVER materialized to global memory (that DRAM
