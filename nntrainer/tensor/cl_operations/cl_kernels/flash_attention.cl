@@ -306,3 +306,231 @@ __kernel void flash_attention_prefill_f16_coop(
   for (int x = lid; x < d; x += FLASH_COOP_LWS)
     O[o_base + x] = (half)(acc_sh[x] * inv);
 }
+
+// ===========================================================================
+// VECTORIZED COOPERATIVE flash attention prefill — half8/half4 K/V loads.
+//
+// Same workgroup decomposition as flash_attention_prefill_f16_coop (#55: one
+// WG per (head_q, query_row), online softmax, acc[d] in LDS, BLOCK_KV blocked,
+// causal n_last, K OHWI via k_stride / V concat) but with two changes that
+// RAISE ARITHMETIC INTENSITY on Intel Arc (which cannot sample images, so the
+// 3-kernel image dot4 path is unavailable — plain __global half* vload8/vload4
+// coalesces just fine here):
+//
+//   (A) CONTIGUOUS d-lane ownership instead of strided. WI `lid` owns the
+//       contiguous lane block [lid*VPL, lid*VPL+VPL) where VPL = d / LWS
+//       (=2 for LWS64, 4 for LWS32, 8 for LWS16). Contiguous lanes let each
+//       WI issue a SINGLE vload8/vload4/vload2 over its K/V/Q block instead
+//       of VPL scalar half->float reads, cutting the load instruction count
+//       by VPL and coalescing the global access.
+//
+//   (B) OPTIONAL LDS STAGING of each key's K[n,:] and V[n,:] row. All LWS WIs
+//       of a WG attend the SAME keys, so each K/V row is otherwise re-read
+//       LWS-strided from global by every WI. With FLASH_VEC_STAGE the WG
+//       cooperatively vload8s K[n,:]/V[n,:] into LDS ONCE per key, then every
+//       WI reads its VPL lanes from LDS — cutting global K/V traffic ~LWS x.
+//       (LDS cost: 2*BLOCK_KV*d halfs = 2*4*128*2 = 2KB at defaults; stays
+//       <=32KB for Adreno at LWS<=64, BLOCK_KV<=8.)
+//
+// REDUCTION-ORDER NOTE: the per-WI partial dot now sums a DIFFERENT (contig)
+// set of d-lanes than #55's strided set, so the fp32 tree-reduced score is a
+// reassociation of the #55 sum. fp32 add is non-associative => the score can
+// differ by a few ULPs. This is FAR below the fp16 output / fp16-score
+// granularity, so e2e greedy tokens are unchanged (verified) — the math is the
+// same online-softmax merge, only the load layout changed.
+//
+// Q row, acc[d], m_i/l_i, the score tree-reduction, and the FLASH_FP16_SCORE
+// diagnostic are all identical to #55. d MUST be divisible by LWS (Qwen3 d=128,
+// LWS in {16,32,64,128} all divide it). half8/half4/half2 picked from VPL.
+// ===========================================================================
+#ifndef FLASH_VEC_LWS
+#define FLASH_VEC_LWS 64
+#endif
+#ifndef FLASH_VEC_BLOCK_KV
+#define FLASH_VEC_BLOCK_KV 4
+#endif
+// FLASH_VEC_STAGE: 1 => stage K/V rows in LDS (lever B); 0 => vload direct
+// from global (lever A only). Default OFF — measured on Intel Arc the LDS
+// staging adds a per-tile barrier + LDS pressure that nets slower than direct
+// vloads at d=128 (the K/V row is small and the texture/L2 already caches it).
+#ifndef FLASH_VEC_STAGE
+#define FLASH_VEC_STAGE 0
+#endif
+
+// VPL = vector lanes per WI = head_dim / LWS, made a COMPILE-TIME constant so
+// the half2/half4/half8 vload + the float2/4/8 vector ops are true REGISTER
+// vectors (no private-array spill — the #1 perf trap here; cf. #55's priv=0).
+// Qwen3 d=128: LWS 16->VPL8, 32->VPL4, 64->VPL2. (Host rejects LWS not | d.)
+#ifndef FLASH_VEC_D
+#define FLASH_VEC_D 128
+#endif
+#define FLASH_VEC_VPL (FLASH_VEC_D / FLASH_VEC_LWS)
+
+#if FLASH_VEC_VPL == 8
+#define FVHALF half8
+#define FVFLOAT float8
+#define FV_VLOAD(p, off) vload8((off), (p))
+#define FV_VSTORE(v, off, p) vstore8((v), (off), (p))
+#define FV_CVT_F(v) convert_float8(v)
+#define FV_CVT_H(v) convert_half8(v)
+#elif FLASH_VEC_VPL == 4
+#define FVHALF half4
+#define FVFLOAT float4
+#define FV_VLOAD(p, off) vload4((off), (p))
+#define FV_VSTORE(v, off, p) vstore4((v), (off), (p))
+#define FV_CVT_F(v) convert_float4(v)
+#define FV_CVT_H(v) convert_half4(v)
+#elif FLASH_VEC_VPL == 2
+#define FVHALF half2
+#define FVFLOAT float2
+#define FV_VLOAD(p, off) vload2((off), (p))
+#define FV_VSTORE(v, off, p) vstore2((v), (off), (p))
+#define FV_CVT_F(v) convert_float2(v)
+#define FV_CVT_H(v) convert_half2(v)
+#else
+#error FLASH_VEC_VPL must be 2 4 or 8 set FLASH_VEC_LWS to half quarter eighth of d
+#endif
+
+// Horizontal fp32 sum of a FVFLOAT register (compile-time unrolled per VPL).
+static inline float fv_hsum(FVFLOAT v) {
+#if FLASH_VEC_VPL == 8
+  return (v.s0 + v.s1) + (v.s2 + v.s3) + ((v.s4 + v.s5) + (v.s6 + v.s7));
+#elif FLASH_VEC_VPL == 4
+  return (v.s0 + v.s1) + (v.s2 + v.s3);
+#else
+  return v.s0 + v.s1;
+#endif
+}
+
+__attribute__((reqd_work_group_size(FLASH_VEC_LWS, 1, 1)))
+__kernel void flash_attention_prefill_f16_coop_vec(
+    __global const half *Q,           // [M, HD_Q] fp16, row-major (concat)
+    __global const half *K,           // OHWI [H_kv,S_max,d] or concat [N_kv,HD_KV]
+    __global const half *V,           // [N_kv, HD_KV] fp16, row-major (concat)
+    __global       half *O,           // [M, HD_Q] fp16, row-major (concat)
+    const int M,
+    const int N_kv,
+    const int d,                       // head_dim
+    const int HD_Q,                    // num_heads_q * d
+    const int HD_KV,                   // num_heads_kv * d
+    const int gqa,                     // num_heads_q / num_heads_kv
+    const int is_causal,
+    const float scale,                 // 1 / sqrt(d), precomputed
+    const int k_stride                 // >0: K OHWI S_max row-stride; <=0: concat
+) {
+  const int lid = get_local_id(0);
+  const int grp = get_group_id(0);      // decodes to (head_q, query_row)
+  const int head_q = grp / M;
+  const int m = grp % M;
+  const int total_groups = (HD_Q / d) * M;   // num_heads_q * M
+  if (grp >= total_groups || m >= M)
+    return;
+
+  const int head_kv = head_q / gqa;
+
+  const long k_head_base =
+      (k_stride > 0) ? ((long)head_kv * (long)k_stride * (long)d)
+                     : ((long)head_kv * (long)d);
+  const long k_row_stride = (k_stride > 0) ? (long)d : (long)HD_KV;
+  const long q_base = (long)m * HD_Q + (long)head_q * d;
+
+  // VPL contiguous lanes per WI (compile-time). WI lid owns lanes
+  // [lane0, lane0+VPL). q (this WI's block) lives in a REGISTER vector; acc
+  // (this WI's block) lives in a REGISTER vector across the whole key loop —
+  // no acc_sh round-trip per key, no private array => priv stays ~0.
+  const int VPL = FLASH_VEC_VPL;
+  const int lane0 = lid * VPL;
+
+  // LDS only for the cross-WI score reduction (red_sh). q/acc are registers.
+  __local float red_sh[FLASH_VEC_BLOCK_KV * FLASH_VEC_LWS];
+#if FLASH_VEC_STAGE
+  // Optional staged K/V tile in LDS, half-vector aligned. [BLOCK_KV][d] each.
+  __local half k_sh[FLASH_VEC_BLOCK_KV * FLASH_VEC_D];
+  __local half v_sh[FLASH_VEC_BLOCK_KV * FLASH_VEC_D];
+#endif
+
+  float m_i = -INFINITY;
+  float l_i = 0.0f;
+
+  // Load this WI's contiguous Q block into a register vector (single vloadN,
+  // half-vector -> float-vector promotion).
+  const FVFLOAT q_reg = FV_CVT_F(FV_VLOAD(Q, (q_base + lane0) / VPL));
+  // acc register vector, zero-initialized.
+  FVFLOAT acc_reg = (FVFLOAT)(0.0f);
+
+  const int n_last = is_causal ? min(N_kv - 1, m) : (N_kv - 1);
+
+  for (int n0 = 0; n0 <= n_last; n0 += FLASH_VEC_BLOCK_KV) {
+    const int nb = min(FLASH_VEC_BLOCK_KV, n_last - n0 + 1);
+
+#if FLASH_VEC_STAGE
+    // (0) Cooperatively stage this key tile's K/V rows into LDS, ONCE per WG.
+    //     Each WI vstoreN's its own contiguous VPL block of each of the nb rows.
+    for (int j = 0; j < nb; ++j) {
+      const long k_base = k_head_base + (long)(n0 + j) * k_row_stride;
+      const long v_base = (long)(n0 + j) * HD_KV + (long)head_kv * d;
+      const FVHALF kblk = FV_VLOAD(K, (k_base + lane0) / VPL);
+      const FVHALF vblk = FV_VLOAD(V, (v_base + lane0) / VPL);
+      FV_VSTORE(kblk, (j * FLASH_VEC_D + lane0) / VPL, k_sh);
+      FV_VSTORE(vblk, (j * FLASH_VEC_D + lane0) / VPL, v_sh);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    // (1) Each WI computes its PARTIAL d-dot for every key in the tile from a
+    //     SINGLE vloadN of K (register vector FMA), stages into red_sh.
+    for (int j = 0; j < nb; ++j) {
+#if FLASH_VEC_STAGE
+      const FVFLOAT k_reg =
+          FV_CVT_F(FV_VLOAD(k_sh, (j * FLASH_VEC_D + lane0) / VPL));
+#else
+      const long k_base = k_head_base + (long)(n0 + j) * k_row_stride;
+      const FVFLOAT k_reg =
+          FV_CVT_F(FV_VLOAD(K, (k_base + lane0) / VPL));
+#endif
+      red_sh[j * FLASH_VEC_LWS + lid] = fv_hsum(q_reg * k_reg);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // (2) Tree-reduce ALL nb columns together (log2(LWS) barrier rounds).
+    for (int off = FLASH_VEC_LWS >> 1; off > 0; off >>= 1) {
+      if (lid < off)
+        for (int j = 0; j < nb; ++j)
+          red_sh[j * FLASH_VEC_LWS + lid] +=
+              red_sh[j * FLASH_VEC_LWS + lid + off];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // (3) Serial online-softmax over the tile. Each WI updates only its own
+    //     acc register vector (single vloadN of V) and its private m_i/l_i.
+    for (int j = 0; j < nb; ++j) {
+#ifdef FLASH_FP16_SCORE
+      const float s = (float)((half)(scale * red_sh[j * FLASH_VEC_LWS]));
+#else
+      const float s = scale * red_sh[j * FLASH_VEC_LWS];
+#endif
+      const float m_new = fmax(m_i, s);
+      const float alpha = exp(m_i - m_new);
+      const float p = exp(s - m_new);
+#if FLASH_VEC_STAGE
+      const FVFLOAT v_reg =
+          FV_CVT_F(FV_VLOAD(v_sh, (j * FLASH_VEC_D + lane0) / VPL));
+#else
+      const long v_base = (long)(n0 + j) * HD_KV + (long)head_kv * d;
+      const FVFLOAT v_reg =
+          FV_CVT_F(FV_VLOAD(V, (v_base + lane0) / VPL));
+#endif
+      acc_reg = alpha * acc_reg + p * v_reg;
+      l_i = alpha * l_i + p;
+      m_i = m_new;
+    }
+    // red_sh is overwritten by the next tile's step (1); fence before reuse.
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  // Normalize and write this WI's contiguous d-lanes (single vstoreN).
+  const float inv = (l_i > 0.0f) ? (1.0f / l_i) : 0.0f;
+  const long o_base = (long)m * HD_Q + (long)head_q * d;
+  const FVHALF o_reg = FV_CVT_H(acc_reg * inv);
+  FV_VSTORE(o_reg, (o_base + lane0) / VPL, O);
+}

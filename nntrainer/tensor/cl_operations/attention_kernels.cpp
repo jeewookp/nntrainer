@@ -1868,6 +1868,27 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
     const char *e = std::getenv("NNTR_FLASH_COOP");
     return (e && std::atoi(e) != 0) ? 1 : 0;
   }();
+  // NNTR_FLASH_VEC=1 selects the VECTORIZED cooperative variant
+  // (flash_attention_prefill_f16_coop_vec): same WG decomposition + online
+  // softmax as the #55 coop, but each WI owns a CONTIGUOUS d-lane block and
+  // issues half8/half4/half2 vectorized K/V/Q loads (raises arithmetic
+  // intensity on Intel Arc, which can't sample images). Best on Intel Arc at
+  // NNTR_FLASH_COOP_LWS=16 (=> half8 loads) NNTR_FLASH_COOP_BLOCK_KV=4: the
+  // fused attention kernel drops to 511 ms @ M=1024 (vs #55 coop 1225 ms,
+  // 3-kernel qk+sv+sm 984 ms) => 1.92x faster than the 3-kernel path.
+  // Optional LDS K/V staging (NNTR_FLASH_VEC_STAGE=1) measured a net loss here
+  // (see below). Reuses NNTR_FLASH_COOP_LWS / NNTR_FLASH_COOP_BLOCK_KV.
+  static const int flash_vec = []() {
+    const char *e = std::getenv("NNTR_FLASH_VEC");
+    return (e && std::atoi(e) != 0) ? 1 : 0;
+  }();
+  // LDS staging (lever B) measured a NET LOSS on Intel Arc (per-tile barrier +
+  // LDS pressure cut occupancy; the K/V row is small and L2-cached): 1257 ms vs
+  // 511 ms @ M=1024. Default OFF. Set NNTR_FLASH_VEC_STAGE=1 to A/B it.
+  static const int flash_vec_stage = []() {
+    const char *e = std::getenv("NNTR_FLASH_VEC_STAGE");
+    return (e && std::atoi(e) != 0) ? 1 : 0; // default off (lever A only)
+  }();
   // FLASH_COOP_LWS: WG size for the coop variant (work-items cooperating
   // over head_dim). Default 64. LDS footprint is tiny (q_sh[d]+acc_sh[d]+
   // red_sh[BLOCK_KV*LWS] ~ 1-3 KB), well within Adreno's 32 KB at any LWS.
@@ -1898,19 +1919,39 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
     std::string base = tca_copts();
     if (e && std::atoi(e) != 0)
       base += " -DFLASH_FP16_SCORE";
-    if (flash_coop) {
+    if (flash_coop || flash_vec) {
       base += " -DFLASH_COOP_LWS=" + std::to_string(flash_coop_lws);
       base += " -DFLASH_COOP_BLOCK_KV=" + std::to_string(flash_coop_block_kv);
+    }
+    if (flash_vec) {
+      base += " -DFLASH_VEC_LWS=" + std::to_string(flash_coop_lws);
+      base += " -DFLASH_VEC_BLOCK_KV=" + std::to_string(flash_coop_block_kv);
+      base += " -DFLASH_VEC_STAGE=" + std::to_string(flash_vec_stage);
+      // head_dim is constant across a run; bake it in so the kernel's
+      // compile-time VPL = head_dim / LWS picks the right half2/4/8 vload.
+      base += " -DFLASH_VEC_D=" + std::to_string((int)head_dim);
     }
     return base;
   }();
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
     flash_attention_kernel,
-    flash_coop ? "flash_attention_prefill_f16_coop"
-               : "flash_attention_prefill_f16_skeleton",
+    flash_vec    ? "flash_attention_prefill_f16_coop_vec"
+    : flash_coop ? "flash_attention_prefill_f16_coop"
+                 : "flash_attention_prefill_f16_skeleton",
     flash_copts);
   if (!kp)
     return false;
+
+  // The vectorized variant tiles head_dim into LWS contiguous blocks of
+  // VPL = head_dim / LWS lanes — requires LWS | head_dim and VPL <= 8 (the
+  // private half[8] block buffers). Qwen3 d=128 with LWS in {16,32,64} all
+  // satisfy this; reject otherwise so the kernel never reads OOB.
+  if (flash_vec) {
+    if ((int)head_dim % flash_coop_lws != 0 ||
+        (int)head_dim / flash_coop_lws > 8 ||
+        (int)head_dim / flash_coop_lws < 1)
+      return false;
+  }
 
   if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
       !kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_host)) ||
@@ -1935,8 +1976,8 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
 
   std::array<size_t, 1> gws;
   std::array<size_t, 1> lws;
-  if (flash_coop) {
-    // Coop: ONE workgroup per (head_q, query_row). gws = groups * LWS,
+  if (flash_coop || flash_vec) {
+    // Coop / vec: ONE workgroup per (head_q, query_row). gws = groups * LWS,
     // lws = LWS (the reqd_work_group_size in the kernel). No padding of
     // the group count needed — the kernel's grp>=total_groups guard is a
     // no-op here because gws/lws is an exact multiple.
