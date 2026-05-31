@@ -1857,19 +1857,57 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
   // serialize on Intel NEO's OOO queue so the kernel sees finished writes.
   clFinish(q);
 
+  // NNTR_FLASH_COOP=1 selects the cooperative d-axis-tiled variant
+  // (flash_attention_prefill_f16_coop): one workgroup per (head_q,
+  // query_row), FLASH_COOP_LWS WIs each own a disjoint slice of head_dim,
+  // tree-reduce the score dot in LDS and cooperatively run the shared
+  // online-softmax (acc[d] lives in LDS, no per-WI d-wide private acc => no
+  // register spill). The naive 1-WI variant (skeleton) is the default flash
+  // path and remains reachable (NNTR_FLASH=1 without COOP) for A/B.
+  static const int flash_coop = []() {
+    const char *e = std::getenv("NNTR_FLASH_COOP");
+    return (e && std::atoi(e) != 0) ? 1 : 0;
+  }();
+  // FLASH_COOP_LWS: WG size for the coop variant (work-items cooperating
+  // over head_dim). Default 64. LDS footprint is tiny (q_sh[d]+acc_sh[d]+
+  // red_sh[BLOCK_KV*LWS] ~ 1-3 KB), well within Adreno's 32 KB at any LWS.
+  // Must be a power of two (log-step reduction). Override via env.
+  static const int flash_coop_lws = []() {
+    const char *e = std::getenv("NNTR_FLASH_COOP_LWS");
+    int v = (e && std::atoi(e) > 0) ? std::atoi(e) : 64;
+    // Must be a power of two for the log-step tree reduction.
+    if (v != 16 && v != 32 && v != 64 && v != 128 && v != 256)
+      v = 64;
+    return v;
+  }();
+  // FLASH_COOP_BLOCK_KV: keys reduced per phase (tunable; 1 = no blocking).
+  static const int flash_coop_block_kv = []() {
+    const char *e = std::getenv("NNTR_FLASH_COOP_BLOCK_KV");
+    int v = (e && std::atoi(e) > 0) ? std::atoi(e) : 4; // Intel Arc sweet spot
+    if (v < 1) v = 1;
+    if (v > 64) v = 64;
+    return v;
+  }();
+
   // Diagnostic: NNTR_FLASH_FP16_SCORE=1 truncates each score to fp16
   // before the online-softmax update, matching the 3-kernel baseline
   // (which stores scores as fp16). Used to confirm the flash vs baseline
   // greedy divergence is fp16-score precision, not an indexing bug.
-  static const std::string flash_copts = []() {
+  static const std::string flash_copts = [&]() {
     const char *e = std::getenv("NNTR_FLASH_FP16_SCORE");
     std::string base = tca_copts();
     if (e && std::atoi(e) != 0)
       base += " -DFLASH_FP16_SCORE";
+    if (flash_coop) {
+      base += " -DFLASH_COOP_LWS=" + std::to_string(flash_coop_lws);
+      base += " -DFLASH_COOP_BLOCK_KV=" + std::to_string(flash_coop_block_kv);
+    }
     return base;
   }();
   ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
-    flash_attention_kernel, "flash_attention_prefill_f16_skeleton",
+    flash_attention_kernel,
+    flash_coop ? "flash_attention_prefill_f16_coop"
+               : "flash_attention_prefill_f16_skeleton",
     flash_copts);
   if (!kp)
     return false;
@@ -1895,12 +1933,25 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
       !kp->SetKernelArguments(12, &k_stride, sizeof(int)))
     return false;
 
-  // One WI per (head_q, query_row). gws padded to LWS multiple.
-  constexpr size_t LWS = 64;
-  const size_t total = (size_t)num_heads_Q * M;
-  const size_t gws_x = ((total + LWS - 1) / LWS) * LWS;
-  std::array<size_t, 1> gws = {gws_x};
-  std::array<size_t, 1> lws = {LWS};
+  std::array<size_t, 1> gws;
+  std::array<size_t, 1> lws;
+  if (flash_coop) {
+    // Coop: ONE workgroup per (head_q, query_row). gws = groups * LWS,
+    // lws = LWS (the reqd_work_group_size in the kernel). No padding of
+    // the group count needed — the kernel's grp>=total_groups guard is a
+    // no-op here because gws/lws is an exact multiple.
+    const size_t groups = (size_t)num_heads_Q * M;
+    const size_t L = (size_t)flash_coop_lws;
+    gws = {groups * L};
+    lws = {L};
+  } else {
+    // Naive: one WI per (head_q, query_row). gws padded to LWS multiple.
+    constexpr size_t LWS = 64;
+    const size_t total = (size_t)num_heads_Q * M;
+    const size_t gws_x = ((total + LWS - 1) / LWS) * LWS;
+    gws = {gws_x};
+    lws = {LWS};
+  }
   blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                              lws.data(), 0, nullptr, nullptr);
 

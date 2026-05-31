@@ -141,3 +141,168 @@ __kernel void flash_attention_prefill_f16_skeleton(
   for (int x = 0; x < d; ++x)
     O[o_base + x] = (half)(acc[x] * inv);
 }
+
+// ===========================================================================
+// COOPERATIVE flash attention prefill — d-AXIS-TILED online softmax.
+//
+// Motivation (measured on Intel Arc 0x7d55): the naive 1-WI variant and the
+// first "split-the-key-loop + tree-reduce" coop attempt BOTH keep a full
+// private acc[d=128] + q_row[d=128] per work-item. clGetKernelWorkGroupInfo
+// reported CL_KERNEL_PRIVATE_MEM_SIZE = 16384 B/WI for both => the compiler
+// spills that to global scratch, and the kernel becomes scratch-bandwidth
+// bound (8.2 s @ M=1024 vs the 3-kernel path's ~1.0 s). The key-split coop
+// made it WORSE by stacking a 32 KB LDS acc reduction on top of the same
+// 16 KB private spill (max_wg collapsed to 64, occupancy died).
+//
+// FIX: tile the head_dim across the work-group so NO work-item ever holds a
+// full d-wide vector. One WORKGROUP per (head_q, query_row), LWS work-items:
+//   - Q row -> LDS once (q_sh[d], cooperative load), reused for every key.
+//   - acc[d] -> LDS (acc_sh[d]), shared online-softmax output accumulator;
+//     WI `lid` owns the d-lanes  x = lid, lid+LWS, ...   (tiny private state).
+//   - m_i, l_i -> LDS scalars (shared online-softmax running max / denom).
+//   - For each key n (serial over the WG, all WIs in lockstep):
+//       * each WI computes a PARTIAL dot over its d-lanes (q_sh[x]*K[..x]);
+//       * tree-reduce the LWS partials in LDS -> scalar score s (red_sh[]);
+//       * one online-softmax step: alpha=exp(m_i-m_new), p=exp(s-m_new);
+//         each WI updates ITS acc lanes acc_sh[x]=alpha*acc_sh[x]+p*V[..x],
+//         and l_i=alpha*l_i+p ; m_i=m_new (scalars updated by all, identical).
+//   - Finally each WI writes O[.. x] = acc_sh[x]/l_i for its d-lanes.
+//
+// Private footprint per WI is now O(1) floats (a couple of scalars + a small
+// strided loop index) => NO spill. LDS = q_sh[d] + acc_sh[d] + red_sh[LWS]
+// + a few scalars = 128*4 + 128*4 + LWS*4 + 16 ≈ 1.3 KB (LWS=64). Fits both
+// Intel (64 KB) and Adreno (32 KB) with huge occupancy headroom.
+//
+// Score-reduction tree is a portable log-step LDS reduction (NO subgroup-64
+// assumption) => Adreno-portable. LWS must be a power of two and divide d
+// reasonably (each WI owns ceil(d/LWS) lanes); LWS in {16,32,64,128}.
+//
+// Same signature / layout contract as the naive variant (K OHWI via k_stride,
+// V concat, causal via n_last, FLASH_FP16_SCORE diag off by default).
+// ===========================================================================
+#ifndef FLASH_COOP_LWS
+#define FLASH_COOP_LWS 64
+#endif
+
+// Keys processed per reduction phase (amortizes the log-step dot-reduction
+// barriers over a tile of keys). LDS red_sh = BLOCK_KV*LWS*4 B
+// (4*64*4 = 1 KB). Must keep total LDS <= 32 KB for Adreno. Default 4 is the
+// measured Intel Arc sweet spot (BLOCK_KV 2-4 ~equal; 1 and >=8 slower).
+#ifndef FLASH_COOP_BLOCK_KV
+#define FLASH_COOP_BLOCK_KV 4
+#endif
+
+__attribute__((reqd_work_group_size(FLASH_COOP_LWS, 1, 1)))
+__kernel void flash_attention_prefill_f16_coop(
+    __global const half *Q,           // [M, HD_Q] fp16, row-major (concat)
+    __global const half *K,           // OHWI [H_kv,S_max,d] or concat [N_kv,HD_KV]
+    __global const half *V,           // [N_kv, HD_KV] fp16, row-major (concat)
+    __global       half *O,           // [M, HD_Q] fp16, row-major (concat)
+    const int M,
+    const int N_kv,
+    const int d,                       // head_dim
+    const int HD_Q,                    // num_heads_q * d
+    const int HD_KV,                   // num_heads_kv * d
+    const int gqa,                     // num_heads_q / num_heads_kv
+    const int is_causal,
+    const float scale,                 // 1 / sqrt(d), precomputed
+    const int k_stride                 // >0: K OHWI S_max row-stride; <=0: concat
+) {
+  const int lid = get_local_id(0);
+  const int grp = get_group_id(0);      // decodes to (head_q, query_row)
+  const int head_q = grp / M;
+  const int m = grp % M;
+  const int total_groups = (HD_Q / d) * M;   // num_heads_q * M
+  if (grp >= total_groups || m >= M)
+    return;
+
+  const int head_kv = head_q / gqa;
+
+  const long k_head_base =
+      (k_stride > 0) ? ((long)head_kv * (long)k_stride * (long)d)
+                     : ((long)head_kv * (long)d);
+  const long k_row_stride = (k_stride > 0) ? (long)d : (long)HD_KV;
+  const long q_base = (long)m * HD_Q + (long)head_q * d;
+
+  // Shared per-(head_q,m) state in LDS. q_sh: query row; acc_sh: output
+  // accumulator (WI lid owns disjoint d-lanes lid,lid+LWS,...). red_sh:
+  // score-dot reduction scratch, sized [BLOCK_KV][LWS] so a whole key tile
+  // reduces with ONE set of log-step barriers instead of one set per key.
+  __local float q_sh[FLASH_MAX_D];
+  __local float acc_sh[FLASH_MAX_D];
+  __local float red_sh[FLASH_COOP_BLOCK_KV * FLASH_COOP_LWS];
+
+  // m_i / l_i are kept PRIVATE in every WI and stay identical across the WG
+  // (all WIs read the same reduced score) — this removes the per-key cross-WI
+  // barrier the shared-scalar version needed. acc_sh lanes are WI-private
+  // (disjoint), so consecutive keys need NO barrier between acc updates; the
+  // only barriers are inside the dot reduction.
+  float m_i = -INFINITY;
+  float l_i = 0.0f;
+
+  // Cooperative load of Q row + zero acc. WI lid owns d-lanes lid, lid+LWS...
+  for (int x = lid; x < d; x += FLASH_COOP_LWS) {
+    q_sh[x] = (float)Q[q_base + x];
+    acc_sh[x] = 0.0f;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  const int n_last = is_causal ? min(N_kv - 1, m) : (N_kv - 1);
+
+  // Key-blocked loop: process up to BLOCK_KV keys per reduction phase.
+  for (int n0 = 0; n0 <= n_last; n0 += FLASH_COOP_BLOCK_KV) {
+    const int nb = min(FLASH_COOP_BLOCK_KV, n_last - n0 + 1);
+
+    // (1) Each WI computes its PARTIAL d-dot for every key in the tile and
+    //     stages them into red_sh[j*LWS + lid].
+    for (int j = 0; j < nb; ++j) {
+      const long k_base = k_head_base + (long)(n0 + j) * k_row_stride;
+      float part = 0.0f;
+      for (int x = lid; x < d; x += FLASH_COOP_LWS)
+        part += q_sh[x] * (float)K[k_base + x];
+      red_sh[j * FLASH_COOP_LWS + lid] = part;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // (2) Tree-reduce ALL nb columns together: log2(LWS) barrier rounds for
+    //     the whole tile (not per key). Each active WI folds nb partials.
+    for (int off = FLASH_COOP_LWS >> 1; off > 0; off >>= 1) {
+      if (lid < off)
+        for (int j = 0; j < nb; ++j)
+          red_sh[j * FLASH_COOP_LWS + lid] +=
+              red_sh[j * FLASH_COOP_LWS + lid + off];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    // red_sh[j*LWS] now holds the full fp32 dot for key (n0+j).
+
+    // (3) Serial online-softmax over the tile. No barrier between keys: each
+    //     WI updates only its own acc_sh lanes and its private m_i/l_i.
+    for (int j = 0; j < nb; ++j) {
+#ifdef FLASH_FP16_SCORE
+      const float s = (float)((half)(scale * red_sh[j * FLASH_COOP_LWS]));
+#else
+      const float s = scale * red_sh[j * FLASH_COOP_LWS];
+#endif
+      const float m_new = fmax(m_i, s);
+      const float alpha = exp(m_i - m_new);   // m_i=-inf, m_new finite => 0
+      const float p = exp(s - m_new);
+      const long v_base = (long)(n0 + j) * HD_KV + (long)head_kv * d;
+      for (int x = lid; x < d; x += FLASH_COOP_LWS)
+        acc_sh[x] = alpha * acc_sh[x] + p * (float)V[v_base + x];
+      l_i = alpha * l_i + p;
+      m_i = m_new;
+    }
+    // acc_sh lanes are WI-private; next tile's reduction barrier (step 1->2)
+    // re-fences red_sh. A barrier here ensures the tile's acc writes are
+    // settled before red_sh is overwritten by the next tile (red_sh and
+    // acc_sh are distinct, but the staging write of step (1) must not race
+    // a still-reading WI of step (3) — they read red_sh, step (1) writes it).
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  // Normalize and write O for this WI's d-lanes.
+  const float inv = (l_i > 0.0f) ? (1.0f / l_i) : 0.0f;
+  const long o_base = (long)m * HD_Q + (long)head_q * d;
+  for (int x = lid; x < d; x += FLASH_COOP_LWS)
+    O[o_base + x] = (half)(acc_sh[x] * inv);
+}
