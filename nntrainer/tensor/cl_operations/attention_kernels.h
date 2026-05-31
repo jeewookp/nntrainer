@@ -221,10 +221,16 @@ bool two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
 /// when the env is unset; caller falls back to CPU mha. Step #1 of
 /// the everything-on-GPU plan (see TENSOR_VIRTUALIZATION_PLAN.md).
 ///
-/// Step status: SKELETON. Body is a zero-fill stub; the host wrapper
-/// always returns false so the caller's existing CPU path runs. The
-/// real flash-attention body lands once the dispatch path is
-/// proven and the synthetic-input validation harness is in place.
+/// Step #2: real online-softmax body. K may be in OHWI layout
+/// (K[head_kv*max_seq_len*d + n*d + x], the gpu_native cache_k_svm form)
+/// or pure concat ([N_kv, HD_KV]); pass max_seq_len = the OHWI S_max
+/// row-stride when K is OHWI, or 0 when K is pure concat. V is always
+/// concat ([N_kv, HD_KV]); Q and O are always concat ([*, HD_Q]). This
+/// matches the buffers fed by two_conv_attention_prefill_f16_ohwi_cl so
+/// the flash path is bit-comparable to the 3-kernel baseline it replaces.
+/// Env-gated by NNTR_GPU_MHA=1 (legacy) OR called directly via the
+/// NNTR_FLASH=1 gate in qwen3_forward. Returns false on shape mismatch
+/// or when neither env is set; caller falls back to the 3-kernel path.
 bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     const uint16_t *K_host,
                                     const uint16_t *V_host,
@@ -232,7 +238,8 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     unsigned int N_kv,
                                     unsigned int num_heads_Q,
                                     unsigned int num_heads_KV,
-                                    unsigned int head_dim, bool causal,
+                                    unsigned int head_dim,
+                                    unsigned int max_seq_len, bool causal,
                                     bool svm_inputs = false);
 
 } // namespace nntrainer

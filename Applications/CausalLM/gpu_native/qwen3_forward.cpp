@@ -3369,10 +3369,27 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     timings_.host_q_ms += MS(NOW(), _h0);  // [host-timing] Q bridge
   }
   // Attention dispatch:
+  //   NNTR_FLASH=1   → fused flash-attention single kernel (online softmax,
+  //                    no scores DRAM). Uses the SAME SVM buffers as the
+  //                    _ohwi_cl fallback below (Q concat, K OHWI, V concat).
   //   default        → _ohwi_cl   (K OHWI, V concat — half-OHWI, 192 TPS@1K)
   //   NNTR_OHWI_IMG  → _ohwi_img_cl (K OHWI SVM, V cl_mem→image2d, #46f)
+  static const bool use_flash = []() {
+    const char *e = std::getenv("NNTR_FLASH");
+    return e && std::atoi(e) != 0;
+  }();
   bool attn_ok;
-  if (use_ohwi_img) {
+  if (use_flash) {
+    // Fused flash path. K is cache_k_svm (OHWI [H_kv, max_S, d]) so we
+    // pass max_seq_len as the OHWI row-stride; V is cache_v_svm (concat).
+    attn_ok = nntrainer::flash_attention_prefill_f16_cl(
+      static_cast<const uint16_t *>(scratch_.q_svm),
+      static_cast<const uint16_t *>(lw.cache_k_svm),
+      static_cast<const uint16_t *>(lw.cache_v_svm),
+      static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
+      cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
+      kv_cache_max_seq_len_, true, /*svm_inputs=*/true);
+  } else if (use_ohwi_img) {
     // K image2d path (qk_matmul_f16_ohwi_img): default ON. The earlier
     // #46h "NEUTRAL" verdict was a measurement artifact of clFinish-
     // bracketed stage timing (queue catch-up). CL-event per-kernel

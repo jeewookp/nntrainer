@@ -14,6 +14,7 @@
 #include "attention_kernels_templates.h"
 #include <array>
 #include <chrono>
+#include <cl_kernels/flash_attention.h>
 #include <cl_kernels/rotary_emb.h>
 #include <cl_kernels/two_conv_attention.h>
 #include <cmath>
@@ -106,8 +107,9 @@ inline std::mutex &tca_mtx() {
 static const std::string &tca_copts() {
   static const std::string opts = []() {
     const char *e = std::getenv("NNTR_V8C_BUF");
-    return (e && std::atoi(e) != 0) ? std::string("-DTCA_BUFFER_ONLY")
-                                    : std::string();
+    std::string o = (e && std::atoi(e) != 0) ? std::string("-DTCA_BUFFER_ONLY")
+                                             : std::string();
+    return o;
   }();
   return opts;
 }
@@ -1792,32 +1794,23 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
 }
 
 // =============================================================================
-// Step #1 (skeleton) of the GPU mha migration. flash-attention single-
-// kernel prefill. See attention_kernels.h declaration + flash_attention.cl
-// for the kernel-side design + memory budget. This wrapper is the host
-// dispatch point that mha_core.cpp will call once Step #2 fills in the
-// kernel body.
+// Step #2 of the GPU mha migration. Fused flash-attention prefill: ONE
+// kernel does QK -> online-softmax -> S*V inline, so the [H, M, N_kv]
+// scores tensor is NEVER materialized to global memory (that DRAM
+// traffic is the measured root cause of the prefill gap vs the ML Drift
+// paper on the same Adreno 830). See flash_attention.cl for the kernel
+// design + the K-layout (OHWI vs concat) note.
 //
-// Step status:
-//   - .cl file is registered, kernel compiles into the registry.
-//   - this wrapper validates shapes, sets up cl_mem bindings, dispatches
-//     the kernel, and reads the result back. Body of the kernel is a
-//     zero-fill stub, so the output is meaningless. Wrapper returns
-//     `false` regardless of dispatch outcome so the caller's existing
-//     CPU path runs. The point is to exercise the build + symbol +
-//     env-gate plumbing.
+// Layout contract (matches two_conv_attention_prefill_f16_ohwi_cl):
+//   Q : [M, HD_Q] concat fp16    (HD_Q = num_heads_Q * head_dim)
+//   K : OHWI [H_kv, max_seq_len, d]  (k_stride = max_seq_len > 0)
+//       or pure concat [N_kv, HD_KV] (pass max_seq_len = 0)
+//   V : [N_kv, HD_KV] concat fp16
+//   O : [M, HD_Q] concat fp16
+// SVM-input path only (svm_inputs == true) — the gpu_native callers feed
+// SVM buffers. cl_mem (svm_inputs == false) path is not used here and
+// returns false.
 // =============================================================================
-namespace {
-
-static bool gpu_mha_env_enabled() {
-  static int cached = -1;
-  if (cached < 0)
-    cached = std::getenv("NNTR_GPU_MHA") != nullptr ? 1 : 0;
-  return cached != 0;
-}
-
-} // anonymous namespace
-
 bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     const uint16_t *K_host,
                                     const uint16_t *V_host,
@@ -1825,36 +1818,94 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
                                     unsigned int N_kv,
                                     unsigned int num_heads_Q,
                                     unsigned int num_heads_KV,
-                                    unsigned int head_dim, bool causal,
+                                    unsigned int head_dim,
+                                    unsigned int max_seq_len, bool causal,
                                     bool svm_inputs) {
-  if (!gpu_mha_env_enabled())
-    return false;
   if (num_heads_Q == 0 || num_heads_KV == 0 || head_dim == 0 || M == 0 ||
       N_kv == 0)
     return false;
   if (num_heads_Q % num_heads_KV != 0)
     return false;
+  if (head_dim > 128)
+    return false; // FLASH_MAX_D private-acc bound (Qwen3 d=128)
+  if (!svm_inputs)
+    return false; // gpu_native feeds SVM only
 
-  // Step 1 stub log so we can confirm the dispatch path is reachable
-  // on real device traffic when NNTR_GPU_MHA=1 + NNTR_GPU_MHA_TRIP=1.
   static int logged_trip = 0;
   if (!logged_trip && std::getenv("NNTR_GPU_MHA_TRIP") != nullptr) {
     logged_trip = 1;
     std::fprintf(stderr,
-                 "[GPU-MHA] flash_attention stub reached: M=%u N_kv=%u "
-                 "hq=%u hkv=%u d=%u causal=%d svm=%d\n",
-                 M, N_kv, num_heads_Q, num_heads_KV, head_dim,
+                 "[GPU-MHA] flash_attention dispatch: M=%u N_kv=%u "
+                 "hq=%u hkv=%u d=%u S_max=%u causal=%d svm=%d\n",
+                 M, N_kv, num_heads_Q, num_heads_KV, head_dim, max_seq_len,
                  (int)causal, (int)svm_inputs);
     std::fflush(stderr);
   }
 
-  // Silence unused-param warnings while body is a stub.
-  (void)Q_host; (void)K_host; (void)V_host; (void)O_host;
+  auto *blas_cc =
+    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+  cl_command_queue q = blas_cc->command_queue_inst_.GetCommandQueue();
 
-  // Stub: return false so the caller's existing CPU mha path runs.
-  // Step #2 of the GPU mha plan will set up the cl_mem bindings,
-  // dispatch the real kernel, and flip the return to true.
-  return false;
+  const int HD_Q = (int)(num_heads_Q * head_dim);
+  const int HD_KV = (int)(num_heads_KV * head_dim);
+
+  // K-layout selection: OHWI (cache_k_svm) uses max_seq_len as the
+  // per-head row stride; concat passes k_stride = 0.
+  const int k_stride = (int)max_seq_len; // >0 => OHWI, 0 => concat
+
+  // Host enqueues this after Q/K/V are ready. Like the _ohwi_cl path,
+  // serialize on Intel NEO's OOO queue so the kernel sees finished writes.
+  clFinish(q);
+
+  // Diagnostic: NNTR_FLASH_FP16_SCORE=1 truncates each score to fp16
+  // before the online-softmax update, matching the 3-kernel baseline
+  // (which stores scores as fp16). Used to confirm the flash vs baseline
+  // greedy divergence is fp16-score precision, not an indexing bug.
+  static const std::string flash_copts = []() {
+    const char *e = std::getenv("NNTR_FLASH_FP16_SCORE");
+    std::string base = tca_copts();
+    if (e && std::atoi(e) != 0)
+      base += " -DFLASH_FP16_SCORE";
+    return base;
+  }();
+  ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+    flash_attention_kernel, "flash_attention_prefill_f16_skeleton",
+    flash_copts);
+  if (!kp)
+    return false;
+
+  if (!kp->SetKernelSVMArguments(0, const_cast<uint16_t *>(Q_host)) ||
+      !kp->SetKernelSVMArguments(1, const_cast<uint16_t *>(K_host)) ||
+      !kp->SetKernelSVMArguments(2, const_cast<uint16_t *>(V_host)) ||
+      !kp->SetKernelSVMArguments(3, O_host))
+    return false;
+
+  int Mi = (int)M, Nkvi = (int)N_kv, di = (int)head_dim;
+  int gqa = (int)(num_heads_Q / num_heads_KV);
+  int causal_i = causal ? 1 : 0;
+  float scale = 1.0f / std::sqrt((float)head_dim);
+  if (!kp->SetKernelArguments(4, &Mi, sizeof(int)) ||
+      !kp->SetKernelArguments(5, &Nkvi, sizeof(int)) ||
+      !kp->SetKernelArguments(6, &di, sizeof(int)) ||
+      !kp->SetKernelArguments(7, &HD_Q, sizeof(int)) ||
+      !kp->SetKernelArguments(8, &HD_KV, sizeof(int)) ||
+      !kp->SetKernelArguments(9, &gqa, sizeof(int)) ||
+      !kp->SetKernelArguments(10, &causal_i, sizeof(int)) ||
+      !kp->SetKernelArguments(11, &scale, sizeof(float)) ||
+      !kp->SetKernelArguments(12, &k_stride, sizeof(int)))
+    return false;
+
+  // One WI per (head_q, query_row). gws padded to LWS multiple.
+  constexpr size_t LWS = 64;
+  const size_t total = (size_t)num_heads_Q * M;
+  const size_t gws_x = ((total + LWS - 1) / LWS) * LWS;
+  std::array<size_t, 1> gws = {gws_x};
+  std::array<size_t, 1> lws = {LWS};
+  blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                             lws.data(), 0, nullptr, nullptr);
+
+  clFinish(q);
+  return true;
 }
 
 } // namespace nntrainer

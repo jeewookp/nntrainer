@@ -10,39 +10,36 @@
 //
 // PIPELINE (one kernel):
 //   For each (head_q, query_row):
-//     - load Q[query_row, head_q*d : (head_q+1)*d] into local memory
 //     - online maximum / sum / output accumulator (head_dim FP32 reg)
-//     - tile-loop over K/V in BLOCK_KV-sized chunks:
-//       * cooperatively load K[block], V[block] into LDS
-//       * compute s[i] = Q · K[i] / sqrt(d), apply causal mask
-//       * online softmax update: m_new = max, alpha = exp(m_old-m_new),
-//         sum_new = alpha*sum_old + sum(exp(s - m_new))
-//         out_new = alpha*out_old + sum_i (exp(s[i]-m_new) * V[i,:])
-//     - write O[query_row, head_q*d : (head_q+1)*d] = out / sum
+//     - serial loop over K/V rows n=0..N_kv-1 (causal: n<=m):
+//       * s = scale * dot(Q[m,head_q], K[n,head_kv])   (fp32 accum)
+//       * m_new = max(m_i, s); alpha = exp(m_i - m_new); p = exp(s - m_new)
+//       * l_i = alpha*l_i + p
+//       * acc[:] = alpha*acc[:] + p*V[n,head_kv,:]
+//       * m_i = m_new
+//     - write O[query_row, head_q*d : (head_q+1)*d] = acc / l_i
 //
-// MEMORY BUDGET (Adreno 830 has 32KB LDS per workgroup):
-//   K tile: BLOCK_KV * d * sizeof(half)  e.g. 32*128*2 = 8KB
-//   V tile: same                                       = 8KB
-//   Q row:  d * sizeof(half)              e.g. 128*2   = 256B
-//   sum/max/output FP32 in registers (no LDS for these)
-//   Total LDS: ~17KB. Fits.
+// CORRECTNESS-FIRST DESIGN (Step #2):
+//   ONE work-item per (head_q, query_row). The full d=128 fp32 output
+//   accumulator (512 B) + Q row (256 B fp16) live in private memory.
+//   No LDS, no inter-WI reduction, no scores DRAM materialization — the
+//   whole point (removing the [H,M,N_kv] global traffic) is achieved by
+//   the single-WI serial form. Tiling/LDS cooperation is a follow-up.
+//   gws = (num_heads_q * M,); lws chosen by host (small, e.g. 64).
 //
-// GROUP SIZING:
-//   gws = (1, 1, num_heads_q * M)   — one WG per (head_q, query_row)
-//   lws = SUBGROUP_SIZE (64 on Adreno "half")
-//   Within a WG, 64 WIs cooperatively (a) load K/V blocks, (b) compute
-//   the d-axis reduction for one (query_row, head_q, key_row) score,
-//   (c) reduce the BLOCK_KV per-key partial outputs into one row.
-//
-// STATUS:
-//   Step #1 SKELETON. Kernel body is a stub (zero-fills output) so the
-//   build + dispatch + env-gate plumbing is exercised end-to-end. The
-//   actual flash math lands in a follow-up commit after the host
-//   dispatch path + correctness-validation harness are in place.
+// K-LAYOUT NOTE: the gpu_native NNTR_OHWI_IMG=0 path stores cache_k_svm
+//   in OHWI form  K[head_kv * S_max * d + n * d + x]  (qk_matmul_f16_ohwi
+//   layout, NOT the pure concat [N_kv, HD_KV]). V stays concat
+//   V[n * HD_KV + head_kv * d + x] (sv_matmul_f16 layout). To feed the
+//   EXACT SAME buffers as the 3-kernel _ohwi_cl fallback, this kernel
+//   takes a k_stride param: if k_stride > 0, K is OHWI with that S_max
+//   row-stride; if k_stride <= 0, K is pure concat (HD_KV stride). Q and
+//   O are always concat. This keeps the flash path bit-comparable to the
+//   baseline it replaces.
 //
 // QWEN3-0.6B SHAPES (for reference; kernel is parameterized):
 //   M = step_size (prefill: input length; decode: 1)
-//   N_kv = cache_to (running cache fill, ≤ MAX_SEQ_LEN)
+//   N_kv = cache_to (running cache fill, <= MAX_SEQ_LEN)
 //   d = head_dim = 128
 //   num_heads_q = 16, num_heads_kv = 8 (GQA = 2)
 //   HD_Q = num_heads_q * d = 2048
@@ -54,15 +51,18 @@
 #define FLASH_BLOCK_KV 32
 #endif
 
-// Skeleton entry. Step #1 of GPU mha migration: prove build + dispatch.
-// The signature here is the final-form contract that the host wrapper
-// (flash_attention_prefill_f16_cl in attention_kernels.cpp) will call.
-// Following step replaces the body with the online-softmax flash loop.
+#ifndef FLASH_MAX_D
+#define FLASH_MAX_D 128
+#endif
+
+// Single-WI-per-(head_q, query_row) flash attention prefill. Online
+// softmax (Dao et al.) so scores are never materialized to global memory.
+// Signature matches the host wrapper flash_attention_prefill_f16_cl.
 __kernel void flash_attention_prefill_f16_skeleton(
-    __global const half *Q,           // [M, HD_Q] fp16, row-major
-    __global const half *K,           // [N_kv, HD_KV] fp16, row-major
-    __global const half *V,           // [N_kv, HD_KV] fp16, row-major
-    __global       half *O,           // [M, HD_Q] fp16, row-major
+    __global const half *Q,           // [M, HD_Q] fp16, row-major (concat)
+    __global const half *K,           // OHWI [H_kv,S_max,d] or concat [N_kv,HD_KV]
+    __global const half *V,           // [N_kv, HD_KV] fp16, row-major (concat)
+    __global       half *O,           // [M, HD_Q] fp16, row-major (concat)
     const int M,
     const int N_kv,
     const int d,                       // head_dim
@@ -70,25 +70,74 @@ __kernel void flash_attention_prefill_f16_skeleton(
     const int HD_KV,                   // num_heads_kv * d
     const int gqa,                     // num_heads_q / num_heads_kv
     const int is_causal,
-    const float scale                  // 1 / sqrt(d), precomputed
+    const float scale,                 // 1 / sqrt(d), precomputed
+    const int k_stride                 // >0: K OHWI S_max row-stride; <=0: concat
 ) {
-  // Skeleton: gws = (1, 1, num_heads_q * M). global_id(2) decodes to
-  // (head_q, query_row). Local size = SUBGROUP_SIZE.
-  const int gid2 = get_global_id(2);
-  const int head_q = gid2 / M;
-  const int m = gid2 % M;
-  const int lid = get_local_id(0);
-
-  // Only WI 0 of each WG zero-fills the output row, to keep the stub
-  // deterministic without race. Real kernel will do cooperative writes.
-  if (lid != 0) return;
+  const int gid = get_global_id(0);     // decodes to (head_q, query_row)
+  const int head_q = gid / M;
+  const int m = gid % M;
   if (m >= M) return;
+  const int total = (HD_Q / d) * M;     // num_heads_q * M
+  if (gid >= total) return;
 
-  for (int x = 0; x < d; ++x) {
-    O[(long)m * HD_Q + head_q * d + x] = (half)0.0f;
+  const int head_kv = head_q / gqa;
+
+  // K base offset for this (head_kv). OHWI: head_kv*S_max*d + n*d + x.
+  // concat: n*HD_KV + head_kv*d + x. We fold the per-n stride into k_row.
+  const long k_head_base =
+      (k_stride > 0) ? ((long)head_kv * (long)k_stride * (long)d)
+                     : ((long)head_kv * (long)d);
+  const long k_row_stride = (k_stride > 0) ? (long)d : (long)HD_KV;
+
+  const long q_base = (long)m * HD_Q + (long)head_q * d;
+
+  // Load this query row into private fp32 registers.
+  float q_row[FLASH_MAX_D];
+  for (int x = 0; x < d; ++x)
+    q_row[x] = (float)Q[q_base + x];
+
+  // Online-softmax state.
+  float m_i = -INFINITY;
+  float l_i = 0.0f;
+  float acc[FLASH_MAX_D];
+  for (int x = 0; x < d; ++x)
+    acc[x] = 0.0f;
+
+  // Causal: key n is masked when is_causal && n > m. So the valid range
+  // is n in [0, n_last] where n_last = is_causal ? min(N_kv-1, m) : N_kv-1.
+  const int n_last = is_causal ? min(N_kv - 1, m) : (N_kv - 1);
+
+  for (int n = 0; n <= n_last; ++n) {
+    const long k_base = k_head_base + (long)n * k_row_stride;
+    const long v_base = (long)n * HD_KV + (long)head_kv * d;
+
+    // s = scale * dot(Q[m,head_q], K[n,head_kv]) in fp32.
+    float dot = 0.0f;
+    for (int x = 0; x < d; ++x)
+      dot += q_row[x] * (float)K[k_base + x];
+#ifdef FLASH_FP16_SCORE
+    // Match the 3-kernel baseline, which writes scores as fp16 before
+    // softmax (qk_matmul_f16 stores (half)(acc*scale)). Truncating here
+    // makes the flash path bit-comparable to that baseline.
+    const float s = (float)((half)(scale * dot));
+#else
+    const float s = scale * dot;
+#endif
+
+    // Online softmax update (Dao et al.).
+    const float m_new = fmax(m_i, s);
+    const float alpha = exp(m_i - m_new);   // m_i==-inf, m_new finite => 0
+    const float p = exp(s - m_new);
+    l_i = alpha * l_i + p;
+    for (int x = 0; x < d; ++x)
+      acc[x] = alpha * acc[x] + p * (float)V[v_base + x];
+    m_i = m_new;
   }
 
-  // Silence unused-param warnings during skeleton phase.
-  (void)Q; (void)K; (void)V;
-  (void)N_kv; (void)HD_KV; (void)gqa; (void)is_causal; (void)scale;
+  // Normalize and write out. l_i == 0 only when no key was attended
+  // (e.g. causal row with N_kv==0); guard to avoid NaN.
+  const float inv = (l_i > 0.0f) ? (1.0f / l_i) : 0.0f;
+  const long o_base = (long)m * HD_Q + (long)head_q * d;
+  for (int x = 0; x < d; ++x)
+    O[o_base + x] = (half)(acc[x] * inv);
 }
