@@ -3174,8 +3174,16 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     ((n*C+c)*H + h)*W. Set B=M, C=num_heads, H=1, W=head_dim →
   //     each WI covers one (token, head) head_dim-row.
   auto disp_qk_norm = [&](cl_mem io, void *gamma, unsigned int num_heads) {
+    // #61: q/k-norm has W = head_dim = 128 (W8 = 16). At the default LWS=64 only
+    // 16/64 WIs do work (75% idle) + a 6-round LDS barrier tree -> 35ms on Intel
+    // (4x Adreno). On the Intel/buffer path use LWS=16 (perfect occupancy) +
+    // subgroup-reduce (no LDS, no barriers). Adreno (use_v8c_buf unset) keeps
+    // LWS=64 + LDS tree, bit-identical. Gate on head_dim==128 so LWS=16==W8.
+    const bool sg = use_v8c_buf && cfg_.head_dim == 128;
+    const char *copts = sg ? "-DRMSN_SG -DRMSN_LWS=16" : "";
+    const size_t RMSN_LWS = sg ? 16 : 64;
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16_coop");
+                                   "rmsnorm_cl_fp16_coop", copts);
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
     int n_rows = (int)M * (int)num_heads, W = (int)cfg_.head_dim;
     kp->SetKernelArguments(0, &io, sizeof(cl_mem));
@@ -3184,7 +3192,6 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
     kp->SetKernelArguments(4, &n_rows, sizeof(int));
     kp->SetKernelArguments(5, &W, sizeof(int));
-    constexpr size_t RMSN_LWS = 64;
     std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
     std::array<size_t, 1> lws = {RMSN_LWS};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
