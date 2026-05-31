@@ -3391,10 +3391,18 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //                    _ohwi_cl fallback below (Q concat, K OHWI, V concat).
   //   default        → _ohwi_cl   (K OHWI, V concat — half-OHWI, 192 TPS@1K)
   //   NNTR_OHWI_IMG  → _ohwi_img_cl (K OHWI SVM, V cl_mem→image2d, #46f)
-  static const bool use_flash = []() {
+  // #59 device specialization: NNTR_FLASH explicit overrides; else default the
+  // fused (vectorized) flash attention ON for the Intel/buffer path
+  // (use_v8c_buf) when the image attention path is unavailable (!use_ohwi_img)
+  // — vec-flash is +59% over the scalar 3-kernel there (Intel Arc M=1024
+  // 727 -> 1153 TPS, token 7212). Adreno (use_v8c_buf unset, use_ohwi_img set)
+  // keeps the image 3-kernel path: image attention beats flash 3x there.
+  static const int flash_env = []() {
     const char *e = std::getenv("NNTR_FLASH");
-    return e && std::atoi(e) != 0;
+    return e ? (std::atoi(e) != 0 ? 1 : 0) : -1;  // -1 = unset
   }();
+  const bool use_flash =
+    (flash_env >= 0) ? (flash_env == 1) : (use_v8c_buf && !use_ohwi_img);
   // #58: NNTR_FLASH_IMG=1 → fused single-kernel attention over the SAME two
   // OHWI images as the default 3-kernel kvimg_view path (K image + reversed-V
   // image), but with the score row kept in LDS instead of round-tripping the

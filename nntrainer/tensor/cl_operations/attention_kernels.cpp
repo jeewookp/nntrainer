@@ -1943,7 +1943,15 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
   // (see below). Reuses NNTR_FLASH_COOP_LWS / NNTR_FLASH_COOP_BLOCK_KV.
   static const int flash_vec = []() {
     const char *e = std::getenv("NNTR_FLASH_VEC");
-    return (e && std::atoi(e) != 0) ? 1 : 0;
+    if (e)
+      return std::atoi(e) != 0 ? 1 : 0;
+    // #59 device specialization: on the Intel/buffer path (NNTR_V8C_BUF) the
+    // vectorized fused attention is the measured-best attention (Intel Arc
+    // M=1024 1153 TPS vs scalar 3-kernel 727), so default it ON there. Adreno
+    // (NNTR_V8C_BUF unset) keeps the naive flash OFF and uses the image
+    // 3-kernel path — image attention beats flash 3x on Adreno.
+    const char *b = std::getenv("NNTR_V8C_BUF");
+    return (b && std::atoi(b) != 0) ? 1 : 0;
   }();
   // LDS staging (lever B) measured a NET LOSS on Intel Arc (per-tile barrier +
   // LDS pressure cut occupancy; the K/V row is small and L2-cached): 1257 ms vs
@@ -1958,7 +1966,16 @@ bool flash_attention_prefill_f16_cl(const uint16_t *Q_host,
   // Must be a power of two (log-step reduction). Override via env.
   static const int flash_coop_lws = []() {
     const char *e = std::getenv("NNTR_FLASH_COOP_LWS");
-    int v = (e && std::atoi(e) > 0) ? std::atoi(e) : 64;
+    int v;
+    if (e && std::atoi(e) > 0) {
+      v = std::atoi(e);
+    } else {
+      // #59: Intel/buffer path default LWS=16 => VPL = d/16 = 8 (half8 vloads),
+      // the measured Intel-Arc optimum (1153 TPS @ M=1024 vs 981 at LWS=64).
+      // Adreno default stays 64.
+      const char *b = std::getenv("NNTR_V8C_BUF");
+      v = (b && std::atoi(b) != 0) ? 16 : 64;
+    }
     // Must be a power of two for the log-step tree reduction.
     if (v != 16 && v != 32 && v != 64 && v != 128 && v != 256)
       v = 64;
