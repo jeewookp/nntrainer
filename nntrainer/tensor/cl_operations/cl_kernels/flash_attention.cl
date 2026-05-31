@@ -556,11 +556,18 @@ __kernel void flash_attention_prefill_f16_coop_vec(
 #ifdef FBQ_SG
 // Subgroup-reduce variant (#60b): LWS == subgroup size, so the cross-lane d-dot
 // reduction is a single sub_group_reduce_add per (key,row) — NO red_sh LDS, NO
-// barriers (vs the log-step tree below). Intel only; gated by NNTR_FLASH_SG, so
-// the attribute/pragma never reach the Adreno compile (which uses the image
-// path and never builds Block-Q).
+// barriers (vs the log-step tree below). Gated by NNTR_FLASH_SG. Picks the
+// platform subgroup attribute (Intel reqd size = LWS; Adreno qcom "half" = 64,
+// so the host MUST dispatch LWS=64 there). Mirrors rmsnorm.cl.
+#if defined(cl_intel_required_subgroup_size)
 #pragma OPENCL EXTENSION cl_intel_subgroups : enable
 __attribute__((intel_reqd_sub_group_size(FLASH_VEC_LWS)))
+#elif defined(cl_qcom_reqd_sub_group_size)
+#pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
+__attribute__((qcom_reqd_sub_group_size("half")))
+#else
+__attribute__((reqd_work_group_size(FLASH_VEC_LWS, 1, 1)))
+#endif
 #else
 __attribute__((reqd_work_group_size(FLASH_VEC_LWS, 1, 1)))
 #endif
