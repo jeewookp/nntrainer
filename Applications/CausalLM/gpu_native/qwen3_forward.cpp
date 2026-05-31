@@ -3255,13 +3255,30 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //                                        the K-image attention path is
   //                                        off (caller still reads SVM).
   //   default                           → CPU map + per-(t,h) memcpy.
-  static const bool use_k_image_scatter = []() {
-    const char *e = std::getenv("NNTR_OHWI_KIMG");
+  // #57: the CPU map+scatter that fills cache_k_svm is DEAD WORK whenever
+  // attention reads the K image (cache_k_image_ohwi, a view of the
+  // GPU-scattered cache_k_buf_ohwi) instead of SVM K. That is the default
+  // fast path (NNTR_OHWI_IMG=1, NNTR_OHWI_KIMG default-on, NNTR_FLASH off):
+  // the GPU k_scatter_ohwi above already populated the buffer the image
+  // wraps, so the blocking map (a per-layer queue drain + M*hKV host memcpys
+  // + refill bubble = the whole host_kv_ms) produces a cache_k_svm nobody
+  // reads. Skip it. Keep it ONLY when a path that actually reads SVM K runs:
+  // NNTR_FLASH (3387), NNTR_OHWI_KIMG=0 img_view (3416), or no K image.
+  // The two env reads below MUST mirror use_flash (~3377) and use_k_image
+  // (~3402) so the scatter and the attention dispatch never disagree.
+  static const bool flash_reads_svm_k = []() {
+    const char *e = std::getenv("NNTR_FLASH");
     return e && std::atoi(e) != 0;
+  }();
+  static const bool kimg_attn_on = []() {
+    const char *e = std::getenv("NNTR_OHWI_KIMG");
+    return e ? (std::atoi(e) != 0) : true;
   }();
   const bool gpu_k_scatter =
     use_ohwi_img && (lw.cache_k_buf_ohwi != nullptr);
-  const bool need_k_svm_after_scatter = !use_k_image_scatter;
+  const bool need_k_svm_after_scatter =
+    flash_reads_svm_k ||
+    !(kimg_attn_on && lw.cache_k_image_ohwi != nullptr);
 
   if (gpu_k_scatter) {
     // GPU-side OHWI K scatter. Stays on the command queue with the prior
