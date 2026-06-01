@@ -436,13 +436,16 @@ void Gemma4CausalLM::registerCustomLayers() {
 namespace nntrainer {
 // Fallback stubs: used only when libnntrainer.so is too old to export
 // svm_alloc_ints/svm_free_ptr/svm_blocking_read.
-// __attribute__((used)) prevents linker --gc-sections from discarding the
-// section even if no other object in this .so calls these functions.
-__attribute__((used, visibility("default"))) int *svm_alloc_ints(int) {
+// __attribute__((weak)) lets the strong definition from libnntrainer.so win
+// regardless of DSO load order (Android bionic prefers strong over weak in
+// dlsym(RTLD_DEFAULT, ...) lookups).  Without weak, dlsym finds whichever
+// DSO appears first in the global symbol table — typically libcausallm_core.so
+// — and returns the nullptr stub instead of the real clSVMAlloc wrapper.
+__attribute__((used, visibility("default"), weak)) int *svm_alloc_ints(int) {
   return nullptr;
 }
-__attribute__((used, visibility("default"))) void svm_free_ptr(void *) {}
-__attribute__((used, visibility("default"))) void svm_blocking_read(
+__attribute__((used, visibility("default"), weak)) void svm_free_ptr(void *) {}
+__attribute__((used, visibility("default"), weak)) void svm_blocking_read(
   void *, std::size_t) {}
 } // namespace nntrainer
 #endif // ENABLE_OPENCL

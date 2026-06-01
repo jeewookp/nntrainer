@@ -19,11 +19,13 @@
 
 namespace nntrainer {
 
-int *svm_alloc_ints(int /*n*/) { return nullptr; }
+// Weak stubs: strong definitions in libnntrainer.so always win via
+// dlsym(RTLD_DEFAULT, ...) regardless of DSO load order.
+__attribute__((weak)) int *svm_alloc_ints(int /*n*/) { return nullptr; }
 
-void svm_free_ptr(void * /*p*/) {}
+__attribute__((weak)) void svm_free_ptr(void * /*p*/) {}
 
-void svm_blocking_read(void * /*p*/, std::size_t /*bytes*/) {}
+__attribute__((weak)) void svm_blocking_read(void * /*p*/, std::size_t /*bytes*/) {}
 
 } // namespace nntrainer
 #endif // ENABLE_OPENCL
