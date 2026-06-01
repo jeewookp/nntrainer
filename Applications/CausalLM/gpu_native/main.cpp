@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <engine.h>
 #include <limits>
 #include <string>
@@ -39,6 +40,107 @@
 static struct EnvSetup {
   EnvSetup() { setenv("NNTR_MHA_VERIFY", "1", 1); }
 } _env_setup;
+
+// #69 On-device compute-peak microbench (NNTR_PEAK_BENCH=1). Register-resident
+// loops (NO memory traffic inside the loop) measure the Adreno int8-dp4a peak
+// — the ceiling our int8×int4 FC GEMM competes against — and the fp16-FMA peak.
+// 16 independent dependency chains hide instruction latency so we measure
+// THROUGHPUT, not latency. Counted as flops (dp4a = 4 MAC = 8 flop; fma = 2
+// flop) to match the GEMM's "TOP/s" = 2×MAC convention (our v8c FC = 5.08).
+static const char *kPeakKernels = R"CLC(
+#pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define C32(op) op(0) op(1) op(2) op(3) op(4) op(5) op(6) op(7) \
+  op(8) op(9) op(10) op(11) op(12) op(13) op(14) op(15) \
+  op(16) op(17) op(18) op(19) op(20) op(21) op(22) op(23) \
+  op(24) op(25) op(26) op(27) op(28) op(29) op(30) op(31)
+// 32 independent dp4a recurrence chains, no extra ALU per dp4a (just the
+// accumulate, matching the GEMM's acc += dot). Lots of in-flight WIs + 32
+// chains/WI saturate throughput.
+__kernel void dp4a_peak(__global int *out, const int iters, const uint b) {
+  int a[32];
+  #pragma unroll
+  for (int j=0;j<32;j++) a[j]=(int)get_global_id(0)+j+1;
+  for (int i=0;i<iters;i++) {
+    #define DP(j) a[j]=dot_4x8packed_su_int(as_uint(a[j]),b)+a[j];
+    C32(DP)
+    #undef DP
+  }
+  int s=0;
+  #pragma unroll
+  for (int j=0;j<32;j++) s+=a[j];
+  out[get_global_id(0)]=s;
+}
+)CLC";
+
+static void run_peak_bench() {
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  if (!cl) { std::fprintf(stderr, "[peak] no gpu context\n"); return; }
+  cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
+  cl_context ctx = nullptr;
+  clGetCommandQueueInfo(q, CL_QUEUE_CONTEXT, sizeof(ctx), &ctx, nullptr);
+  // #69b: dump device HW facilities — which fast ops does THIS Adreno expose,
+  // and are we using them? (dp4a=yes; ml_ops/command_buffer/recordable=?)
+  {
+    cl_device_id dev = nullptr;
+    clGetCommandQueueInfo(q, CL_QUEUE_DEVICE, sizeof(dev), &dev, nullptr);
+    static char buf[16384];
+    size_t n = 0;
+    clGetDeviceInfo(dev, CL_DEVICE_NAME, sizeof(buf), buf, &n);
+    std::fprintf(stderr, "[hw] device: %s\n", buf);
+    clGetDeviceInfo(dev, CL_DEVICE_VERSION, sizeof(buf), buf, &n);
+    std::fprintf(stderr, "[hw] version: %s\n", buf);
+    clGetDeviceInfo(dev, CL_DEVICE_EXTENSIONS, sizeof(buf), buf, &n);
+    std::fprintf(stderr, "[hw] extensions: %s\n", buf);
+    const char *probe[] = {"cl_qcom_ml_ops", "cl_khr_command_buffer",
+                           "cl_qcom_recordable_queue", "cl_khr_integer_dot_product",
+                           "cl_qcom_dot_product8", "cl_qcom_subgroup",
+                           "cl_qcom_accelerated_image_ops", "cl_khr_subgroups",
+                           "cl_qcom_extended_query_image_info", "matrix"};
+    for (auto *p : probe)
+      std::fprintf(stderr, "[hw]   %-34s : %s\n", p,
+                   std::strstr(buf, p) ? "YES" : "no");
+  }
+  const size_t GS = 256 * 1024;   // work-items
+  const size_t LWS = 64;
+  cl_int err = 0;
+  cl_mem out_i = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, GS * sizeof(int),
+                                nullptr, &err);
+  cl_mem out_h = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, GS * sizeof(uint16_t),
+                                nullptr, &err);
+  auto NOW = []() { return std::chrono::steady_clock::now(); };
+  auto SEC = [](auto t1, auto t0) {
+    return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+             .count() / 1e6;
+  };
+  std::array<size_t, 1> gws = {GS}, lws = {LWS};
+
+  // ---- int8 dp4a peak ----
+  for (int iters : {4096, 16384}) {
+    auto kp = cl->registerClKernel(kPeakKernels, "dp4a_peak");
+    uint32_t b = 0x01010101u;
+    kp->SetKernelArguments(0, &out_i, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &iters, sizeof(int));
+    kp->SetKernelArguments(2, &b, sizeof(uint32_t));
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(q);  // warmup
+    auto t0 = NOW();
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(q);
+    double s = SEC(NOW(), t0);
+    double flop = (double)GS * iters * 32.0 * 8.0;  // 32 chains × dp4a(8 flop)
+    std::fprintf(stderr, "[peak] int8-dp4a iters=%d : %.3f ms => %.2f TOP/s\n",
+                 iters, s * 1e3, flop / s / 1e12);
+  }
+  std::fprintf(stderr, "[peak] (our v8c int8xint4 FC in-forward = 5.08 TOP/s; "
+                       "this register-only loop is the int8-dp4a ceiling)\n");
+  (void)out_h;
+  clReleaseMemObject(out_i);
+  clReleaseMemObject(out_h);
+}
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -113,6 +215,13 @@ int main(int argc, char **argv) {
   if (!fwd.init(cfg, weight_path)) {
     std::fprintf(stderr, "[main] init failed\n");
     return 2;
+  }
+
+  // #69 compute-peak microbench (no model needed): measure the actual
+  // Adreno int8-dp4a + fp16 peak on THIS device, then exit.
+  if (std::getenv("NNTR_PEAK_BENCH")) {
+    run_peak_bench();
+    return 0;
   }
 
   // RoPE freqs for position 0 (identity rotation; degenerate single-

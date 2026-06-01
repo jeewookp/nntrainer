@@ -231,6 +231,43 @@ __kernel void fused_geglu_h2f_fp32(__global const half *gate,
 }
 )CL";
 
+// #71 fuse residual-add + RMSNorm (MLC fuse_add_norm). One workgroup (LWS=64)
+// per row: resid = a(fp32) + b(fp16) [written for the later residual add], then
+// normed = resid * rsqrt(mean(resid^2)+eps) * gamma [fp16, gamma has Gemma2
+// (1+w) baked]. Replaces the standalone add + pad-copy + rmsnorm (3 dispatches
+// -> 1). Recompute a+b in pass 2 to avoid a global read-after-write hazard.
+static const std::string kFusedAddRmsnormKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void fused_add_rmsnorm(__global const float *a,
+                                __global const half  *b,
+                                __global       float *resid,
+                                __global       half  *normed,
+                                __global const half  *gamma,
+                                const half eps, const int W) {
+  const int row = get_group_id(0);
+  const int tid = get_local_id(0);
+  const int L = get_local_size(0);
+  __local float lss[64];
+  float psum = 0.0f;
+  for (int k = tid; k < W; k += L) {
+    float v = a[(long)row * W + k] + (float)b[(long)row * W + k];
+    resid[(long)row * W + k] = v;
+    psum += v * v;
+  }
+  lss[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = L / 2; s > 0; s >>= 1) {
+    if (tid < s) lss[tid] += lss[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  float inv = rsqrt(lss[0] / (float)W + (float)eps);
+  for (int k = tid; k < W; k += L) {
+    float v = a[(long)row * W + k] + (float)b[(long)row * W + k];
+    normed[(long)row * W + k] = (half)(v * inv * (float)gamma[k]);
+  }
+}
+)CL";
+
 static const std::string kSwigluFp32Kernel = R"CL(
 __kernel void swiglu_fp32(__global const float *gate,
                           __global const float *up,
@@ -3691,10 +3728,17 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
     clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
   }
+  // #71 fuse_add_norm (NNTR_FUSE_ADDNORM=1): fold this residual add into the
+  // ffn-rmsnorm kernel below (one cooperative pass computes residual_1 AND
+  // ffn_normed). When off, the standalone add runs here as before.
+  static const bool fuse_addnorm = []() {
+    const char *e = std::getenv("NNTR_FUSE_ADDNORM");
+    return e && std::atoi(e) != 0;
+  }();
   // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
   // accumulated in fp32 because the last layer's massive activations exceed
   // the fp16 max (65504) -> inf -> NaN cascade through ffn_norm.
-  {
+  if (!fuse_addnorm) {
     auto kp =
       cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
     int n = (int)(M * K_h);
@@ -3714,20 +3758,45 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     ffn_down, cvt, add residual -> out_fp32 (caller-managed).
   stage_begin();
   // #47j: residual_1 and ffn_in_padded are FP32 (fp32 residual accumulation).
-  // Only zero the pad rows [M, M_pad); the copy below overwrites [0, M).
-  if (M_pad > M)
-    clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero,
-                        sizeof(float), (size_t)M * K_h * sizeof(float),
-                        (size_t)(M_pad - M) * K_h * sizeof(float), 0,
-                        nullptr, nullptr);
-  clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
-                      0, (size_t)M * K_h * sizeof(float), 0, nullptr,
-                      nullptr);
-  bar();  // fill/copy(ffn_in_padded) -> ffn rmsnorm
-  {
+  uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+  if (fuse_addnorm) {
+    // #71 one cooperative pass: residual_1 = in_padded + wo_y (fp32, for the
+    // later residual add) AND ffn_normed = rmsnorm(residual_1)*gamma (fp16).
+    // Replaces standalone add + pad-fill + copy + rmsnorm.
+    auto kp = cl->registerClKernel(kFusedAddRmsnormKernel, "fused_add_rmsnorm");
+    int W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));   // a fp32
+    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));   // b fp16
+    kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));  // resid fp32
+    kp->SetKernelArguments(3, &scratch_.ffn_normed, sizeof(cl_mem));  // normed fp16
+    kp->SetKernelSVMArguments(4, lw.ffn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(5, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(6, &W, sizeof(int));
+    std::array<size_t, 1> gws = {(size_t)64 * M};  // M rows × LWS 64
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    // pad rows of ffn_normed = rmsnorm(0) = 0
+    if (M_pad > M) {
+      const uint16_t zero_h = 0;
+      clEnqueueFillBuffer(cl_q_, scratch_.ffn_normed, &zero_h, sizeof(uint16_t),
+                          (size_t)M * K_h * sizeof(uint16_t),
+                          (size_t)(M_pad - M) * K_h * sizeof(uint16_t), 0,
+                          nullptr, nullptr);
+    }
+  } else {
+    // Only zero the pad rows [M, M_pad); the copy below overwrites [0, M).
+    if (M_pad > M)
+      clEnqueueFillBuffer(cl_q_, scratch_.ffn_in_padded, &zero,
+                          sizeof(float), (size_t)M * K_h * sizeof(float),
+                          (size_t)(M_pad - M) * K_h * sizeof(float), 0,
+                          nullptr, nullptr);
+    clEnqueueCopyBuffer(cl_q_, scratch_.residual_1, scratch_.ffn_in_padded, 0,
+                        0, (size_t)M * K_h * sizeof(float), 0, nullptr,
+                        nullptr);
+    bar();  // fill/copy(ffn_in_padded) -> ffn rmsnorm
     auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
                                    "rmsnorm_f32in_f16out_coop");
-    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
     int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.ffn_in_padded, sizeof(cl_mem));
     kp->SetKernelArguments(1, &scratch_.ffn_normed, sizeof(cl_mem));
