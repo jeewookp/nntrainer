@@ -363,43 +363,73 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
-          // PRE-PREAD backpressure: when system memory is critically low, wait.
-          // With NNTRAINER_WEIGHT_MMAP=1 (mmap pool), MADV_PAGEOUT genuinely
-          // evicts pages to zRAM, so avail recovers after each sweep.  The
-          // threshold is kept low (128 MB) so loading is not stalled when avail
-          // hovers in the 300–400 MB range (zRAM near capacity but still usable).
-          // With coarse-grain SVM the threshold was 512 MB but that caused the
-          // loop to spin for 20 s doing nothing useful on Adreno 830 devices.
-          {
-            static const bool s_weight_mmap =
-              std::getenv("NNTRAINER_WEIGHT_MMAP") != nullptr;
-            // Lower threshold when pages are evictable (mmap); keep 512 MB for
-            // legacy SVM path where MADV_PAGEOUT has no effect.
-            const size_t bp_threshold_kb =
-              s_weight_mmap ? 128UL * 1024 : 512UL * 1024;
-            size_t avail_kb = read_mem_available_kb();
-            if (avail_kb < bp_threshold_kb) {
-              for (int _bp = 0; _bp < 5 && avail_kb < bp_threshold_kb; ++_bp) {
-                std::fprintf(stderr,
-                             "[DIAG] load_weight: backpressure avail=%zu MB "
-                             "(retry %d/5, threshold=%zu MB)\n",
-                             avail_kb / 1024, _bp + 1, bp_threshold_kb / 1024);
-                std::fflush(stderr);
-                ::usleep(1000000); // 1 s — let LMKD/zRAM reclaim
-                avail_kb = read_mem_available_kb();
+          // LiteRT-style file-backed mmap: overlay MAP_PRIVATE|MAP_FIXED pages
+          // from the weight file onto the pool address.  File-backed pages can
+          // be released with MADV_DONTNEED at zero cost (the file IS the backing
+          // store — no zRAM needed).  During inference the pages reload from
+          // the file via page faults, exactly as LiteRT does.
+          //
+          // Alignment requirement: (ptr % PAGE_SZ) must equal (file_pos %
+          // PAGE_SZ).  This holds when the pool is laid out sequentially in
+          // file order (inference MAX_LIFESPAN packing) and pool_base is
+          // page-aligned (guaranteed by anonymous mmap).
+          static const size_t PAGE_SZ =
+            static_cast<size_t>(sysconf(_SC_PAGE_SIZE));
+          static const bool s_weight_mmap =
+            std::getenv("NNTRAINER_WEIGHT_MMAP") != nullptr;
+
+          bool file_mapped = false;
+          if (s_weight_mmap) {
+            size_t file_inpage = file_pos % PAGE_SZ;
+            size_t pool_inpage =
+              reinterpret_cast<uintptr_t>(ptr) % PAGE_SZ;
+            if (file_inpage == pool_inpage) {
+              off_t   fp_align = static_cast<off_t>(file_pos - file_inpage);
+              size_t  map_sz   = (file_inpage + n + PAGE_SZ - 1) & ~(PAGE_SZ - 1);
+              void   *pg_ptr   = reinterpret_cast<void *>(
+                reinterpret_cast<uintptr_t>(ptr) - pool_inpage);
+              void *r = ::mmap(pg_ptr, map_sz, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_FIXED, fd, fp_align);
+              if (r != MAP_FAILED) {
+                // Pages are file-backed; DONTNEED drops them for free.
+                ::madvise(pg_ptr, map_sz, MADV_DONTNEED);
+                file_mapped = true;
               }
+            }
+            if (!file_mapped) {
+              // Alignment mismatch — log once per mismatch for diagnostics.
+              std::fprintf(stderr,
+                           "[DIAG] load_weight: MAP_FIXED skip "
+                           "(file_inpage=%zu pool_inpage=%zu), "
+                           "falling back to pread\n",
+                           file_pos % PAGE_SZ,
+                           reinterpret_cast<uintptr_t>(ptr) % PAGE_SZ);
+              std::fflush(stderr);
             }
           }
 
-          // pread in 128 MB chunks, evicting each chunk to zRAM before the
-          // next read.  This caps peak physical-page demand at 128 MB per
-          // weight regardless of the weight size, preventing OOM when avail
-          // is low (e.g. 350 MB) and a large weight block (> avail) arrives.
-          {
-            static const size_t CHUNK = 128UL << 20; // 128 MB
-            char *dst = static_cast<char *>(ptr);
-            off_t foff = static_cast<off_t>(file_pos);
-            size_t rem = n;
+          if (!file_mapped) {
+            // Fallback: chunked pread + MADV_PAGEOUT (uses zRAM).
+            // Only stall when critically low (< 64 MB) — zRAM may be full.
+            {
+              size_t avail_kb = read_mem_available_kb();
+              const size_t bp_kb = 64UL * 1024;
+              if (avail_kb < bp_kb) {
+                for (int _bp = 0; _bp < 5 && avail_kb < bp_kb; ++_bp) {
+                  std::fprintf(stderr,
+                               "[DIAG] load_weight: backpressure avail=%zu MB"
+                               " (retry %d/5)\n",
+                               avail_kb / 1024, _bp + 1);
+                  std::fflush(stderr);
+                  ::usleep(1000000);
+                  avail_kb = read_mem_available_kb();
+                }
+              }
+            }
+            static const size_t CHUNK = 128UL << 20;
+            char  *dst  = static_cast<char *>(ptr);
+            off_t  foff = static_cast<off_t>(file_pos);
+            size_t rem  = n;
             while (rem > 0) {
               size_t csz = std::min(rem, CHUNK);
               size_t cdone = 0;
@@ -411,7 +441,6 @@ void Transformer::load_weight(const std::string &weight_path) {
                     "pread failed for weight '" + ctx.getWeightName(i) + "'");
                 cdone += static_cast<size_t>(nr);
               }
-              // Evict this chunk immediately before reading the next.
               ::posix_fadvise(fd, foff, static_cast<off_t>(csz),
                               POSIX_FADV_DONTNEED);
               ::madvise(dst, csz, MADV_COLD);
@@ -420,8 +449,8 @@ void Transformer::load_weight(const std::string &weight_path) {
               foff += static_cast<off_t>(csz);
               rem -= csz;
             }
+            svm_written.push_back({ptr, n});
           }
-          svm_written.push_back({ptr, n});
 
           file_pos += n;
           bytes_done += n;
