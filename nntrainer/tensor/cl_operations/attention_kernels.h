@@ -200,7 +200,7 @@ bool two_conv_attention_prefill_f16_ohwi_kvimg_view_cl(
   const uint16_t *Q_svm, cl_mem K_image_ohwi, cl_mem V_image_ohwi,
   uint16_t *O_svm, unsigned int M, unsigned int N_kv, unsigned int num_heads_Q,
   unsigned int num_heads_KV, unsigned int head_dim, unsigned int max_seq_len,
-  bool causal);
+  bool causal, float attn_softcap = 0.0f);  // #63 Gemma2 QK soft-cap (0=off)
 
 /// Fused single-kernel attention over the SAME two OHWI images as
 /// _ohwi_kvimg_view_cl (K image [H_kv,S_max,d], reversed-V image

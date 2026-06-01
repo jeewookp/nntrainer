@@ -198,7 +198,8 @@ __kernel void qk_matmul_f16_ohwi_img(
     __global       half *scores,       // [H, M, N_kv] fp16, row-major
     const int M, const int N_kv, const int d,
     const int HD_Q, const int S_max, const int gqa,
-    const int causal, const float scale) {
+    const int causal, const float scale,
+    const float softcap) {             // #63 Gemma2: >0 => cap*tanh(s/cap)
   const int n0 = get_global_id(0) * TN_QK;
   const int m0 = get_global_id(1) * TM_QK;
   const int head_q = get_global_id(2);
@@ -280,6 +281,7 @@ __kernel void qk_matmul_f16_ohwi_img(
       const int n = n0 + j;
       if (n >= N_kv) continue;
       float v = acc[i][j] * scale;
+      if (softcap > 0.0f) v = softcap * tanh(v / softcap); // #63 Gemma2 score cap
       if (causal && n > m) v = -INFINITY;
       scores[score_base + (long)m * N_kv + n] = (half)v;
     }
