@@ -1,3 +1,4 @@
+──────────────────────
 [OK] Device: R3CY10WM83Y
 [OK] Model files found
 
@@ -46,13 +47,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 34.0 MB/s (50360616 bytes in 1.411s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.6 MB/s (50362824 bytes in 1.431s)
 [OK]   libcausallm_core.so
 /home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.7 MB/s (11449640 bytes in 0.324s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.8 MB/s (129304 bytes in 0.007s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 17.6 MB/s (129304 bytes in 0.007s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.9 MB/s (4143264 bytes in 0.120s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.7 MB/s (4143264 bytes in 0.121s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -65,102 +66,698 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[DIAG] cgroup entry: 0::/system/uid_0/pid_16298
+[DIAG] cgroup entry: 0::/system/uid_0/pid_17081
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 372488 KB
+[DIAG] RSS before initialize: 372712 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[DIAG] RSS after initialize:  185144 KB
+[DIAG] RSS after initialize:  185716 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=398 MB, avail=5972 MB
-[DIAG] load_weight: 472 MB written, RSS=655 MB, avail=5707 MB
-[DIAG] load_weight: 755 MB written, RSS=939 MB, avail=5433 MB
-[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=5416 MB
-[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=5163 MB
-[DIAG] load_weight: 1321 MB written, RSS=1505 MB, avail=4881 MB
-[DIAG] load_weight: 1605 MB written, RSS=1789 MB, avail=4611 MB
-[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=4388 MB
-[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=4236 MB
-[DIAG] load_weight: 2176 MB written, RSS=2360 MB, avail=4235 MB
-[DIAG] load_weight: 2455 MB written, RSS=2640 MB, avail=4149 MB
-[DIAG] load_weight: post sweep: avail=4066 MB, RSS=2922 MB, sweeping 162 regions
-[DIAG] load_weight: after post sweep RSS=2922 MB, avail=4066 MB
-[DIAG] load_weight: 2738 MB written, RSS=2922 MB, avail=4066 MB
-[DIAG] load_weight: post sweep: avail=3809 MB, RSS=3205 MB, sweeping 182 regions
-[DIAG] load_weight: after post sweep RSS=3205 MB, avail=3809 MB
-[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3809 MB
-[DIAG] load_weight: post sweep: avail=3525 MB, RSS=3489 MB, sweeping 202 regions
-[DIAG] load_weight: after post sweep RSS=3489 MB, avail=3518 MB
-[DIAG] load_weight: 3305 MB written, RSS=3489 MB, avail=3518 MB
-[DIAG] load_weight: 3332 MB written, RSS=3516 MB, avail=3487 MB
-[DIAG] load_weight: post sweep: avail=3238 MB, RSS=3772 MB, sweeping 222 regions
-[DIAG] load_weight: after post sweep RSS=3772 MB, avail=3238 MB
-[DIAG] load_weight: 3588 MB written, RSS=3772 MB, avail=3238 MB
-[DIAG] load_weight: post sweep: avail=2994 MB, RSS=4055 MB, sweeping 242 regions
-[DIAG] load_weight: after post sweep RSS=4055 MB, avail=2994 MB
-[DIAG] load_weight: 3871 MB written, RSS=4055 MB, avail=2994 MB
-[DIAG] load_weight: post sweep: avail=2871 MB, RSS=4338 MB, sweeping 262 regions
-[DIAG] load_weight: after post sweep RSS=4338 MB, avail=2872 MB
-[DIAG] load_weight: 4155 MB written, RSS=4338 MB, avail=2872 MB
-[DIAG] load_weight: post sweep: avail=2935 MB, RSS=4622 MB, sweeping 282 regions
-[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2941 MB
-[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2941 MB
-[DIAG] load_weight: post sweep: avail=2791 MB, RSS=4905 MB, sweeping 302 regions
-[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2790 MB
-[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2790 MB
-[DIAG] load_weight: 4738 MB written, RSS=4922 MB, avail=2766 MB
-[DIAG] load_weight: post sweep: avail=2500 MB, RSS=5188 MB, sweeping 319 regions
-[DIAG] load_weight: after post sweep RSS=5188 MB, avail=2499 MB
-[DIAG] load_weight: 5004 MB written, RSS=5188 MB, avail=2499 MB
-[DIAG] load_weight: post sweep: avail=2225 MB, RSS=5467 MB, sweeping 336 regions
-[DIAG] load_weight: after post sweep RSS=5467 MB, avail=2223 MB
-[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=2223 MB
-[DIAG] load_weight: post sweep: avail=1924 MB, RSS=5749 MB, sweeping 353 regions
-[DIAG] load_weight: after post sweep RSS=5749 MB, avail=1923 MB
-[DIAG] load_weight: 5569 MB written, RSS=5749 MB, avail=1923 MB
-[DIAG] load_weight: post sweep: avail=1731 MB, RSS=6032 MB, sweeping 370 regions
-[DIAG] load_weight: after post sweep RSS=6032 MB, avail=1734 MB
-[DIAG] load_weight: 5851 MB written, RSS=6032 MB, avail=1734 MB
-[DIAG] load_weight: post sweep: avail=1586 MB, RSS=6314 MB, sweeping 387 regions
-[DIAG] load_weight: after post sweep RSS=6314 MB, avail=1586 MB
-[DIAG] load_weight: 6134 MB written, RSS=6314 MB, avail=1586 MB
-[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1566 MB
-[DIAG] load_weight: post sweep: avail=1388 MB, RSS=6538 MB, sweeping 404 regions
-[DIAG] load_weight: after post sweep RSS=6538 MB, avail=1387 MB
-[DIAG] load_weight: 6416 MB written, RSS=6538 MB, avail=1387 MB
-[DIAG] load_weight: post sweep: avail=1161 MB, RSS=6517 MB, sweeping 421 regions
-[DIAG] load_weight: after post sweep RSS=6517 MB, avail=1161 MB
-[DIAG] load_weight: 6699 MB written, RSS=6517 MB, avail=1161 MB
-[DIAG] load_weight: post sweep: avail=896 MB, RSS=6663 MB, sweeping 438 regions
-[DIAG] load_weight: after post sweep RSS=6649 MB, avail=897 MB
-[DIAG] load_weight: 6981 MB written, RSS=6649 MB, avail=897 MB
-[DIAG] load_weight: post sweep: avail=764 MB, RSS=6355 MB, sweeping 455 regions
-[DIAG] load_weight: after post sweep RSS=6355 MB, avail=754 MB
-[DIAG] load_weight: 7263 MB written, RSS=6355 MB, avail=754 MB
-[DIAG] load_weight: post sweep: avail=817 MB, RSS=5886 MB, sweeping 472 regions
-[DIAG] load_weight: after post sweep RSS=5886 MB, avail=793 MB
-[DIAG] load_weight: 7546 MB written, RSS=5886 MB, avail=793 MB
-[DIAG] load_weight: 7554 MB written, RSS=5892 MB, avail=784 MB
-[DIAG] load_weight: post sweep: avail=787 MB, RSS=5868 MB, sweeping 489 regions
-[DIAG] load_weight: after post sweep RSS=5631 MB, avail=760 MB
-[DIAG] load_weight: 7828 MB written, RSS=5631 MB, avail=757 MB
-[DIAG] load_weight: post sweep: avail=727 MB, RSS=5007 MB, sweeping 506 regions
-[DIAG] load_weight: after post sweep RSS=4999 MB, avail=638 MB
-[DIAG] load_weight: 8111 MB written, RSS=4999 MB, avail=638 MB
-[DIAG] load_weight: post sweep: avail=419 MB, RSS=5276 MB, sweeping 523 regions
-[DIAG] load_weight: after post sweep RSS=5275 MB, avail=458 MB
-[DIAG] load_weight: 8393 MB written, RSS=5275 MB, avail=458 MB
-[DIAG] load_weight: post sweep: avail=364 MB, RSS=5557 MB, sweeping 540 regions
-[DIAG] load_weight: after post sweep RSS=5556 MB, avail=366 MB
-[DIAG] load_weight: 8676 MB written, RSS=5556 MB, avail=367 MB
-[DIAG] load_weight: post sweep: avail=402 MB, RSS=5583 MB, sweeping 557 regions
-[DIAG] load_weight: after post sweep RSS=5579 MB, avail=390 MB
-[DIAG] load_weight: 8958 MB written, RSS=5579 MB, avail=389 MB
-[DIAG] load_weight: 8960 MB written, RSS=5578 MB, avail=389 MB
-[DIAG] load_weight: post sweep: avail=372 MB, RSS=5614 MB, sweeping 574 regions
-[DIAG] load_weight: after post sweep RSS=5614 MB, avail=358 MB
-[DIAG] load_weight: 9241 MB written, RSS=5614 MB, avail=357 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: 216 MB written, RSS=399 MB, avail=5785 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: 472 MB written, RSS=656 MB, avail=5524 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3072 pool_inpage=3952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: 755 MB written, RSS=939 MB, avail=5246 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2052 pool_inpage=2932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=5231 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=4983 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1032 pool_inpage=1912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: 1321 MB written, RSS=1506 MB, avail=4705 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=12 pool_inpage=892), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: 1605 MB written, RSS=1789 MB, avail=4419 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3088 pool_inpage=3968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=4135 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2068 pool_inpage=2948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: post sweep: avail=3850 MB, RSS=2355 MB, sweeping 122 regions
+[DIAG] load_weight: after post sweep RSS=2355 MB, avail=3850 MB
+[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=3850 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: 2176 MB written, RSS=2360 MB, avail=3844 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1048 pool_inpage=1928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: post sweep: avail=3565 MB, RSS=2639 MB, sweeping 142 regions
+[DIAG] load_weight: after post sweep RSS=2639 MB, avail=3557 MB
+[DIAG] load_weight: 2455 MB written, RSS=2639 MB, avail=3557 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=28 pool_inpage=908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: post sweep: avail=3268 MB, RSS=2922 MB, sweeping 162 regions
+[DIAG] load_weight: after post sweep RSS=2922 MB, avail=3267 MB
+[DIAG] load_weight: 2738 MB written, RSS=2922 MB, avail=3267 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3104 pool_inpage=3984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: post sweep: avail=3042 MB, RSS=3205 MB, sweeping 182 regions
+[DIAG] load_weight: after post sweep RSS=3205 MB, avail=3041 MB
+[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3041 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2084 pool_inpage=2964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: post sweep: avail=2878 MB, RSS=3489 MB, sweeping 202 regions
+[DIAG] load_weight: after post sweep RSS=3489 MB, avail=2878 MB
+[DIAG] load_weight: 3305 MB written, RSS=3489 MB, avail=2878 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1064 pool_inpage=1944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: 3332 MB written, RSS=3516 MB, avail=2851 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: post sweep: avail=2889 MB, RSS=3773 MB, sweeping 222 regions
+[DIAG] load_weight: after post sweep RSS=3773 MB, avail=2889 MB
+[DIAG] load_weight: 3588 MB written, RSS=3773 MB, avail=2889 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=44 pool_inpage=924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: post sweep: avail=2865 MB, RSS=4056 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4056 MB, avail=2895 MB
+[DIAG] load_weight: 3871 MB written, RSS=4056 MB, avail=2895 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3120 pool_inpage=4000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: post sweep: avail=2682 MB, RSS=4339 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4339 MB, avail=2686 MB
+[DIAG] load_weight: 4155 MB written, RSS=4339 MB, avail=2686 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2100 pool_inpage=2980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: post sweep: avail=2559 MB, RSS=4622 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2558 MB
+[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2558 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1080 pool_inpage=1960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: post sweep: avail=2465 MB, RSS=4905 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2465 MB
+[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2465 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=60 pool_inpage=940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: 4738 MB written, RSS=4921 MB, avail=2449 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: post sweep: avail=2185 MB, RSS=5188 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5188 MB, avail=2185 MB
+[DIAG] load_weight: 5004 MB written, RSS=5188 MB, avail=2185 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=880), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1088 pool_inpage=1968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: post sweep: avail=1900 MB, RSS=5467 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1900 MB
+[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1900 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2116 pool_inpage=2996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: post sweep: avail=1632 MB, RSS=5749 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5749 MB, avail=1632 MB
+[DIAG] load_weight: 5569 MB written, RSS=5749 MB, avail=1632 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3144 pool_inpage=4024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: post sweep: avail=1469 MB, RSS=6033 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6033 MB, avail=1469 MB
+[DIAG] load_weight: 5851 MB written, RSS=6033 MB, avail=1469 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=76 pool_inpage=956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: post sweep: avail=1525 MB, RSS=6315 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6315 MB, avail=1526 MB
+[DIAG] load_weight: 6134 MB written, RSS=6315 MB, avail=1526 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1104 pool_inpage=1984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1506 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: post sweep: avail=1418 MB, RSS=6495 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6247 MB, avail=1413 MB
+[DIAG] load_weight: 6416 MB written, RSS=6247 MB, avail=1413 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2132 pool_inpage=3012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: post sweep: avail=1161 MB, RSS=6413 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6413 MB, avail=1162 MB
+[DIAG] load_weight: 6699 MB written, RSS=6413 MB, avail=1162 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3160 pool_inpage=4040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: post sweep: avail=981 MB, RSS=6578 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=6501 MB, avail=986 MB
+[DIAG] load_weight: 6981 MB written, RSS=6501 MB, avail=986 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=92 pool_inpage=972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: post sweep: avail=841 MB, RSS=6689 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=6689 MB, avail=841 MB
+[DIAG] load_weight: 7263 MB written, RSS=6689 MB, avail=841 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1120 pool_inpage=2000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: post sweep: avail=794 MB, RSS=6528 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=6528 MB, avail=793 MB
+[DIAG] load_weight: 7546 MB written, RSS=6528 MB, avail=793 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2148 pool_inpage=3028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: 7554 MB written, RSS=6536 MB, avail=787 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: post sweep: avail=635 MB, RSS=6792 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=6704 MB, avail=620 MB
+[DIAG] load_weight: 7828 MB written, RSS=6704 MB, avail=620 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3176 pool_inpage=4056), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: post sweep: avail=569 MB, RSS=6073 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=5748 MB, avail=588 MB
+[DIAG] load_weight: 8111 MB written, RSS=5748 MB, avail=588 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=108 pool_inpage=988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: post sweep: avail=418 MB, RSS=5405 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5402 MB, avail=434 MB
+[DIAG] load_weight: 8393 MB written, RSS=5402 MB, avail=434 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1136 pool_inpage=2016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: post sweep: avail=364 MB, RSS=5620 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5620 MB, avail=363 MB
+[DIAG] load_weight: 8676 MB written, RSS=5620 MB, avail=363 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2164 pool_inpage=3044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: post sweep: avail=359 MB, RSS=5674 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5673 MB, avail=359 MB
+[DIAG] load_weight: 8958 MB written, RSS=5673 MB, avail=358 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: 8960 MB written, RSS=5675 MB, avail=357 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3192 pool_inpage=4072), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: post sweep: avail=416 MB, RSS=5614 MB, sweeping 574 regions
+[DIAG] load_weight: after post sweep RSS=5611 MB, avail=426 MB
+[DIAG] load_weight: 9241 MB written, RSS=5611 MB, avail=426 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2172 pool_inpage=3052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2172 pool_inpage=3052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2172 pool_inpage=3052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=124 pool_inpage=1004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2176 pool_inpage=3056), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2176 pool_inpage=3056), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2176 pool_inpage=3056), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=128 pool_inpage=1008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2176 pool_inpage=3056), falling back to pread
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git add .
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
+
