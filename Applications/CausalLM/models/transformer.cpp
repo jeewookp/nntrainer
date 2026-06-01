@@ -363,24 +363,29 @@ void Transformer::load_weight(const std::string &weight_path) {
             throw std::runtime_error(
               "Weight '" + ctx.getWeightName(i) + "' exceeds file size");
 
-          // PRE-PREAD backpressure: when system memory is tight, wait before
-          // committing new physical pages via pread.
-          // With NNTRAINER_SVM_FINE_GRAIN=1: MADV_PAGEOUT truly evicts pages
-          // to zRAM (no GPU DMA pin), so avail stays high.  The loop below is
-          // a safety net for the case where zRAM fills up.
-          // With coarse-grain SVM: MADV_PAGEOUT cannot free pages (GPU DMA
-          // holds them), so we rely on Android LMKD killing background
-          // processes during the sleep to raise MemAvailable.
+          // PRE-PREAD backpressure: when system memory is critically low, wait.
+          // With NNTRAINER_WEIGHT_MMAP=1 (mmap pool), MADV_PAGEOUT genuinely
+          // evicts pages to zRAM, so avail recovers after each sweep.  The
+          // threshold is kept low (128 MB) so loading is not stalled when avail
+          // hovers in the 300–400 MB range (zRAM near capacity but still usable).
+          // With coarse-grain SVM the threshold was 512 MB but that caused the
+          // loop to spin for 20 s doing nothing useful on Adreno 830 devices.
           {
+            static const bool s_weight_mmap =
+              std::getenv("NNTRAINER_WEIGHT_MMAP") != nullptr;
+            // Lower threshold when pages are evictable (mmap); keep 512 MB for
+            // legacy SVM path where MADV_PAGEOUT has no effect.
+            const size_t bp_threshold_kb =
+              s_weight_mmap ? 128UL * 1024 : 512UL * 1024;
             size_t avail_kb = read_mem_available_kb();
-            if (avail_kb < 1UL * 1024 * 1024) { // system < 1 GB free
-              for (int _bp = 0; _bp < 10 && avail_kb < 512UL * 1024; ++_bp) {
+            if (avail_kb < bp_threshold_kb) {
+              for (int _bp = 0; _bp < 5 && avail_kb < bp_threshold_kb; ++_bp) {
                 std::fprintf(stderr,
                              "[DIAG] load_weight: backpressure avail=%zu MB "
-                             "(retry %d/10)\n",
-                             avail_kb / 1024, _bp + 1);
+                             "(retry %d/5, threshold=%zu MB)\n",
+                             avail_kb / 1024, _bp + 1, bp_threshold_kb / 1024);
                 std::fflush(stderr);
-                ::usleep(2000000); // 2 s — let LMKD/zRAM reclaim
+                ::usleep(1000000); // 1 s — let LMKD/zRAM reclaim
                 avail_kb = read_mem_available_kb();
               }
             }
