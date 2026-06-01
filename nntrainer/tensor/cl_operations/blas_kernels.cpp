@@ -6772,7 +6772,8 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       M == 0 || T == 0 || num_heads_Q == 0 || gqa_size == 0 ||
       (num_heads_Q % gqa_size) != 0)
     return;
-  if (head_dim != 128) return;
+  // Allow head_dim multiples of 64 up to 512; kernels compiled via -DHD=.
+  if (head_dim % 64 != 0 || head_dim == 0 || head_dim > 512) return;
   auto *blas_cc =
     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
   if (!blas_cc) return;
@@ -6794,15 +6795,39 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   static ClContext::SharedPtrClKernel s_kern;
   static ClContext::SharedPtrClKernel s_kern_decode;
   static ClContext::SharedPtrClKernel s_kern_decode_v2;
-  if (!s_kern) {
-    // -cl-std=CL2.0 override matches the ClContext init registration so
-    // ocl_kernel_map dedupes on (name + options).  Required for
-    // work_group_reduce_add.
-    s_kern = blas_cc->registerClKernel(
-      attention_fused_fp16_kernel, "attention_fused_fp16",
-      "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  // Per-HD kernel variant caches for head_dim != 128.
+  // registerClKernel dedupes on (name + options) so -DHD=256 produces a
+  // separately compiled binary with the correct compile-time HD constant.
+  static std::unordered_map<unsigned int, ClContext::SharedPtrClKernel> s_kern_hd;
+  static std::unordered_map<unsigned int, ClContext::SharedPtrClKernel> s_kern_v3_hd;
+  static std::unordered_map<unsigned int, ClContext::SharedPtrClKernel> s_kern_v9_hd;
+
+  // Helper: build options string for a given head_dim.
+  auto hd_opts = [](unsigned int hd) -> std::string {
+    const unsigned dpt = hd / 64u;
+    return std::string("@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true"
+                       " -cl-std=CL2.0 -DHD=") +
+           std::to_string(hd) + " -DDPT=" + std::to_string(dpt);
+  };
+
+  if (head_dim == 128u) {
+    if (!s_kern) {
+      // -cl-std=CL2.0 override matches the ClContext init registration so
+      // ocl_kernel_map dedupes on (name + options).  Required for
+      // work_group_reduce_add.
+      s_kern = blas_cc->registerClKernel(
+        attention_fused_fp16_kernel, "attention_fused_fp16",
+        "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+    }
+    if (!s_kern) return;
+  } else {
+    // Non-128 head_dim: register/lookup per-HD compiled variant.
+    if (!s_kern_hd.count(head_dim)) {
+      s_kern_hd[head_dim] = blas_cc->registerClKernel(
+        attention_fused_fp16_kernel, "attention_fused_fp16", hd_opts(head_dim));
+    }
+    if (!s_kern_hd[head_dim]) return;
   }
-  if (!s_kern) return;
   if (s_attn_decode_specialized && !s_kern_decode) {
     s_kern_decode = blas_cc->registerClKernel(
       attention_fused_fp16_decode_kernel, "attention_fused_fp16_decode",
@@ -6825,6 +6850,11 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       attention_fused_fp16_decode_v3_kernel,
       "attention_fused_fp16_decode_v3",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
+  }
+  if (s_attn_decode_v3 && head_dim != 128u && !s_kern_v3_hd.count(head_dim)) {
+    s_kern_v3_hd[head_dim] = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v3_kernel,
+      "attention_fused_fp16_decode_v3", hd_opts(head_dim));
   }
   // v3 image2d output: writes directly to image2d instead of SVM,
   // eliminating the svm_to_image2d_publish step in MHA exit (~47ms).
@@ -6922,6 +6952,11 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
       "attention_fused_fp16_decode_v9",
       "@@OVERRIDE_DEFAULT@@-qcom-accelerate-16-bit=true -cl-std=CL2.0");
   }
+  if (s_attn_decode_v9 && head_dim != 128u && !s_kern_v9_hd.count(head_dim)) {
+    s_kern_v9_hd[head_dim] = blas_cc->registerClKernel(
+      attention_fused_fp16_decode_v9_kernel,
+      "attention_fused_fp16_decode_v9", hd_opts(head_dim));
+  }
 
   const bool use_decode_v9 =
     (s_attn_decode_v9 && M == 1u && s_kern_decode_v9);
@@ -6990,18 +7025,28 @@ void attention_fused_fp16_cl(void *q_svm, void *k_cache_svm,
   }
   const bool do_v3_image2d = use_v3_image2d && v3_out_img;
 
+  // For non-128 head_dim, substitute per-HD compiled variants where available.
+  auto hd_or = [&](const ClContext::SharedPtrClKernel &base,
+                   const std::unordered_map<unsigned int, ClContext::SharedPtrClKernel> &by_hd)
+      -> ClContext::SharedPtrClKernel {
+    if (head_dim == 128u) return base;
+    auto it = by_hd.find(head_dim);
+    return (it != by_hd.end() && it->second) ? it->second : nullptr;
+  };
+
   ClContext::SharedPtrClKernel kern_to_use =
-    use_decode_v9   ? s_kern_decode_v9
+    use_decode_v9   ? hd_or(s_kern_decode_v9, s_kern_v9_hd)
     : use_decode_v8   ? s_kern_decode_v8
     : use_decode_v7   ? s_kern_decode_v7
     : use_decode_v6   ? s_kern_decode_v6
     : use_decode_v5   ? s_kern_decode_v5
     : do_v3_image2d   ? s_kern_decode_v3_image2d
-    : use_decode_v3   ? s_kern_decode_v3
+    : use_decode_v3   ? hd_or(s_kern_decode_v3, s_kern_v3_hd)
     : use_decode_gqa  ? s_kern_decode_gqa
     : use_decode_v2   ? s_kern_decode_v2
     : use_decode_kern ? s_kern_decode
-                      : s_kern;
+                      : hd_or(s_kern, s_kern_hd);
+  if (!kern_to_use) return;  // no compiled variant for this head_dim
 
   // Commit upstream CPU writes before the GPU reads.
   // Skip when in pure-GPU-pipeline mode (NNTRAINER_RoPE_GPU=1):
@@ -7167,7 +7212,8 @@ bool rope_decode_fp16_qk_cl(void *q_in, void *q_out,
                               unsigned int head_dim,
                               unsigned int position, float theta_base) {
   if (!q_in || !q_out || !k_in || !kc_out ||
-      num_heads_Q == 0 || num_heads_K == 0 || head_dim != 128u ||
+      num_heads_Q == 0 || num_heads_K == 0 ||
+      head_dim % 64 != 0 || head_dim == 0 || head_dim > 512 ||
       theta_base <= 0.0f)
     return false;
 
@@ -7214,7 +7260,8 @@ bool rope_prefill_fp16_qk_cl(void *q_in, void *q_out,
                                unsigned int M, unsigned int from,
                                float theta_base) {
   if (!q_in || !q_out || !k_in || !kc_out ||
-      num_heads_Q == 0 || num_heads_K == 0 || head_dim != 128u ||
+      num_heads_Q == 0 || num_heads_K == 0 ||
+      head_dim % 64 != 0 || head_dim == 0 || head_dim > 512 ||
       M == 0 || theta_base <= 0.0f)
     return false;
 

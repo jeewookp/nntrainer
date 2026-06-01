@@ -17,7 +17,6 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-__attribute__((reqd_work_group_size(64, 1, 1)))
 __kernel void rope_prefill_fp16_qk(
     __global const half *q_in,   __global half *q_out,
     __global const half *k_in,   __global half *kc_out,

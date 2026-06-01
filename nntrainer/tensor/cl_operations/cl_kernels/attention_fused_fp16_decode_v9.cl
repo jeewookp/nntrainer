@@ -28,9 +28,15 @@
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 #pragma OPENCL EXTENSION cl_qcom_reqd_sub_group_size : enable
 
+#ifndef HD
 #define HD              128
+#endif
+#ifndef WG
 #define WG              64
-#define DPT             (HD / WG)   // 2
+#endif
+#ifndef DPT
+#define DPT             (HD / WG)
+#endif
 #define KK_BLOCK        4
 #define PREFETCH_AHEAD  2
 

@@ -974,11 +974,13 @@ void MHACoreLayer::one_batch_incremental_forwarding(
                       b_cache_value_step.getMemoryData()->isSVM();
   const bool fp16_q =
     query_step.getDataType() == ml::train::TensorDim::DataType::FP16;
+  // Allow head_dim multiples of 64 up to 512 (covers 128, 256, 512).
+  const bool rope_hd_ok = (head_dim % 64 == 0) && (head_dim <= 512);
   const bool rope_gpu_eligible =
-    s_rope_gpu && profile_decode && fp16_q && head_dim == 128 &&
+    s_rope_gpu && profile_decode && fp16_q && rope_hd_ok &&
     q_svm && k_svm && v_svm && kc_svm && vc_svm;
   const bool rope_prefill_eligible =
-    s_rope_gpu && profile_substage && fp16_q && head_dim == 128 &&
+    s_rope_gpu && profile_substage && fp16_q && rope_hd_ok &&
     q_svm && k_svm && v_svm && kc_svm && vc_svm;
   static std::atomic<int> s_rope_gpu_diag{0};
   if (s_rope_gpu_diag.fetch_add(1, std::memory_order_relaxed) == 0) {
@@ -1133,7 +1135,7 @@ void MHACoreLayer::one_batch_incremental_forwarding(
       attention_output_step.getMemoryData() &&
       attention_output_step.getMemoryData()->isSVM() &&
       query_step.getDataType() == ml::train::TensorDim::DataType::FP16 &&
-      head_dim == 128 &&
+      (head_dim % 64 == 0) && (head_dim <= 512) &&
       (num_heads_Q % gqa_size) == 0) {
     const uint64_t t_fused0 = mha_now_ns();
     nntrainer::attention_fused_fp16_cl(

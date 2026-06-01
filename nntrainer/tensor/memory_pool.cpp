@@ -181,39 +181,20 @@ void MemoryPool::allocate() {
 #else
 
 #if defined(ENABLE_OPENCL) && ENABLE_OPENCL == 1
-  // When NNTRAINER_WEIGHT_MMAP=1 and this pool is large (likely a weight
-  // pool), allocate via anonymous mmap instead of SVM. mmap pages are
-  // evictable (zRAM-swappable) whereas Adreno SVM pages are GPU-pinned via
-  // IOMMU and cannot be evicted by MADV_PAGEOUT or LMKD.
-  // Threshold: 256 MB — covers Gemma4 E2B weight pool (~10.6 GB) while
-  // leaving activation pools (typically < 512 MB) as SVM.
-  static const bool s_weight_mmap =
-    std::getenv("NNTRAINER_WEIGHT_MMAP") != nullptr;
-  if (s_weight_mmap && pool_size >= (256UL * 1024 * 1024)) {
-    void *mptr = ::mmap(nullptr, pool_size, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (mptr != MAP_FAILED) {
-      mem_pool = mptr;
-      mmap_allocation = true;
-      // Register range so blas_kernels can detect mmap-backed pointers.
-      {
-        std::lock_guard<std::mutex> lk(s_mmap_ranges_mutex);
-        s_mmap_ranges.push_back({reinterpret_cast<uintptr_t>(mptr),
-                                  reinterpret_cast<uintptr_t>(mptr) + pool_size});
-      }
-      ml_logi("MemoryPool::allocate: pool_size=%zu MB via anonymous mmap "
-              "(evictable, LiteRT-style)", pool_size / 1024 / 1024);
-    }
-  }
-
-  if (mem_pool == nullptr) {
+  // Weight pool stays SVM (clSVMAlloc) so GPU kernels can use
+  // clSetKernelSVMArg directly.  MAP_FIXED in transformer.cpp overlays
+  // file-backed pages on top of the SVM VAs for RSS savings; Adreno 830
+  // fine_buf SVM shares CPU/GPU page tables, so the GPU IOMMU sees the
+  // new physical pages automatically.
+  {
     auto *cl_context =
       static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
     mem_pool = cl_context->context_inst_.createSVMRegion(pool_size);
 
-    // If SVM allocation fails, use calloc()
     if (mem_pool != nullptr) {
       svm_allocation = true;
+      ml_logi("MemoryPool::allocate: pool_size=%zu MB via clSVMAlloc",
+              pool_size / 1024 / 1024);
     }
   }
 #endif
