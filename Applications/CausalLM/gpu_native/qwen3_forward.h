@@ -43,6 +43,14 @@ struct Qwen3Config {
   unsigned int max_seq_len;       // 20480 (from nntr_config)
   float rms_norm_eps;             // 1e-6
   float rope_theta;               // 1e6
+  // --- Gemma2 generalization (#63). Default 0/values => Qwen3 behavior. ---
+  bool is_gemma2 = false;         // sandwich norm (4/layer), GeGLU, no q/k-norm,
+                                  //   embed*sqrt(H), logit/score soft-cap
+  float embed_scale = 0.0f;       // >0 => multiply embedding by this (sqrt(H));
+                                  //   0 => no scale (Qwen3)
+  float attn_logit_softcap = 0.0f;  // >0 => cap QK scores: c*tanh(s/c) (Gemma2 50)
+  float final_logit_softcap = 0.0f; // >0 => cap lm_head logits (Gemma2 30)
+  unsigned int sliding_window = 0;  // 0 => full causal (Gemma2 4096; no-op at M<=window)
 };
 
 /// Per-layer weight handles (SVM cl_mem). All allocated once at init,
@@ -393,8 +401,14 @@ private:
     void *attn_norm_gamma_svm_fp16 = nullptr;// fp16 [hidden] (#46m)
     void *q_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
     void *k_norm_gamma_svm_fp16 = nullptr;   // fp16 [head_dim]
-    void *ffn_norm_gamma_svm = nullptr;      // fp32 [hidden]
+    void *ffn_norm_gamma_svm = nullptr;      // fp32 [hidden] (Gemma2: pre_ffn)
     void *ffn_norm_gamma_svm_fp16 = nullptr; // fp16 [hidden] (#46m)
+    // #63 Gemma2 sandwich norm: post-attention + post-FFN RMSNorm gammas,
+    // applied to the SUBLAYER OUTPUT before the residual add. Unused on Qwen3.
+    void *post_attn_norm_gamma_svm = nullptr;      // fp32 [hidden]
+    void *post_attn_norm_gamma_svm_fp16 = nullptr; // fp16 [hidden]
+    void *post_ffn_norm_gamma_svm = nullptr;       // fp32 [hidden]
+    void *post_ffn_norm_gamma_svm_fp16 = nullptr;  // fp16 [hidden]
     V8cFcWeight wq, wk, wv, wo;
     V8cFcWeight ffn_up, ffn_gate, ffn_down;
     void *cache_k_svm = nullptr; // fp16 [max_seq_len_used * hKV * d]

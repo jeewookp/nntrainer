@@ -58,13 +58,39 @@ int main(int argc, char **argv) {
     const char *e = std::getenv("NNTR_MODEL_4B");
     return e && std::atoi(e) != 0;
   }();
-  if (model_4b) {
+  // #63: NNTR_MODEL_GEMMA2=1 selects Gemma2-2B (the ML Drift paper's model) —
+  // a plain transformer but with head_dim 256, sandwich norm, GeGLU, attn/final
+  // soft-cap, embed*sqrt(H), no q/k-norm. Proves gpu_native is model-agnostic.
+  const bool model_gemma2 = []() {
+    const char *e = std::getenv("NNTR_MODEL_GEMMA2");
+    return e && std::atoi(e) != 0;
+  }();
+  const char *model_name = "Qwen3-0.6B";
+  if (model_gemma2) {
+    cfg.hidden_size = 2304;
+    cfg.intermediate_size = 9216;
+    cfg.head_dim = 256;
+    cfg.num_heads_Q = 8;
+    cfg.num_heads_KV = 4;
+    cfg.num_layers = 26;
+    cfg.vocab_size = 256000;
+    cfg.rope_theta = 1e4f;            // Gemma2 sliding/default rope
+    cfg.is_gemma2 = true;
+    cfg.embed_scale = std::sqrt((float)cfg.hidden_size); // ~48.0
+    cfg.attn_logit_softcap = 50.0f;
+    cfg.final_logit_softcap = 30.0f;
+    cfg.sliding_window = 4096;        // no-op for prefill M<=1024
+    model_name = "Gemma2-2B";
+  } else if (model_4b) {
     cfg.hidden_size = 2560;
     cfg.intermediate_size = 9728;
     cfg.head_dim = 128;
     cfg.num_heads_Q = 32;
     cfg.num_heads_KV = 8;
     cfg.num_layers = 36;
+    cfg.vocab_size = 151936;
+    cfg.rope_theta = 1e6f;
+    model_name = "Qwen3-4B";
   } else {
     cfg.hidden_size = 1024;
     cfg.intermediate_size = 3072;
@@ -72,14 +98,16 @@ int main(int argc, char **argv) {
     cfg.num_heads_Q = 16;
     cfg.num_heads_KV = 8;
     cfg.num_layers = 28;
+    cfg.vocab_size = 151936;
+    cfg.rope_theta = 1e6f;
   }
-  cfg.vocab_size = 151936;
   cfg.max_seq_len = 20480;
   cfg.rms_norm_eps = 1e-6f;
-  cfg.rope_theta = 1e6f;
-  std::fprintf(stderr, "[main] model=%s hidden=%u L=%u hQ=%u\n",
-               model_4b ? "Qwen3-4B" : "Qwen3-0.6B", cfg.hidden_size,
-               cfg.num_layers, cfg.num_heads_Q);
+  std::fprintf(stderr,
+               "[main] model=%s hidden=%u L=%u hQ=%u hKV=%u hd=%u V=%u gemma2=%d\n",
+               model_name, cfg.hidden_size, cfg.num_layers, cfg.num_heads_Q,
+               cfg.num_heads_KV, cfg.head_dim, cfg.vocab_size,
+               (int)cfg.is_gemma2);
 
   causallm_gpu::Qwen3Forward fwd;
   if (!fwd.init(cfg, weight_path)) {
@@ -132,7 +160,9 @@ int main(int argc, char **argv) {
     return 60;
   }
 
-  constexpr unsigned int BOS_TOKEN = 151643;
+  // Gemma2 BOS = 2 (<bos>); Qwen3 uses 151643. Model-aware so the seed
+  // token is in-distribution for the loaded model (#63).
+  const unsigned int BOS_TOKEN = cfg.is_gemma2 ? 2u : 151643u;
   auto *cl = static_cast<nntrainer::ClContext *>(
     nntrainer::Engine::Global().getRegisteredContext("gpu"));
   cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();

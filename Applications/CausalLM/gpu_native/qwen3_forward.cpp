@@ -212,6 +212,25 @@ __kernel void fused_swiglu_h2f_fp32(__global const half *gate,
 }
 )CL";
 
+// #63 Gemma2 GeGLU: out[i] = gelu_tanh(gate[i]) * up[i], where
+//   gelu_tanh(x) = 0.5*x*(1 + tanh(sqrt(2/pi)*(x + 0.044715*x^3))).
+// Same fp16-in / fp32-out contract as fused_swiglu_h2f_fp32.
+static const std::string kFusedGegluH2fFp32Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__kernel void fused_geglu_h2f_fp32(__global const half *gate,
+                                   __global const half *up,
+                                   __global       float *out,
+                                   const int n) {
+  int i = get_global_id(0);
+  if (i >= n) return;
+  float g = (float)gate[i];
+  float u = (float)up[i];
+  const float k = 0.7978845608028654f; // sqrt(2/pi)
+  float t = tanh(k * (g + 0.044715f * g * g * g));
+  out[i] = (0.5f * g * (1.0f + t)) * u;
+}
+)CL";
+
 static const std::string kSwigluFp32Kernel = R"CL(
 __kernel void swiglu_fp32(__global const float *gate,
                           __global const float *up,
@@ -330,6 +349,14 @@ Qwen3Forward::~Qwen3Forward() {
       clSVMFree(cl_ctx_, lw.ffn_norm_gamma_svm);
     if (lw.ffn_norm_gamma_svm_fp16 && cl_ctx_)
       clSVMFree(cl_ctx_, lw.ffn_norm_gamma_svm_fp16);
+    if (lw.post_attn_norm_gamma_svm && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.post_attn_norm_gamma_svm);
+    if (lw.post_attn_norm_gamma_svm_fp16 && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.post_attn_norm_gamma_svm_fp16);
+    if (lw.post_ffn_norm_gamma_svm && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.post_ffn_norm_gamma_svm);
+    if (lw.post_ffn_norm_gamma_svm_fp16 && cl_ctx_)
+      clSVMFree(cl_ctx_, lw.post_ffn_norm_gamma_svm_fp16);
     if (lw.cache_k_svm && cl_ctx_)
       clSVMFree(cl_ctx_, lw.cache_k_svm);
     if (lw.cache_v_svm && cl_ctx_)
@@ -2260,6 +2287,46 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
 
   size_t off = *offset_inout;
 
+  if (cfg_.is_gemma2) {
+    // #63 Gemma2 layout: input_ln | q | k | v | o | post_attn_ln | pre_ffn_ln |
+    // gate | up | down | post_ffn_ln. NO q/k-norm; 4 sandwich norms (all [H]).
+    // (1+w) is already baked into the gammas by the converter.
+    auto load_hnorm = [&](void **f32, void **f16, const char *nm) -> bool {
+      const float *g = reinterpret_cast<const float *>(weight_mmap_ + off);
+      if (!load_norm_to_svm_fp32(cl_ctx_, cl_q_, g, K_h, f32, nm)) return false;
+      if (!load_hidden_norm_to_svm_fp16(cl_ctx_, cl_q_, g, K_h, f16, nm))
+        return false;
+      off += norm_bytes;
+      return true;
+    };
+    if (!load_hnorm(&lw.attn_norm_gamma_svm, &lw.attn_norm_gamma_svm_fp16,
+                    "input_ln")) return false;
+    if (!load_qint4_weight_at(off, K_h, N_q, &lw.wq, "wq")) return false;
+    off += fc_bytes(off, K_h, N_q);
+    if (!load_qint4_weight_at(off, K_h, N_kv, &lw.wk, "wk")) return false;
+    off += fc_bytes(off, K_h, N_kv);
+    if (!load_qint4_weight_at(off, K_h, N_kv, &lw.wv, "wv")) return false;
+    off += fc_bytes(off, K_h, N_kv);
+    if (!load_qint4_weight_at(off, N_q, K_h, &lw.wo, "wo")) return false;
+    off += fc_bytes(off, N_q, K_h);
+    if (!load_hnorm(&lw.post_attn_norm_gamma_svm,
+                    &lw.post_attn_norm_gamma_svm_fp16, "post_attn_ln"))
+      return false;
+    if (!load_hnorm(&lw.ffn_norm_gamma_svm, &lw.ffn_norm_gamma_svm_fp16,
+                    "pre_ffn_ln")) return false;
+    if (!load_qint4_weight_at(off, K_h, I, &lw.ffn_up, "ffn_up")) return false;
+    off += fc_bytes(off, K_h, I);
+    if (!load_qint4_weight_at(off, K_h, I, &lw.ffn_gate, "ffn_gate"))
+      return false;
+    off += fc_bytes(off, K_h, I);
+    if (!load_qint4_weight_at(off, I, K_h, &lw.ffn_down, "ffn_down"))
+      return false;
+    off += fc_bytes(off, I, K_h);
+    if (!load_hnorm(&lw.post_ffn_norm_gamma_svm,
+                    &lw.post_ffn_norm_gamma_svm_fp16, "post_ffn_ln"))
+      return false;
+  } else {
+
   // attn_norm gamma -> SVM fp32 AND fp16 (#46m)
   if (!load_norm_to_svm_fp32(
         cl_ctx_, cl_q_,
@@ -2322,6 +2389,7 @@ bool Qwen3Forward::load_layer(unsigned int layer_id, size_t *offset_inout,
   if (!load_qint4_weight_at(off, I, K_h, &lw.ffn_down, "ffn_down"))
     return false;
   off += fc_bytes(off, I, K_h);
+  } // end else (Qwen3 layout)
 
   // K, V cache SVM, sized for max_seq_len_used.
   const size_t cache_bytes =
@@ -3147,11 +3215,22 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   kgemm(qkv_act_arg, wk_arg, scratch_.qkv_act_scale, lw.wk.scale_buf,
         scratch_.qkv_act_rs, scratch_.qkv_act_zp, lw.wk.row_sum_w_int4,
         scratch_.y_k, M_pad, N_kv, K_h);
-  // #46l: when OHWI_IMG path is active, wv writes outputs directly into
-  // cache_v_buf_ohwi at OHWI-reversed positions (paper §3.6 reorder
-  // fusion). Eliminates the separate v_scatter_ohwi_t pass below.
-  // Fallback: original concat write to scratch_.y_v.
-  if (use_ohwi_img && lw.cache_v_buf_ohwi != nullptr) {
+  // #46l tried: when OHWI_IMG active, wv writes directly into
+  // cache_v_buf_ohwi (gemm_int8_v8c_v_ohwi_cl), eliminating the separate
+  // v_scatter_ohwi_t pass. BUT the profiler showed this direct GEMM is ~7x
+  // SLOWER than the equivalent buffer GEMM (v_ohwi 6.8ms vs the same-shape
+  // k_proj ~1ms at M=1024) because it does strided stores into the
+  // TRANSPOSED [hKV,d,S] image layout. #65: default to the fast buffer GEMM
+  // -> scratch_.y_v, then a cheap v_scatter_ohwi_t pass (mirrors the K path,
+  // ~0.1ms). NNTR_V_DIRECT=1 restores the old fused direct write for A/B
+  // (must produce token-identical output, only slower).
+  static const bool v_direct = []() {
+    const char *e = std::getenv("NNTR_V_DIRECT");
+    return e && std::atoi(e) != 0;
+  }();
+  const bool v_gpu_scatter =
+    use_ohwi_img && lw.cache_v_buf_ohwi != nullptr && !v_direct;
+  if (use_ohwi_img && lw.cache_v_buf_ohwi != nullptr && v_direct) {
     auto *vohwi = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_v_ohwi_cl
                                 : &nntrainer::gemm_int8_v8c_v_ohwi_cl;
     vohwi(qkv_act_arg, wv_arg, scratch_.qkv_act_scale,
@@ -3159,6 +3238,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
           lw.wv.row_sum_w_int4, lw.cache_v_buf_ohwi, M_pad, N_kv, K_h,
           cfg_.head_dim, kv_cache_max_seq_len_, position, /*M_real=*/M);
   } else {
+    // Fast path (default) + non-image fallback: concat write to scratch_.y_v.
     auto *vgemm = lw.wv.is_int8 ? &nntrainer::gemm_int8_int8_v8c_cl
                                 : &nntrainer::gemm_int8_v8c_cl;
     vgemm(qkv_act_arg, wv_arg, scratch_.qkv_act_scale,
@@ -3198,6 +3278,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
   };
   stage_begin();
+  // #63 Gemma2 has NO q/k-norm (RoPE applies to raw projected Q/K). Skip.
+  if (!cfg_.is_gemma2) {
   disp_qk_norm(scratch_.y_q, lw.q_norm_gamma_svm_fp16, cfg_.num_heads_Q);
   disp_qk_norm(scratch_.y_k, lw.k_norm_gamma_svm_fp16, cfg_.num_heads_KV);
   // Intel NEO (OOO queue): q_norm/k_norm write y_q/y_k in place, and the
@@ -3212,6 +3294,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // step~13 inf/NaN. bar() is pure ordering, no math; no-op on Adreno
   // (gated by NNTR_V8C_BUF) which serializes same-buffer commands in practice.
   bar();  // q_norm/k_norm(y_q,y_k) -> RoPE in-place reads
+  } // end if (!is_gemma2): q/k-norm
 
   // RoPE on Q/K via batched LUT kernel (#45b / Path 4). Single
   // dispatch covers all M tokens × num_heads × half_d, looking up
@@ -3324,6 +3407,44 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                           lws.data(), 0, nullptr, nullptr);
   }
 
+  if (v_gpu_scatter) {
+    // #65 V scatter: scratch_.y_v [t,hKV,d] -> cache_v_buf_ohwi TRANSPOSED
+    // [hKV,d,S] layout (same bytes the old direct v_ohwi GEMM produced, just
+    // far faster: fast buffer GEMM above + this cheap scatter). dst innermost
+    // index is (position+t), so coalesce the write on the t (gws_x) axis.
+    auto kp = cl->registerClKernel(kVScatterOhwiTKernel, "v_scatter_ohwi_t");
+    if (!kp) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] layer %u: v_scatter_ohwi_t register failed\n",
+                   layer_id);
+      return false;
+    }
+    cl_mem src_mem = scratch_.y_v;
+    cl_mem dst_mem = lw.cache_v_buf_ohwi;
+    int Mi = (int)M;
+    int hKVi = (int)cfg_.num_heads_KV;
+    int di = (int)cfg_.head_dim;
+    int max_Si = (int)max_S;
+    int pos_i = (int)position;
+    if (!kp->SetKernelArguments(0, &src_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(1, &dst_mem, sizeof(cl_mem)) ||
+        !kp->SetKernelArguments(2, &Mi, sizeof(int)) ||
+        !kp->SetKernelArguments(3, &hKVi, sizeof(int)) ||
+        !kp->SetKernelArguments(4, &di, sizeof(int)) ||
+        !kp->SetKernelArguments(5, &max_Si, sizeof(int)) ||
+        !kp->SetKernelArguments(6, &pos_i, sizeof(int))) {
+      return false;
+    }
+    constexpr size_t LWS_X = 64, LWS_Y = 1, LWS_Z = 1;
+    const size_t gws_x = ((size_t)Mi + LWS_X - 1) / LWS_X * LWS_X;
+    const size_t gws_y = (size_t)hKVi;
+    const size_t gws_z = (size_t)di;
+    std::array<size_t, 3> gws = {gws_x, gws_y, gws_z};
+    std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+
   if (!gpu_k_scatter || need_k_svm_after_scatter) {
     // CPU-side scatter path: writes cache_k_svm (and, in legacy NNTR_OHWI
     // _IMG-without-KIMG mode, also keeps SVM in sync for the SVM-K
@@ -3379,7 +3500,19 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   //     position + M (all rows just written are visible to attention).
   stage_begin();
   const size_t q_total_bytes = (size_t)M * N_q * sizeof(uint16_t);
-  {
+  // #66 enqueue-batching: the Q bridge moves the qkv-GEMM output y_q (cl_mem)
+  // into q_svm (SVM) that the attention kernel reads. The old path did a
+  // host map(CL_TRUE)+4MB memcpy+clFinish PER LAYER — a host stall that
+  // bubbles the GPU. Replace with a GPU copy that stays on the in-order
+  // queue: copy_svm_to_clmem_fp16 is just dst[i]=src[i], so bind src=y_q
+  // (cl_mem) + dst=q_svm (SVM). attention reads q_svm next on the same queue
+  // (coherent — the o_svm path already does kernel-write-SVM->kernel-read-SVM).
+  // NNTR_Q_HOST_BRIDGE=1 restores the old host path for A/B (token-identical).
+  static const bool q_host_bridge = []() {
+    const char *e = std::getenv("NNTR_Q_HOST_BRIDGE");
+    return e && std::atoi(e) != 0;
+  }();
+  if (q_host_bridge) {
     auto _h0 = NOW();  // [host-timing] Q SVM-upload bridge (BLOCKS host)
     cl_int e;
     void *p = clEnqueueMapBuffer(cl_q_, scratch_.y_q, CL_TRUE, CL_MAP_READ,
@@ -3391,6 +3524,22 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     clEnqueueUnmapMemObject(cl_q_, scratch_.y_q, p, 0, nullptr, nullptr);
     clFinish(cl_q_);
     timings_.host_q_ms += MS(NOW(), _h0);  // [host-timing] Q bridge
+  } else {
+    auto kp =
+      cl->registerClKernel(kCopySvmFp16Kernel, "copy_svm_to_clmem_fp16");
+    if (!kp) {
+      std::fprintf(stderr, "[qwen3-gpu] layer %u: Q copy register failed\n",
+                   layer_id);
+      return false;
+    }
+    int n = (int)((size_t)M * N_q);
+    kp->SetKernelArguments(0, &scratch_.y_q, sizeof(cl_mem));   // src cl_mem
+    kp->SetKernelSVMArguments(1, scratch_.q_svm);               // dst SVM
+    kp->SetKernelArguments(2, &n, sizeof(int));
+    std::array<size_t, 1> gws = {((size_t)n + 63) / 64 * 64};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
   }
   // Attention dispatch:
   //   NNTR_FLASH=1   → fused flash-attention single kernel (online softmax,
@@ -3458,7 +3607,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
         lw.cache_k_image_ohwi, lw.cache_v_image_ohwi,
         static_cast<uint16_t *>(scratch_.o_svm), M, position + M,
         cfg_.num_heads_Q, cfg_.num_heads_KV, cfg_.head_dim,
-        kv_cache_max_seq_len_, true);
+        kv_cache_max_seq_len_, true,
+        cfg_.attn_logit_softcap);  // #63 Gemma2 QK soft-cap (0 on Qwen3)
     } else {
       attn_ok = nntrainer::two_conv_attention_prefill_f16_ohwi_img_view_cl(
         static_cast<const uint16_t *>(scratch_.q_svm),
@@ -3520,6 +3670,27 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
         lw.wo.scale_buf, scratch_.wo_act_rs, scratch_.wo_act_zp,
         lw.wo.row_sum_w_int4, scratch_.wo_y_fp16, M_pad, K_h, N_q);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  // #63 Gemma2 sandwich norm: residual_1 = x + post_attention_layernorm(attn_out).
+  // Normalize wo_y in place (rmsnorm reads its own lanes before writing them, so
+  // in==out is safe per work-item). Gated; Qwen3 adds the raw attn_out.
+  if (cfg_.is_gemma2) {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                   "rmsnorm_cl_fp16_coop");
+    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+    int n_rows = (int)M_pad, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.wo_y_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem)); // in place
+    kp->SetKernelSVMArguments(2, lw.post_attn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(4, &n_rows, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    constexpr size_t RMSN_LWS = 64;
+    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {RMSN_LWS};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  }
   // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
   // accumulated in fp32 because the last layer's massive activations exceed
   // the fp16 max (65504) -> inf -> NaN cascade through ffn_norm.
@@ -3611,11 +3782,22 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // -> garbage prefill output for those rows. Computing the product in fp32
   // (h2f kernel) lets the per-row int8 quant absorb the large magnitude.
   {
-    auto kp =
-      cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
+    // #63 Gemma2 uses GeGLU (gelu_tanh) instead of SwiGLU (silu).
+    auto kp = cfg_.is_gemma2
+      ? cl->registerClKernel(kFusedGegluH2fFp32Kernel, "fused_geglu_h2f_fp32")
+      : cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
     int n = (int)(M * I);
-    kp->SetKernelArguments(0, &scratch_.gate_fp16, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.up_fp16, sizeof(cl_mem));
+    // #64 FFN gate/up de-swap. The loader uses an INVERTED naming: lw.ffn_up
+    // holds gate_proj weights and lw.ffn_gate holds up_proj weights (see
+    // load_layer + converter records h=gate_proj,i=up_proj). The GEMMs above
+    // therefore wrote gate_proj(x) into scratch_.up_fp16 and up_proj(x) into
+    // scratch_.gate_fp16. The kernel applies the activation to its arg0
+    // ("gate" param). (Geg/Swi)GLU must activate gate_proj, so arg0 MUST be
+    // scratch_.up_fp16 (=gate_proj output) and arg1 scratch_.gate_fp16
+    // (=up_proj output). Previously these were swapped -> act(up)*gate, which
+    // silently corrupted EVERY model's FFN (never-coherent C++ forward).
+    kp->SetKernelArguments(0, &scratch_.up_fp16, sizeof(cl_mem));    // gate_proj(x)
+    kp->SetKernelArguments(1, &scratch_.gate_fp16, sizeof(cl_mem));  // up_proj(x)
     kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem)); // fp32
     kp->SetKernelArguments(3, &n, sizeof(int));
     std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
@@ -3638,6 +3820,26 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  // #63 Gemma2 sandwich norm: out = residual_1 + post_feedforward_layernorm(ffn_out).
+  // Normalize dn_fp16 in place. Gated; Qwen3 adds the raw ffn_out.
+  if (cfg_.is_gemma2) {
+    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                   "rmsnorm_cl_fp16_coop");
+    uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+    int n_rows = (int)M_pad, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.dn_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem)); // in place
+    kp->SetKernelSVMArguments(2, lw.post_ffn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(4, &n_rows, sizeof(int));
+    kp->SetKernelArguments(5, &W, sizeof(int));
+    constexpr size_t RMSN_LWS = 64;
+    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {RMSN_LWS};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  }
   // #47j: end-of-layer boundary. residual_1 (FP32) + dn_fp16 → out_fp32.
   {
     auto kp =
@@ -3746,6 +3948,12 @@ cl_mem Qwen3Forward::embedding_lookup_to_fp32_clmem(unsigned int token_id) {
   std::vector<float> host_row(H);
   nntrainer::dequantize_row_q6_K(weight_mmap_ + row_off, host_row.data(),
                                  (int64_t)H);
+  // #63 Gemma2 scales the INPUT embedding by sqrt(hidden) (~48). The tied
+  // lm_head output projection is NOT scaled, so this is applied here only.
+  if (cfg_.embed_scale > 0.0f) {
+    const float s = cfg_.embed_scale;
+    for (unsigned int i = 0; i < H; ++i) host_row[i] *= s;
+  }
   std::fprintf(stderr,
                "[qwen3-gpu] embedding[%u] dequant first 8:", token_id);
   for (int i = 0; i < 8; ++i) std::fprintf(stderr, " %g", host_row[i]);
