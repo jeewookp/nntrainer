@@ -137,9 +137,12 @@ size_t OptimizedV1Planner::planLayout(
 
   /**
    * sort the memory requests with ascending order of start time first, and
-   * then end time
+   * then end time.
+   * Use stable_sort so that equal-key tensors (e.g. all MAX_LIFESPAN weights
+   * in inference mode) preserve their registration order, which matches the
+   * file layout and allows MAP_FIXED file-backed mmap alignment to hold.
    */
-  std::sort(requests.begin(), requests.end(),
+  std::stable_sort(requests.begin(), requests.end(),
             [](auto const &v1, auto const &v2) -> int {
               if (v1.start == v2.start)
                 return v1.end < v2.end;
