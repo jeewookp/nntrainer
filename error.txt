@@ -1,42 +1,36 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 1.27 KiB | 162.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   021e2cd0..940cca18  all_gpu    -> upstream/all_gpu
+Updating 021e2cd0..940cca18
+Fast-forward
+ nntrainer/tensor/optimized_v1_planner.cpp | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
 ──────────────────────
 [OK] Device: R3CY10WM83Y
 [OK] Model files found
 
 [Step 2/5] Build
 ──────────────────────
-[INFO] Source files changed, rebuilding Android binary...
-[INFO] Building Android binary...
-[arm64-v8a] Compile++      : causallm_core <= transformer.cpp
-In file included from ./../models/transformer.cpp:24:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/engine.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/opencl_buffer.h:17:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl.h:20:
-In file included from /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_platform.h:20:
-/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL/cl_version.h:22:9: warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
-#pragma message(                                                               \
-        ^
-1 warning generated.
-[arm64-v8a] SharedLibrary  : libcausallm_core.so
-make: Nothing to be done for 'causallm_core'.
-[arm64-v8a] Compile++      : nntrainer_causallm <= main.cpp
-In file included from ./../main.cpp:35:
-In file included from ./../models/gemma3/embedding_gemma.h:17:
-./../models/gemma3/gemma3_causallm.h:52:3: warning: 'createTransformerDecoderBlock' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-./../models/transformer.h:140:3: note: overridden virtual function is here
-  createTransformerDecoderBlock(const int layer_id, std::string input_name);
-  ^
-1 warning generated.
-[arm64-v8a] Executable     : nntrainer_causallm
-[INFO]   Copied nntrainer_causallm: obj/local → libs/
-[INFO]   Copied libcausallm_core.so: obj/local → libs/
-[OK] Android build done
+[OK] Android binary up to date
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[3/4] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
+[3/42] Generating symbol file nntrainer/libnntrainer.so.p/libnntrainer.so.symbols
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -47,13 +41,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.6 MB/s (50362824 bytes in 1.431s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 34.0 MB/s (50362824 bytes in 1.414s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.7 MB/s (11449640 bytes in 0.324s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.6 MB/s (11449640 bytes in 0.325s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 17.6 MB/s (129304 bytes in 0.007s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.8 MB/s (129304 bytes in 0.007s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.7 MB/s (4143264 bytes in 0.121s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 33.4 MB/s (4143264 bytes in 0.118s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -66,17 +60,17 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[DIAG] cgroup entry: 0::/system/uid_0/pid_17081
+[DIAG] cgroup entry: 0::/system/uid_0/pid_13302
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 372712 KB
+[DIAG] RSS before initialize: 372680 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[DIAG] RSS after initialize:  185716 KB
+[DIAG] RSS after initialize:  185336 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=4016), falling back to pread
-[DIAG] load_weight: 216 MB written, RSS=399 MB, avail=5785 MB
+[DIAG] load_weight: 216 MB written, RSS=399 MB, avail=6626 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
-[DIAG] load_weight: 472 MB written, RSS=656 MB, avail=5524 MB
+[DIAG] load_weight: 472 MB written, RSS=657 MB, avail=6368 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
@@ -97,7 +91,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
-[DIAG] load_weight: 755 MB written, RSS=939 MB, avail=5246 MB
+[DIAG] load_weight: 755 MB written, RSS=939 MB, avail=6086 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
@@ -114,12 +108,12 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
-[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=5231 MB
+[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=6068 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
-[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=4983 MB
+[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=5801 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
@@ -140,7 +134,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
-[DIAG] load_weight: 1321 MB written, RSS=1506 MB, avail=4705 MB
+[DIAG] load_weight: 1321 MB written, RSS=1505 MB, avail=5523 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
@@ -161,7 +155,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
-[DIAG] load_weight: 1605 MB written, RSS=1789 MB, avail=4419 MB
+[DIAG] load_weight: 1605 MB written, RSS=1789 MB, avail=5247 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
@@ -182,7 +176,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
-[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=4135 MB
+[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=4965 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
@@ -203,14 +197,12 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
-[DIAG] load_weight: post sweep: avail=3850 MB, RSS=2355 MB, sweeping 122 regions
-[DIAG] load_weight: after post sweep RSS=2355 MB, avail=3850 MB
-[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=3850 MB
+[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=4685 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
-[DIAG] load_weight: 2176 MB written, RSS=2360 MB, avail=3844 MB
+[DIAG] load_weight: 2176 MB written, RSS=2360 MB, avail=4681 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1048 pool_inpage=1928), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
@@ -227,9 +219,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
-[DIAG] load_weight: post sweep: avail=3565 MB, RSS=2639 MB, sweeping 142 regions
-[DIAG] load_weight: after post sweep RSS=2639 MB, avail=3557 MB
-[DIAG] load_weight: 2455 MB written, RSS=2639 MB, avail=3557 MB
+[DIAG] load_weight: 2455 MB written, RSS=2639 MB, avail=4396 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
@@ -250,9 +240,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
-[DIAG] load_weight: post sweep: avail=3268 MB, RSS=2922 MB, sweeping 162 regions
-[DIAG] load_weight: after post sweep RSS=2922 MB, avail=3267 MB
-[DIAG] load_weight: 2738 MB written, RSS=2922 MB, avail=3267 MB
+[DIAG] load_weight: 2738 MB written, RSS=2922 MB, avail=4128 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
@@ -271,11 +259,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: post sweep: avail=4094 MB, RSS=2949 MB, sweeping 180 regions
+[DIAG] load_weight: after post sweep RSS=2949 MB, avail=4095 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
-[DIAG] load_weight: post sweep: avail=3042 MB, RSS=3205 MB, sweeping 182 regions
-[DIAG] load_weight: after post sweep RSS=3205 MB, avail=3041 MB
-[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3041 MB
+[DIAG] load_weight: post sweep: avail=3836 MB, RSS=3205 MB, sweeping 182 regions
+[DIAG] load_weight: after post sweep RSS=3205 MB, avail=3836 MB
+[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3836 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
@@ -296,9 +286,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
-[DIAG] load_weight: post sweep: avail=2878 MB, RSS=3489 MB, sweeping 202 regions
-[DIAG] load_weight: after post sweep RSS=3489 MB, avail=2878 MB
-[DIAG] load_weight: 3305 MB written, RSS=3489 MB, avail=2878 MB
+[DIAG] load_weight: post sweep: avail=3551 MB, RSS=3489 MB, sweeping 202 regions
+[DIAG] load_weight: after post sweep RSS=3489 MB, avail=3551 MB
+[DIAG] load_weight: 3305 MB written, RSS=3489 MB, avail=3551 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
@@ -317,12 +307,12 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
-[DIAG] load_weight: 3332 MB written, RSS=3516 MB, avail=2851 MB
+[DIAG] load_weight: 3332 MB written, RSS=3516 MB, avail=3521 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
-[DIAG] load_weight: post sweep: avail=2889 MB, RSS=3773 MB, sweeping 222 regions
-[DIAG] load_weight: after post sweep RSS=3773 MB, avail=2889 MB
-[DIAG] load_weight: 3588 MB written, RSS=3773 MB, avail=2889 MB
+[DIAG] load_weight: post sweep: avail=3267 MB, RSS=3772 MB, sweeping 222 regions
+[DIAG] load_weight: after post sweep RSS=3772 MB, avail=3267 MB
+[DIAG] load_weight: 3588 MB written, RSS=3772 MB, avail=3267 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
@@ -343,9 +333,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
-[DIAG] load_weight: post sweep: avail=2865 MB, RSS=4056 MB, sweeping 242 regions
-[DIAG] load_weight: after post sweep RSS=4056 MB, avail=2895 MB
-[DIAG] load_weight: 3871 MB written, RSS=4056 MB, avail=2895 MB
+[DIAG] load_weight: post sweep: avail=2977 MB, RSS=4055 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4055 MB, avail=2976 MB
+[DIAG] load_weight: 3871 MB written, RSS=4055 MB, avail=2976 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
@@ -366,9 +356,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
-[DIAG] load_weight: post sweep: avail=2682 MB, RSS=4339 MB, sweeping 262 regions
-[DIAG] load_weight: after post sweep RSS=4339 MB, avail=2686 MB
-[DIAG] load_weight: 4155 MB written, RSS=4339 MB, avail=2686 MB
+[DIAG] load_weight: post sweep: avail=2745 MB, RSS=4338 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4338 MB, avail=2744 MB
+[DIAG] load_weight: 4155 MB written, RSS=4338 MB, avail=2744 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
@@ -389,9 +379,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
-[DIAG] load_weight: post sweep: avail=2559 MB, RSS=4622 MB, sweeping 282 regions
-[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2558 MB
-[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2558 MB
+[DIAG] load_weight: post sweep: avail=2573 MB, RSS=4622 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2572 MB
+[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2572 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
@@ -412,9 +402,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
-[DIAG] load_weight: post sweep: avail=2465 MB, RSS=4905 MB, sweeping 302 regions
-[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2465 MB
-[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2465 MB
+[DIAG] load_weight: post sweep: avail=2288 MB, RSS=4905 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2292 MB
+[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2292 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
@@ -428,14 +418,14 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
-[DIAG] load_weight: 4738 MB written, RSS=4921 MB, avail=2449 MB
+[DIAG] load_weight: 4738 MB written, RSS=4921 MB, avail=2273 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
-[DIAG] load_weight: post sweep: avail=2185 MB, RSS=5188 MB, sweeping 319 regions
-[DIAG] load_weight: after post sweep RSS=5188 MB, avail=2185 MB
-[DIAG] load_weight: 5004 MB written, RSS=5188 MB, avail=2185 MB
+[DIAG] load_weight: post sweep: avail=2006 MB, RSS=5187 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5187 MB, avail=2006 MB
+[DIAG] load_weight: 5004 MB written, RSS=5187 MB, avail=2006 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=880), falling back to pread
@@ -453,9 +443,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
-[DIAG] load_weight: post sweep: avail=1900 MB, RSS=5467 MB, sweeping 336 regions
-[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1900 MB
-[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1900 MB
+[DIAG] load_weight: post sweep: avail=1722 MB, RSS=5467 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1722 MB
+[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1722 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
@@ -473,9 +463,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
-[DIAG] load_weight: post sweep: avail=1632 MB, RSS=5749 MB, sweeping 353 regions
-[DIAG] load_weight: after post sweep RSS=5749 MB, avail=1632 MB
-[DIAG] load_weight: 5569 MB written, RSS=5749 MB, avail=1632 MB
+[DIAG] load_weight: post sweep: avail=1609 MB, RSS=5751 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5751 MB, avail=1609 MB
+[DIAG] load_weight: 5569 MB written, RSS=5751 MB, avail=1609 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
@@ -493,9 +483,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
-[DIAG] load_weight: post sweep: avail=1469 MB, RSS=6033 MB, sweeping 370 regions
-[DIAG] load_weight: after post sweep RSS=6033 MB, avail=1469 MB
-[DIAG] load_weight: 5851 MB written, RSS=6033 MB, avail=1469 MB
+[DIAG] load_weight: post sweep: avail=1499 MB, RSS=6033 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6033 MB, avail=1499 MB
+[DIAG] load_weight: 5851 MB written, RSS=6033 MB, avail=1499 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
@@ -513,9 +503,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
-[DIAG] load_weight: post sweep: avail=1525 MB, RSS=6315 MB, sweeping 387 regions
-[DIAG] load_weight: after post sweep RSS=6315 MB, avail=1526 MB
-[DIAG] load_weight: 6134 MB written, RSS=6315 MB, avail=1526 MB
+[DIAG] load_weight: post sweep: avail=1360 MB, RSS=6315 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6315 MB, avail=1360 MB
+[DIAG] load_weight: 6134 MB written, RSS=6315 MB, avail=1360 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
@@ -526,7 +516,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
-[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1506 MB
+[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1342 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
@@ -534,9 +524,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
-[DIAG] load_weight: post sweep: avail=1418 MB, RSS=6495 MB, sweeping 404 regions
-[DIAG] load_weight: after post sweep RSS=6247 MB, avail=1413 MB
-[DIAG] load_weight: 6416 MB written, RSS=6247 MB, avail=1413 MB
+[DIAG] load_weight: post sweep: avail=1199 MB, RSS=6595 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6595 MB, avail=1223 MB
+[DIAG] load_weight: 6416 MB written, RSS=6595 MB, avail=1223 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
@@ -554,9 +544,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
-[DIAG] load_weight: post sweep: avail=1161 MB, RSS=6413 MB, sweeping 421 regions
-[DIAG] load_weight: after post sweep RSS=6413 MB, avail=1162 MB
-[DIAG] load_weight: 6699 MB written, RSS=6413 MB, avail=1162 MB
+[DIAG] load_weight: post sweep: avail=1099 MB, RSS=6726 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6726 MB, avail=1099 MB
+[DIAG] load_weight: 6699 MB written, RSS=6726 MB, avail=1099 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
@@ -574,9 +564,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
-[DIAG] load_weight: post sweep: avail=981 MB, RSS=6578 MB, sweeping 438 regions
-[DIAG] load_weight: after post sweep RSS=6501 MB, avail=986 MB
-[DIAG] load_weight: 6981 MB written, RSS=6501 MB, avail=986 MB
+[DIAG] load_weight: post sweep: avail=918 MB, RSS=6740 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=6740 MB, avail=920 MB
+[DIAG] load_weight: 6981 MB written, RSS=6740 MB, avail=920 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
@@ -594,9 +584,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
-[DIAG] load_weight: post sweep: avail=841 MB, RSS=6689 MB, sweeping 455 regions
-[DIAG] load_weight: after post sweep RSS=6689 MB, avail=841 MB
-[DIAG] load_weight: 7263 MB written, RSS=6689 MB, avail=841 MB
+[DIAG] load_weight: post sweep: avail=817 MB, RSS=6471 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=6389 MB, avail=810 MB
+[DIAG] load_weight: 7263 MB written, RSS=6389 MB, avail=810 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
@@ -614,9 +604,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
-[DIAG] load_weight: post sweep: avail=794 MB, RSS=6528 MB, sweeping 472 regions
-[DIAG] load_weight: after post sweep RSS=6528 MB, avail=793 MB
-[DIAG] load_weight: 7546 MB written, RSS=6528 MB, avail=793 MB
+[DIAG] load_weight: post sweep: avail=791 MB, RSS=5821 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=5626 MB, avail=782 MB
+[DIAG] load_weight: 7546 MB written, RSS=5626 MB, avail=782 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
@@ -625,7 +615,7 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2148 pool_inpage=3028), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
-[DIAG] load_weight: 7554 MB written, RSS=6536 MB, avail=787 MB
+[DIAG] load_weight: 7554 MB written, RSS=5415 MB, avail=822 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
@@ -635,9 +625,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
-[DIAG] load_weight: post sweep: avail=635 MB, RSS=6792 MB, sweeping 489 regions
-[DIAG] load_weight: after post sweep RSS=6704 MB, avail=620 MB
-[DIAG] load_weight: 7828 MB written, RSS=6704 MB, avail=620 MB
+[DIAG] load_weight: post sweep: avail=783 MB, RSS=5434 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=5289 MB, avail=795 MB
+[DIAG] load_weight: 7828 MB written, RSS=5289 MB, avail=795 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
@@ -655,9 +645,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
-[DIAG] load_weight: post sweep: avail=569 MB, RSS=6073 MB, sweeping 506 regions
-[DIAG] load_weight: after post sweep RSS=5748 MB, avail=588 MB
-[DIAG] load_weight: 8111 MB written, RSS=5748 MB, avail=588 MB
+[DIAG] load_weight: post sweep: avail=661 MB, RSS=5247 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=5199 MB, avail=572 MB
+[DIAG] load_weight: 8111 MB written, RSS=5199 MB, avail=572 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
@@ -675,9 +665,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
-[DIAG] load_weight: post sweep: avail=418 MB, RSS=5405 MB, sweeping 523 regions
-[DIAG] load_weight: after post sweep RSS=5402 MB, avail=434 MB
-[DIAG] load_weight: 8393 MB written, RSS=5402 MB, avail=434 MB
+[DIAG] load_weight: post sweep: avail=457 MB, RSS=5475 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5473 MB, avail=465 MB
+[DIAG] load_weight: 8393 MB written, RSS=5473 MB, avail=465 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
@@ -695,9 +685,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
-[DIAG] load_weight: post sweep: avail=364 MB, RSS=5620 MB, sweeping 540 regions
-[DIAG] load_weight: after post sweep RSS=5620 MB, avail=363 MB
-[DIAG] load_weight: 8676 MB written, RSS=5620 MB, avail=363 MB
+[DIAG] load_weight: post sweep: avail=356 MB, RSS=5597 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5597 MB, avail=381 MB
+[DIAG] load_weight: 8676 MB written, RSS=5597 MB, avail=382 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
@@ -715,11 +705,11 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
-[DIAG] load_weight: post sweep: avail=359 MB, RSS=5674 MB, sweeping 557 regions
-[DIAG] load_weight: after post sweep RSS=5673 MB, avail=359 MB
-[DIAG] load_weight: 8958 MB written, RSS=5673 MB, avail=358 MB
+[DIAG] load_weight: post sweep: avail=370 MB, RSS=5642 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5636 MB, avail=375 MB
+[DIAG] load_weight: 8958 MB written, RSS=5636 MB, avail=370 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
-[DIAG] load_weight: 8960 MB written, RSS=5675 MB, avail=357 MB
+[DIAG] load_weight: 8960 MB written, RSS=5638 MB, avail=370 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
@@ -736,9 +726,9 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
-[DIAG] load_weight: post sweep: avail=416 MB, RSS=5614 MB, sweeping 574 regions
-[DIAG] load_weight: after post sweep RSS=5611 MB, avail=426 MB
-[DIAG] load_weight: 9241 MB written, RSS=5611 MB, avail=426 MB
+[DIAG] load_weight: post sweep: avail=396 MB, RSS=5624 MB, sweeping 574 regions
+[DIAG] load_weight: after post sweep RSS=5616 MB, avail=405 MB
+[DIAG] load_weight: 9241 MB written, RSS=5616 MB, avail=408 MB
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
 [DIAG] load_weight: MAP_FIXED skip (file_inpage=2172 pool_inpage=3052), falling back to pread
