@@ -1,3 +1,81 @@
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/base_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/node_exporter.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/profile_gate.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/util_func.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/profiler.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/nntr_threads.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/util_simd.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/dynamic_library_loader.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/mman_windows.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/bs_thread_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/bs_thread_pool_manager.hpp to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/singleton.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/nonmovable.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/noncopyable.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/graph/connection.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/graph/graph_node.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/graph/network_graph.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/graph/graph_core.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/graph/graph_node.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl_platform.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/gpu_image_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_buffer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_buffer_manager.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_command_queue_manager.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_context_manager.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_device_info.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_kernel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_loader.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/opencl_program.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/cl_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/dataset.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/model.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/optimizer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/tensor_dim.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/include/tensor_api.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/ccapi/../nntrainer-api-common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/capi/include/nntrainer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/api/capi/../nntrainer-api-common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer.pc to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/pkgconfig
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer.ini to /home/jwhero94/projects/nntrainer/builddir/android_build_result/conf
+Installing /home/jwhero94/projects/nntrainer/builddir/api/ccapi/ccapi-ml-training.pc to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/pkgconfig
+Installing /home/jwhero94/projects/nntrainer/builddir/api/capi/capi-ml-training.pc to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/pkgconfig
+Installing /home/jwhero94/projects/nntrainer/jni/Android-prebuilt.mk to /home/jwhero94/projects/nntrainer/builddir/android_build_result
+Running custom install script '/usr/bin/sh -c cp -r /home/jwhero94/projects/nntrainer/builddir/res ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/examples'
+Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/ml-api-common.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
+Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrainer/builddir/ml-api-inference/include/tizen_error.h ${DESTDIR}/home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer'
+[OK] libnntrainer.so rebuilt (incremental)
+[INFO] Building nntr_quantize (Linux x86)...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
+[9/10] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
+[OK] nntr_quantize built
+
+[Step 3/5] Quantize (FP32 → Q4_0)
+──────────────────────
+[OK] Q4_0 bin up to date
+
+[Step 4/5] Push to device
+──────────────────────
+[INFO]   Staged prebuilt: libnntrainer.so
+[INFO]   Staged prebuilt: libccapi-nntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 36.7 MB/s (50362752 bytes in 1.309s)
+[OK]   libcausallm_core.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 36.0 MB/s (11456040 bytes in 0.304s)
+[OK]   libnntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 23.1 MB/s (129304 bytes in 0.005s)
+[OK]   libccapi-nntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 34.4 MB/s (4143264 bytes in 0.115s)
+[OK]   nntrainer_causallm
+[OK]   nntr_gemma4_e2b_q40.bin
+[OK]   tokenizer.json
+[OK]   nntr_config.json
+[OK]   config.json
+[OK]   generation_config.json
+
 [Step 5/5] Run on device
 ──────────────────────
 ── Output ──────────────────────────────────────
@@ -5,147 +83,93 @@
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
 [DIAG] cgroup entry: 0::/system/uid_0/pid_5271
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 372800 KB
+[DIAG] RSS before initialize: 373196 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[DIAG] RSS after initialize:  185304 KB
+[DIAG] RSS after initialize:  241280 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 472 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 755 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 772 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 1038 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 1321 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 1605 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 1888 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 2171 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 2176 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 2455 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 2738 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 3021 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 3305 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 3332 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 3588 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 3871 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 4155 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 4438 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 4721 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 4738 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 5004 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 5286 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 5569 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 5851 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 6134 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 6145 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 6416 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 6699 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 6981 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 7263 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 7546 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 7554 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 7828 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 8111 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 8393 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 8676 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 8958 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 8960 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 9241 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 9523 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 9806 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 10088 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: 10115 MB written, RSS=180 MB, avail=6850 MB
-[DIAG] load_weight: fd closed, bytes=10115 MB, svm_regions=0
-[DIAG] load_weight: svm_written freed
-[DIAG] load_weight: visited freed
-[DIAG] load_weight: returning ok
-[DIAG] RSS after load_weight: 185304 KB
-[DIAG] load_weight done
-[DIAG] ZEROCOPY=1 V3=1 V4=1
-[DIAG] starting inference
-Explain artificial intelligence briefly
-[ROPE_GPU_DIAG] env=0 decode=0 fp16=1 head_dim=512 svm{q=0 k=0 v=0 kc=1 vc=1} -> eligible=0
-[mha_core] NNTRAINER_ATTN_GPU=(unset) -> NEON qk + softmax + av
-[mha_core] NNTRAINER_MHA_NO_EXIT_UNMAP=(unset) -> keep exit SVMUnmap (CPU path)
-end[ASYNC_PIPELINE] svm_alloc_ints(129) = 0x0
-<pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad><pad>
-
-=================[ LLM with NNTrainer ]===================
-prefill: 4 tokens, 1167 ms, 3.42759 TPS
-generation: 128 tokens, 23088 ms, 5.54401 TPS
-total: 24256 ms
-peak memory: 1251568 KB
-==========================================================
-[e2e time]: 25925 ms 
-Max Resident Set Size: 1251568 KB
-
-[PROFILE NetworkGraph per-layer wall clock (decode, step_size==1)]
-  total=22441.0 ms across all forwarding_op() calls
-  gemma4_ple_block              8000.6 ms  calls=4480  avg=1.786 ms
-  activation                    7960.2 ms  calls=4480  avg=1.777 ms
-  rms_norm                      2283.4 ms  calls=18048  avg=0.127 ms
-  fully_connected               2276.6 ms  calls=26240  avg=0.087 ms
-  mha_core                      1053.8 ms  calls=4480  avg=0.235 ms
-  addition                       586.1 ms  calls=8960  avg=0.065 ms
-  reshaped_rms_norm              234.8 ms  calls=6400  avg=0.037 ms
-  multiply                        22.7 ms  calls=4480  avg=0.005 ms
-  multiout                        17.0 ms  calls=15744  avg=0.001 ms
-  tie_word_embeddings              5.6 ms  calls=256  avg=0.022 ms
-  input                            0.2 ms  calls=128  avg=0.002 ms
-
-[PROFILE NetworkGraph per-layer wall clock (prefill only, step_size>1)]
-  total=1157.5 ms across all forwarding_op() calls
-  fully_connected                745.6 ms  calls=205  avg=3.637 ms
-  gemma4_ple_block               279.7 ms  calls=35  avg=7.990 ms
-  mha_core                        57.6 ms  calls=35  avg=1.646 ms
-  activation                      44.9 ms  calls=35  avg=1.283 ms
-  tie_word_embeddings             16.9 ms  calls=2  avg=8.467 ms
-  rms_norm                         6.4 ms  calls=141  avg=0.045 ms
-  addition                         3.6 ms  calls=70  avg=0.051 ms
-  reshaped_rms_norm                2.3 ms  calls=50  avg=0.046 ms
-  multiply                         0.4 ms  calls=35  avg=0.011 ms
-  multiout                         0.2 ms  calls=123  avg=0.001 ms
-  input                            0.0 ms  calls=1  avg=0.004 ms
-[PROFILE TieWordEmbedding (lm_head) decode (M==1)] total=4.27 ms calls=128 avg=0.033 ms
-[PROFILE TieWordEmbedding (embedding) decode (M==1)] total=0.89 ms calls=128 avg=0.007 ms
-[PROFILE TieWordEmbedding (lm_head) prefill (M>1)] total=13.62 ms calls=1 avg=13.618 ms
-[PROFILE TieWordEmbedding (embedding) prefill (M>1)] total=3.31 ms calls=1 avg=3.310 ms
-[PROFILE RMSNormLayer prefill (M>1)] total=6.13 ms calls=141 avg=0.043 ms
-  svm_map      :     3.93 ms ( 64.0%)  [upstream GPU drain]
-  fused        :     0.00 ms (  0.0%)  [rmsnorm_fused_fp16 NEON]
-  publish      :     0.01 ms (  0.2%)  [svm_to_image2d_publish]
-[PROFILE ReshapedRMSNormLayer prefill (M>1)] total=2.22 ms calls=50 avg=0.044 ms
-  svm_map      :     1.16 ms ( 52.4%)
-  fused        :     0.00 ms (  0.0%)  [rmsnorm_fused_fp16 NEON]
-[PROFILE MHACoreLayer decode (M==1)] total=1045.37 ms calls=4480 avg=0.233 ms
-  entry_drain    :   529.94 ms ( 50.7%)  [4x SVMMap blocking q/k/v/output]
-    drain_q  :   131.43 ms ( 12.6%)
-    drain_k  :   132.25 ms ( 12.7%)
-    drain_v  :   132.83 ms ( 12.7%)
-    drain_o  :   133.42 ms ( 12.8%)
-  attn_fused     :     0.00 ms (  0.0%)  [attention_fused_fp16_cl wall (incl. exit drain when ATTN_NO_DRAIN unset)]
-  exit_unmap     :    23.29 ms (  2.2%)  [SVMUnmap(output) -- skipped when NO_EXIT_UNMAP=1]
-  exit_publish   :    73.59 ms (  7.0%)  [svm_to_image2d_publish]
-  rope_q   :     5.23 ms (  0.5%)
-  rope_k   :     5.00 ms (  0.5%)
-  v_copy   :     2.69 ms (  0.3%)
-  qk       :   194.52 ms ( 18.6%)
-  softmax  :     9.18 ms (  0.9%)
-  av       :   150.04 ms ( 14.4%)
-  cpu_busy :   803.31 ms ( 76.8%)  [thread CPU time]
-  idle_wait:   242.05 ms ( 23.2%)  [wall - cpu, host blocked on GPU queue drains]
-[PROFILE MHACoreLayer prefill (M>1)] total=57.56 ms calls=35 avg=1.644 ms
-  rope_q   :    47.24 ms ( 82.1%)  [apply_rotary_emb_v2 query]
-  rope_k   :     0.13 ms (  0.2%)  [apply_rotary_emb_v2 key->cache]
-  v_copy   :     0.05 ms (  0.1%)  [value -> cache copyData]
-  qk       :     1.30 ms (  2.3%)  [compute_kcaches Q dot K^T]
-  softmax  :     1.32 ms (  2.3%)  [softmax_triangle]
-  av       :     1.55 ms (  2.7%)  [compute_fp16vcache_transposed A*V]
-
-[PROFILE AdditionLayer decode] total=0.00 ms fast=0 fallback=9030 avg_fast=0.000 us
-  kernel :     0.00 ms (  0.0%)  [add2_fp16_svm_cl async]
-  drain  :     0.00 ms (  0.0%)  [enqueueSVMMap(hidden_, blocking=true) exit -- queue flush, blames upstream stalls on addition]
-  misc   :     0.00 ms (  0.0%)  [type checks + entry/exit]
-[EXIT] 0
+[DIAG] load_weight: 216 MB written, RSS=452 MB, avail=6830 MB
+[DIAG] load_weight: 472 MB written, RSS=708 MB, avail=6573 MB
+[DIAG] load_weight: 755 MB written, RSS=990 MB, avail=6289 MB
+[DIAG] load_weight: 772 MB written, RSS=1008 MB, avail=6270 MB
+[DIAG] load_weight: 1038 MB written, RSS=1274 MB, avail=6006 MB
+[DIAG] load_weight: 1321 MB written, RSS=1557 MB, avail=5721 MB
+[DIAG] load_weight: 1605 MB written, RSS=1840 MB, avail=5437 MB
+[DIAG] load_weight: 1888 MB written, RSS=2124 MB, avail=5156 MB
+[DIAG] load_weight: 2171 MB written, RSS=2407 MB, avail=4871 MB
+[DIAG] load_weight: 2176 MB written, RSS=2412 MB, avail=4863 MB
+[DIAG] load_weight: 2455 MB written, RSS=2690 MB, avail=4630 MB
+[DIAG] load_weight: 2738 MB written, RSS=2974 MB, avail=4346 MB
+[DIAG] load_weight: post sweep: avail=4062 MB, RSS=3257 MB, sweeping 182 regions
+[DIAG] load_weight: after post sweep RSS=3257 MB, avail=4062 MB
+[DIAG] load_weight: 3021 MB written, RSS=3257 MB, avail=4062 MB
+[DIAG] load_weight: post sweep: avail=3778 MB, RSS=3540 MB, sweeping 202 regions
+[DIAG] load_weight: after post sweep RSS=3540 MB, avail=3777 MB
+[DIAG] load_weight: 3305 MB written, RSS=3540 MB, avail=3777 MB
+[DIAG] load_weight: 3332 MB written, RSS=3567 MB, avail=3743 MB
+[DIAG] load_weight: post sweep: avail=3537 MB, RSS=3823 MB, sweeping 222 regions
+[DIAG] load_weight: after post sweep RSS=3823 MB, avail=3537 MB
+[DIAG] load_weight: 3588 MB written, RSS=3823 MB, avail=3537 MB
+[DIAG] load_weight: post sweep: avail=3253 MB, RSS=4107 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4107 MB, avail=3252 MB
+[DIAG] load_weight: 3871 MB written, RSS=4107 MB, avail=3252 MB
+[DIAG] load_weight: post sweep: avail=3045 MB, RSS=4390 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4390 MB, avail=3044 MB
+[DIAG] load_weight: 4155 MB written, RSS=4390 MB, avail=3044 MB
+[DIAG] load_weight: post sweep: avail=2883 MB, RSS=4673 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4673 MB, avail=2883 MB
+[DIAG] load_weight: 4438 MB written, RSS=4673 MB, avail=2883 MB
+[DIAG] load_weight: post sweep: avail=2786 MB, RSS=4958 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4958 MB, avail=2789 MB
+[DIAG] load_weight: 4721 MB written, RSS=4958 MB, avail=2789 MB
+[DIAG] load_weight: 4738 MB written, RSS=4973 MB, avail=2769 MB
+[DIAG] load_weight: post sweep: avail=2581 MB, RSS=5239 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5239 MB, avail=2581 MB
+[DIAG] load_weight: 5004 MB written, RSS=5239 MB, avail=2581 MB
+[DIAG] load_weight: post sweep: avail=2298 MB, RSS=5521 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5521 MB, avail=2299 MB
+[DIAG] load_weight: 5286 MB written, RSS=5521 MB, avail=2299 MB
+[DIAG] load_weight: post sweep: avail=2015 MB, RSS=5804 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5804 MB, avail=2015 MB
+[DIAG] load_weight: 5569 MB written, RSS=5804 MB, avail=2015 MB
+[DIAG] load_weight: post sweep: avail=1730 MB, RSS=6086 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6086 MB, avail=1729 MB
+[DIAG] load_weight: 5851 MB written, RSS=6086 MB, avail=1729 MB
+[DIAG] load_weight: post sweep: avail=1461 MB, RSS=6369 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6369 MB, avail=1461 MB
+[DIAG] load_weight: 6134 MB written, RSS=6369 MB, avail=1461 MB
+[DIAG] load_weight: 6145 MB written, RSS=6380 MB, avail=1446 MB
+[DIAG] load_weight: post sweep: avail=1281 MB, RSS=6639 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6639 MB, avail=1282 MB
+[DIAG] load_weight: 6416 MB written, RSS=6639 MB, avail=1282 MB
+[DIAG] load_weight: post sweep: avail=1190 MB, RSS=6916 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6916 MB, avail=1231 MB
+[DIAG] load_weight: 6699 MB written, RSS=6916 MB, avail=1231 MB
+[DIAG] load_weight: post sweep: avail=1118 MB, RSS=7176 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=7176 MB, avail=1120 MB
+[DIAG] load_weight: 6981 MB written, RSS=7176 MB, avail=1120 MB
+[DIAG] load_weight: post sweep: avail=988 MB, RSS=7358 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=7358 MB, avail=990 MB
+[DIAG] load_weight: 7263 MB written, RSS=7358 MB, avail=990 MB
+[DIAG] load_weight: post sweep: avail=790 MB, RSS=7286 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=7286 MB, avail=789 MB
+[DIAG] load_weight: 7546 MB written, RSS=7286 MB, avail=789 MB
+[DIAG] load_weight: 7554 MB written, RSS=7294 MB, avail=779 MB
+[DIAG] load_weight: post sweep: avail=802 MB, RSS=6318 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=6251 MB, avail=789 MB
+[DIAG] load_weight: 7828 MB written, RSS=6251 MB, avail=787 MB
+[DIAG] load_weight: post sweep: avail=704 MB, RSS=5025 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=5022 MB, avail=572 MB
+[DIAG] load_weight: 8111 MB written, RSS=5022 MB, avail=572 MB
+[DIAG] load_weight: post sweep: avail=514 MB, RSS=5304 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5302 MB, avail=486 MB
+[DIAG] load_weight: 8393 MB written, RSS=5302 MB, avail=486 MB
+[DIAG] load_weight: post sweep: avail=384 MB, RSS=5581 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5579 MB, avail=440 MB
+[DIAG] load_weight: 8676 MB written, RSS=5579 MB, avail=439 MB
+[DIAG] load_weight: post sweep: avail=383 MB, RSS=5602 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5602 MB, avail=381 MB
+[DIAG] load_weight: 8958 MB written, RSS=5602 MB, avail=382 MB
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
