@@ -1,3 +1,270 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 21, done.
+remote: Counting objects: 100% (21/21), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 11 (delta 9), reused 10 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (11/11), 1.87 KiB | 160.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   736e1d3b..f9cee27a  all_gpu    -> upstream/all_gpu
+Updating 736e1d3b..f9cee27a
+Fast-forward
+ Applications/CausalLM/res/gemma4/e2b/run_gemma4.sh |  1 +
+ nntrainer/opencl/opencl_context_manager.cpp        | 14 ++++++++++++--
+ 2 files changed, 13 insertions(+), 2 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY10WM83Y
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] OpenCL/opencl sources changed — incremental rebuild of libnntrainer.so...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir'
+[1/2] Generating jni/ndk-build with a custom command
+[arm64-v8a] Install /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libOpenCL.so
+[arm64-v8a] Install        : libnnstreamer-native.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnnstreamer-native.so
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] SharedLibrary  : libnntrainer.so
+[arm64-v8a] SharedLibrary  : libccapi-nntrainer.so
+[arm64-v8a] SharedLibrary  : libcapi-nntrainer.so
+[arm64-v8a] Install        : libccapi-nntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libccapi-nntrainer.so
+[arm64-v8a] Install        : libcapi-nntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libcapi-nntrainer.so
+[arm64-v8a] Install        : libnntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnntrainer.so
+[1/2] Installing files.
+Installing subdir /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/opencl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl_version.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl_platform.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnnstreamer-native.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libccapi-nntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libcapi-nntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libOpenCL.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/convert_block_q4_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/copy.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dot.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/embedding.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v5.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_rmsnorm_qkv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_rmsnorm_gate_up.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gateup_swiglu_int4_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_quantize_input.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/image_reformat.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int8_int4_gemm_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/input_transpose.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q4_0_ab_bi_8x4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q6_k_sgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q6_k_sgemv_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/restore_block_q4_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rotary_emb.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_ab.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemv_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sscal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_16bit.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_32bit_16bit.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/add2_fp16_svm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_1_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_2_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_3_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/copy_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dot_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/embedding_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_ab.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemv_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hscal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_fp16_svm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rotary_emb_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_decode_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_decode_fp16_qk.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_prefill_fp16_qk.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_argmax_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_gumbel_sample_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_embedding_int4chunked.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v3_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v5.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v6.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v7.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v8.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v9.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_gqa.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_fp16_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_0_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_1_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_2_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/cl_kernels.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_logger.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_error.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/app_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/engine.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/mem_allocator.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/compiler/compiler_fwd.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/dataset/databuffer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/dataset/databuffer_factory.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/loss/loss_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_devel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/acti_func.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/operation_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/common_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_node.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/weight_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/tensor_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/neuralnet.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/dynamic_training_optimization.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/model_common_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_devel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/lr_scheduler.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_wrapped.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/fallback/fallback_internal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/fallback/fallback_kleidiai.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/ggml_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/cblas_interface/cblas_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/matrix_transpose_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/mask_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/matrix_transpose_kernels_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_kernel/hgemm_kernel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_util.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_pack.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p_qsi4c32p_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qsi8d32p_f32.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qsi8d32p_f32_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qai8dxp_f32.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/kai_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/arm_compute_backend.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_setting.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_mathfun.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_mathfun.hxx to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/cpu_backend.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernel_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/attention_kernel_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/clblast_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_data.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_base.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/float_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/uint4_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/char_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/short_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q6_k_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/uint_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_k_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_0_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_0_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/weight.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/var_grad.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/quantizer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_wrap_specs.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/manager.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/basic_planner.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_planner.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_loader.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/task_executor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_elem.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/swap_device.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/task.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/base_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/node_exporter.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
@@ -51,7 +318,7 @@ Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrain
 [OK] libnntrainer.so rebuilt (incremental)
 [INFO] Building nntr_quantize (Linux x86)...
 ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
-[9/10] Generating symbol file Applications/CausalLM/libcausallm.so.p/libcausallm.so.symbols
+ninja: no work to do.
 [OK] nntr_quantize built
 
 [Step 3/5] Quantize (FP32 → Q4_0)
@@ -62,13 +329,13 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ──────────────────────
 [INFO]   Staged prebuilt: libnntrainer.so
 [INFO]   Staged prebuilt: libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 36.7 MB/s (50362752 bytes in 1.309s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 33.7 MB/s (50362752 bytes in 1.425s)
 [OK]   libcausallm_core.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 36.0 MB/s (11456040 bytes in 0.304s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 32.9 MB/s (11456040 bytes in 0.332s)
 [OK]   libnntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 23.1 MB/s (129304 bytes in 0.005s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 17.1 MB/s (129304 bytes in 0.007s)
 [OK]   libccapi-nntrainer.so
-/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 34.4 MB/s (4143264 bytes in 0.115s)
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 32.8 MB/s (4143264 bytes in 0.120s)
 [OK]   nntrainer_causallm
 [OK]   nntr_gemma4_e2b_q40.bin
 [OK]   tokenizer.json
@@ -81,95 +348,668 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[DIAG] cgroup entry: 0::/system/uid_0/pid_5271
+[DIAG] cgroup entry: 0::/system/uid_0/pid_16453
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 373196 KB
+[DIAG] RSS before initialize: 372700 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[DIAG] RSS after initialize:  241280 KB
+[DIAG] RSS after initialize:  185552 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=452 MB, avail=6830 MB
-[DIAG] load_weight: 472 MB written, RSS=708 MB, avail=6573 MB
-[DIAG] load_weight: 755 MB written, RSS=990 MB, avail=6289 MB
-[DIAG] load_weight: 772 MB written, RSS=1008 MB, avail=6270 MB
-[DIAG] load_weight: 1038 MB written, RSS=1274 MB, avail=6006 MB
-[DIAG] load_weight: 1321 MB written, RSS=1557 MB, avail=5721 MB
-[DIAG] load_weight: 1605 MB written, RSS=1840 MB, avail=5437 MB
-[DIAG] load_weight: 1888 MB written, RSS=2124 MB, avail=5156 MB
-[DIAG] load_weight: 2171 MB written, RSS=2407 MB, avail=4871 MB
-[DIAG] load_weight: 2176 MB written, RSS=2412 MB, avail=4863 MB
-[DIAG] load_weight: 2455 MB written, RSS=2690 MB, avail=4630 MB
-[DIAG] load_weight: 2738 MB written, RSS=2974 MB, avail=4346 MB
-[DIAG] load_weight: post sweep: avail=4062 MB, RSS=3257 MB, sweeping 182 regions
-[DIAG] load_weight: after post sweep RSS=3257 MB, avail=4062 MB
-[DIAG] load_weight: 3021 MB written, RSS=3257 MB, avail=4062 MB
-[DIAG] load_weight: post sweep: avail=3778 MB, RSS=3540 MB, sweeping 202 regions
-[DIAG] load_weight: after post sweep RSS=3540 MB, avail=3777 MB
-[DIAG] load_weight: 3305 MB written, RSS=3540 MB, avail=3777 MB
-[DIAG] load_weight: 3332 MB written, RSS=3567 MB, avail=3743 MB
-[DIAG] load_weight: post sweep: avail=3537 MB, RSS=3823 MB, sweeping 222 regions
-[DIAG] load_weight: after post sweep RSS=3823 MB, avail=3537 MB
-[DIAG] load_weight: 3588 MB written, RSS=3823 MB, avail=3537 MB
-[DIAG] load_weight: post sweep: avail=3253 MB, RSS=4107 MB, sweeping 242 regions
-[DIAG] load_weight: after post sweep RSS=4107 MB, avail=3252 MB
-[DIAG] load_weight: 3871 MB written, RSS=4107 MB, avail=3252 MB
-[DIAG] load_weight: post sweep: avail=3045 MB, RSS=4390 MB, sweeping 262 regions
-[DIAG] load_weight: after post sweep RSS=4390 MB, avail=3044 MB
-[DIAG] load_weight: 4155 MB written, RSS=4390 MB, avail=3044 MB
-[DIAG] load_weight: post sweep: avail=2883 MB, RSS=4673 MB, sweeping 282 regions
-[DIAG] load_weight: after post sweep RSS=4673 MB, avail=2883 MB
-[DIAG] load_weight: 4438 MB written, RSS=4673 MB, avail=2883 MB
-[DIAG] load_weight: post sweep: avail=2786 MB, RSS=4958 MB, sweeping 302 regions
-[DIAG] load_weight: after post sweep RSS=4958 MB, avail=2789 MB
-[DIAG] load_weight: 4721 MB written, RSS=4958 MB, avail=2789 MB
-[DIAG] load_weight: 4738 MB written, RSS=4973 MB, avail=2769 MB
-[DIAG] load_weight: post sweep: avail=2581 MB, RSS=5239 MB, sweeping 319 regions
-[DIAG] load_weight: after post sweep RSS=5239 MB, avail=2581 MB
-[DIAG] load_weight: 5004 MB written, RSS=5239 MB, avail=2581 MB
-[DIAG] load_weight: post sweep: avail=2298 MB, RSS=5521 MB, sweeping 336 regions
-[DIAG] load_weight: after post sweep RSS=5521 MB, avail=2299 MB
-[DIAG] load_weight: 5286 MB written, RSS=5521 MB, avail=2299 MB
-[DIAG] load_weight: post sweep: avail=2015 MB, RSS=5804 MB, sweeping 353 regions
-[DIAG] load_weight: after post sweep RSS=5804 MB, avail=2015 MB
-[DIAG] load_weight: 5569 MB written, RSS=5804 MB, avail=2015 MB
-[DIAG] load_weight: post sweep: avail=1730 MB, RSS=6086 MB, sweeping 370 regions
-[DIAG] load_weight: after post sweep RSS=6086 MB, avail=1729 MB
-[DIAG] load_weight: 5851 MB written, RSS=6086 MB, avail=1729 MB
-[DIAG] load_weight: post sweep: avail=1461 MB, RSS=6369 MB, sweeping 387 regions
-[DIAG] load_weight: after post sweep RSS=6369 MB, avail=1461 MB
-[DIAG] load_weight: 6134 MB written, RSS=6369 MB, avail=1461 MB
-[DIAG] load_weight: 6145 MB written, RSS=6380 MB, avail=1446 MB
-[DIAG] load_weight: post sweep: avail=1281 MB, RSS=6639 MB, sweeping 404 regions
-[DIAG] load_weight: after post sweep RSS=6639 MB, avail=1282 MB
-[DIAG] load_weight: 6416 MB written, RSS=6639 MB, avail=1282 MB
-[DIAG] load_weight: post sweep: avail=1190 MB, RSS=6916 MB, sweeping 421 regions
-[DIAG] load_weight: after post sweep RSS=6916 MB, avail=1231 MB
-[DIAG] load_weight: 6699 MB written, RSS=6916 MB, avail=1231 MB
-[DIAG] load_weight: post sweep: avail=1118 MB, RSS=7176 MB, sweeping 438 regions
-[DIAG] load_weight: after post sweep RSS=7176 MB, avail=1120 MB
-[DIAG] load_weight: 6981 MB written, RSS=7176 MB, avail=1120 MB
-[DIAG] load_weight: post sweep: avail=988 MB, RSS=7358 MB, sweeping 455 regions
-[DIAG] load_weight: after post sweep RSS=7358 MB, avail=990 MB
-[DIAG] load_weight: 7263 MB written, RSS=7358 MB, avail=990 MB
-[DIAG] load_weight: post sweep: avail=790 MB, RSS=7286 MB, sweeping 472 regions
-[DIAG] load_weight: after post sweep RSS=7286 MB, avail=789 MB
-[DIAG] load_weight: 7546 MB written, RSS=7286 MB, avail=789 MB
-[DIAG] load_weight: 7554 MB written, RSS=7294 MB, avail=779 MB
-[DIAG] load_weight: post sweep: avail=802 MB, RSS=6318 MB, sweeping 489 regions
-[DIAG] load_weight: after post sweep RSS=6251 MB, avail=789 MB
-[DIAG] load_weight: 7828 MB written, RSS=6251 MB, avail=787 MB
-[DIAG] load_weight: post sweep: avail=704 MB, RSS=5025 MB, sweeping 506 regions
-[DIAG] load_weight: after post sweep RSS=5022 MB, avail=572 MB
-[DIAG] load_weight: 8111 MB written, RSS=5022 MB, avail=572 MB
-[DIAG] load_weight: post sweep: avail=514 MB, RSS=5304 MB, sweeping 523 regions
-[DIAG] load_weight: after post sweep RSS=5302 MB, avail=486 MB
-[DIAG] load_weight: 8393 MB written, RSS=5302 MB, avail=486 MB
-[DIAG] load_weight: post sweep: avail=384 MB, RSS=5581 MB, sweeping 540 regions
-[DIAG] load_weight: after post sweep RSS=5579 MB, avail=440 MB
-[DIAG] load_weight: 8676 MB written, RSS=5579 MB, avail=439 MB
-[DIAG] load_weight: post sweep: avail=383 MB, RSS=5602 MB, sweeping 557 regions
-[DIAG] load_weight: after post sweep RSS=5602 MB, avail=381 MB
-[DIAG] load_weight: 8958 MB written, RSS=5602 MB, avail=382 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: 216 MB written, RSS=398 MB, avail=6789 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: 472 MB written, RSS=654 MB, avail=6526 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=0 pool_inpage=880), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1024 pool_inpage=1904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3072 pool_inpage=3952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1028 pool_inpage=1908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: 755 MB written, RSS=936 MB, avail=6248 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3076 pool_inpage=3956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=4 pool_inpage=884), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2052 pool_inpage=2932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: 772 MB written, RSS=953 MB, avail=6227 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=8 pool_inpage=888), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: 1038 MB written, RSS=1219 MB, avail=5968 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2056 pool_inpage=2936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3080 pool_inpage=3960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1032 pool_inpage=1912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3084 pool_inpage=3964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: 1321 MB written, RSS=1503 MB, avail=5683 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1036 pool_inpage=1916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2060 pool_inpage=2940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=12 pool_inpage=892), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2064 pool_inpage=2944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: 1605 MB written, RSS=1786 MB, avail=5400 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=16 pool_inpage=896), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1040 pool_inpage=1920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3088 pool_inpage=3968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1044 pool_inpage=1924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: 1888 MB written, RSS=2069 MB, avail=5116 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3092 pool_inpage=3972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=20 pool_inpage=900), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2068 pool_inpage=2948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=24 pool_inpage=904), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: 2171 MB written, RSS=2353 MB, avail=4849 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2072 pool_inpage=2952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: 2176 MB written, RSS=2357 MB, avail=4844 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3096 pool_inpage=3976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1048 pool_inpage=1928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3100 pool_inpage=3980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: 2455 MB written, RSS=2636 MB, avail=4565 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1052 pool_inpage=1932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2076 pool_inpage=2956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=28 pool_inpage=908), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2080 pool_inpage=2960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: 2738 MB written, RSS=2919 MB, avail=4280 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=32 pool_inpage=912), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1056 pool_inpage=1936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3104 pool_inpage=3984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1060 pool_inpage=1940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: post sweep: avail=3996 MB, RSS=3203 MB, sweeping 182 regions
+[DIAG] load_weight: after post sweep RSS=3203 MB, avail=3996 MB
+[DIAG] load_weight: 3021 MB written, RSS=3203 MB, avail=3996 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3108 pool_inpage=3988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=36 pool_inpage=916), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2084 pool_inpage=2964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=40 pool_inpage=920), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: post sweep: avail=3742 MB, RSS=3486 MB, sweeping 202 regions
+[DIAG] load_weight: after post sweep RSS=3486 MB, avail=3742 MB
+[DIAG] load_weight: 3305 MB written, RSS=3486 MB, avail=3742 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2088 pool_inpage=2968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3112 pool_inpage=3992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1064 pool_inpage=1944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: 3332 MB written, RSS=3513 MB, avail=3711 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3116 pool_inpage=3996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: post sweep: avail=3458 MB, RSS=3769 MB, sweeping 222 regions
+[DIAG] load_weight: after post sweep RSS=3769 MB, avail=3458 MB
+[DIAG] load_weight: 3588 MB written, RSS=3769 MB, avail=3458 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1068 pool_inpage=1948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2092 pool_inpage=2972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=44 pool_inpage=924), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2096 pool_inpage=2976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: post sweep: avail=3173 MB, RSS=4053 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4053 MB, avail=3173 MB
+[DIAG] load_weight: 3871 MB written, RSS=4053 MB, avail=3173 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=48 pool_inpage=928), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1072 pool_inpage=1952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3120 pool_inpage=4000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1076 pool_inpage=1956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: post sweep: avail=2902 MB, RSS=4336 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4336 MB, avail=2903 MB
+[DIAG] load_weight: 4155 MB written, RSS=4336 MB, avail=2903 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3124 pool_inpage=4004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=52 pool_inpage=932), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2100 pool_inpage=2980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=56 pool_inpage=936), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: post sweep: avail=2734 MB, RSS=4619 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4619 MB, avail=2733 MB
+[DIAG] load_weight: 4438 MB written, RSS=4619 MB, avail=2733 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2104 pool_inpage=2984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3128 pool_inpage=4008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1080 pool_inpage=1960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3132 pool_inpage=4012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: post sweep: avail=2572 MB, RSS=4902 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4902 MB, avail=2576 MB
+[DIAG] load_weight: 4721 MB written, RSS=4902 MB, avail=2576 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1084 pool_inpage=1964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2108 pool_inpage=2988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=60 pool_inpage=940), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: 4738 MB written, RSS=4919 MB, avail=2557 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=64 pool_inpage=944), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: post sweep: avail=2365 MB, RSS=5185 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5185 MB, avail=2364 MB
+[DIAG] load_weight: 5004 MB written, RSS=5185 MB, avail=2364 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2112 pool_inpage=2992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3136 pool_inpage=4016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1088 pool_inpage=1968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1092 pool_inpage=1972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: post sweep: avail=2310 MB, RSS=5468 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5468 MB, avail=2312 MB
+[DIAG] load_weight: 5286 MB written, RSS=5468 MB, avail=2312 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3140 pool_inpage=4020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=68 pool_inpage=948), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2116 pool_inpage=2996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2120 pool_inpage=3000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: post sweep: avail=2091 MB, RSS=5750 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5750 MB, avail=2090 MB
+[DIAG] load_weight: 5569 MB written, RSS=5750 MB, avail=2090 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=72 pool_inpage=952), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1096 pool_inpage=1976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3144 pool_inpage=4024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3148 pool_inpage=4028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: post sweep: avail=1805 MB, RSS=6032 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6032 MB, avail=1805 MB
+[DIAG] load_weight: 5851 MB written, RSS=6032 MB, avail=1805 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1100 pool_inpage=1980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2124 pool_inpage=3004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=76 pool_inpage=956), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=80 pool_inpage=960), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: post sweep: avail=1520 MB, RSS=6314 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6314 MB, avail=1520 MB
+[DIAG] load_weight: 6134 MB written, RSS=6314 MB, avail=1520 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2128 pool_inpage=3008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3152 pool_inpage=4032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1104 pool_inpage=1984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1498 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1108 pool_inpage=1988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: post sweep: avail=1232 MB, RSS=6595 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6595 MB, avail=1231 MB
+[DIAG] load_weight: 6416 MB written, RSS=6595 MB, avail=1231 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3156 pool_inpage=4036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=84 pool_inpage=964), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2132 pool_inpage=3012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2136 pool_inpage=3016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: post sweep: avail=1076 MB, RSS=6878 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6878 MB, avail=1084 MB
+[DIAG] load_weight: 6699 MB written, RSS=6878 MB, avail=1084 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=88 pool_inpage=968), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1112 pool_inpage=1992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3160 pool_inpage=4040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3164 pool_inpage=4044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: post sweep: avail=958 MB, RSS=7160 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=7160 MB, avail=958 MB
+[DIAG] load_weight: 6981 MB written, RSS=7160 MB, avail=958 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1116 pool_inpage=1996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2140 pool_inpage=3020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=92 pool_inpage=972), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=96 pool_inpage=976), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: post sweep: avail=800 MB, RSS=7313 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=7313 MB, avail=800 MB
+[DIAG] load_weight: 7263 MB written, RSS=7313 MB, avail=800 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2144 pool_inpage=3024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3168 pool_inpage=4048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1120 pool_inpage=2000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1124 pool_inpage=2004), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: post sweep: avail=849 MB, RSS=6246 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=5971 MB, avail=796 MB
+[DIAG] load_weight: 7546 MB written, RSS=5971 MB, avail=799 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3172 pool_inpage=4052), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=100 pool_inpage=980), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2148 pool_inpage=3028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: 7554 MB written, RSS=5976 MB, avail=793 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2152 pool_inpage=3032), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: post sweep: avail=889 MB, RSS=5236 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=5181 MB, avail=759 MB
+[DIAG] load_weight: 7828 MB written, RSS=5181 MB, avail=759 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=104 pool_inpage=984), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1128 pool_inpage=2008), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3176 pool_inpage=4056), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3180 pool_inpage=4060), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: post sweep: avail=554 MB, RSS=4895 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=4894 MB, avail=525 MB
+[DIAG] load_weight: 8111 MB written, RSS=4894 MB, avail=526 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1132 pool_inpage=2012), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2156 pool_inpage=3036), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=108 pool_inpage=988), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=112 pool_inpage=992), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: post sweep: avail=479 MB, RSS=5176 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5175 MB, avail=492 MB
+[DIAG] load_weight: 8393 MB written, RSS=5175 MB, avail=492 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2160 pool_inpage=3040), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3184 pool_inpage=4064), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1136 pool_inpage=2016), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1140 pool_inpage=2020), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: post sweep: avail=363 MB, RSS=5438 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5438 MB, avail=368 MB
+[DIAG] load_weight: 8676 MB written, RSS=5438 MB, avail=369 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3188 pool_inpage=4068), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=116 pool_inpage=996), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2164 pool_inpage=3044), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=2168 pool_inpage=3048), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: post sweep: avail=359 MB, RSS=5498 MB, sweeping 557 regions
+[DIAG] load_weight: after post sweep RSS=5471 MB, avail=394 MB
+[DIAG] load_weight: 8958 MB written, RSS=5471 MB, avail=395 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: 8960 MB written, RSS=5473 MB, avail=391 MB
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=120 pool_inpage=1000), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1144 pool_inpage=2024), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3192 pool_inpage=4072), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=1148 pool_inpage=2028), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
+[DIAG] load_weight: MAP_FIXED skip (file_inpage=3196 pool_inpage=4076), falling back to pread
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
