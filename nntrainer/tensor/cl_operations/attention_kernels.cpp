@@ -1731,9 +1731,15 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
 
   // ---- K3: scores @ V_image -> O via sv_matmul_f16_ohwi_img ----
   {
-    ClContext::SharedPtrClKernel kp =
-      blas_cc->registerClKernel(two_conv_attention_kernel,
-                                "sv_matmul_f16_ohwi_img", tca_copts());
+    // #72 M-tiled sv (NNTR_SV_TM2=1): 2 query rows/WI, reuse V across both.
+    static const bool sv_tm2 = []() {
+      const char *e = std::getenv("NNTR_SV_TM2");
+      return e && std::atoi(e) != 0;
+    }();
+    ClContext::SharedPtrClKernel kp = blas_cc->registerClKernel(
+      two_conv_attention_kernel,
+      sv_tm2 ? "sv_matmul_f16_ohwi_img_tm2" : "sv_matmul_f16_ohwi_img",
+      tca_copts());
     if (!kp) return false;
     if (!kp->SetKernelArguments(0, &sc.scores, sizeof(cl_mem)) ||
         !kp->SetKernelArguments(1, &v_image, sizeof(cl_mem)) ||
@@ -1782,7 +1788,9 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
     const size_t lx = LWS_X > 0 ? LWS_X : 1;
     const size_t ly = LWS_Y > 0 ? LWS_Y : 1;
     const size_t dx_pad = ((dx + lx - 1) / lx) * lx;
-    const size_t mx_pad = ((M + ly - 1) / ly) * ly;
+    // #72 TM2 halves the m-grid (2 query rows per WI).
+    const size_t mrows = sv_tm2 ? ((size_t)M + 1) / 2 : (size_t)M;
+    const size_t mx_pad = ((mrows + ly - 1) / ly) * ly;
     std::array<size_t, 3> gws = {dx_pad, mx_pad, num_heads_Q};
     std::array<size_t, 3> lws = {LWS_X, LWS_Y, LWS_Z};
     // Divisibility guard: all three dims must divide, and all lws>0, else NULL.
