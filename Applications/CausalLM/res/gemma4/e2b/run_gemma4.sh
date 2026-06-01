@@ -152,6 +152,7 @@ _platform=$(_meson_platform)
 _src_changed=false
 if [ -f "$_PREBUILT_SO" ]; then
     if find "$_CL_DIR" "$NNTRAINER_ROOT/nntrainer/opencl" \
+         "$NNTRAINER_ROOT/nntrainer/tensor" \
          \( -name "*.cl" -o -name "*.cpp" -o -name "*.h" \) \
          -newer "$_PREBUILT_SO" 2>/dev/null | grep -q .; then
         _src_changed=true
