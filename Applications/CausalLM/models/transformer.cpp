@@ -391,33 +391,36 @@ void Transformer::load_weight(const std::string &weight_path) {
             }
           }
 
-          // pread directly into the SVM buffer — no intermediate copy.
+          // pread in 128 MB chunks, evicting each chunk to zRAM before the
+          // next read.  This caps peak physical-page demand at 128 MB per
+          // weight regardless of the weight size, preventing OOM when avail
+          // is low (e.g. 350 MB) and a large weight block (> avail) arrives.
           {
+            static const size_t CHUNK = 128UL << 20; // 128 MB
             char *dst = static_cast<char *>(ptr);
             off_t foff = static_cast<off_t>(file_pos);
             size_t rem = n;
             while (rem > 0) {
-              ssize_t nr = ::pread(fd, dst, rem, foff);
-              if (nr <= 0)
-                throw std::runtime_error(
-                  "pread failed for weight '" + ctx.getWeightName(i) + "'");
-              dst += nr;
-              foff += nr;
-              rem -= static_cast<size_t>(nr);
+              size_t csz = std::min(rem, CHUNK);
+              size_t cdone = 0;
+              while (cdone < csz) {
+                ssize_t nr = ::pread(fd, dst + cdone, csz - cdone,
+                                     foff + static_cast<off_t>(cdone));
+                if (nr <= 0)
+                  throw std::runtime_error(
+                    "pread failed for weight '" + ctx.getWeightName(i) + "'");
+                cdone += static_cast<size_t>(nr);
+              }
+              // Evict this chunk immediately before reading the next.
+              ::posix_fadvise(fd, foff, static_cast<off_t>(csz),
+                              POSIX_FADV_DONTNEED);
+              ::madvise(dst, csz, MADV_COLD);
+              ::madvise(dst, csz, MADV_PAGEOUT);
+              dst += csz;
+              foff += static_cast<off_t>(csz);
+              rem -= csz;
             }
           }
-
-          // Evict file-cache pages for this weight immediately.
-          // posix_fadvise on the fd removes the page-cache entries directly,
-          // unlike mmap POSIX_MADV_DONTNEED which only clears page-table refs.
-          ::posix_fadvise(fd, static_cast<off_t>(file_pos),
-                          static_cast<off_t>(n), POSIX_FADV_DONTNEED);
-
-          // Deactivate then page out SVM pages.  MADV_COLD first moves pages
-          // to the inactive list so the kernel treats them as eviction
-          // candidates; MADV_PAGEOUT then explicitly compresses them to zRAM.
-          ::madvise(ptr, n, MADV_COLD);
-          ::madvise(ptr, n, MADV_PAGEOUT);
           svm_written.push_back({ptr, n});
 
           file_pos += n;
