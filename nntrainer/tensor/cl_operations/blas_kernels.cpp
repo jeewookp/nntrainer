@@ -18,6 +18,7 @@
 #include <cpu_backend.h>
 #include <fp16.h>
 #include <gpu_image_pool.h>
+#include <memory_pool.h>
 #include <profile_gate.h>
 
 #include <atomic>
@@ -2432,41 +2433,56 @@ bool gemv_int4_adreno_v4_cl(uint16_t *input, uint16_t *weights,
   if (!blas_cc) return false;
   cl_context clctx = blas_cc->context_inst_.GetContext();
 
-  // Sticky cache: holds the cl_mem buf (USE_HOST_PTR over the SVM
-  // weight, no copy) once first-call repack has succeeded.
-  struct WeightV4 {
+  // Detect LiteRT-style mmap-backed weight pool.
+  // When NNTRAINER_WEIGHT_MMAP=1, MemoryPool::allocate() places large pools
+  // in anonymous mmap instead of SVM.  mmap pages are evictable (zRAM) so
+  // GPU must not hold a persistent cl_mem reference.  We create cl_mem per
+  // dispatch and release it immediately after DispatchCommand so the driver
+  // can unpin the pages between layers.
+  const bool weight_mmap = MemoryPool::is_mmap_backed(weights);
+  const bool scale_mmap  = MemoryPool::is_mmap_backed(scales);
+
+  // Shape-indexed repack cache.  Stores only (K, N) – no cl_mem – so we can
+  // confirm that in-place repack was already done without holding a GPU pin.
+  struct WeightV4Info {
+    unsigned int K, N;
+  };
+  // SVM path: sticky cl_mem cache (cl_mem held permanently – safe because SVM
+  // pages are already GPU-pinned regardless).
+  struct WeightV4SVM {
     cl_mem buf;
     unsigned int K, N;
   };
-  static std::unordered_map<uintptr_t, WeightV4> s_v4_cache;
+  static std::unordered_map<uintptr_t, WeightV4Info> s_v4_mmap_cache;
+  static std::unordered_map<uintptr_t, WeightV4SVM>  s_v4_svm_cache;
   static std::unordered_set<uintptr_t> s_v4_failed;
-  cl_mem weight_buf = nullptr;
-  {
-    const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
-    if (s_v4_failed.count(wk)) return false;
-    auto it = s_v4_cache.find(wk);
-    if (it != s_v4_cache.end() && it->second.K == K && it->second.N == N) {
-      weight_buf = it->second.buf;
-    } else if (it != s_v4_cache.end()) {
-      // Shape changed for an already-repacked weight -- can't safely
-      // un-repack. Mark failed.
+
+  const uintptr_t wk = reinterpret_cast<uintptr_t>(weights);
+  if (s_v4_failed.count(wk)) return false;
+
+  const size_t weight_bytes = (size_t)K * (size_t)N / 4u * sizeof(uint16_t);
+
+  // ── mmap path ────────────────────────────────────────────────────────────
+  if (weight_mmap) {
+    auto it = s_v4_mmap_cache.find(wk);
+    if (it != s_v4_mmap_cache.end() &&
+        (it->second.K != K || it->second.N != N)) {
       s_v4_failed.insert(wk);
       return false;
-    } else {
-      // Validate by creating cl_mem buf BEFORE repack. If it fails,
-      // SVM stays in ushort layout for the v3 fallback.
-      cl_int err = 0;
-      const size_t bytes = (size_t)K * (size_t)N / 4u * sizeof(uint16_t);
-      cl_mem buf = clCreateBuffer(
-        clctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, bytes,
-        (void *)weights, &err);
-      if (err != CL_SUCCESS || !buf) {
+    }
+    if (it == s_v4_mmap_cache.end()) {
+      // Validate host ptr is mappable before committing to repack.
+      cl_int verr = 0;
+      cl_mem test = clCreateBuffer(clctx,
+                                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                   weight_bytes, (void *)weights, &verr);
+      if (verr != CL_SUCCESS || !test) {
         s_v4_failed.insert(wk);
         return false;
       }
+      clReleaseMemObject(test);
 
-      // In-place repack ushort → uint: snapshot 2 ushort rows per
-      // iteration, write back as 1 uint row over the same 4N bytes.
+      // In-place ushort → uint repack on the mmap-backed buffer.
       static thread_local std::vector<uint16_t> scratch;
       scratch.resize(2u * (size_t)N);
       for (size_t j = 0; j < (size_t)(K / 8); ++j) {
@@ -2476,12 +2492,121 @@ bool gemv_int4_adreno_v4_cl(uint16_t *input, uint16_t *weights,
         const uint16_t *lo = scratch.data();
         const uint16_t *hi = scratch.data() + (size_t)N;
         uint32_t *dst = reinterpret_cast<uint32_t *>(row_pair_base);
-        for (size_t n = 0; n < (size_t)N; ++n) {
+        for (size_t n = 0; n < (size_t)N; ++n)
           dst[n] = ((uint32_t)hi[n] << 16) | (uint32_t)lo[n];
-        }
+      }
+      s_v4_mmap_cache[wk] = WeightV4Info{K, N};
+    }
+
+    // Create per-dispatch cl_mem (non-sticky: released after dispatch so
+    // driver can unpin mmap pages and let the kernel swap them to zRAM).
+    cl_int err = 0;
+    cl_mem weight_buf = clCreateBuffer(clctx,
+                                       CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                       weight_bytes, (void *)weights, &err);
+    if (err != CL_SUCCESS || !weight_buf) return false;
+
+    // Scale cl_mem: the v4 kernel reads N half values from scales[0..N-1].
+    const size_t scale_bytes = (size_t)N * sizeof(uint16_t);
+    cl_mem scale_buf = nullptr;
+    if (scale_mmap) {
+      scale_buf = clCreateBuffer(clctx,
+                                  CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                  scale_bytes, (void *)scales, &err);
+      if (err != CL_SUCCESS || !scale_buf) {
+        clReleaseMemObject(weight_buf);
+        return false;
+      }
+    }
+
+    ClContext::SharedPtrClKernel kernel_ptr = blas_cc->registerClKernel(
+      int4_gemv_adreno_v4_kernel, "gpu_int4_gemv_adreno_v4");
+    if (!kernel_ptr) {
+      clReleaseMemObject(weight_buf);
+      if (scale_buf) clReleaseMemObject(scale_buf);
+      return false;
+    }
+
+    int arg = 0;
+    bool ok = true;
+    ok = ok && kernel_ptr->SetKernelSVMArguments(arg++, input);
+    if (scale_buf)
+      ok = ok && kernel_ptr->SetKernelArguments(arg++, &scale_buf,
+                                                  sizeof(cl_mem));
+    else
+      ok = ok && kernel_ptr->SetKernelSVMArguments(arg++, scales);
+    ok = ok && kernel_ptr->SetKernelSVMArguments(arg++, output);
+    ok = ok && kernel_ptr->SetKernelArguments(arg++, &weight_buf,
+                                                sizeof(cl_mem));
+    int size_k = (int)K, size_n = (int)N;
+    ok = ok && kernel_ptr->SetKernelArguments(arg++, &size_k, sizeof(int));
+    ok = ok && kernel_ptr->SetKernelArguments(arg++, &size_n, sizeof(int));
+    if (!ok) {
+      clReleaseMemObject(weight_buf);
+      if (scale_buf) clReleaseMemObject(scale_buf);
+      return false;
+    }
+
+    const int align_N = static_cast<int>(align(N, 256));
+    const int g[3] = {align_N / 4, 1, 1};
+    const int l[3] = {64, 1, 1};
+    cl_event v4_ev = nullptr;
+    cl_event *v4_ev_ptr =
+      DecodeKernelGpuProfile::enabled() ? &v4_ev : nullptr;
+    bool dispatched = blas_cc->command_queue_inst_.DispatchCommand(
+      kernel_ptr, g, l, v4_ev_ptr);
+
+    // Release cl_mem immediately after enqueue.  OpenCL guarantees the
+    // kernel holds its own reference until completion, so releasing our
+    // handle here is safe.  Once the kernel finishes the driver drops
+    // its reference and the mmap pages become evictable again.
+    clReleaseMemObject(weight_buf);
+    if (scale_buf) clReleaseMemObject(scale_buf);
+
+    if (!dispatched) return false;
+
+    if (sync_output) {
+      blas_cc->command_queue_inst_.enqueueSVMMap(
+        output, static_cast<size_t>(N) * sizeof(uint16_t), /*read_only=*/true);
+    }
+    if (v4_ev)
+      g_decode_gpu_profile.defer(g_decode_gpu_profile.per_fc_gemv, v4_ev);
+    return true;
+  }
+
+  // ── SVM path (original sticky-cache behaviour) ───────────────────────────
+  cl_mem weight_buf = nullptr;
+  {
+    auto it = s_v4_svm_cache.find(wk);
+    if (it != s_v4_svm_cache.end() && it->second.K == K &&
+        it->second.N == N) {
+      weight_buf = it->second.buf;
+    } else if (it != s_v4_svm_cache.end()) {
+      s_v4_failed.insert(wk);
+      return false;
+    } else {
+      cl_int err = 0;
+      cl_mem buf = clCreateBuffer(clctx,
+                                  CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                  weight_bytes, (void *)weights, &err);
+      if (err != CL_SUCCESS || !buf) {
+        s_v4_failed.insert(wk);
+        return false;
       }
 
-      s_v4_cache[wk] = WeightV4{buf, K, N};
+      static thread_local std::vector<uint16_t> scratch;
+      scratch.resize(2u * (size_t)N);
+      for (size_t j = 0; j < (size_t)(K / 8); ++j) {
+        uint16_t *row_pair_base = weights + (size_t)(2 * j) * (size_t)N;
+        std::memcpy(scratch.data(), row_pair_base,
+                    2u * (size_t)N * sizeof(uint16_t));
+        const uint16_t *lo = scratch.data();
+        const uint16_t *hi = scratch.data() + (size_t)N;
+        uint32_t *dst = reinterpret_cast<uint32_t *>(row_pair_base);
+        for (size_t n = 0; n < (size_t)N; ++n)
+          dst[n] = ((uint32_t)hi[n] << 16) | (uint32_t)lo[n];
+      }
+      s_v4_svm_cache[wk] = WeightV4SVM{buf, K, N};
       weight_buf = buf;
     }
   }

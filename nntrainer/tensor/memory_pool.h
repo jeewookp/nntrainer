@@ -87,7 +87,8 @@ public:
     pool_size(0),
     min_pool_size(0),
     n_wgrad(0),
-    svm_allocation(false) {
+    svm_allocation(false),
+    mmap_allocation(false) {
 
 #if defined(__ANDROID__) && ENABLE_NPU
     void *handle =
@@ -225,6 +226,16 @@ public:
   void *getMemoryPoolAddress() { return mem_pool; }
 
   /**
+   * @brief Check if a pointer falls within any anonymous-mmap pool range.
+   *        Used by blas_kernels.cpp to detect mmap-backed weight tensors
+   *        so it can use cl_mem instead of clSetKernelArgSVMPointer.
+   *
+   * @param ptr Pointer to check.
+   * @return true if ptr is inside a pool allocated via mmap (not SVM).
+   */
+  static bool is_mmap_backed(const void *ptr);
+
+  /**
    * @brief set FSU weight path
    *
    * @param path FSU weight file path
@@ -327,6 +338,9 @@ private:
   size_t n_wgrad;
 
   bool svm_allocation; /**< flag if memory is a shared virtual memory */
+
+  bool mmap_allocation; /**< flag if pool was allocated via anonymous mmap
+                             (evictable, not GPU-pinned like SVM) */
 
   std::unordered_map<std::string, std::shared_ptr<nntrainer::MemAllocator>>
     allocators;
