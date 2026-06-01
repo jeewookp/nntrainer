@@ -1,331 +1,186 @@
+
+[Step 3/5] Quantize (FP32 → Q4_0)
+──────────────────────
+[OK] Q4_0 bin up to date
+
+[Step 4/5] Push to device
+──────────────────────
+[INFO]   Staged prebuilt: libnntrainer.so
+[INFO]   Staged prebuilt: libccapi-nntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libcausallm_core.so: 1 file pushed. 34.0 MB/s (50359480 bytes in 1.414s)
+[OK]   libcausallm_core.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libnntrainer.so: 1 file pushed. 33.1 MB/s (11449640 bytes in 0.330s)
+[OK]   libnntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/libccapi-nntrainer.so: 1 file pushed. 18.7 MB/s (129304 bytes in 0.007s)
+[OK]   libccapi-nntrainer.so
+/home/jwhero94/projects/nntrainer/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_causallm: 1 file pushed. 33.6 MB/s (4143264 bytes in 0.117s)
+[OK]   nntrainer_causallm
+[OK]   nntr_gemma4_e2b_q40.bin
+[OK]   tokenizer.json
+[OK]   nntr_config.json
+[OK]   config.json
+[OK]   generation_config.json
+
 [Step 5/5] Run on device
 ──────────────────────
 ── Output ──────────────────────────────────────
 /data/local/tmp/nntrainer/causallm/models/gemma4
 /data/local/tmp/nntrainer/causallm/models/gemma4/nntr_gemma4_e2b_q40.bin
-[DIAG] cgroup entry: 0::/system/uid_0/pid_15951
+[DIAG] cgroup entry: 0::/system/uid_0/pid_22139
 [DIAG] oom_score_adj set to -1000
-[DIAG] RSS before initialize: 372540 KB
+[DIAG] RSS before initialize: 372816 KB
 [CL_DEV] device="QUALCOMM Adreno(TM) 830" driver="OpenCL 3.0 QUALCOMM build: 0800.40.1 Compiler E031.47.18.36" cl_khr_command_buffer=0 cl_qcom_recordable_queues=1 svm{coarse=1 fine_buf=1 fine_sys=0 atomic=1}
-[DIAG] RSS after initialize:  184996 KB
+[DIAG] RSS after initialize:  185352 KB
 [DIAG] initialize done
 [DIAG] load_weight: file=10606484620 bytes
-[DIAG] load_weight: 216 MB written, RSS=398 MB, avail=6173 MB
-[DIAG] load_weight: 472 MB written, RSS=656 MB, avail=5914 MB
-[DIAG] load_weight: 755 MB written, RSS=940 MB, avail=5632 MB
-[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=5616 MB
-[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=5348 MB
-[DIAG] load_weight: 1321 MB written, RSS=1505 MB, avail=5065 MB
-[DIAG] load_weight: 1605 MB written, RSS=1788 MB, avail=4783 MB
-[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=4501 MB
-[DIAG] load_weight: 2171 MB written, RSS=2355 MB, avail=4230 MB
-[DIAG] load_weight: 2176 MB written, RSS=2359 MB, avail=4225 MB
-[DIAG] load_weight: post sweep: avail=3941 MB, RSS=2638 MB, sweeping 142 regions
-[DIAG] load_weight: after post sweep RSS=2638 MB, avail=3940 MB
-[DIAG] load_weight: 2455 MB written, RSS=2638 MB, avail=3940 MB
-[DIAG] load_weight: post sweep: avail=3652 MB, RSS=2921 MB, sweeping 162 regions
-[DIAG] load_weight: after post sweep RSS=2921 MB, avail=3652 MB
-[DIAG] load_weight: 2738 MB written, RSS=2921 MB, avail=3652 MB
-[DIAG] load_weight: post sweep: avail=3367 MB, RSS=3205 MB, sweeping 182 regions
-[DIAG] load_weight: after post sweep RSS=3205 MB, avail=3367 MB
-[DIAG] load_weight: 3021 MB written, RSS=3205 MB, avail=3367 MB
-[DIAG] load_weight: post sweep: avail=3076 MB, RSS=3488 MB, sweeping 202 regions
-[DIAG] load_weight: after post sweep RSS=3488 MB, avail=3076 MB
-[DIAG] load_weight: 3305 MB written, RSS=3488 MB, avail=3076 MB
-[DIAG] load_weight: 3332 MB written, RSS=3515 MB, avail=3049 MB
-[DIAG] load_weight: post sweep: avail=2798 MB, RSS=3771 MB, sweeping 222 regions
-[DIAG] load_weight: after post sweep RSS=3771 MB, avail=2797 MB
-[DIAG] load_weight: 3588 MB written, RSS=3771 MB, avail=2797 MB
-[DIAG] load_weight: post sweep: avail=2571 MB, RSS=4055 MB, sweeping 242 regions
-[DIAG] load_weight: after post sweep RSS=4055 MB, avail=2570 MB
-[DIAG] load_weight: 3871 MB written, RSS=4055 MB, avail=2570 MB
-[DIAG] load_weight: post sweep: avail=2440 MB, RSS=4338 MB, sweeping 262 regions
-[DIAG] load_weight: after post sweep RSS=4338 MB, avail=2440 MB
-[DIAG] load_weight: 4155 MB written, RSS=4338 MB, avail=2440 MB
-[DIAG] load_weight: post sweep: avail=2476 MB, RSS=4622 MB, sweeping 282 regions
-[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2477 MB
-[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2477 MB
-[DIAG] load_weight: post sweep: avail=2448 MB, RSS=4905 MB, sweeping 302 regions
-[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2449 MB
-[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2449 MB
-[DIAG] load_weight: 4738 MB written, RSS=4921 MB, avail=2429 MB
-[DIAG] load_weight: post sweep: avail=2215 MB, RSS=5187 MB, sweeping 319 regions
-[DIAG] load_weight: after post sweep RSS=5187 MB, avail=2214 MB
-[DIAG] load_weight: 5004 MB written, RSS=5187 MB, avail=2214 MB
-[DIAG] load_weight: post sweep: avail=1951 MB, RSS=5467 MB, sweeping 336 regions
-[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1951 MB
-[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1951 MB
-[DIAG] load_weight: post sweep: avail=1957 MB, RSS=5751 MB, sweeping 353 regions
-[DIAG] load_weight: after post sweep RSS=5751 MB, avail=1964 MB
-[DIAG] load_weight: 5569 MB written, RSS=5751 MB, avail=1964 MB
-[DIAG] load_weight: post sweep: avail=1766 MB, RSS=6031 MB, sweeping 370 regions
-[DIAG] load_weight: after post sweep RSS=6031 MB, avail=1764 MB
-[DIAG] load_weight: 5851 MB written, RSS=6031 MB, avail=1764 MB
-[DIAG] load_weight: post sweep: avail=1672 MB, RSS=6314 MB, sweeping 387 regions
-[DIAG] load_weight: after post sweep RSS=6314 MB, avail=1672 MB
-[DIAG] load_weight: 6134 MB written, RSS=6314 MB, avail=1672 MB
-[DIAG] load_weight: 6145 MB written, RSS=6326 MB, avail=1657 MB
-[DIAG] load_weight: post sweep: avail=1504 MB, RSS=6496 MB, sweeping 404 regions
-[DIAG] load_weight: after post sweep RSS=6496 MB, avail=1504 MB
-[DIAG] load_weight: 6416 MB written, RSS=6496 MB, avail=1504 MB
-[DIAG] load_weight: post sweep: avail=1272 MB, RSS=6438 MB, sweeping 421 regions
-[DIAG] load_weight: after post sweep RSS=6438 MB, avail=1284 MB
-[DIAG] load_weight: 6699 MB written, RSS=6438 MB, avail=1284 MB
-[DIAG] load_weight: post sweep: avail=1086 MB, RSS=6633 MB, sweeping 438 regions
-[DIAG] load_weight: after post sweep RSS=6595 MB, avail=1091 MB
-[DIAG] load_weight: 6981 MB written, RSS=6595 MB, avail=1091 MB
-[DIAG] load_weight: post sweep: avail=885 MB, RSS=6766 MB, sweeping 455 regions
-[DIAG] load_weight: after post sweep RSS=6752 MB, avail=888 MB
-[DIAG] load_weight: 7263 MB written, RSS=6752 MB, avail=888 MB
-[DIAG] load_weight: post sweep: avail=839 MB, RSS=5490 MB, sweeping 472 regions
-[DIAG] load_weight: after post sweep RSS=5490 MB, avail=875 MB
-[DIAG] load_weight: 7546 MB written, RSS=5490 MB, avail=875 MB
-[DIAG] load_weight: 7554 MB written, RSS=5498 MB, avail=871 MB
-[DIAG] load_weight: post sweep: avail=831 MB, RSS=5192 MB, sweeping 489 regions
-[DIAG] load_weight: after post sweep RSS=5106 MB, avail=813 MB
-[DIAG] load_weight: 7828 MB written, RSS=5106 MB, avail=812 MB
-[DIAG] load_weight: post sweep: avail=567 MB, RSS=5364 MB, sweeping 506 regions
-[DIAG] load_weight: after post sweep RSS=5357 MB, avail=566 MB
-[DIAG] load_weight: 8111 MB written, RSS=5357 MB, avail=567 MB
-[DIAG] load_weight: post sweep: avail=463 MB, RSS=5367 MB, sweeping 523 regions
-[DIAG] load_weight: after post sweep RSS=5364 MB, avail=451 MB
-[DIAG] load_weight: 8393 MB written, RSS=5364 MB, avail=453 MB
-[DIAG] load_weight: backpressure avail=452 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=508 MB (retry 2/10)
-[DIAG] load_weight: post sweep: avail=463 MB, RSS=5580 MB, sweeping 540 regions
-[DIAG] load_weight: after post sweep RSS=5471 MB, avail=434 MB
-[DIAG] load_weight: 8676 MB written, RSS=5471 MB, avail=434 MB
-[DIAG] load_weight: backpressure avail=435 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=433 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=505 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=502 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=502 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=501 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=456 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=489 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=499 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=500 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 2/10)
+[DIAG] load_weight: 216 MB written, RSS=399 MB, avail=5051 MB
+[DIAG] load_weight: 472 MB written, RSS=656 MB, avail=4793 MB
+[DIAG] load_weight: 755 MB written, RSS=939 MB, avail=4535 MB
+[DIAG] load_weight: 772 MB written, RSS=956 MB, avail=4517 MB
+[DIAG] load_weight: 1038 MB written, RSS=1222 MB, avail=4260 MB
+[DIAG] load_weight: post sweep: avail=3976 MB, RSS=1506 MB, sweeping 62 regions
+[DIAG] load_weight: after post sweep RSS=1506 MB, avail=3976 MB
+[DIAG] load_weight: 1321 MB written, RSS=1506 MB, avail=3976 MB
+[DIAG] load_weight: post sweep: avail=3695 MB, RSS=1789 MB, sweeping 82 regions
+[DIAG] load_weight: after post sweep RSS=1789 MB, avail=3695 MB
+[DIAG] load_weight: 1605 MB written, RSS=1789 MB, avail=3695 MB
+[DIAG] load_weight: post sweep: avail=3404 MB, RSS=2072 MB, sweeping 102 regions
+[DIAG] load_weight: after post sweep RSS=2072 MB, avail=3400 MB
+[DIAG] load_weight: 1888 MB written, RSS=2072 MB, avail=3400 MB
+[DIAG] load_weight: post sweep: avail=3166 MB, RSS=2356 MB, sweeping 122 regions
+[DIAG] load_weight: after post sweep RSS=2356 MB, avail=3166 MB
+[DIAG] load_weight: 2171 MB written, RSS=2356 MB, avail=3166 MB
+[DIAG] load_weight: 2176 MB written, RSS=2360 MB, avail=3157 MB
+[DIAG] load_weight: post sweep: avail=3013 MB, RSS=2639 MB, sweeping 142 regions
+[DIAG] load_weight: after post sweep RSS=2639 MB, avail=3023 MB
+[DIAG] load_weight: 2455 MB written, RSS=2639 MB, avail=3023 MB
+[DIAG] load_weight: post sweep: avail=3017 MB, RSS=2922 MB, sweeping 162 regions
+[DIAG] load_weight: after post sweep RSS=2922 MB, avail=3017 MB
+[DIAG] load_weight: 2738 MB written, RSS=2922 MB, avail=3017 MB
+[DIAG] load_weight: post sweep: avail=2953 MB, RSS=3206 MB, sweeping 182 regions
+[DIAG] load_weight: after post sweep RSS=3206 MB, avail=2953 MB
+[DIAG] load_weight: 3021 MB written, RSS=3206 MB, avail=2953 MB
+[DIAG] load_weight: post sweep: avail=2767 MB, RSS=3490 MB, sweeping 202 regions
+[DIAG] load_weight: after post sweep RSS=3490 MB, avail=2767 MB
+[DIAG] load_weight: 3305 MB written, RSS=3490 MB, avail=2767 MB
+[DIAG] load_weight: 3332 MB written, RSS=3516 MB, avail=2743 MB
+[DIAG] load_weight: post sweep: avail=2658 MB, RSS=3772 MB, sweeping 222 regions
+[DIAG] load_weight: after post sweep RSS=3772 MB, avail=2660 MB
+[DIAG] load_weight: 3588 MB written, RSS=3772 MB, avail=2660 MB
+[DIAG] load_weight: post sweep: avail=2586 MB, RSS=4055 MB, sweeping 242 regions
+[DIAG] load_weight: after post sweep RSS=4055 MB, avail=2586 MB
+[DIAG] load_weight: 3871 MB written, RSS=4055 MB, avail=2586 MB
+[DIAG] load_weight: post sweep: avail=2623 MB, RSS=4339 MB, sweeping 262 regions
+[DIAG] load_weight: after post sweep RSS=4339 MB, avail=2623 MB
+[DIAG] load_weight: 4155 MB written, RSS=4339 MB, avail=2623 MB
+[DIAG] load_weight: post sweep: avail=2363 MB, RSS=4622 MB, sweeping 282 regions
+[DIAG] load_weight: after post sweep RSS=4622 MB, avail=2363 MB
+[DIAG] load_weight: 4438 MB written, RSS=4622 MB, avail=2363 MB
+[DIAG] load_weight: post sweep: avail=2079 MB, RSS=4905 MB, sweeping 302 regions
+[DIAG] load_weight: after post sweep RSS=4905 MB, avail=2078 MB
+[DIAG] load_weight: 4721 MB written, RSS=4905 MB, avail=2078 MB
+[DIAG] load_weight: 4738 MB written, RSS=4921 MB, avail=2061 MB
+[DIAG] load_weight: post sweep: avail=1859 MB, RSS=5188 MB, sweeping 319 regions
+[DIAG] load_weight: after post sweep RSS=5188 MB, avail=1859 MB
+[DIAG] load_weight: 5004 MB written, RSS=5188 MB, avail=1859 MB
+[DIAG] load_weight: post sweep: avail=1789 MB, RSS=5467 MB, sweeping 336 regions
+[DIAG] load_weight: after post sweep RSS=5467 MB, avail=1788 MB
+[DIAG] load_weight: 5286 MB written, RSS=5467 MB, avail=1788 MB
+[DIAG] load_weight: post sweep: avail=1669 MB, RSS=5749 MB, sweeping 353 regions
+[DIAG] load_weight: after post sweep RSS=5749 MB, avail=1669 MB
+[DIAG] load_weight: 5569 MB written, RSS=5749 MB, avail=1669 MB
+[DIAG] load_weight: post sweep: avail=1546 MB, RSS=6032 MB, sweeping 370 regions
+[DIAG] load_weight: after post sweep RSS=6032 MB, avail=1545 MB
+[DIAG] load_weight: 5851 MB written, RSS=6032 MB, avail=1545 MB
+[DIAG] load_weight: post sweep: avail=1484 MB, RSS=6257 MB, sweeping 387 regions
+[DIAG] load_weight: after post sweep RSS=6257 MB, avail=1483 MB
+[DIAG] load_weight: 6134 MB written, RSS=6257 MB, avail=1483 MB
+[DIAG] load_weight: 6145 MB written, RSS=6268 MB, avail=1462 MB
+[DIAG] load_weight: post sweep: avail=1329 MB, RSS=6270 MB, sweeping 404 regions
+[DIAG] load_weight: after post sweep RSS=6270 MB, avail=1328 MB
+[DIAG] load_weight: 6416 MB written, RSS=6270 MB, avail=1328 MB
+[DIAG] load_weight: post sweep: avail=1110 MB, RSS=6455 MB, sweeping 421 regions
+[DIAG] load_weight: after post sweep RSS=6455 MB, avail=1114 MB
+[DIAG] load_weight: 6699 MB written, RSS=6455 MB, avail=1114 MB
+[DIAG] load_weight: post sweep: avail=986 MB, RSS=6662 MB, sweeping 438 regions
+[DIAG] load_weight: after post sweep RSS=6614 MB, avail=991 MB
+[DIAG] load_weight: 6981 MB written, RSS=6614 MB, avail=991 MB
+[DIAG] load_weight: post sweep: avail=801 MB, RSS=6470 MB, sweeping 455 regions
+[DIAG] load_weight: after post sweep RSS=6470 MB, avail=780 MB
+[DIAG] load_weight: 7263 MB written, RSS=6470 MB, avail=780 MB
+[DIAG] load_weight: post sweep: avail=836 MB, RSS=6749 MB, sweeping 472 regions
+[DIAG] load_weight: after post sweep RSS=6749 MB, avail=836 MB
+[DIAG] load_weight: 7546 MB written, RSS=6749 MB, avail=836 MB
+[DIAG] load_weight: 7554 MB written, RSS=6757 MB, avail=822 MB
+[DIAG] load_weight: post sweep: avail=822 MB, RSS=6634 MB, sweeping 489 regions
+[DIAG] load_weight: after post sweep RSS=6634 MB, avail=760 MB
+[DIAG] load_weight: 7828 MB written, RSS=6634 MB, avail=760 MB
+[DIAG] load_weight: post sweep: avail=707 MB, RSS=5047 MB, sweeping 506 regions
+[DIAG] load_weight: after post sweep RSS=5046 MB, avail=699 MB
+[DIAG] load_weight: 8111 MB written, RSS=5046 MB, avail=699 MB
+[DIAG] load_weight: post sweep: avail=480 MB, RSS=5326 MB, sweeping 523 regions
+[DIAG] load_weight: after post sweep RSS=5325 MB, avail=484 MB
+[DIAG] load_weight: 8393 MB written, RSS=5325 MB, avail=484 MB
+[DIAG] load_weight: backpressure avail=483 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=493 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=510 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=469 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=489 MB (retry 3/10)
+[DIAG] load_weight: backpressure avail=485 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=499 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=511 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=452 MB (retry 2/10)
 [DIAG] load_weight: backpressure avail=494 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=508 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=485 MB (retry 5/10)
 [DIAG] load_weight: backpressure avail=492 MB (retry 6/10)
 [DIAG] load_weight: backpressure avail=491 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=495 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=466 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=483 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=499 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=483 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=489 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=486 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=486 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=450 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=440 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=472 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=488 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=490 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=481 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=484 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=484 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=483 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=475 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=475 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=475 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=472 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=481 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=481 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=472 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=472 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=497 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=498 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=496 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=494 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=485 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=486 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=493 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=492 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=488 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=491 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=489 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=487 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=482 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=481 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=480 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=472 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=460 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=458 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=479 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=478 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=477 MB (retry 10/10)
-[DIAG] load_weight: post sweep: avail=402 MB, RSS=5526 MB, sweeping 557 regions
-[DIAG] load_weight: after post sweep RSS=5526 MB, avail=407 MB
-[DIAG] load_weight: 8958 MB written, RSS=5526 MB, avail=407 MB
-[DIAG] load_weight: backpressure avail=404 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=401 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=400 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=394 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 10/10)
-[DIAG] load_weight: 8960 MB written, RSS=5521 MB, avail=395 MB
-[DIAG] load_weight: backpressure avail=395 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=400 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=399 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 7/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 8/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 9/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 10/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 1/10)
-[DIAG] load_weight: backpressure avail=398 MB (retry 2/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 3/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 4/10)
-[DIAG] load_weight: backpressure avail=397 MB (retry 5/10)
-[DIAG] load_weight: backpressure avail=395 MB (retry 6/10)
-[DIAG] load_weight: backpressure avail=396 MB (retry 7/10)
+[DIAG] load_weight: backpressure avail=495 MB (retry 8/10)
+[DIAG] load_weight: backpressure avail=472 MB (retry 9/10)
+[DIAG] load_weight: backpressure avail=485 MB (retry 10/10)
+[DIAG] load_weight: backpressure avail=504 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=485 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=499 MB (retry 3/10)
+[DIAG] load_weight: backpressure avail=501 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=499 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=462 MB (retry 6/10)
+[DIAG] load_weight: backpressure avail=483 MB (retry 7/10)
+[DIAG] load_weight: backpressure avail=462 MB (retry 8/10)
+[DIAG] load_weight: backpressure avail=499 MB (retry 9/10)
+[DIAG] load_weight: post sweep: avail=377 MB, RSS=5485 MB, sweeping 540 regions
+[DIAG] load_weight: after post sweep RSS=5484 MB, avail=392 MB
+[DIAG] load_weight: 8676 MB written, RSS=5484 MB, avail=393 MB
+[DIAG] load_weight: backpressure avail=392 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=390 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=392 MB (retry 3/10)
+[DIAG] load_weight: backpressure avail=391 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=388 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=390 MB (retry 6/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 7/10)
+[DIAG] load_weight: backpressure avail=392 MB (retry 8/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 9/10)
+[DIAG] load_weight: backpressure avail=391 MB (retry 10/10)
+[DIAG] load_weight: backpressure avail=387 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=388 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=385 MB (retry 3/10)
+[DIAG] load_weight: backpressure avail=386 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=387 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 6/10)
+[DIAG] load_weight: backpressure avail=386 MB (retry 7/10)
+[DIAG] load_weight: backpressure avail=385 MB (retry 8/10)
+[DIAG] load_weight: backpressure avail=384 MB (retry 9/10)
+[DIAG] load_weight: backpressure avail=386 MB (retry 10/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 1/10)
+[DIAG] load_weight: backpressure avail=386 MB (retry 2/10)
+[DIAG] load_weight: backpressure avail=388 MB (retry 3/10)
+[DIAG] load_weight: backpressure avail=390 MB (retry 4/10)
+[DIAG] load_weight: backpressure avail=390 MB (retry 5/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 6/10)
+[DIAG] load_weight: backpressure avail=389 MB (retry 7/10)
+[DIAG] load_weight: backpressure avail=390 MB (retry 8/10)
+[DIAG] load_weight: backpressure avail=386 MB (retry 9/10)
+[DIAG] load_weight: backpressure avail=388 MB (retry 10/10)
+[DIAG] load_weight: backpressure avail=373 MB (retry 1/10)
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
