@@ -102,10 +102,20 @@ void *ContextManager::createSVMRegion(size_t size) {
   if (s_svm_fine_grain) {
     flags |= CL_MEM_SVM_FINE_GRAIN_BUFFER;
   }
-  void *p = clSVMAlloc(context_, flags, size, 0);
+  // Request page-aligned SVM allocation so that transformer.cpp's MAP_FIXED
+  // weight-loading path (NNTRAINER_WEIGHT_MMAP=1) works: MAP_FIXED requires
+  // pool_ptr % PAGE_SZ == file_pos % PAGE_SZ, which holds iff the pool base
+  // is page-aligned.  Try 4096-byte alignment first; fall back to 0 (driver
+  // default) if the driver rejects the large alignment request.
+  static const cl_uint PAGE_ALIGN = 4096u;
+  void *p = clSVMAlloc(context_, flags, size, PAGE_ALIGN);
+  if (!p) {
+    p = clSVMAlloc(context_, flags, size, 0);
+  }
   if (!p && s_svm_fine_grain) {
     // Fall back to coarse if fine-grain alloc rejected for this size.
-    p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
+    p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, PAGE_ALIGN);
+    if (!p) p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
   }
   return p;
 }
