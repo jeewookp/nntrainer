@@ -342,6 +342,8 @@ private:
   bool mmap_allocation; /**< flag if pool was allocated via anonymous mmap
                              (evictable, not GPU-pinned like SVM) */
 
+  void *svm_raw_pool = nullptr; /**< raw (unaligned) SVM pointer for release */
+
   std::unordered_map<std::string, std::shared_ptr<nntrainer::MemAllocator>>
     allocators;
 #if defined(__ANDROID__) && ENABLE_NPU
