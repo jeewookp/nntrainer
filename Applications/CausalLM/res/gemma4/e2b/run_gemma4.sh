@@ -57,6 +57,13 @@ log_info "Quantize   : $( [ "$SKIP_QUANTIZE" = true ] && echo 'skip' || echo 'Q4
 # ── Step 1: Prerequisites ──────────────────────────────────────────────────
 log_step 1 "Check prerequisites"
 
+# Auto-pull latest fixes from upstream before building
+cd "$NNTRAINER_ROOT"
+if git remote get-url upstream &>/dev/null; then
+    log_info "Pulling latest fixes from upstream/all_gpu..."
+    git pull upstream all_gpu --ff-only 2>&1 | grep -v "^$" || true
+fi
+
 [ -z "$ANDROID_NDK" ] && { log_error "ANDROID_NDK not set"; exit 1; }
 command -v adb &>/dev/null || { log_error "adb not found"; exit 1; }
 adb devices | grep -q "device$" || { log_error "No Android device connected"; exit 1; }
