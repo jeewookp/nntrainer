@@ -14,7 +14,10 @@
 # Usage:
 #   sh execute.sh [/path/to/gemma2-2b-qint4.bin]
 #
-# The weight path may also be given via the GEMMA2_WEIGHT env var.
+# The weight path may also be given via the GEMMA2_WEIGHT env var. If NO weight
+# is given, the script looks for a *.bin already on the device (under the model
+# dir) and runs that in place — so a plain `sh execute.sh` works once the model
+# has been placed on the device. Set PULL_WEIGHT=1 to also adb-pull a local copy.
 # A real Adreno device (with vendor OpenCL) must be connected via adb,
 # and ANDROID_NDK must point at your Android NDK.
 #
@@ -26,6 +29,7 @@
 #   NNTR_NUM_THREADS  CPU helper threads on device (default: 4)
 #   REUSE_NNTR=1      reuse an existing nntrainer android builddir (skip step 1)
 #   SKIP_BUILD=1      skip all building, just push + run existing artifacts
+#   PULL_WEIGHT=1     adb-pull the on-device weight into ./weights/ as well
 #
 # Invoked as `sh execute.sh ...`? Re-exec under bash for the color logging and
 # BASH_SOURCE handling below (dash lacks both).
@@ -64,8 +68,12 @@ MODEL_DIR="$INSTALL_DIR/models/gemma2-2b"
 NNTR_NUM_THREADS="${NNTR_NUM_THREADS:-4}"
 TARGET="nntrainer_qwen3_gpu"
 
-# Weight: $1 wins, then $GEMMA2_WEIGHT.
+# Weight resolution order:
+#   1. local file given via $1 or $GEMMA2_WEIGHT  -> pushed to the device
+#   2. otherwise: auto-discover a *.bin already ON the device under the model
+#      dir and run it in place (set PULL_WEIGHT=1 to also adb-pull a local copy)
 GEMMA2_WEIGHT="${1:-${GEMMA2_WEIGHT:-}}"
+USE_DEVICE_WEIGHT=0   # set to 1 when we reuse a weight already on the device
 
 log_header "GPU-native Gemma2-2B on Adreno"
 log_info "NNTRAINER_ROOT : $NNTRAINER_ROOT"
@@ -90,17 +98,32 @@ fi
 DEVICE_ID=$("$ADB" devices | awk 'NR>1 && $2=="device"{print $1; exit}')
 log_info "Device         : $DEVICE_ID"
 
-if [ -z "$GEMMA2_WEIGHT" ]; then
-  log_error "No Gemma2-2B weight given."
-  log_info  "Pass the QINT4 .bin file:  sh execute.sh /path/to/gemma2-2b-qint4.bin"
-  log_info  "or set GEMMA2_WEIGHT=/path/to/gemma2-2b-qint4.bin"
-  exit 1
+if [ -n "$GEMMA2_WEIGHT" ]; then
+  # A local weight was given — it will be pushed to the device.
+  [ -f "$GEMMA2_WEIGHT" ] || { log_error "Weight file not found: $GEMMA2_WEIGHT"; exit 1; }
+  log_info "Weight (local) : $GEMMA2_WEIGHT ($(du -h "$GEMMA2_WEIGHT" | cut -f1))"
+else
+  # No local weight: look for one already on the device and use it in place.
+  log_info "No local weight given — searching the device..."
+  DEV_WEIGHT=$("$ADB" shell "ls -1 $MODEL_DIR/*.bin 2>/dev/null | head -1" | tr -d '\r')
+  [ -z "$DEV_WEIGHT" ] && DEV_WEIGHT=$("$ADB" shell "find $INSTALL_DIR/models -name '*.bin' 2>/dev/null | head -1" | tr -d '\r')
+  if [ -z "$DEV_WEIGHT" ]; then
+    log_error "No weight on local disk AND none found on the device under $INSTALL_DIR/models."
+    log_info  "Either pass a local .bin:  sh execute.sh /path/to/gemma2-2b-qint4.bin"
+    log_info  "or push one to the device first (e.g. into $MODEL_DIR/)."
+    exit 1
+  fi
+  USE_DEVICE_WEIGHT=1
+  DEV_SZ=$("$ADB" shell "wc -c < '$DEV_WEIGHT'" 2>/dev/null | tr -dc '0-9')
+  log_info "Weight (device): $DEV_WEIGHT (${DEV_SZ:-?} bytes) — using in place"
+  if [ "${PULL_WEIGHT:-0}" = "1" ]; then
+    mkdir -p "$NNTRAINER_ROOT/weights"
+    LOCAL_COPY="$NNTRAINER_ROOT/weights/$(basename "$DEV_WEIGHT")"
+    log_info "Pulling to $LOCAL_COPY ..."
+    "$ADB" pull "$DEV_WEIGHT" "$LOCAL_COPY"
+    log_success "Pulled $(basename "$DEV_WEIGHT")"
+  fi
 fi
-if [ ! -f "$GEMMA2_WEIGHT" ]; then
-  log_error "Weight file not found: $GEMMA2_WEIGHT"
-  exit 1
-fi
-log_info "Weight         : $GEMMA2_WEIGHT ($(du -h "$GEMMA2_WEIGHT" | cut -f1))"
 
 if [ "${SKIP_BUILD:-0}" != "1" ] && [ -z "$ANDROID_NDK" ]; then
   log_error "ANDROID_NDK is not set (needed to build). Example: export ANDROID_NDK=/opt/android-ndk-r26d"
@@ -171,16 +194,21 @@ for f in "$TARGET" libnntrainer.so libccapi-nntrainer.so libOpenCL.so libc++_sha
 done
 "$ADB" shell "chmod 755 $INSTALL_DIR/$TARGET"
 
-# Push the weight only if size differs (avoid re-pushing multi-GB files).
-WEIGHT_NAME="$(basename "$GEMMA2_WEIGHT")"
-DEV_WEIGHT="$MODEL_DIR/$WEIGHT_NAME"
-LOCAL_SZ=$(wc -c < "$GEMMA2_WEIGHT" | tr -d ' ')
-DEV_SZ=$("$ADB" shell "[ -f $DEV_WEIGHT ] && wc -c < $DEV_WEIGHT" 2>/dev/null | tr -dc '0-9')
-if [ "$LOCAL_SZ" = "$DEV_SZ" ]; then
-  log_info "weight already on device ($WEIGHT_NAME, $LOCAL_SZ bytes) — skipping push"
+# Weight: reuse the on-device one, or push the local one (skipping the push
+# when an identical-size copy is already there, to avoid re-sending GBs).
+if [ "$USE_DEVICE_WEIGHT" = "1" ]; then
+  log_info "using on-device weight: $DEV_WEIGHT (no push)"
 else
-  log_info "pushing weight $WEIGHT_NAME ($(du -h "$GEMMA2_WEIGHT" | cut -f1))..."
-  "$ADB" push "$GEMMA2_WEIGHT" "$DEV_WEIGHT" >/dev/null
+  WEIGHT_NAME="$(basename "$GEMMA2_WEIGHT")"
+  DEV_WEIGHT="$MODEL_DIR/$WEIGHT_NAME"
+  LOCAL_SZ=$(wc -c < "$GEMMA2_WEIGHT" | tr -d ' ')
+  DEV_SZ=$("$ADB" shell "[ -f $DEV_WEIGHT ] && wc -c < $DEV_WEIGHT" 2>/dev/null | tr -dc '0-9')
+  if [ "$LOCAL_SZ" = "$DEV_SZ" ]; then
+    log_info "weight already on device ($WEIGHT_NAME, $LOCAL_SZ bytes) — skipping push"
+  else
+    log_info "pushing weight $WEIGHT_NAME ($(du -h "$GEMMA2_WEIGHT" | cut -f1))..."
+    "$ADB" push "$GEMMA2_WEIGHT" "$DEV_WEIGHT" >/dev/null
+  fi
 fi
 log_success "Device ready"
 
