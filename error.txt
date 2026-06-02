@@ -3,14 +3,14 @@ remote: Enumerating objects: 5, done.
 remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.22 KiB | 625.00 KiB/s, done.
+Unpacking objects: 100% (3/3), 1.00 KiB | 342.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   1bcd439a6..4f59cfa7f  jijoong    -> origin/jijoong
-Updating 1bcd439a6..4f59cfa7f
+   74cb3b526..1f8fe5a38  jijoong    -> origin/jijoong
+Updating 74cb3b526..1f8fe5a38
 Fast-forward
- execute.sh | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
+ execute.sh | 6 ++++++
+ 1 file changed, 6 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -21,7 +21,7 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 [INFO] Install dir    : /data/local/tmp/nntrainer/causallm
 
 [Step 0] Check prerequisites
-[INFO] Device         : R3CY70LV96T
+[INFO] Device         : R3CY10WM83Y
 [INFO] Weight (local) : /home/jwhero94/models/gemma2/nntr_gemma2_2b_qint4.bin (1.4G)
 [SUCCESS] Prerequisites OK
 
@@ -241,7 +241,7 @@ WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features 
  * 0.57.0: {'fs.read'}
  * 0.58.0: {'format strings'}
 NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.source_root', 'meson.build_root'}
+ * 0.56.0: {'meson.build_root', 'meson.source_root'}
 
 nntrainer 0.6.0
 
@@ -263,74 +263,74 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
 [arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
 [arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
 [arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_svm_allocator.cpp
 [arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/ml-api-inference/lib/arm64-v8a/
 [arm64-v8a] Install /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libc++_shared.so:
 [arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/opencl/lib/arm64-v8a/
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_svm_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
 [arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
 [arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : clblast <= common.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : clblast <= api_common.cpp
 [arm64-v8a] Compile++      : clblast <= routine.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api.cpp
-[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor.cpp
+[arm64-v8a] Compile++      : clblast <= clblast_c.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api.cpp
 [arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
 [arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_ops.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_lazy.cpp
 [arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_lazy.cpp
 [arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
 [arm64-v8a] Compile++      : clblast <= database.cpp
 [arm64-v8a] Compile++      : nntrainer <= manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= engine.cpp
 [arm64-v8a] Compile++      : nntrainer <= data_iteration.cpp
 [arm64-v8a] Compile++      : nntrainer <= iteration_queue.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
 [arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= previous_input_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= bn_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
-[arm64-v8a] Compile++      : nntrainer <= databuffer_factory.cpp
-[arm64-v8a] Compile++      : clblast <= clblast.cpp
 [arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_graph.cpp
+[arm64-v8a] Compile++      : clblast <= clblast.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= tflite_export_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= databuffer_factory.cpp
 [arm64-v8a] Compile++      : nntrainer <= multiout_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
 [arm64-v8a] Compile++      : nntrainer <= databuffer.cpp
 [arm64-v8a] Compile++      : nntrainer <= app_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= random_data_producers.cpp
@@ -338,44 +338,45 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= raw_file_data_producer.cpp
 [arm64-v8a] Compile++      : nntrainer <= loss_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= cross_entropy_sigmoid_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= mse_loss_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= constant_derivative_loss_layer.cpp
-[arm64-v8a] Compile++      : clblast <= tuning.cpp
 [arm64-v8a] Compile++      : nntrainer <= dir_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= cross_entropy_sigmoid_loss_layer.cpp
+[arm64-v8a] Compile++      : clblast <= tuning.cpp
+[arm64-v8a] Compile++      : nntrainer <= constant_derivative_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cross_entropy_softmax_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= kld_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= multiply_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= add_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= subtract_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= sqrt_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= sine_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= tangent_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cosine_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= matmul_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tangent_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cast_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= gather_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= activation_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= slice_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= negative_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= multiout_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= bn_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= flatten_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= conv1d_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= input_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= preprocess_flip_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= preprocess_translate_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= layer_normalization_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= conv1d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= fc_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= preprocess_l2norm_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_flip_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_normalization_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_translate_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= conv2d_transpose_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_l2norm_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= conv2d_layer.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/conv2d_layer.cpp:96:24: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
   auto apply_data = [&]<typename T>(T *val) {
@@ -384,7 +385,7 @@ Found ninja-1.10.1 at /usr/bin/ninja
   auto apply_data = [&]<typename T>(T *out_data) {
                        ^
 2 warnings generated.
-[arm64-v8a] Compile++      : nntrainer <= attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= embedding.cpp
 [arm64-v8a] Compile++      : nntrainer <= pooling2d_layer.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/pooling2d_layer.cpp:194:23: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
   auto apply_max = [&]<typename T>(T *result_data) {
@@ -405,164 +406,163 @@ Found ninja-1.10.1 at /usr/bin/ninja
   auto pool_fn_average = [&]<typename T>(const T *in_data, int channel_idx,
                             ^
 6 warnings generated.
-[arm64-v8a] Compile++      : nntrainer <= embedding.cpp
 [arm64-v8a] Compile++      : nntrainer <= multi_head_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= permute_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= split_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= rnncell.cpp
 [arm64-v8a] Compile++      : nntrainer <= rnn.cpp
-[arm64-v8a] Compile++      : nntrainer <= permute_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= time_dist.cpp
 [arm64-v8a] Compile++      : nntrainer <= common_properties.cpp
-[arm64-v8a] Compile++      : nntrainer <= layer_node.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_impl.cpp
 [arm64-v8a] Compile++      : nntrainer <= dropout.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_node.cpp
 [arm64-v8a] Compile++      : nntrainer <= lstmcell_core.cpp
 [arm64-v8a] Compile++      : nntrainer <= centroid_knn.cpp
-[arm64-v8a] Compile++      : nntrainer <= layer_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= reduce_sum_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= reduce_mean_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= layer_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= reshape_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= identity_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= reduce_sum_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= lstmcell.cpp
+[arm64-v8a] Compile++      : nntrainer <= identity_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimizer_devel.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgd.cpp
 [arm64-v8a] Compile++      : nntrainer <= positional_encoding_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= lstm.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgd.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimizer_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= cpu_ops_table.cpp
 [arm64-v8a] Compile++      : nntrainer <= zoneout_lstmcell.cpp
 [arm64-v8a] Compile++      : nntrainer <= compute_ops.cpp
-[arm64-v8a] Compile++      : nntrainer <= cpu_ops_table.cpp
-[arm64-v8a] Compile++      : nntrainer <= upsample2d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= lstm.cpp
 [arm64-v8a] Compile++      : nntrainer <= fallback_kleidiai.cpp
-[arm64-v8a] Compile++      : nntrainer <= fallback_internal_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= grucell.cpp
+[arm64-v8a] Compile++      : nntrainer <= upsample2d_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= fallback_internal.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_fp16_fp32.cpp
 [arm64-v8a] Compile++      : nntrainer <= model_common_properties.cpp
 [arm64-v8a] Compile++      : nntrainer <= cblas_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_fp16_fp32.cpp
+[arm64-v8a] Compile++      : nntrainer <= fallback_internal_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= grucell.cpp
 [arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x4.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x8.cpp
-[arm64-v8a] Compile++      : nntrainer <= gru.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x4.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x8.cpp
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon_f16.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_neon.cpp
+[arm64-v8a] Compile++      : nntrainer <= gru.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x8.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_quant.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_neon.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_util.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_transA.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_quant.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transA.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_transAB.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_pack.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x16.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_transB.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile++      : nntrainer <= dynamic_training_optimization.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f16_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.c
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_constant.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32.c
-[arm64-v8a] Compile++      : nntrainer <= hgemm_noTrans.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32_neon.c
-[arm64-v8a] Compile++      : nntrainer <= dynamic_training_optimization.cpp
-[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
-[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f16.c
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f32.c
+[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f16.c
+[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
 [arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.c
 [arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.c
-[arm64-v8a] Compile++      : nntrainer <= channel_shuffle.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_noTrans.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_cosine.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_padding_b.cpp
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_constant.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_2.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_1.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_a.cpp
 [arm64-v8a] Compile++      : nntrainer <= lr_scheduler_linear.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_3.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_exponential.cpp
 [arm64-v8a] Compile++      : nntrainer <= adam.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition.cpp
+[arm64-v8a] Compile++      : nntrainer <= channel_shuffle.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= convert_block_q4_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= copy.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_step.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_quantize_input.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3.cpp
 [arm64-v8a] Compile++      : nntrainer <= dot.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_gemv.cpp
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_cosine.cpp
-[arm64-v8a] Compile++      : nntrainer <= convert_block_q4_0.cpp
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_exponential.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_quantize_input.cpp
-[arm64-v8a] Compile++      : nntrainer <= int8_int4_gemm_v8c.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_gemm.cpp
-[arm64-v8a] Compile++      : nntrainer <= lion.cpp
-[arm64-v8a] Compile++      : nntrainer <= fused_rmsnorm_quant.cpp
+[arm64-v8a] Compile++      : nntrainer <= int8_int4_gemm_v8c.cpp
 [arm64-v8a] Compile++      : nntrainer <= fused_qkv_rope.cpp
+[arm64-v8a] Compile++      : nntrainer <= fused_rmsnorm_quant.cpp
 [arm64-v8a] Compile++      : nntrainer <= two_conv_attention.cpp
-[arm64-v8a] Compile++      : nntrainer <= flash_attention.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_ab_bi_8x4.cpp
 [arm64-v8a] Compile++      : nntrainer <= q6_k_sgemv.cpp
 [arm64-v8a] Compile++      : nntrainer <= rmsnorm.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_ab_bi_8x4.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= restore_block_q4_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= rotary_emb.cpp
-[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_b.cpp
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_step.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_ab.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_a.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= flash_attention.cpp
+[arm64-v8a] Compile++      : nntrainer <= restore_block_q4_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= sgemv_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_ab.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_a.cpp
 [arm64-v8a] Compile++      : nntrainer <= sscal.cpp
-[arm64-v8a] Compile++      : nntrainer <= adamw.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
+[arm64-v8a] Compile++      : nntrainer <= lion.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_16bit.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_32bit_16bit.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_1.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
+[arm64-v8a] Compile++      : nntrainer <= adamw.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_2_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_axis_3_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= copy_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_2.cpp
 [arm64-v8a] Compile++      : nntrainer <= dot_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_a.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_trans_ab.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_a.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= hscal.cpp
 [arm64-v8a] Compile++      : nntrainer <= rmsnorm_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= hscal.cpp
-[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_omp.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_tensor_view.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_tensor_backing_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
 [arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= thread_manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= safetensors_util.cpp
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
 [arm64-v8a] Compile++      : nntrainer <= thread_manager_util.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
-[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
 [arm64-v8a] Compile++      : nntrainer <= profiler.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
 [arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
@@ -570,10 +570,6 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
 [arm64-v8a] Compile        : iniparser <= iniparser.c
 [arm64-v8a] Compile        : iniparser <= dictionary.c
-[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_compute_ops.cpp
-[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/opencl/opencl_command_queue_manager.cpp:89:25: warning: data argument not used by format string [-Wformat-extra-args]
             error_code, OpenCLErrorCodeToString(error_code));
@@ -582,13 +578,18 @@ Found ninja-1.10.1 at /usr/bin/ninja
   __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
                                                    ^~~~~~~~~~~
 1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_compute_ops.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= connection.cpp
 [arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
 [arm64-v8a] Compile++      : clblast <= cache.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
 [arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/tensor/cl_operations/blas_kernel_interface.cpp:1377:7: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
       input.height(),
@@ -597,52 +598,53 @@ Found ninja-1.10.1 at /usr/bin/ninja
       (input.getFormat() == Tformat::NHWC) ? input.channel() : input.width(),
       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 2 warnings generated.
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
 [arm64-v8a] Compile++      : nntrainer <= util_func.cpp
 [arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
 [arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
-[arm64-v8a] Compile++      : clblast <= gemm_routine.cpp
-[arm64-v8a] Compile++      : clblast <= xger.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_cl.cpp
+[arm64-v8a] Compile++      : clblast <= xgemv.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv_fast_rot.cpp
+[arm64-v8a] Compile++      : clblast <= gemm_routine.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
+[arm64-v8a] Compile++      : clblast <= clblast_exceptions.cpp
+[arm64-v8a] Compile++      : clblast <= xger.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv_fast.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_cl.cpp
-[arm64-v8a] Compile++      : clblast <= xgemv.cpp
-[arm64-v8a] Compile++      : clblast <= clblast_exceptions.cpp
-[arm64-v8a] Compile++      : clblast <= copy.cpp
+[arm64-v8a] Compile++      : clblast <= invert.cpp
 [arm64-v8a] Compile++      : clblast <= xgemm.cpp
-[arm64-v8a] Compile++      : clblast <= timing.cpp
+[arm64-v8a] Compile++      : clblast <= copy.cpp
 [arm64-v8a] Compile++      : clblast <= trsv_routine.cpp
 [arm64-v8a] Compile++      : clblast <= xdot.cpp
-[arm64-v8a] Compile++      : clblast <= invert.cpp
+[arm64-v8a] Compile++      : clblast <= timing.cpp
 [arm64-v8a] Compile++      : clblast <= compile.cpp
 [arm64-v8a] Compile++      : clblast <= xgemm_direct.cpp
-[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
 [arm64-v8a] Compile++      : clblast <= configurations.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
 [arm64-v8a] Compile++      : clblast <= padtranspose.cpp
-[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
 [arm64-v8a] Compile++      : clblast <= xdotc.cpp
 [arm64-v8a] Compile++      : clblast <= pad.cpp
 [arm64-v8a] Compile++      : clblast <= transpose.cpp
 [arm64-v8a] Compile++      : clblast <= utilities.cpp
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
 [arm64-v8a] Compile++      : clblast <= xtrsv.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/routines/xtrsv.cpp:137:12: warning: enumeration values 'kAny' and 'kHalf' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xcopy.cpp
 [arm64-v8a] Compile++      : clblast <= xdotu.cpp
 [arm64-v8a] Compile++      : clblast <= xswap.cpp
-[arm64-v8a] Compile++      : clblast <= xcopy.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
 [arm64-v8a] Compile++      : clblast <= xamax.cpp
 [arm64-v8a] Compile++      : clblast <= xhpr.cpp
-[arm64-v8a] Compile++      : clblast <= invert.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/invert.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+[arm64-v8a] Compile++      : clblast <= xscal.cpp
+[arm64-v8a] Compile++      : clblast <= xhpmv.cpp
+[arm64-v8a] Compile++      : clblast <= copy_fast.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
@@ -651,21 +653,19 @@ Found ninja-1.10.1 at /usr/bin/ninja
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
-[arm64-v8a] Compile++      : clblast <= xhpmv.cpp
-[arm64-v8a] Compile++      : clblast <= xgerc.cpp
-[arm64-v8a] Compile++      : clblast <= xscal.cpp
-[arm64-v8a] Compile++      : clblast <= xnrm2.cpp
+[arm64-v8a] Compile++      : clblast <= invert.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/invert.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xaxpy.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xdot.cpp
-[arm64-v8a] Compile++      : clblast <= copy_fast.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xnrm2.cpp
+[arm64-v8a] Compile++      : clblast <= xgerc.cpp
 [arm64-v8a] Compile++      : clblast <= xasum.cpp
 [arm64-v8a] Compile++      : clblast <= xtrmv.cpp
 [arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
@@ -679,6 +679,21 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<1>(argc, argv);
     ^
 2 warnings generated.
+[arm64-v8a] Compile++      : clblast <= transpose_pad.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xger.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xger.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : clblast <= transpose_fast.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xsbmv.cpp
 [arm64-v8a] Compile++      : clblast <= xdot.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xdot.cpp:26:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
@@ -698,21 +713,6 @@ Found ninja-1.10.1 at /usr/bin/ninja
     ^
 3 warnings generated.
 [arm64-v8a] Compile++      : clblast <= xhpr2.cpp
-[arm64-v8a] Compile++      : clblast <= transpose_pad.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= xger.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xger.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= transpose_fast.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xgemm.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/routines/xgemm.cpp:219:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
@@ -721,15 +721,15 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [arm64-v8a] Compile++      : clblast <= xspmv.cpp
 [arm64-v8a] Compile++      : clblast <= xsyr2.cpp
 [arm64-v8a] Compile++      : clblast <= xgeru.cpp
-[arm64-v8a] Compile++      : clblast <= xhemv.cpp
-[arm64-v8a] Compile++      : clblast <= xhbmv.cpp
 [arm64-v8a] Compile++      : clblast <= xgbmv.cpp
-[arm64-v8a] Compile++      : clblast <= xtpmv.cpp
-[arm64-v8a] Compile++      : clblast <= xtbmv.cpp
-[arm64-v8a] Compile++      : clblast <= xsyr.cpp
-[arm64-v8a] Compile++      : clblast <= xspr2.cpp
-[arm64-v8a] Compile++      : clblast <= xspr.cpp
 [arm64-v8a] Compile++      : clblast <= xsymv.cpp
+[arm64-v8a] Compile++      : clblast <= xtbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xhemv.cpp
+[arm64-v8a] Compile++      : clblast <= xsyr.cpp
+[arm64-v8a] Compile++      : clblast <= xhbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xtpmv.cpp
+[arm64-v8a] Compile++      : clblast <= xspr.cpp
+[arm64-v8a] Compile++      : clblast <= xspr2.cpp
 [arm64-v8a] Compile++      : clblast <= xtrsv.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemv.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
@@ -755,6 +755,10 @@ Found ninja-1.10.1 at /usr/bin/ninja
     ^
 4 warnings generated.
 [arm64-v8a] Compile++      : clblast <= xher.cpp
+[arm64-v8a] Compile++      : clblast <= xher2k.cpp
+[arm64-v8a] Install        : libnnstreamer-native.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libnnstreamer-native.so
+[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libOpenCL.so
+[arm64-v8a] StaticLibrary  : libiniparser.a
 [arm64-v8a] Compile++      : clblast <= xgemm_direct.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemm_direct.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -772,30 +776,23 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<2>(argc, argv);
     ^
 3 warnings generated.
-[arm64-v8a] Install        : libnnstreamer-native.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libnnstreamer-native.so
-[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libOpenCL.so
-[arm64-v8a] StaticLibrary  : libiniparser.a
 [arm64-v8a] Compile++      : clblast <= xgemv.cpp
-[arm64-v8a] Compile++      : clblast <= xher2k.cpp
 [arm64-v8a] Compile++      : clblast <= xher2.cpp
 [arm64-v8a] Compile++      : clblast <= xsyr2k.cpp
-[arm64-v8a] Compile++      : clblast <= xhemm.cpp
 [arm64-v8a] Compile++      : clblast <= xger.cpp
-[arm64-v8a] Compile++      : clblast <= xcol2im.cpp
 [arm64-v8a] Compile++      : clblast <= xtrmm.cpp
-[arm64-v8a] Compile++      : clblast <= xim2col.cpp
 [arm64-v8a] Compile++      : clblast <= xtrsm.cpp
-[arm64-v8a] Compile++      : clblast <= xherk.cpp
-[arm64-v8a] Compile++      : clblast <= xomatcopy.cpp
-[arm64-v8a] Compile++      : clblast <= xaxpybatched.cpp
+[arm64-v8a] Compile++      : clblast <= xhemm.cpp
+[arm64-v8a] Compile++      : clblast <= xim2col.cpp
+[arm64-v8a] Compile++      : clblast <= xcol2im.cpp
 [arm64-v8a] Compile++      : clblast <= xinvert.cpp
+[arm64-v8a] Compile++      : clblast <= xomatcopy.cpp
 [arm64-v8a] Compile++      : clblast <= xhad.cpp
+[arm64-v8a] Compile++      : clblast <= xherk.cpp
+[arm64-v8a] Compile++      : clblast <= xaxpybatched.cpp
 [arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
-[arm64-v8a] Compile++      : clblast <= xsymm.cpp
-[arm64-v8a] Compile++      : clblast <= test_utilities.cpp
-[arm64-v8a] Compile++      : clblast <= xgemm.cpp
 [arm64-v8a] Compile++      : clblast <= xsyrk.cpp
-[arm64-v8a] Compile++      : clblast <= xgemmstridedbatched.cpp
+[arm64-v8a] Compile++      : clblast <= test_utilities.cpp
 [arm64-v8a] Compile++      : clblast <= xgemm.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemm.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -825,6 +822,9 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<12>(argc, argv);
     ^
 5 warnings generated.
+[arm64-v8a] Compile++      : clblast <= xsymm.cpp
+[arm64-v8a] Compile++      : clblast <= xgemm.cpp
+[arm64-v8a] Compile++      : clblast <= xgemmstridedbatched.cpp
 [arm64-v8a] Compile++      : clblast <= xgemmbatched.cpp
 [arm64-v8a] StaticLibrary  : libclblast.a
 [arm64-v8a] SharedLibrary  : libnntrainer.so
@@ -1288,24 +1288,13 @@ Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrain
 [SUCCESS] nntrainer libraries ready
 
 [Step 2] Build nntrainer_qwen3_gpu (ndk-build)
-[INFO] Creating placeholder /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/lib/libtokenizers_android_c.a (gpu binary doesn't link the tokenizer)
 [arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/opencl/lib/arm64-v8a/
 [arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/lib/arm64-v8a/
 [arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/lib/arm64-v8a/
-[arm64-v8a] Compile++      : nntrainer_qwen3_gpu <= qwen3_forward.cpp
-./../gpu_native/qwen3_forward.cpp:12:10: fatal error: 'attention_kernels.h' file not found
-#include <attention_kernels.h>
-         ^~~~~~~~~~~~~~~~~~~~~
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer_qwen3_gpu/__/gpu_native/qwen3_forward.o] Error 1
-make: *** Waiting for unfinished jobs....
 [arm64-v8a] Compile++      : nntrainer_qwen3_gpu <= main.cpp
-In file included from ./../gpu_native/main.cpp:26:
-In file included from /home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/include/nntrainer/cl_context.h:34:
-/home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/include/nntrainer/opencl_buffer_manager.h:19:10: fatal error: 'opencl_buffer.h' file not found
-#include <opencl_buffer.h>
-         ^~~~~~~~~~~~~~~~~
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer_qwen3_gpu/__/gpu_native/main.o] Error 1
+[arm64-v8a] Compile++      : nntrainer_qwen3_gpu <= qwen3_forward.cpp
+[arm64-v8a] Executable     : nntrainer_qwen3_gpu
+[SUCCESS] nntrainer_qwen3_gpu built
+[ERROR] Built binary not found: /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/jni/libs/arm64-v8a/nntrainer_qwen3_gpu (run without SKIP_BUILD first).
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
 
