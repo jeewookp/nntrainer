@@ -167,7 +167,11 @@ else
     fi
   fi
   [ -d builddir ] && { log_info "Removing existing builddir..."; rm -rf builddir; }
-  ./tools/package_android.sh
+  # enable-opencl=true is required: it runs jni/prepare_opencl.sh (creates
+  # builddir/opencl that the CausalLM Android.mk links against), adds the
+  # cl_operations include path (blas_kernel_interface.h) and -DENABLE_OPENCL=1.
+  # The gpu-native binary needs OpenCL anyway. Extra flags via MESON_ARGS.
+  ./tools/package_android.sh -Denable-opencl=true ${MESON_ARGS:-}
 fi
 
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
