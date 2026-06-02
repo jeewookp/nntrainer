@@ -1436,7 +1436,45 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
             : ((M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4");
   // Buffer path compiles the program with -DV8C_BUFFER_ONLY so the
   // image-sampling kernel bodies are excluded (Intel NEO can't compile them).
-  const std::string copts = use_buf ? kV8cBufCompileOpts : "";
+  std::string copts = use_buf ? kV8cBufCompileOpts : "";
+  // NNTR_V8C_KCLOCK: in-kernel cl_khr_kernel_clock measurement build (off by
+  // default). "1" = time the full K-loop; "2" = also drop the dp4a (fetch-only
+  // floor) to isolate fetch-stall from compute. Measurement-only; the printf is
+  // emitted by one work-item per dispatch.
+  // NNTR_V8C_KCLOCK loop-decomposition modes (in-kernel clock_read_device):
+  //   1 full | 2 no-dp4a (fetch+unpack) | 3 no-weight-fetch | 4 no-act-fetch |
+  //   5 compute-only (no fetch). Diff of modes isolates weight- vs act-fetch
+  //   vs pure compute. Synthetic runtime values suppress a stream w/o DCE.
+  // Env-gated diagnostic/experimental compile flags — process-constant, so read
+  // ONCE (static), not per dispatch. NNTR_V8C_KCLOCK {1..5} (in-kernel clock
+  // decomposition), NNTR_V8C_PREFETCH=1 (1-ahead weight prefetch), NNTR_V8C_MFAST
+  // =1 (M-fast dispatch order). All bit-identical / default-off.
+  static const std::string v8c_env_copts = []() {
+    std::string s;
+    if (const char *kc = getenv("NNTR_V8C_KCLOCK")) {
+      const char m = kc[0];
+      if (m >= '1' && m <= '5')
+        s += " -DV8C_KCLOCK";
+      if (m == '2')
+        s += " -DV8C_KCLOCK_NOCOMPUTE";
+      if (m == '3' || m == '5')
+        s += " -DV8C_KCLOCK_NOWFETCH";
+      if (m == '4' || m == '5')
+        s += " -DV8C_KCLOCK_NOAFETCH";
+    }
+    if (const char *pf = getenv("NNTR_V8C_PREFETCH"))
+      if (pf[0] == '1')
+        s += " -DV8C_PREFETCH";
+    if (const char *mf = getenv("NNTR_V8C_MFAST"))
+      if (mf[0] == '1')
+        s += " -DV8C_MFAST";
+    return s;
+  }();
+  static const bool v8c_mfast = []() {
+    const char *mf = getenv("NNTR_V8C_MFAST");
+    return mf && mf[0] == '1';
+  }();
+  copts += v8c_env_copts;
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)
@@ -1485,6 +1523,15 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   // any LWS that divides gws works. (OpenCL 3.0 on Adreno 830 allows
   // non-uniform groups, but staying uniform with a runtime-chosen LWS is
   // the conservative win.)
+  // Tag this dispatch's profile entry with its shape (N,K uniquely identify
+  // each transformer FC: q/k/v/o/gate/up/down) so NNTR_OPENCL_PROFILING splits
+  // the aggregate v8c_gemm_int8_int4 number per GEMM shape. Host-only; consumed
+  // by the next enqueueKernel; no effect on kernel output.
+  {
+    char lbl[48];
+    snprintf(lbl, sizeof(lbl), ":N%u_K%u", N, K);
+    blas_cc->command_queue_inst_.setNextProfileLabel(lbl);
+  }
   if (M <= 4) {
     // M=1 (TM=1) GEMV-style dispatch: 1-D grid over output channels.
     constexpr size_t TN_M1 = 8;
@@ -1493,7 +1540,14 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
       kp->GetKernel(), 1, gws.data(), nullptr, 0, nullptr, nullptr);
   } else {
     constexpr size_t TM = 4, TN = 8;
-    std::array<size_t, 3> gws = {(size_t)N / TN, (size_t)M / TM, 1};
+    // NNTR_V8C_MFAST: swap so M/TM is the fast-varying (dim0) axis; the kernel
+    // (-DV8C_MFAST) reads m0 from gid0, n0 from gid1 to match. Weight-reuse
+    // dispatch order. Default keeps {N/TN, M/TM}.
+    std::array<size_t, 3> gws = v8c_mfast
+                                  ? std::array<size_t, 3>{(size_t)M / TM,
+                                                          (size_t)N / TN, 1}
+                                  : std::array<size_t, 3>{(size_t)N / TN,
+                                                          (size_t)M / TM, 1};
     // CL-event profiling showed the historic NULL lws (driver-chosen
     // workgroup) lands the GEMM at ~14% of dp4a peak in-forward, vs 87%
     // in the standalone microbench which used a tuned LWS. Pick a device-

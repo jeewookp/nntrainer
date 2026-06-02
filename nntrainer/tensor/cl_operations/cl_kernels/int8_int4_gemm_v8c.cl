@@ -17,6 +17,12 @@
 
 #pragma OPENCL EXTENSION cl_khr_integer_dot_product : enable
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#ifdef V8C_KCLOCK
+// In-kernel HW timestamp counter (cl_khr_kernel_clock, present on Adreno 840).
+// Used only in the NNTR_V8C_KCLOCK measurement build to time the K-loop from
+// inside the kernel; default builds never define V8C_KCLOCK so this is a no-op.
+#pragma OPENCL EXTENSION cl_khr_kernel_clock : enable
+#endif
 
 __constant sampler_t SMP_v8c = CLK_NORMALIZED_COORDS_FALSE |
                                CLK_ADDRESS_CLAMP_TO_EDGE |
@@ -324,8 +330,18 @@ __kernel void v8c_gemm_int8_int4(
     __global const int    *row_sum_w_int4,  // [N] sum_k(int4 w_nk), pre-decoded
     __global       half   *Y,               // [M, N] fp16 output
     const int M, const int N, const int K) {
+#ifdef V8C_MFAST
+  // prefill weight-reuse: M is the fast-varying dispatch axis (wrapper sets
+  // gws={M/TM, N/TN}), so m-tiles of a fixed n launch consecutively and the
+  // weight panel stays cache-hot across them (cross-workgroup weight reuse
+  // without growing the workgroup -> no occupancy/spill change). Output
+  // bit-identical; only WI->(m,n) assignment + dispatch order change.
+  const int m0 = get_global_id(0) * V8C_TM;
+  const int n0 = get_global_id(1) * V8C_TN;
+#else
   const int n0 = get_global_id(0) * V8C_TN;
   const int m0 = get_global_id(1) * V8C_TM;
+#endif
   const int K32 = K >> 5;
 
   int acc[V8C_TM][V8C_TN];
@@ -334,18 +350,47 @@ __kernel void v8c_gemm_int8_int4(
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) acc[i][j] = 0;
 
+#ifdef V8C_KCLOCK
+  ulong _kc0 = clock_read_device();
+#endif
   for (int k32 = 0; k32 < K32; k32++) {
     // 2 activation texels (16 K each) cover 32 K of activation row
     uint4 a_lo[V8C_TM], a_hi[V8C_TM];
     #pragma unroll
     for (int i = 0; i < V8C_TM; i++) {
+#ifdef V8C_KCLOCK_NOAFETCH
+      // kclock mode 4/5: suppress the activation fetch (synthetic runtime value,
+      // not a memory read) to isolate the act-fetch contribution.
+      a_lo[i] = (uint4)((uint)(k32 * 7u + (uint)i + 1u));
+      a_hi[i] = (uint4)((uint)(k32 * 11u + (uint)i + 3u));
+#else
       a_lo[i] = read_imageui(Ximg, SMP_v8c, (int2)(2*k32  , m0 + i));
       a_hi[i] = read_imageui(Ximg, SMP_v8c, (int2)(2*k32+1, m0 + i));
+#endif
     }
+#if defined(V8C_PREFETCH) && !defined(V8C_KCLOCK_NOWFETCH)
+    // 1-ahead weight prefetch: issue the NEXT column's texel load before
+    // consuming the current one, so the texture-fetch latency overlaps the 8
+    // dp4a. Bit-identical math (only reorders the loads). The in-kernel clock
+    // profile showed this loop is ~2/3 weight-fetch latency, so giving the HW
+    // an extra outstanding load to hide should help. Cost: +1 uint4 live (~4
+    // regs), well under the register-spill cliff.
+    uint4 wpf_carry = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0));
+#endif
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) {
       // 1 weight texel = 32 int4 K-channels (offset-encoded)
+#ifdef V8C_KCLOCK_NOWFETCH
+      // kclock mode 3/5: suppress the weight fetch (synthetic runtime value)
+      // to isolate the weight-fetch contribution.
+      uint4 w = (uint4)((uint)(k32 * 13u + (uint)j + 1u));
+#elif defined(V8C_PREFETCH)
+      uint4 w = wpf_carry;
+      if (j + 1 < V8C_TN)
+        wpf_carry = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j + 1));
+#else
       uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+#endif
       // Mask-only unpack: each masked uint = 4 unsigned bytes in [0..15]
       // (= encoded values; real value = encoded - 8).
       const uint M4 = 0x0F0F0F0Fu;
@@ -357,6 +402,17 @@ __kernel void v8c_gemm_int8_int4(
       uint w2hi = (w.z >> 4)  & M4;  // K = j_block*32 + [20..23]
       uint w3lo =  w.w        & M4;  // K = j_block*32 + [24..27]
       uint w3hi = (w.w >> 4)  & M4;  // K = j_block*32 + [28..31]
+#ifdef V8C_KCLOCK_NOCOMPUTE
+      // fetch-only floor: consume every fetched/unpacked value (so the loads
+      // are NOT dead-code-eliminated) but skip the 256 dp4a/block. Comparing
+      // these cycles to the full-loop cycles isolates fetch-stall vs compute.
+      #pragma unroll
+      for (int i = 0; i < V8C_TM; i++) {
+        acc[i][j] += (int)(w0lo + w0hi + w1lo + w1hi + w2lo + w2hi + w3lo + w3hi +
+                           a_lo[i].x + a_lo[i].y + a_lo[i].z + a_lo[i].w +
+                           a_hi[i].x + a_hi[i].y + a_hi[i].z + a_hi[i].w);
+      }
+#else
       #pragma unroll
       for (int i = 0; i < V8C_TM; i++) {
         // dot_4x8packed_su_int: signed_int8 (act) × unsigned_uint8 (encoded)
@@ -369,8 +425,24 @@ __kernel void v8c_gemm_int8_int4(
                    + dot_4x8packed_su_int(a_hi[i].z, w3lo)
                    + dot_4x8packed_su_int(a_hi[i].w, w3hi);
       }
+#endif
     }
   }
+#ifdef V8C_KCLOCK
+  ulong _kc1 = clock_read_device();
+  if (get_global_id(0) == 0 && get_global_id(1) == 0) {
+    int _chk = 0;
+    #pragma unroll
+    for (int i = 0; i < V8C_TM; i++)
+      #pragma unroll
+      for (int j = 0; j < V8C_TN; j++) _chk += acc[i][j];
+    ulong _dt = _kc1 - _kc0;
+    // 256 dp4a + 16 image reads per K-block (TM=4,TN=8). cyc/block vs the
+    // dp4a count reveals stall. _chk anchors the loop (no DCE) + orders _kc1.
+    printf("V8CKC N=%d K=%d K32=%d loop_cyc=%u cyc_per_block=%u chk=%d\n",
+           N, K, K32, (uint)_dt, (uint)(_dt / (ulong)(K32 > 0 ? K32 : 1)), _chk);
+  }
+#endif
   // Bias correction for asymmetric int8 activation + offset-encoded int4 wgt:
   //   acc                          = Σ_k act_q[i,k] * w_enc[j,k]
   //                                 where w_enc = w_int4 + 8 ∈ [0..15]
