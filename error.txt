@@ -1,3 +1,275 @@
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ git pull upstream all_gpu
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Total 5 (delta 4), reused 4 (delta 4), pack-reused 1 (from 1)
+Unpacking objects: 100% (5/5), 790 bytes | 263.00 KiB/s, done.
+From https://github.com/jeewookp/nntrainer
+ * branch              all_gpu    -> FETCH_HEAD
+   2d4c266c..789bc451  all_gpu    -> upstream/all_gpu
+Updating 2d4c266c..789bc451
+Fast-forward
+ nntrainer/tensor/memory_pool.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ bash run_gemma4_e2b.sh 
+[run_gemma4_e2b] FP32 binary already exists, skipping conversion
+╔══════════════════════════════════════╗
+║   Gemma4 E2B – INT4 Run Script       ║
+╚══════════════════════════════════════╝
+[INFO] Model dir  : /home/jwhero94/models/gemma4
+[INFO] Prompt     : Explain artificial intelligence briefly
+[INFO] Quantize   : Q4_0
+
+[Step 1/5] Check prerequisites
+──────────────────────
+[OK] Device: R3CY10WM83Y
+[OK] Model files found
+
+[Step 2/5] Build
+──────────────────────
+[OK] Android binary up to date
+[INFO] OpenCL/opencl sources changed — incremental rebuild of libnntrainer.so...
+ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir'
+[1/2] Generating jni/ndk-build with a custom command
+[arm64-v8a] Install /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Install        : libnnstreamer-native.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnnstreamer-native.so
+[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libOpenCL.so
+[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
+[arm64-v8a] SharedLibrary  : libnntrainer.so
+[arm64-v8a] SharedLibrary  : libccapi-nntrainer.so
+[arm64-v8a] Install        : libccapi-nntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libccapi-nntrainer.so
+[arm64-v8a] SharedLibrary  : libcapi-nntrainer.so
+[arm64-v8a] Install        : libcapi-nntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libcapi-nntrainer.so
+[arm64-v8a] Install        : libnntrainer.so => /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnntrainer.so
+[1/2] Installing files.
+Installing subdir /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/opencl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl_version.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/nntrainer/opencl/CL/cl_platform.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/CL
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnnstreamer-native.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libnntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libc++_shared.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libccapi-nntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libcapi-nntrainer.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/jni/arm64-v8a/libOpenCL.so to /home/jwhero94/projects/nntrainer/builddir/android_build_result/lib/arm64-v8a
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/convert_block_q4_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/copy.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dot.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/embedding.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_adreno_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_weight_image2d_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image_v5.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemv_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_rmsnorm_qkv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_rmsnorm_gate_up.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/fused_gemv_int4_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gateup_swiglu_int4_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_quantize_input.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/delegate_conv_wave.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dequant_int4_to_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/image_reformat.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_image2d_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int4_gemm_adreno_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/int8_int4_gemm_adreno.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/input_transpose.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q4_0_ab_bi_8x4.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q6_k_sgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/q6_k_sgemv_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/restore_block_q4_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rotary_emb.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_ab.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemm_trans_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemv_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/sscal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_16bit.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_32bit_16bit.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_1.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/add2_fp16_svm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/addition_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_1_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_2_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/concat_axis_3_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/copy_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/dot_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/embedding_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_ab.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemm_trans_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemv_no_trans.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hgemv.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/hscal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rmsnorm_fp16_svm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rotary_emb_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_decode_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_decode_fp16_qk.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/rope_prefill_fp16_qk.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_argmax_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_gumbel_sample_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/gpu_embedding_int4chunked.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v2.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v3.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v3_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v5.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v6.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v7.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v8.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_v9.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/attention_fused_fp16_decode_gqa.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/swiglu_fp16_image2d.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_0_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_1_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/transpose_axis_2_fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/builddir/nntrainer/tensor/cl_operations/cl_kernels/cl_kernels.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer/cl_kernels
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_log.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_logger.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/nntrainer_error.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/app_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/engine.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/mem_allocator.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/compiler/compiler_fwd.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/dataset/databuffer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/dataset/databuffer_factory.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/loss/loss_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_devel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/acti_func.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/operation_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/common_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/layer_node.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/weight_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/layers/tensor_layer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/neuralnet.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/dynamic_training_optimization.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/models/model_common_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_devel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_context.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/lr_scheduler.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/optimizers/optimizer_wrapped.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/fallback/fallback_internal.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/fallback/fallback_kleidiai.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/nntr_ggml_impl/nntr_ggml_impl_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/ggml_interface/ggml_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/cblas_interface/cblas_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/matrix_transpose_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/mask_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/matrix_transpose_neon/matrix_transpose_kernels_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_kernel/hgemm_kernel.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding_a.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_padding/hgemm_padding_b.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_util.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_pack.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/hgemm/hgemm_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p_qsi4c32p_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qsi8d32p_f32.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qsi8d32p_f32_neon.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_lhs_quant_pack_qai8dxp_f32.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/pack/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kai/kai_common.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/arm_compute_backend.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_impl.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_setting.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_mathfun.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/neon_mathfun.hxx to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/arm/kleidiai_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cpu_backend/cpu_backend.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernel_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/blas_kernels.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/attention_kernel_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cl_operations/clblast_interface.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_data.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_base.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/float_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/int4_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/uint4_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/char_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/short_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q6_k_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/uint_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_k_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_0_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/q4_0_utils.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/weight.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/var_grad.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/quantizer.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_wrap_specs.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/manager.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/basic_planner.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_planner.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/tensor_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_loader.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/task_executor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/cache_elem.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/memory_pool.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/swap_device.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/task.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/tensor/half_tensor.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/base_properties.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/node_exporter.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/profile_gate.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/util_func.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/profiler.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
+Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/nntr_threads.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/fp16.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/util_simd.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
 Installing /home/jwhero94/projects/nntrainer/nntrainer/utils/dynamic_library_loader.h to /home/jwhero94/projects/nntrainer/builddir/android_build_result/include/nntrainer
@@ -747,5 +1019,3 @@ ninja: Entering directory `/home/jwhero94/projects/nntrainer/builddir_quantize'
 ────────────────────────────────────────────────
 [INFO] adb shell exit: 0
 [OK] Done!
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer$ 
-
