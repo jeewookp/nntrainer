@@ -22,6 +22,9 @@
 # A real Adreno device (with vendor OpenCL) must be connected via adb,
 # and ANDROID_NDK must point at your Android NDK.
 #
+# Missing git submodules (iniparser, ruy, OpenBLAS, minja, ...) are auto-inited
+# before the build, so a fresh clone works without `git submodule update` first.
+#
 # Common env overrides:
 #   ANDROID_NDK        (required) path to the Android NDK
 #   GEMMA2_WEIGHT      local path to the Gemma2-2B QINT4 .bin weight file
@@ -153,6 +156,16 @@ elif [ "${REUSE_NNTR:-0}" = "1" ] && [ -f "$NNTR_LIB" ]; then
 else
   log_step "1" "Build nntrainer for Android (arm64-v8a, OpenCL enabled)"
   cd "$NNTRAINER_ROOT"
+  # The meson subprojects (iniparser, ruy, OpenBLAS, ...) and minja are git
+  # submodules; an un-inited clone leaves them empty and the ndk build fails
+  # with "iniparser.h not found". Initialise any that are missing.
+  if [ -d .git ] || git rev-parse --git-dir >/dev/null 2>&1; then
+    if [ -z "$(ls -A subprojects/iniparser 2>/dev/null)" ] || \
+       [ -z "$(ls -A Applications/CausalLM/third_party/minja 2>/dev/null)" ]; then
+      log_info "Initialising git submodules (iniparser, ruy, OpenBLAS, minja, ...)"
+      git submodule update --init --recursive
+    fi
+  fi
   [ -d builddir ] && { log_info "Removing existing builddir..."; rm -rf builddir; }
   ./tools/package_android.sh
 fi
