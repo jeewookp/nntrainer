@@ -28,7 +28,6 @@
 #include <vector>
 
 #include <sys/mman.h>
-#include <unistd.h>
 
 // Static registry of anonymous-mmap pool ranges.
 // MemoryPool::allocate() registers ranges here when it uses mmap instead of
@@ -191,24 +190,13 @@ void MemoryPool::allocate() {
     auto *cl_context =
       static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
 
-    // Qualcomm Adreno drivers ignore the alignment hint passed to clSVMAlloc
-    // and may return a non-page-aligned pointer (e.g. offset 880 within a
-    // page).  transformer.cpp's MAP_FIXED weight-mmap path requires
-    // pool_ptr % PAGE_SZ == file_pos % PAGE_SZ.  Fix: over-allocate by one
-    // page and manually align upward; keep the raw pointer for release.
-    static const size_t PAGE_SZ =
-      static_cast<size_t>(::sysconf(_SC_PAGE_SIZE));
-    void *raw = cl_context->context_inst_.createSVMRegion(pool_size + PAGE_SZ);
-    if (raw != nullptr) {
-      uintptr_t raw_addr = reinterpret_cast<uintptr_t>(raw);
-      uintptr_t aligned_addr = (raw_addr + PAGE_SZ - 1) & ~(PAGE_SZ - 1);
-      svm_raw_pool = raw;
-      mem_pool = reinterpret_cast<void *>(aligned_addr);
+    // createSVMRegion internally page-aligns the pointer and tracks the raw
+    // SVM address for release.  Caller receives an aligned pointer directly.
+    mem_pool = cl_context->context_inst_.createSVMRegion(pool_size);
+    if (mem_pool != nullptr) {
       svm_allocation = true;
-      ml_logi("MemoryPool::allocate: pool_size=%zu MB via clSVMAlloc "
-              "(raw=%p aligned=%p inpage=%zu)",
-              pool_size / 1024 / 1024, raw, mem_pool,
-              aligned_addr % PAGE_SZ);
+      ml_logi("MemoryPool::allocate: pool_size=%zu MB via clSVMAlloc",
+              pool_size / 1024 / 1024);
     }
   }
 #endif
@@ -320,12 +308,7 @@ void MemoryPool::deallocate() {
     } else if (svm_allocation) {
       auto *cl_context =
         static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-      // Release the raw (unaligned) pointer; mem_pool may point into the
-      // middle of the SVM allocation after manual page-alignment above.
-      void *to_release = svm_raw_pool ? svm_raw_pool : mem_pool;
-      cl_context->context_inst_.releaseSVMRegion(to_release);
-      svm_raw_pool = nullptr;
-      svm_allocation = false;
+      cl_context->context_inst_.releaseSVMRegion(mem_pool);
     } else {
       free(mem_pool);
     }

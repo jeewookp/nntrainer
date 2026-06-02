@@ -16,7 +16,9 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "CL/cl.h"
@@ -88,46 +90,74 @@ void ContextManager::ReleaseContext() {
  */
 const cl_device_id ContextManager::GetDeviceId() { return device_id_; }
 
+// Tracks raw (unaligned) SVM pointers by their page-aligned counterpart.
+// Qualcomm Adreno drivers ignore the alignment hint in clSVMAlloc and may
+// return addresses that are not page-aligned.  We over-allocate by PAGE_SZ,
+// manually advance to the next page boundary, and store the raw pointer here
+// so releaseSVMRegion can pass the correct address to clSVMFree.
+static std::unordered_map<void *, void *> s_svm_aligned_to_raw;
+static std::mutex s_svm_map_mutex;
+
 void *ContextManager::createSVMRegion(size_t size) {
   if (!context_) return nullptr;
-  // Phase A: Adreno 830 advertises CL_DEVICE_SVM_FINE_GRAIN_BUFFER.
-  // Fine-grained SVM auto-coheres host<->device without explicit
-  // SVMMap/Unmap, so the structural ~330us cache-flush wait that
-  // Phase O hit on coarse-grain becomes a no-op. Trade-off: per-
-  // cacheline coherence may add per-access cost during kernels;
-  // env-gate it so a regression triggers a fast revert.
+
   static const bool s_svm_fine_grain =
     std::getenv("NNTRAINER_SVM_FINE_GRAIN") != nullptr;
   cl_svm_mem_flags flags = CL_MEM_READ_WRITE;
   if (s_svm_fine_grain) {
     flags |= CL_MEM_SVM_FINE_GRAIN_BUFFER;
   }
-  // Request page-aligned SVM allocation so that transformer.cpp's MAP_FIXED
-  // weight-loading path (NNTRAINER_WEIGHT_MMAP=1) works: MAP_FIXED requires
-  // pool_ptr % PAGE_SZ == file_pos % PAGE_SZ, which holds iff the pool base
-  // is page-aligned.  Try 4096-byte alignment first; fall back to 0 (driver
-  // default) if the driver rejects the large alignment request.
-  static const cl_uint PAGE_ALIGN = 4096u;
-  void *p = clSVMAlloc(context_, flags, size, PAGE_ALIGN);
-  if (!p) {
-    p = clSVMAlloc(context_, flags, size, 0);
+
+  // Over-allocate by PAGE_SZ so we can align the returned pointer upward.
+  // transformer.cpp's MAP_FIXED path requires pool_ptr % PAGE_SZ == file_pos
+  // % PAGE_SZ; a page-aligned pool base guarantees this for any tensor offset
+  // that itself matches the file layout.
+  static const cl_uint PAGE_SZ = 4096u;
+  const size_t alloc_size = size + PAGE_SZ;
+
+  void *raw = clSVMAlloc(context_, flags, alloc_size, PAGE_SZ);
+  if (!raw) {
+    raw = clSVMAlloc(context_, flags, alloc_size, 0);
   }
-  if (!p && s_svm_fine_grain) {
-    // Fall back to coarse if fine-grain alloc rejected for this size.
-    p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, PAGE_ALIGN);
-    if (!p) p = clSVMAlloc(context_, CL_MEM_READ_WRITE, size, 0);
+  if (!raw && s_svm_fine_grain) {
+    raw = clSVMAlloc(context_, CL_MEM_READ_WRITE, alloc_size, PAGE_SZ);
+    if (!raw) raw = clSVMAlloc(context_, CL_MEM_READ_WRITE, alloc_size, 0);
   }
-  return p;
+  if (!raw) return nullptr;
+
+  // Align upward to the next page boundary.
+  uintptr_t raw_addr     = reinterpret_cast<uintptr_t>(raw);
+  uintptr_t aligned_addr = (raw_addr + PAGE_SZ - 1) & ~(uintptr_t)(PAGE_SZ - 1);
+  void *aligned          = reinterpret_cast<void *>(aligned_addr);
+
+  if (aligned != raw) {
+    std::lock_guard<std::mutex> lk(s_svm_map_mutex);
+    s_svm_aligned_to_raw[aligned] = raw;
+  }
+
+  ml_logi("createSVMRegion: size=%zu raw=%p aligned=%p inpage=%zu",
+          size, raw, aligned, aligned_addr % PAGE_SZ);
+
+  return aligned;
 }
 
 void ContextManager::releaseSVMRegion(void *svm_ptr) {
-  if (svm_ptr) {
-    // deallocates the SVM memory
-    clSVMFree(context_, svm_ptr);
-  } else {
+  if (!svm_ptr) {
     ml_logw("Attempted to deallocate a null pointer");
+    return;
   }
-  svm_ptr = nullptr;
+
+  // If we aligned the pointer in createSVMRegion, free the original raw ptr.
+  void *to_free = svm_ptr;
+  {
+    std::lock_guard<std::mutex> lk(s_svm_map_mutex);
+    auto it = s_svm_aligned_to_raw.find(svm_ptr);
+    if (it != s_svm_aligned_to_raw.end()) {
+      to_free = it->second;
+      s_svm_aligned_to_raw.erase(it);
+    }
+  }
+  clSVMFree(context_, to_free);
 }
 
 /**
