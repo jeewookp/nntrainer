@@ -218,7 +218,20 @@ else
   log_success "$TARGET built"
 fi
 
-[ -f "$LIBS_DIR/$TARGET" ] || { log_error "Built binary not found: $LIBS_DIR/$TARGET (run without SKIP_BUILD first)."; exit 1; }
+# ndk-build copies shared libs into libs/<abi>/ but leaves BUILD_EXECUTABLE
+# output in obj/local/<abi>/. Mirror build_android.sh: copy the binary into
+# libs/ so the push step finds everything in one place.
+OBJ_DIR="$JNI_DIR/obj/local/$ABI"
+if [ "${SKIP_BUILD:-0}" != "1" ] && [ ! -f "$LIBS_DIR/$TARGET" ] && [ -f "$OBJ_DIR/$TARGET" ]; then
+  mkdir -p "$LIBS_DIR"
+  cp "$OBJ_DIR/$TARGET" "$LIBS_DIR/$TARGET"
+  chmod +x "$LIBS_DIR/$TARGET"
+fi
+
+if [ ! -f "$LIBS_DIR/$TARGET" ]; then
+  log_error "Built binary not found in $LIBS_DIR or $OBJ_DIR (run without SKIP_BUILD first)."
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Step 3: Push binary, shared libs and weight to the device.
