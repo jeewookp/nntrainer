@@ -189,6 +189,20 @@ if [ "${SKIP_BUILD:-0}" = "1" ]; then
 else
   log_step "2" "Build $TARGET (ndk-build)"
   command -v ndk-build >/dev/null 2>&1 || export PATH="$ANDROID_NDK:$PATH"
+  # The CausalLM Android.mk declares a `tokenizers_c` prebuilt static lib;
+  # ndk-build checks the file exists while parsing, even though the gpu-native
+  # binary doesn't link it (only main.cpp + qwen3_forward.cpp). Drop in an empty
+  # placeholder archive so parsing passes. (Building nntr_causallm instead would
+  # need the real lib from Applications/CausalLM/build_tokenizer_android.sh.)
+  TOK_LIB="$CAUSALLM_DIR/lib/libtokenizers_android_c.a"
+  if [ ! -f "$TOK_LIB" ]; then
+    log_info "Creating placeholder $TOK_LIB (gpu binary doesn't link the tokenizer)"
+    mkdir -p "$(dirname "$TOK_LIB")"
+    AR="$(command -v llvm-ar || command -v ar)"
+    EMPTY_OBJ="$(mktemp --suffix=.o)" ; : > "$EMPTY_OBJ"
+    "$AR" rcs "$TOK_LIB" 2>/dev/null || "$AR" rc "$TOK_LIB" "$EMPTY_OBJ" 2>/dev/null || true
+    rm -f "$EMPTY_OBJ"
+  fi
   cd "$JNI_DIR"
   rm -rf libs obj
   ndk-build \
