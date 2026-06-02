@@ -203,11 +203,17 @@ else
     "$AR" rcs "$TOK_LIB" 2>/dev/null || "$AR" rc "$TOK_LIB" "$EMPTY_OBJ" 2>/dev/null || true
     rm -f "$EMPTY_OBJ"
   fi
+  # The gpu binary directly includes OpenCL-internal headers that meson does
+  # NOT install (attention_kernels.h, blas_kernels.h, cl_tensor_view.h from
+  # tensor/cl_operations; opencl_buffer.h from opencl/). Add those source dirs
+  # via APP_CFLAGS (empty in Application.mk, so APP_CPPFLAGS is untouched).
+  GPU_INCLUDES="-I$NNTRAINER_ROOT/nntrainer/tensor/cl_operations -I$NNTRAINER_ROOT/nntrainer/opencl"
   cd "$JNI_DIR"
   rm -rf libs obj
   ndk-build \
     NDK_PROJECT_PATH=. NDK_LIBS_OUT=./libs NDK_OUT=./obj \
     APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk \
+    APP_CFLAGS="$GPU_INCLUDES" \
     "$TARGET" -j "$(nproc 2>/dev/null || echo 4)"
   log_success "$TARGET built"
 fi
