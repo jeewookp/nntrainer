@@ -268,6 +268,214 @@ __kernel void fused_add_rmsnorm(__global const float *a,
 }
 )CL";
 
+// #80 rmsnorm + int8 act-quant fused into one cooperative pass. Folds
+// rmsnorm_f32in_f16out_coop (float8 sum-of-squares -> normed=(half)(x*scale)*gamma)
+// and v8c_act_quant_f16_par (row min/max -> recip-scale/zp -> int8 round + rowsum)
+// so the fp16 normed buffer is never round-tripped to DRAM and one dispatch is
+// removed. Bit-identical to the split path: the SS reduction matches
+// rmsnorm_f32in_f16out_coop exactly (float8 dot), and the quant math operates on
+// the SAME (half)-cast normed value the split path stored/reloaded. One WG(64)/row.
+static const std::string kFusedNormQuantKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define FNQ_LWS 64
+__kernel void rmsnorm_f32in_quant_fused(
+    __global const float *input,         // [M, W] fp32 residual
+    __global const half  *gamma,         // [W] norm weight (fp16)
+    __global       char  *act_int8,      // [M, W] int8 out
+    __global       float *scale_per_row, // [M] recip-scale
+    __global       int   *zp_per_row,    // [M]
+    __global       int   *row_sum_act,   // [M]
+    const half epsilon, const int M, const int W) {
+  const int row = get_group_id(0);
+  if (row >= M) return;
+  const int tid = get_local_id(0);
+  const long base = (long)row * (long)W;
+  const int W8 = W >> 3;
+  __global const float8 *in8 = (__global const float8 *)(input + base);
+
+  // pass 1: sum of squares (float8 dot == rmsnorm_f32in_f16out_coop)
+  float partial = 0.0f;
+  for (int i = tid; i < W8; i += FNQ_LWS) {
+    const float8 v = in8[i];
+    partial += dot(v.lo, v.lo) + dot(v.hi, v.hi);
+  }
+  __local float lss[FNQ_LWS];
+  lss[tid] = partial;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FNQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) lss[tid] += lss[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  const float nscale = rsqrt(lss[0] / (float)W + (float)epsilon);
+
+  // pass 2: normed = (half)(x*nscale)*gamma; reduce row min/max
+  __local float lmin[FNQ_LWS];
+  __local float lmax[FNQ_LWS];
+  __local float l_scale_q;
+  __local int   l_zp;
+  float pmin = 0.0f, pmax = 0.0f;
+  for (int k = tid; k < W; k += FNQ_LWS) {
+    half nk = (half)((float)input[base + k] * nscale) * gamma[k];
+    float fv = (float)nk;
+    pmin = fmin(pmin, fv);
+    pmax = fmax(pmax, fv);
+  }
+  lmin[tid] = pmin;
+  lmax[tid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FNQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) {
+      lmin[tid] = fmin(lmin[tid], lmin[tid + s]);
+      lmax[tid] = fmax(lmax[tid], lmax[tid + s]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) {
+    const float fmn = lmin[0], fmx = lmax[0];
+    const float rmin = fmn < 0.0f ? fmn : 0.0f;
+    const float rmax = fmx > 0.0f ? fmx : 0.0f;
+    const float qmin = -128.0f, qmax = 127.0f;
+    const float range = rmax - rmin;
+    const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+    const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+    const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+    const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+    float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+    if (zp_f < qmin) zp_f = qmin;
+    if (zp_f > qmax) zp_f = qmax;
+    l_scale_q = scale_q;
+    l_zp = (int)rint(zp_f);
+    scale_per_row[row] = recip;
+    zp_per_row[row] = l_zp;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  const float scale_q = l_scale_q;
+  const int zp = l_zp;
+
+  // pass 3: quantize (recompute normed) + row sum
+  __local int lsum[FNQ_LWS];
+  int psum = 0;
+  for (int k = tid; k < W; k += FNQ_LWS) {
+    half nk = (half)((float)input[base + k] * nscale) * gamma[k];
+    int q = (int)rint((float)nk * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
+    act_int8[base + k] = (char)q;
+    psum += q;
+  }
+  lsum[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FNQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) row_sum_act[row] = lsum[0];
+}
+)CL";
+
+// #80b fused residual-add + rmsnorm + int8 act-quant (FFN path). Extends #71
+// fused_add_rmsnorm to also emit int8 + recip-scale/zp/rowsum, skipping the
+// fp16 ffn_normed round-trip + the standalone quant dispatch. Bit-identical to
+// (#71 -> quantize_act) for rows<M: same scalar SS reduction, same
+// normed=(half)(v*inv*(float)gamma), same quant math on the (half)-normed.
+static const std::string kFusedAddRmsnormQuantKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define FARQ_LWS 64
+__kernel void fused_add_rmsnorm_quant(
+    __global const float *a,             // [M,W] in_padded fp32
+    __global const half  *b,             // [M,W] wo_y fp16
+    __global       float *resid,         // [M,W] residual_1 fp32 out
+    __global const half  *gamma,         // [W]
+    __global       char  *act_int8,      // [M,W] int8 out
+    __global       float *scale_per_row, // [M]
+    __global       int   *zp_per_row,    // [M]
+    __global       int   *row_sum_act,   // [M]
+    const half eps, const int M, const int W) {
+  const int row = get_group_id(0);
+  if (row >= M) return;
+  const int tid = get_local_id(0);
+  const long base = (long)row * (long)W;
+  // pass 1: v = a + b ; write resid ; sum of squares (scalar, == #71)
+  __local float lss[FARQ_LWS];
+  float psum = 0.0f;
+  for (int k = tid; k < W; k += FARQ_LWS) {
+    float v = a[base + k] + (float)b[base + k];
+    resid[base + k] = v;
+    psum += v * v;
+  }
+  lss[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FARQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) lss[tid] += lss[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  const float inv = rsqrt(lss[0] / (float)W + (float)eps);
+  // pass 2: normed = (half)(v*inv*(float)gamma); reduce row min/max
+  __local float lmin[FARQ_LWS];
+  __local float lmax[FARQ_LWS];
+  __local float l_scale_q;
+  __local int   l_zp;
+  float pmin = 0.0f, pmax = 0.0f;
+  for (int k = tid; k < W; k += FARQ_LWS) {
+    float v = a[base + k] + (float)b[base + k];
+    half nk = (half)(v * inv * (float)gamma[k]);
+    float fv = (float)nk;
+    pmin = fmin(pmin, fv);
+    pmax = fmax(pmax, fv);
+  }
+  lmin[tid] = pmin;
+  lmax[tid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FARQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) {
+      lmin[tid] = fmin(lmin[tid], lmin[tid + s]);
+      lmax[tid] = fmax(lmax[tid], lmax[tid + s]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) {
+    const float fmn = lmin[0], fmx = lmax[0];
+    const float rmin = fmn < 0.0f ? fmn : 0.0f;
+    const float rmax = fmx > 0.0f ? fmx : 0.0f;
+    const float qmin = -128.0f, qmax = 127.0f;
+    const float range = rmax - rmin;
+    const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+    const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+    const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+    const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+    float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+    if (zp_f < qmin) zp_f = qmin;
+    if (zp_f > qmax) zp_f = qmax;
+    l_scale_q = scale_q;
+    l_zp = (int)rint(zp_f);
+    scale_per_row[row] = recip;
+    zp_per_row[row] = l_zp;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  const float scale_q = l_scale_q;
+  const int zp = l_zp;
+  // pass 3: quantize (recompute) + row sum
+  __local int lsum[FARQ_LWS];
+  int isum = 0;
+  for (int k = tid; k < W; k += FARQ_LWS) {
+    float v = a[base + k] + (float)b[base + k];
+    half nk = (half)(v * inv * (float)gamma[k]);
+    int q = (int)rint((float)nk * scale_q) + zp;
+    if (q < -128) q = -128;
+    if (q > 127) q = 127;
+    act_int8[base + k] = (char)q;
+    isum += q;
+  }
+  lsum[tid] = isum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = FARQ_LWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) row_sum_act[row] = lsum[0];
+}
+)CL";
+
 static const std::string kSwigluFp32Kernel = R"CL(
 __kernel void swiglu_fp32(__global const float *gate,
                           __global const float *up,
@@ -3205,33 +3413,60 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   clEnqueueCopyBuffer(cl_q_, in_fp32, scratch_.in_padded, 0, 0,
                       (size_t)M * K_h * sizeof(float), 0, nullptr, nullptr);
   bar();  // fill/copy(in_padded) -> attn rmsnorm
-  {
-    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_f32in_f16out_coop");
+  // #80 NNTR_FUSE_NORMQUANT: fold attn-rmsnorm + QKV int8 act-quant into one
+  // cooperative pass (no fp16 normed round-trip, one fewer dispatch).
+  // Bit-identical to the split path. Default off for A/B.
+  static const bool fuse_normquant = []() {
+    const char *e = std::getenv("NNTR_FUSE_NORMQUANT");
+    return e && std::atoi(e) != 0;
+  }();
+  cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
+  if (fuse_normquant) {
+    auto kp = cl->registerClKernel(kFusedNormQuantKernel,
+                                   "rmsnorm_f32in_quant_fused");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
     int n_rows = (int)M_pad, W = (int)K_h;
     kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
-    kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm_fp16);
-    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
-    kp->SetKernelArguments(4, &n_rows, sizeof(int));
-    kp->SetKernelArguments(5, &W, sizeof(int));
-    constexpr size_t RMSN_LWS = 64;
-    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
-    std::array<size_t, 1> lws = {RMSN_LWS};
+    kp->SetKernelSVMArguments(1, lw.attn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(2, &scratch_.qkv_act_i8, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &scratch_.qkv_act_scale, sizeof(cl_mem));
+    kp->SetKernelArguments(4, &scratch_.qkv_act_zp, sizeof(cl_mem));
+    kp->SetKernelArguments(5, &scratch_.qkv_act_rs, sizeof(cl_mem));
+    kp->SetKernelArguments(6, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(7, &n_rows, sizeof(int));
+    kp->SetKernelArguments(8, &W, sizeof(int));
+    constexpr size_t FNQ_LWS = 64;
+    std::array<size_t, 1> gws = {FNQ_LWS * (size_t)n_rows};
+    std::array<size_t, 1> lws = {FNQ_LWS};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
+    stage_end_add(timings_.qkv_quant_image_ms);
+  } else {
+    {
+      auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                     "rmsnorm_f32in_f16out_coop");
+      uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+      int n_rows = (int)M_pad, W = (int)K_h;
+      kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
+      kp->SetKernelArguments(1, &scratch_.attn_normed, sizeof(cl_mem));
+      kp->SetKernelSVMArguments(2, lw.attn_norm_gamma_svm_fp16);
+      kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+      kp->SetKernelArguments(4, &n_rows, sizeof(int));
+      kp->SetKernelArguments(5, &W, sizeof(int));
+      constexpr size_t RMSN_LWS = 64;
+      std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+      std::array<size_t, 1> lws = {RMSN_LWS};
+      cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                            lws.data(), 0, nullptr, nullptr);
+    }
+    stage_end_add(timings_.pad_attn_norm_ms);
+    // (b) shared act quant Q/K/V (fp16 act, #46m).
+    stage_begin();
+    nntrainer::quantize_act_v8c_fp16_cl(
+      scratch_.attn_normed, scratch_.qkv_act_i8, scratch_.qkv_act_scale,
+      scratch_.qkv_act_zp, scratch_.qkv_act_rs, M_pad, K_h);
+    stage_end_add(timings_.qkv_quant_image_ms);
   }
-  stage_end_add(timings_.pad_attn_norm_ms);
-
-  // (b) shared act quant Q/K/V (fp16 act, #46m).
-  stage_begin();
-  nntrainer::quantize_act_v8c_fp16_cl(scratch_.attn_normed, scratch_.qkv_act_i8,
-                                      scratch_.qkv_act_scale,
-                                      scratch_.qkv_act_zp, scratch_.qkv_act_rs,
-                                      M_pad, K_h);
-  cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
-  stage_end_add(timings_.qkv_quant_image_ms);
 
   // (c) Q/K/V GEMMs against persistent y_q/y_k/y_v. 8/4/4: int8 weights for
   // q/k/v (is_int8) dispatch the int8×int8 kernel; int4 keeps v8c int8×int4.
@@ -3759,7 +3994,30 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_begin();
   // #47j: residual_1 and ffn_in_padded are FP32 (fp32 residual accumulation).
   uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-  if (fuse_addnorm) {
+  if (fuse_addnorm && fuse_normquant) {
+    // #80b 3-in-1: residual_1 = in_padded + wo_y (fp32) AND fa_i8/sc/zp/rs =
+    // int8-quant(rmsnorm(residual_1)*gamma) in ONE pass — no fp16 ffn_normed
+    // round-trip and no standalone quant dispatch. M_pad rows (covers the GEMM
+    // pad rows; rows<M bit-identical to #71->quant).
+    auto kp = cl->registerClKernel(kFusedAddRmsnormQuantKernel,
+                                   "fused_add_rmsnorm_quant");
+    int n_rows = (int)M_pad, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.in_padded, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.wo_y_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &scratch_.residual_1, sizeof(cl_mem));
+    kp->SetKernelSVMArguments(3, lw.ffn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(4, &scratch_.fa_i8, sizeof(cl_mem));
+    kp->SetKernelArguments(5, &scratch_.fa_sc, sizeof(cl_mem));
+    kp->SetKernelArguments(6, &scratch_.fa_zp, sizeof(cl_mem));
+    kp->SetKernelArguments(7, &scratch_.fa_rs, sizeof(cl_mem));
+    kp->SetKernelArguments(8, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(9, &n_rows, sizeof(int));
+    kp->SetKernelArguments(10, &W, sizeof(int));
+    std::array<size_t, 1> gws = {(size_t)64 * n_rows};
+    std::array<size_t, 1> lws = {64};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  } else if (fuse_addnorm) {
     // #71 one cooperative pass: residual_1 = in_padded + wo_y (fp32, for the
     // later residual add) AND ffn_normed = rmsnorm(residual_1)*gamma (fp16).
     // Replaces standalone add + pad-fill + copy + rmsnorm.
@@ -3810,10 +4068,12 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  bar();  // ffn rmsnorm(ffn_normed) -> quant
-  nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
-                                      scratch_.fa_sc, scratch_.fa_zp,
-                                      scratch_.fa_rs, M_pad, K_h);
+  if (!(fuse_addnorm && fuse_normquant)) {
+    bar();  // ffn rmsnorm(ffn_normed) -> quant
+    nntrainer::quantize_act_v8c_fp16_cl(scratch_.ffn_normed, scratch_.fa_i8,
+                                        scratch_.fa_sc, scratch_.fa_zp,
+                                        scratch_.fa_rs, M_pad, K_h);
+  }
   bar();  // quant(fa) -> ffn_up/gate GEMM
   cl_mem fa_image = scratch_.fa_act_img; // increment 2: cached view
   cl_mem fa_act_arg = use_v8c_buf ? scratch_.fa_i8 : fa_image;
