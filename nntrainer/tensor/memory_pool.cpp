@@ -325,6 +325,7 @@ void MemoryPool::deallocate() {
       void *to_release = svm_raw_pool ? svm_raw_pool : mem_pool;
       cl_context->context_inst_.releaseSVMRegion(to_release);
       svm_raw_pool = nullptr;
+      svm_allocation = false;
     } else {
       free(mem_pool);
     }
