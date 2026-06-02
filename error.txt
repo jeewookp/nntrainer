@@ -1,17 +1,16 @@
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull upstream jijoong 
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (6/6), done.
-remote: Total 9 (delta 4), reused 8 (delta 3), pack-reused 0 (from 0)
-Unpacking objects: 100% (9/9), 7.61 KiB | 1.52 MiB/s, done.
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.11 KiB | 1.11 MiB/s, done.
 From https://github.com/jeewookp/nntrainer
- * branch              jijoong    -> FETCH_HEAD
-   7f344de7..3789adb8  jijoong    -> upstream/jijoong
-Updating 7f344de7..3789adb8
+ * branch                jijoong    -> FETCH_HEAD
+   a3e094ade..53fdfc4d8  jijoong    -> origin/jijoong
+Updating a3e094ade..53fdfc4d8
 Fast-forward
- execute.sh | 241 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 241 insertions(+)
- create mode 100755 execute.sh
+ execute.sh | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -27,6 +26,57 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 [SUCCESS] Prerequisites OK
 
 [Step 1] Build nntrainer for Android (arm64-v8a, OpenCL enabled)
+[INFO] Initialising git submodules (iniparser, ruy, OpenBLAS, minja, ...)
+Submodule 'Applications/CausalLM/third_party/minja' (https://github.com/google/minja) registered for path 'Applications/CausalLM/third_party/minja'
+Submodule 'nntrainer-windows-resource' (https://github.com/nnstreamer/nntrainer-windows-resource.git) registered for path 'nntrainer-windows-resource'
+Submodule 'subprojects/CLBlast' (https://github.com/CNugteren/CLBlast.git) registered for path 'subprojects/CLBlast'
+Submodule 'subprojects/OpenBLAS' (https://github.com/OpenMathLib/OpenBLAS.git) registered for path 'subprojects/OpenBLAS'
+Submodule 'subprojects/benchmark' (https://github.com/google/benchmark.git) registered for path 'subprojects/benchmark'
+Submodule 'subprojects/googletest' (https://github.com/google/googletest.git) registered for path 'subprojects/googletest'
+Submodule 'subprojects/iniparser' (https://github.com/ndevilla/iniparser.git) registered for path 'subprojects/iniparser'
+Submodule 'subprojects/ruy' (https://github.com/google/ruy) registered for path 'subprojects/ruy'
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/third_party/minja'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/nntrainer-windows-resource'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/OpenBLAS'...
+fatal: unable to access 'https://github.com/OpenMathLib/OpenBLAS.git/': Failed to connect to github.com port 443 after 133629 ms: Connection timed out
+fatal: clone of 'https://github.com/OpenMathLib/OpenBLAS.git' into submodule path '/home/jwhero94/projects/nntrainer_jijoong/subprojects/OpenBLAS' failed
+Failed to clone 'subprojects/OpenBLAS'. Retry scheduled
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/benchmark'...
+fatal: unable to access 'https://github.com/google/benchmark.git/': Failed to connect to github.com port 443 after 135119 ms: Connection timed out
+fatal: clone of 'https://github.com/google/benchmark.git' into submodule path '/home/jwhero94/projects/nntrainer_jijoong/subprojects/benchmark' failed
+Failed to clone 'subprojects/benchmark'. Retry scheduled
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/googletest'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/iniparser'...
+fatal: unable to access 'https://github.com/ndevilla/iniparser.git/': Failed to connect to github.com port 443 after 133505 ms: Connection timed out
+fatal: clone of 'https://github.com/ndevilla/iniparser.git' into submodule path '/home/jwhero94/projects/nntrainer_jijoong/subprojects/iniparser' failed
+Failed to clone 'subprojects/iniparser'. Retry scheduled
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/ruy'...
+fatal: unable to access 'https://github.com/google/ruy/': Failed to connect to github.com port 443 after 135120 ms: Connection timed out
+fatal: clone of 'https://github.com/google/ruy' into submodule path '/home/jwhero94/projects/nntrainer_jijoong/subprojects/ruy' failed
+Failed to clone 'subprojects/ruy'. Retry scheduled
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/OpenBLAS'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/benchmark'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/iniparser'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/ruy'...
+Submodule path 'Applications/CausalLM/third_party/minja': checked out '021c2293c187789ef13d56c6cfd89c9b134fd80f'
+Submodule path 'nntrainer-windows-resource': checked out '15e34cf53a6ab8d30f26e1e108a415b51062ee4c'
+Submodule path 'subprojects/CLBlast': checked out 'e2ee100d7b7a3fb1cb60eb541d787c07f137171b'
+Submodule path 'subprojects/OpenBLAS': checked out '8795fc7985635de1ecf674b87e2008a15097ffab'
+Submodule path 'subprojects/benchmark': checked out 'eddb0241389718a23a42db6af5f0164b6e0139af'
+Submodule path 'subprojects/googletest': checked out '52eb8108c5bdec04579160ae17225d66034bd723'
+Submodule path 'subprojects/iniparser': checked out '4bef811283e0ec1658c60e09950bd5a1ddc92e4b'
+Submodule path 'subprojects/ruy': checked out '83fd40d730feb0804fafbc2d8814bcc19a17b2e5'
+Submodule 'cpuinfo' (https://github.com/pytorch/cpuinfo) registered for path 'subprojects/ruy/third_party/cpuinfo'
+Submodule 'googletest' (https://github.com/google/googletest) registered for path 'subprojects/ruy/third_party/googletest'
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/ruy/third_party/cpuinfo'...
+Cloning into '/home/jwhero94/projects/nntrainer_jijoong/subprojects/ruy/third_party/googletest'...
+Submodule path 'subprojects/ruy/third_party/cpuinfo': checked out '082deffc80ce517f81dc2f3aebe6ba671fcd09c9'
+Submodule path 'subprojects/ruy/third_party/googletest': checked out '6c58c11d5497b6ee1df3cb400ce30deb72fc28c0'
+Submodule path 'subprojects/OpenBLAS': checked out '8795fc7985635de1ecf674b87e2008a15097ffab'
+Submodule path 'subprojects/benchmark': checked out 'eddb0241389718a23a42db6af5f0164b6e0139af'
+Submodule path 'subprojects/iniparser': checked out '4bef811283e0ec1658c60e09950bd5a1ddc92e4b'
+Submodule path 'subprojects/ruy': checked out '83fd40d730feb0804fafbc2d8814bcc19a17b2e5'
 /home/jwhero94/projects/nntrainer_jijoong
 ~/projects/nntrainer_jijoong ~/projects/nntrainer_jijoong
 Using ARM architecture config from: /home/jwhero94/projects/nntrainer_jijoong/tools/cross/android_armv8-2-a.json
@@ -149,52 +199,107 @@ Found ninja-1.10.1 at /usr/bin/ninja
 FAILED: jni/arm64-v8a 
 /home/jwhero94/neo/android-ndk-r26d/ndk-build NDK_LIBS_OUT=/home/jwhero94/projects/nntrainer_jijoong/builddir/jni -j24
 [arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
+[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
+[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-make: *** No rule to make target '/home/jwhero94/projects/nntrainer_jijoong/subprojects/iniparser/src/iniparser.c', needed by 'obj/local/arm64-v8a/objs/iniparser//home/jwhero94/projects/nntrainer_jijoong/subprojects/iniparser/src/iniparser.o'.  Stop.
-make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
 [arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
+[arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/ml-api-inference/lib/arm64-v8a/
+[arm64-v8a] Install /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libc++_shared.so:
+[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
 [arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
+[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
-/home/jwhero94/projects/nntrainer_jijoong/nntrainer/app_context.cpp:21:10: fatal error: 'iniparser.h' file not found
-#include <iniparser.h>
-         ^~~~~~~~~~~~~
-1 error generated.
-make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer_jijoong/nntrainer/app_context.o] Error 1
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
-[arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
-[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_ops.cpp
+[arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_lazy.cpp
 [arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= data_iteration.cpp
 [arm64-v8a] Compile++      : nntrainer <= manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= iteration_queue.cpp
 [arm64-v8a] Compile++      : nntrainer <= engine.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= previous_input_realizer.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
+[arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
+[arm64-v8a] Compile++      : nntrainer <= databuffer_factory.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_graph.cpp
+[arm64-v8a] Compile++      : nntrainer <= tflite_export_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= databuffer.cpp
+[arm64-v8a] Compile++      : nntrainer <= func_data_producer.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiout_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= random_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= raw_file_data_producer.cpp
+[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mse_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= dir_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= constant_derivative_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= app_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= cross_entropy_sigmoid_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= kld_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cross_entropy_softmax_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_layer.cpp
+/home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/addition_layer.cpp:22:10: fatal error: 'blas_kernel_interface.h' file not found
+#include <blas_kernel_interface.h>
+         ^~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/addition_layer.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= add_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= subtract_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiply_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cosine_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= sqrt_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tangent_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= cast_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= sine_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= matmul_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= negative_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= gather_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_normalization_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= multi_head_attention_layer.cpp
 ninja: build stopped: subcommand failed.
