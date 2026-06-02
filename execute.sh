@@ -15,9 +15,10 @@
 #   sh execute.sh [/path/to/gemma2-2b-qint4.bin]
 #
 # The weight path may also be given via the GEMMA2_WEIGHT env var. If NO weight
-# is given, the script looks for a *.bin already on the device (under the model
-# dir) and runs that in place — so a plain `sh execute.sh` works once the model
-# has been placed on the device. Set PULL_WEIGHT=1 to also adb-pull a local copy.
+# is given, the script auto-picks the first *.bin in ~/models/gemma2 (override
+# with LOCAL_WEIGHT_DIR), and if none is found there, falls back to a *.bin
+# already on the device — so a plain `sh execute.sh` works once you've dropped
+# the weight in ~/models/gemma2. Set PULL_WEIGHT=1 to also adb-pull a local copy.
 # A real Adreno device (with vendor OpenCL) must be connected via adb,
 # and ANDROID_NDK must point at your Android NDK.
 #
@@ -69,10 +70,17 @@ NNTR_NUM_THREADS="${NNTR_NUM_THREADS:-4}"
 TARGET="nntrainer_qwen3_gpu"
 
 # Weight resolution order:
-#   1. local file given via $1 or $GEMMA2_WEIGHT  -> pushed to the device
-#   2. otherwise: auto-discover a *.bin already ON the device under the model
-#      dir and run it in place (set PULL_WEIGHT=1 to also adb-pull a local copy)
+#   1. local file given via $1 or $GEMMA2_WEIGHT          -> pushed to the device
+#   2. otherwise: first *.bin in $LOCAL_WEIGHT_DIR (~/models/gemma2 by default)
+#      -> pushed to the device
+#   3. otherwise: a *.bin already ON the device under the model dir, run in place
+#      (set PULL_WEIGHT=1 to also adb-pull a local copy)
+LOCAL_WEIGHT_DIR="${LOCAL_WEIGHT_DIR:-$HOME/models/gemma2}"
 GEMMA2_WEIGHT="${1:-${GEMMA2_WEIGHT:-}}"
+# No explicit weight? Auto-pick the first *.bin in the default local dir.
+if [ -z "$GEMMA2_WEIGHT" ] && [ -d "$LOCAL_WEIGHT_DIR" ]; then
+  GEMMA2_WEIGHT="$(ls -1 "$LOCAL_WEIGHT_DIR"/*.bin 2>/dev/null | head -1)"
+fi
 USE_DEVICE_WEIGHT=0   # set to 1 when we reuse a weight already on the device
 
 log_header "GPU-native Gemma2-2B on Adreno"
@@ -108,9 +116,8 @@ else
   DEV_WEIGHT=$("$ADB" shell "ls -1 $MODEL_DIR/*.bin 2>/dev/null | head -1" | tr -d '\r')
   [ -z "$DEV_WEIGHT" ] && DEV_WEIGHT=$("$ADB" shell "find $INSTALL_DIR/models -name '*.bin' 2>/dev/null | head -1" | tr -d '\r')
   if [ -z "$DEV_WEIGHT" ]; then
-    log_error "No weight on local disk AND none found on the device under $INSTALL_DIR/models."
-    log_info  "Either pass a local .bin:  sh execute.sh /path/to/gemma2-2b-qint4.bin"
-    log_info  "or push one to the device first (e.g. into $MODEL_DIR/)."
+    log_error "No .bin in $LOCAL_WEIGHT_DIR, none on the device under $INSTALL_DIR/models."
+    log_info  "Put a weight in $LOCAL_WEIGHT_DIR/  (or pass one: sh execute.sh /path/to.bin)"
     exit 1
   fi
   USE_DEVICE_WEIGHT=1
