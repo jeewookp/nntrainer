@@ -3,14 +3,17 @@ remote: Enumerating objects: 5, done.
 remote: Counting objects: 100% (5/5), done.
 remote: Compressing objects: 100% (1/1), done.
 remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.02 KiB | 520.00 KiB/s, done.
+Unpacking objects: 100% (3/3), 1.32 KiB | 452.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   fe05c1125..23ae70e61  jijoong    -> origin/jijoong
-Updating fe05c1125..23ae70e61
+   f1ca395a1..2f9f253df  jijoong    -> origin/jijoong
+Updating f1ca395a1..2f9f253df
 Fast-forward
- execute.sh | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ execute.sh | 33 ++++++++++++++++++++++++---------
+ 1 file changed, 24 insertions(+), 9 deletions(-)
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
+jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -241,7 +244,7 @@ WARNING: Project specifies a minimum meson_version '>=0.55.0' but uses features 
  * 0.57.0: {'fs.read'}
  * 0.58.0: {'format strings'}
 NOTICE: Future-deprecated features used:
- * 0.56.0: {'meson.build_root', 'meson.source_root'}
+ * 0.56.0: {'meson.source_root', 'meson.build_root'}
 
 nntrainer 0.6.0
 
@@ -262,119 +265,118 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [1/2] Generating jni/ndk-build with a custom command
 [arm64-v8a] Compile++      : nntrainer <= uint_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p.cpp
+[arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qai8dxp_qsi4cxp.cpp
 [arm64-v8a] Compile++      : nntrainer <= arm_compute_backend.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= kleidiai_interface_qsi8d32p_qsi4c32p_omp.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_utils.cpp
 [arm64-v8a] Compile++      : nntrainer <= cache_elem.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_utils.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= q4_0_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= q6_k_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= basic_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= uint4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
 [arm64-v8a] Compile++      : nntrainer <= short_tensor.cpp
-[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_base.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= char_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= var_grad.cpp
 [arm64-v8a] Compile++      : nntrainer <= swap_device.cpp
 [arm64-v8a] Compile++      : nntrainer <= quantizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
 [arm64-v8a] Compile++      : nntrainer <= weight.cpp
-[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
+[arm64-v8a] Compile++      : nntrainer <= neon_impl.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_loader.cpp
 [arm64-v8a] Compile++      : nntrainer <= mem_allocator.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v1_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= lazy_tensor.cpp
 [arm64-v8a] Compile++      : nntrainer <= neon_impl_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimized_v3_planner.cpp
 [arm64-v8a] Prebuilt       : libnnstreamer-native.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/ml-api-inference/lib/arm64-v8a/
 [arm64-v8a] Install /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libc++_shared.so:
 [arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/opencl/lib/arm64-v8a/
-[arm64-v8a] Compile++      : nntrainer <= nntrainer_logger.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_svm_allocator.cpp
-[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimized_v2_planner.cpp
 [arm64-v8a] Compile++      : nntrainer <= task_executor.cpp
+[arm64-v8a] Compile++      : nntrainer <= cache_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= memory_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_pool.cpp
 [arm64-v8a] Compile++      : nntrainer <= tensor_dim.cpp
 [arm64-v8a] Compile++      : clblast <= common.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api.cpp
-[arm64-v8a] Compile++      : clblast <= api_common.cpp
 [arm64-v8a] Compile++      : clblast <= routine.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor.cpp
+[arm64-v8a] Compile++      : clblast <= api_common.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api.cpp
 [arm64-v8a] Compile++      : clblast <= clblast_c.cpp
 [arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_ops.cpp
 [arm64-v8a] Compile++      : nntrainer <= float_tensor.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_lazy.cpp
 [arm64-v8a] Compile++      : clblast <= kernel_preprocessor.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_lazy.cpp
 [arm64-v8a] Compile++      : nntrainer <= half_tensor.cpp
 [arm64-v8a] Compile++      : clblast <= database.cpp
-[arm64-v8a] Compile++      : nntrainer <= manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= engine.cpp
+[arm64-v8a] Compile++      : nntrainer <= manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= data_iteration.cpp
 [arm64-v8a] Compile++      : nntrainer <= iteration_queue.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
-[arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_context.cpp
+[arm64-v8a] Compile++      : nntrainer <= remap_realizer.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= factory.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= previous_input_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= bn_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= activation_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= input_realizer.cpp
-[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_graph.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= slice_realizer.cpp
-[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
-[arm64-v8a] Compile++      : nntrainer <= tflite_export_realizer.cpp
 [arm64-v8a] Compile++      : clblast <= clblast.cpp
-[arm64-v8a] Compile++      : nntrainer <= multiout_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tflite_export_realizer.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_interpreter.cpp
 [arm64-v8a] Compile++      : nntrainer <= databuffer_factory.cpp
+[arm64-v8a] Compile++      : ccapi-nntrainer <= tensor_api_graph.cpp
+[arm64-v8a] Compile++      : nntrainer <= multiout_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= databuffer.cpp
 [arm64-v8a] Compile++      : nntrainer <= app_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= func_data_producer.cpp
-[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
 [arm64-v8a] Compile++      : nntrainer <= random_data_producers.cpp
-[arm64-v8a] Compile++      : nntrainer <= loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= recurrent_realizer.cpp
+[arm64-v8a] Compile++      : clblast <= tuning.cpp
 [arm64-v8a] Compile++      : nntrainer <= raw_file_data_producer.cpp
-[arm64-v8a] Compile++      : nntrainer <= dir_data_producers.cpp
+[arm64-v8a] Compile++      : nntrainer <= loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= mse_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cross_entropy_sigmoid_loss_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= dir_data_producers.cpp
 [arm64-v8a] Compile++      : nntrainer <= constant_derivative_loss_layer.cpp
-[arm64-v8a] Compile++      : clblast <= tuning.cpp
-[arm64-v8a] Compile++      : nntrainer <= kld_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cross_entropy_softmax_loss_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= add_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= subtract_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= kld_loss_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= multiply_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= divide_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= subtract_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= pow_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= add_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= weight_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= sine_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= sqrt_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cosine_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= tensor_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= tangent_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= matmul_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= cast_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= gather_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= negative_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= slice_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= addition_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= slice_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= gather_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= activation_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= bn_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= multiout_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= flatten_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= bn_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= conv1d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= flatten_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= input_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= layer_normalization_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= fc_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= preprocess_flip_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= conv2d_transpose_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= preprocess_l2norm_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= preprocess_translate_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= conv2d_layer.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/conv2d_layer.cpp:96:24: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
   auto apply_data = [&]<typename T>(T *val) {
@@ -383,8 +385,9 @@ Found ninja-1.10.1 at /usr/bin/ninja
   auto apply_data = [&]<typename T>(T *out_data) {
                        ^
 2 warnings generated.
+[arm64-v8a] Compile++      : nntrainer <= preprocess_translate_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= attention_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= mol_attention_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= preprocess_l2norm_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= embedding.cpp
 [arm64-v8a] Compile++      : nntrainer <= pooling2d_layer.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/layers/pooling2d_layer.cpp:194:23: warning: explicit template parameter list for lambdas is a C++20 extension [-Wc++20-extensions]
@@ -407,152 +410,152 @@ Found ninja-1.10.1 at /usr/bin/ninja
                             ^
 6 warnings generated.
 [arm64-v8a] Compile++      : nntrainer <= multi_head_attention_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= permute_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= rnn.cpp
 [arm64-v8a] Compile++      : nntrainer <= split_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= permute_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= rnncell.cpp
+[arm64-v8a] Compile++      : nntrainer <= rnn.cpp
 [arm64-v8a] Compile++      : nntrainer <= common_properties.cpp
-[arm64-v8a] Compile++      : nntrainer <= time_dist.cpp
-[arm64-v8a] Compile++      : nntrainer <= layer_impl.cpp
-[arm64-v8a] Compile++      : nntrainer <= dropout.cpp
 [arm64-v8a] Compile++      : nntrainer <= layer_node.cpp
+[arm64-v8a] Compile++      : nntrainer <= time_dist.cpp
 [arm64-v8a] Compile++      : nntrainer <= lstmcell_core.cpp
-[arm64-v8a] Compile++      : nntrainer <= reduce_sum_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= layer_impl.cpp
 [arm64-v8a] Compile++      : nntrainer <= reduce_mean_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= reshape_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= layer_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= centroid_knn.cpp
+[arm64-v8a] Compile++      : nntrainer <= dropout.cpp
+[arm64-v8a] Compile++      : nntrainer <= reduce_sum_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= identity_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= optimizer_devel.cpp
+[arm64-v8a] Compile++      : nntrainer <= lstmcell.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_context.cpp
 [arm64-v8a] Compile++      : nntrainer <= sgd.cpp
 [arm64-v8a] Compile++      : nntrainer <= positional_encoding_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= identity_layer.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimizer_context.cpp
-[arm64-v8a] Compile++      : nntrainer <= lstmcell.cpp
-[arm64-v8a] Compile++      : nntrainer <= zoneout_lstmcell.cpp
 [arm64-v8a] Compile++      : nntrainer <= lstm.cpp
-[arm64-v8a] Compile++      : nntrainer <= cpu_ops_table.cpp
 [arm64-v8a] Compile++      : nntrainer <= compute_ops.cpp
-[arm64-v8a] Compile++      : nntrainer <= model_common_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= cpu_ops_table.cpp
+[arm64-v8a] Compile++      : nntrainer <= zoneout_lstmcell.cpp
 [arm64-v8a] Compile++      : nntrainer <= fallback_kleidiai.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_common_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= upsample2d_layer.cpp
 [arm64-v8a] Compile++      : nntrainer <= fallback_internal.cpp
-[arm64-v8a] Compile++      : nntrainer <= fallback_internal_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= cblas_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_fp16_fp32.cpp
-[arm64-v8a] Compile++      : nntrainer <= upsample2d_layer.cpp
+[arm64-v8a] Compile++      : nntrainer <= fallback_internal_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon.cpp
+[arm64-v8a] Compile++      : nntrainer <= gru.cpp
 [arm64-v8a] Compile++      : nntrainer <= ggml_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x4.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_1x8.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x4.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_neon.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x8.cpp
 [arm64-v8a] Compile++      : nntrainer <= matrix_transpose_neon_f16.cpp
-[arm64-v8a] Compile++      : nntrainer <= gru.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_4x8.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x8.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_neon.cpp
 [arm64-v8a] Compile++      : nntrainer <= dynamic_training_optimization.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_util.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_transA.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_pack.cpp
-[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_quant.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_transAB.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_kernel_8x16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_util.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_pack.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transA.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_transAB.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_ggml_impl_quant.cpp
 [arm64-v8a] Compile++      : nntrainer <= grucell.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_transB.cpp
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
-[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f16_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
+[arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x4_qsi4c32p4x4_1x4_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.c
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.c
-[arm64-v8a] Compile++      : nntrainer <= hgemm_noTrans.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c
+[arm64-v8a] Compile++      : nntrainer <= channel_shuffle.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32.c
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qsi8d32p_f32_neon.c
+[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
+[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f32.c
+[arm64-v8a] Compile++      : nntrainer <= hgemm_noTrans.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f16.c
 [arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.c
-[arm64-v8a] Compile        : nntrainer <= kai_lhs_quant_pack_qai8dxp_f32.c
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_constant.cpp
 [arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.c
-[arm64-v8a] Compile        : nntrainer <= kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
-[arm64-v8a] Compile++      : nntrainer <= channel_shuffle.cpp
-[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_exponential.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_a.cpp
 [arm64-v8a] Compile++      : nntrainer <= lr_scheduler_cosine.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_padding_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_padding_a.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_constant.cpp
 [arm64-v8a] Compile++      : nntrainer <= lr_scheduler_linear.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition.cpp
 [arm64-v8a] Compile++      : nntrainer <= adam.cpp
+[arm64-v8a] Compile++      : nntrainer <= lr_scheduler_exponential.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3.cpp
+[arm64-v8a] Compile++      : nntrainer <= copy.cpp
+[arm64-v8a] Compile++      : nntrainer <= convert_block_q4_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= dot.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_quantize_input.cpp
-[arm64-v8a] Compile++      : nntrainer <= copy.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_1.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_3.cpp
-[arm64-v8a] Compile++      : nntrainer <= int4_gemm.cpp
 [arm64-v8a] Compile++      : nntrainer <= int4_gemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= int4_gemm.cpp
 [arm64-v8a] Compile++      : nntrainer <= int8_int4_gemm_v8c.cpp
 [arm64-v8a] Compile++      : nntrainer <= fused_qkv_rope.cpp
-[arm64-v8a] Compile++      : nntrainer <= fused_rmsnorm_quant.cpp
-[arm64-v8a] Compile++      : nntrainer <= convert_block_q4_0.cpp
-[arm64-v8a] Compile++      : nntrainer <= two_conv_attention.cpp
 [arm64-v8a] Compile++      : nntrainer <= lr_scheduler_step.cpp
-[arm64-v8a] Compile++      : nntrainer <= q4_0_ab_bi_8x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= fused_rmsnorm_quant.cpp
 [arm64-v8a] Compile++      : nntrainer <= flash_attention.cpp
+[arm64-v8a] Compile++      : nntrainer <= q4_0_ab_bi_8x4.cpp
+[arm64-v8a] Compile++      : nntrainer <= two_conv_attention.cpp
 [arm64-v8a] Compile++      : nntrainer <= q6_k_sgemv.cpp
-[arm64-v8a] Compile++      : nntrainer <= restore_block_q4_0.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm.cpp
-[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_ab.cpp
-[arm64-v8a] Compile++      : nntrainer <= rotary_emb.cpp
 [arm64-v8a] Compile++      : nntrainer <= sgemm_trans_a.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemv.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_b.cpp
-[arm64-v8a] Compile++      : nntrainer <= sgemv_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm.cpp
+[arm64-v8a] Compile++      : nntrainer <= restore_block_q4_0.cpp
 [arm64-v8a] Compile++      : nntrainer <= sgemm_no_trans.cpp
-[arm64-v8a] Compile++      : nntrainer <= lion.cpp
+[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= rotary_emb.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_ab.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= sgemv.cpp
 [arm64-v8a] Compile++      : nntrainer <= sscal.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= optimizer_wrapped.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_32bit_16bit.cpp
-[arm64-v8a] Compile++      : nntrainer <= adamw.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_0.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1.cpp
-[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_16bit.cpp
+[arm64-v8a] Compile++      : nntrainer <= adamw.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_2.cpp
+[arm64-v8a] Compile++      : nntrainer <= addition_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= concat_axis_2_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_ab.cpp
 [arm64-v8a] Compile++      : nntrainer <= dot_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_axis_3_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_trans_a.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_3_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= copy_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_axis_1_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= hgemm_trans_b.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemm_no_trans.cpp
+[arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
+[arm64-v8a] Compile++      : nntrainer <= lion.cpp
 [arm64-v8a] Compile++      : nntrainer <= hscal.cpp
 [arm64-v8a] Compile++      : nntrainer <= rmsnorm_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemm_trans_ab.cpp
-[arm64-v8a] Compile++      : nntrainer <= model_loader.cpp
-[arm64-v8a] Compile++      : nntrainer <= ggml_interface_omp.cpp
-[arm64-v8a] Compile++      : nntrainer <= hgemv.cpp
-[arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= swiglu_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= rotary_emb_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_0_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_omp.cpp
 [arm64-v8a] Compile++      : nntrainer <= mman_windows.cpp
 [arm64-v8a] Compile++      : nntrainer <= fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= transpose_axis_1_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_axis_2_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_tensor_view.cpp
 [arm64-v8a] Compile++      : nntrainer <= util_simd.cpp
-[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= cl_tensor_backing_pool.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_simd_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= thread_manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= safetensors_util.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_buffer.cpp
@@ -560,14 +563,15 @@ Found ninja-1.10.1 at /usr/bin/ninja
 [arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_kernel.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
-[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
-[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_loader.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
 [arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
 [arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
 [arm64-v8a] Compile++      : nntrainer <= opencl_program.cpp
 [arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile        : iniparser <= iniparser.c
 [arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/opencl/opencl_command_queue_manager.cpp:89:25: warning: data argument not used by format string [-Wformat-extra-args]
             error_code, OpenCLErrorCodeToString(error_code));
@@ -576,20 +580,20 @@ Found ninja-1.10.1 at /usr/bin/ninja
   __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
                                                    ^~~~~~~~~~~
 1 warning generated.
-[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
 [arm64-v8a] Compile        : iniparser <= dictionary.c
-[arm64-v8a] Compile        : iniparser <= iniparser.c
-[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
-[arm64-v8a] Compile++      : nntrainer <= cl_compute_ops.cpp
 [arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_compute_ops.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
 [arm64-v8a] Compile++      : nntrainer <= connection.cpp
 [arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
 [arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
-[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
 [arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
-[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
 [arm64-v8a] Compile++      : clblast <= cache.cpp
 [arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
 [arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
 /home/jwhero94/projects/nntrainer_jijoong/nntrainer/tensor/cl_operations/blas_kernel_interface.cpp:1377:7: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
       input.height(),
@@ -598,67 +602,76 @@ Found ninja-1.10.1 at /usr/bin/ninja
       (input.getFormat() == Tformat::NHWC) ? input.channel() : input.width(),
       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 2 warnings generated.
-[arm64-v8a] Compile++      : nntrainer <= blas_kernels.cpp
 [arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
 [arm64-v8a] Compile++      : nntrainer <= addition_layer_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= fc_layer_cl.cpp
+[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= transpose_cl.cpp
 [arm64-v8a] Compile++      : nntrainer <= reshape_cl.cpp
-[arm64-v8a] Compile++      : nntrainer <= swiglu_cl.cpp
-[arm64-v8a] Compile++      : clblast <= clblast_exceptions.cpp
-[arm64-v8a] Compile++      : clblast <= xger.cpp
-[arm64-v8a] Compile++      : nntrainer <= concat_cl.cpp
-[arm64-v8a] Compile++      : clblast <= xgemv.cpp
-[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
-[arm64-v8a] Compile++      : clblast <= xgemm.cpp
-[arm64-v8a] Compile++      : clblast <= xgemv_fast.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv_fast_rot.cpp
-[arm64-v8a] Compile++      : clblast <= trsv_routine.cpp
+[arm64-v8a] Compile++      : clblast <= xger.cpp
 [arm64-v8a] Compile++      : clblast <= gemm_routine.cpp
-[arm64-v8a] Compile++      : clblast <= timing.cpp
-[arm64-v8a] Compile++      : clblast <= copy.cpp
-[arm64-v8a] Compile++      : clblast <= compile.cpp
+[arm64-v8a] Compile++      : nntrainer <= rmsnorm_layer_cl.cpp
+[arm64-v8a] Compile++      : clblast <= clblast_exceptions.cpp
+[arm64-v8a] Compile++      : clblast <= xgemv.cpp
+[arm64-v8a] Compile++      : clblast <= xgemv_fast.cpp
+[arm64-v8a] Compile++      : nntrainer <= concat_cl.cpp
+[arm64-v8a] Compile++      : clblast <= xgemm.cpp
 [arm64-v8a] Compile++      : clblast <= invert.cpp
-[arm64-v8a] Compile++      : clblast <= xgemm_direct.cpp
-[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+[arm64-v8a] Compile++      : clblast <= compile.cpp
+[arm64-v8a] Compile++      : clblast <= trsv_routine.cpp
+[arm64-v8a] Compile++      : clblast <= copy.cpp
 [arm64-v8a] Compile++      : clblast <= xdot.cpp
+[arm64-v8a] Compile++      : clblast <= timing.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+[arm64-v8a] Compile++      : clblast <= xgemm_direct.cpp
 [arm64-v8a] Compile++      : clblast <= configurations.cpp
 [arm64-v8a] Compile++      : clblast <= padtranspose.cpp
 [arm64-v8a] Compile++      : clblast <= xdotc.cpp
-[arm64-v8a] Compile++      : clblast <= transpose.cpp
-[arm64-v8a] Compile++      : clblast <= utilities.cpp
-[arm64-v8a] Compile++      : clblast <= pad.cpp
 [arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
-[arm64-v8a] Compile++      : clblast <= xcopy.cpp
-[arm64-v8a] Compile++      : clblast <= xdotu.cpp
+[arm64-v8a] Compile++      : clblast <= utilities.cpp
+[arm64-v8a] Compile++      : clblast <= transpose.cpp
+[arm64-v8a] Compile++      : clblast <= pad.cpp
 [arm64-v8a] Compile++      : clblast <= xtrsv.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/routines/xtrsv.cpp:137:12: warning: enumeration values 'kAny' and 'kHalf' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
-[arm64-v8a] Compile++      : clblast <= xswap.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
+[arm64-v8a] Compile++      : clblast <= xdotu.cpp
+[arm64-v8a] Compile++      : clblast <= xcopy.cpp
+[arm64-v8a] Compile++      : clblast <= xswap.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
 [arm64-v8a] Compile++      : clblast <= xamax.cpp
 [arm64-v8a] Compile++      : clblast <= xhpr.cpp
-[arm64-v8a] Compile++      : clblast <= xhpmv.cpp
 [arm64-v8a] Compile++      : clblast <= xscal.cpp
+[arm64-v8a] Compile++      : clblast <= xhpmv.cpp
 [arm64-v8a] Compile++      : clblast <= xgerc.cpp
-[arm64-v8a] Compile++      : clblast <= xdot.cpp
-[arm64-v8a] Compile++      : clblast <= xnrm2.cpp
-[arm64-v8a] Compile++      : clblast <= copy_pad.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= xtrmv.cpp
-[arm64-v8a] Compile++      : clblast <= xasum.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpy.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xaxpy.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xnrm2.cpp
+[arm64-v8a] Compile++      : clblast <= xtrmv.cpp
+[arm64-v8a] Compile++      : clblast <= copy_pad.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : clblast <= copy_fast.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xdot.cpp
+[arm64-v8a] Compile++      : clblast <= invert.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/invert.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xsbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xasum.cpp
 [arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xconvgemm.cpp:25:10: warning: enumeration values 'kAny', 'kComplexSingle', and 'kComplexDouble' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -670,27 +683,6 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<1>(argc, argv);
     ^
 2 warnings generated.
-[arm64-v8a] Compile++      : clblast <= copy_fast.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/copy_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= invert.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/invert.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= transpose_pad.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= transpose_fast.cpp
-/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
-    switch(clblast::GetPrecision(command_line_args)) {
-           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 warning generated.
-[arm64-v8a] Compile++      : clblast <= xhpr2.cpp
 [arm64-v8a] Compile++      : clblast <= xdot.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xdot.cpp:26:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -708,29 +700,40 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<2>(argc, argv);
     ^
 3 warnings generated.
+[arm64-v8a] Compile++      : clblast <= xhpr2.cpp
+[arm64-v8a] Compile++      : clblast <= transpose_pad.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_pad.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xger.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xger.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xspmv.cpp
-[arm64-v8a] Compile++      : clblast <= xsyr2.cpp
-[arm64-v8a] Compile++      : clblast <= xhemv.cpp
-[arm64-v8a] Compile++      : clblast <= xgbmv.cpp
-[arm64-v8a] Compile++      : clblast <= xgeru.cpp
-[arm64-v8a] Compile++      : clblast <= xsymv.cpp
 [arm64-v8a] Compile++      : clblast <= xgemm.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/routines/xgemm.cpp:219:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
     switch(clblast::GetPrecision(command_line_args)) {
            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1 warning generated.
+[arm64-v8a] Compile++      : clblast <= xsyr2.cpp
+[arm64-v8a] Compile++      : clblast <= transpose_fast.cpp
+/home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/transpose_fast.cpp:25:12: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
+    switch(clblast::GetPrecision(command_line_args)) {
+           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
 [arm64-v8a] Compile++      : clblast <= xtpmv.cpp
-[arm64-v8a] Compile++      : clblast <= xhbmv.cpp
-[arm64-v8a] Compile++      : clblast <= xtbmv.cpp
-[arm64-v8a] Compile++      : clblast <= xspr.cpp
-[arm64-v8a] Compile++      : clblast <= xsyr.cpp
-[arm64-v8a] Compile++      : clblast <= xspr2.cpp
+[arm64-v8a] Compile++      : clblast <= xhemv.cpp
 [arm64-v8a] Compile++      : clblast <= xtrsv.cpp
+[arm64-v8a] Compile++      : clblast <= xhbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xspr.cpp
+[arm64-v8a] Compile++      : clblast <= xgbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xgeru.cpp
+[arm64-v8a] Compile++      : clblast <= xsymv.cpp
+[arm64-v8a] Compile++      : clblast <= xtbmv.cpp
+[arm64-v8a] Compile++      : clblast <= xspr2.cpp
+[arm64-v8a] Compile++      : clblast <= xsyr.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemv.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -754,9 +757,11 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<3>(argc, argv);
     ^
 4 warnings generated.
-[arm64-v8a] Compile++      : clblast <= xher2k.cpp
 [arm64-v8a] Compile++      : clblast <= xher.cpp
+[arm64-v8a] Compile++      : clblast <= xher2.cpp
 [arm64-v8a] Install        : libnnstreamer-native.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libnnstreamer-native.so
+[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libOpenCL.so
+[arm64-v8a] StaticLibrary  : libiniparser.a
 [arm64-v8a] Compile++      : clblast <= xgemm_direct.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemm_direct.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -774,28 +779,23 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<2>(argc, argv);
     ^
 3 warnings generated.
-[arm64-v8a] Install        : libOpenCL.so => /home/jwhero94/projects/nntrainer_jijoong/builddir/jni/arm64-v8a/libOpenCL.so
-[arm64-v8a] StaticLibrary  : libiniparser.a
+[arm64-v8a] Compile++      : clblast <= xher2k.cpp
 [arm64-v8a] Compile++      : clblast <= xgemv.cpp
-[arm64-v8a] Compile++      : clblast <= xher2.cpp
 [arm64-v8a] Compile++      : clblast <= xsyr2k.cpp
 [arm64-v8a] Compile++      : clblast <= xger.cpp
-[arm64-v8a] Compile++      : clblast <= xcol2im.cpp
-[arm64-v8a] Compile++      : clblast <= xtrsm.cpp
 [arm64-v8a] Compile++      : clblast <= xhemm.cpp
+[arm64-v8a] Compile++      : clblast <= xtrsm.cpp
 [arm64-v8a] Compile++      : clblast <= xtrmm.cpp
+[arm64-v8a] Compile++      : clblast <= xcol2im.cpp
 [arm64-v8a] Compile++      : clblast <= xim2col.cpp
+[arm64-v8a] Compile++      : clblast <= xomatcopy.cpp
 [arm64-v8a] Compile++      : clblast <= xaxpybatched.cpp
-[arm64-v8a] Compile++      : clblast <= xhad.cpp
 [arm64-v8a] Compile++      : clblast <= xherk.cpp
-[arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
 [arm64-v8a] Compile++      : clblast <= xinvert.cpp
 [arm64-v8a] Compile++      : clblast <= xsymm.cpp
-[arm64-v8a] Compile++      : clblast <= xomatcopy.cpp
-[arm64-v8a] Compile++      : clblast <= xsyrk.cpp
+[arm64-v8a] Compile++      : clblast <= xhad.cpp
+[arm64-v8a] Compile++      : clblast <= xconvgemm.cpp
 [arm64-v8a] Compile++      : clblast <= test_utilities.cpp
-[arm64-v8a] Compile++      : clblast <= xgemmstridedbatched.cpp
-[arm64-v8a] Compile++      : clblast <= xgemm.cpp
 [arm64-v8a] Compile++      : clblast <= xgemm.cpp
 /home/jwhero94/projects/nntrainer_jijoong/subprojects/CLBlast/src/tuning/kernels/xgemm.cpp:25:10: warning: enumeration value 'kAny' not handled in switch [-Wswitch]
   switch(clblast::GetPrecision(command_line_args)) {
@@ -825,6 +825,9 @@ Found ninja-1.10.1 at /usr/bin/ninja
     StartVariation<12>(argc, argv);
     ^
 5 warnings generated.
+[arm64-v8a] Compile++      : clblast <= xgemm.cpp
+[arm64-v8a] Compile++      : clblast <= xgemmstridedbatched.cpp
+[arm64-v8a] Compile++      : clblast <= xsyrk.cpp
 [arm64-v8a] Compile++      : clblast <= xgemmbatched.cpp
 [arm64-v8a] StaticLibrary  : libclblast.a
 [arm64-v8a] SharedLibrary  : libnntrainer.so
@@ -1298,11 +1301,11 @@ Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrain
 
 [Step 3] Push to device
 [INFO] pushed nntrainer_qwen3_gpu
-[WARNING] libnntrainer.so not in /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/jni/libs/arm64-v8a (skipping — device vendor lib may provide it)
-[WARNING] libccapi-nntrainer.so not in /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/jni/libs/arm64-v8a (skipping — device vendor lib may provide it)
-[WARNING] libOpenCL.so not in /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/jni/libs/arm64-v8a (skipping — device vendor lib may provide it)
-[WARNING] libc++_shared.so not in /home/jwhero94/projects/nntrainer_jijoong/Applications/CausalLM/jni/libs/arm64-v8a (skipping — device vendor lib may provide it)
-[INFO] pushing weight nntr_gemma2_2b_qint4.bin (1.4G)...
+[INFO] pushed libnntrainer.so
+[INFO] pushed libccapi-nntrainer.so
+[INFO] pushed libOpenCL.so
+[INFO] pushed libc++_shared.so
+[INFO] weight already on device (nntr_gemma2_2b_qint4.bin, 1498357100 bytes) — skipping push
 [SUCCESS] Device ready
 
 ========================================
@@ -1310,6 +1313,493 @@ Running custom install script '/usr/bin/sh -c cp /home/jwhero94/projects/nntrain
 ========================================
 [INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
 
-CANNOT LINK EXECUTABLE "./nntrainer_qwen3_gpu": cannot locate symbol "_ZN9nntrainer16gemm_int8_v8c_clEP7_cl_memS1_S1_S1_S1_S1_S1_S1_jjj" referenced by "/data/local/tmp/nntrainer/causallm/nntrainer_qwen3_gpu"...
+[main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
+[qwen3-gpu] device image caps: support=1 max=16384x16384 pitch_align=64
+[qwen3-gpu] init OK: weights=/data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin size=1428 MB cl_ctx=0xb40000706496eb90
+[qwen3-gpu] cfg: hidden=2304 inter=9216 d=256 hQ=8 hKV=4 L=26 vocab=256000 S_max=20480
+[qwen3-gpu] RoPE freqs precomputed for position=0: cos[0..3] = 1 1 1 1, sin[0..3] = 0 0 0 0
+[qwen3-gpu] wq off=483849216 (~461 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=486212610 (~463 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=487394308 (~464 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=488576006 (~465 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=490958344 (~468 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=501593610 (~478 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=512228876 (~488 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 0 loaded; advanced offset to 522859534 (~498 MB)
+[qwen3-gpu] wq off=522868750 (~498 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=525232144 (~500 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=526413842 (~502 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=527595540 (~503 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=529977878 (~505 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=540613144 (~515 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=551248410 (~525 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 1 loaded; advanced offset to 561879068 (~535 MB)
+[qwen3-gpu] wq off=561888284 (~535 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=564251678 (~538 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=565433376 (~539 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=566615074 (~540 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=568997412 (~542 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=579632678 (~552 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=590267944 (~562 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 2 loaded; advanced offset to 600898602 (~573 MB)
+[qwen3-gpu] wq off=600907818 (~573 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=603271212 (~575 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=604452910 (~576 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=605634608 (~577 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=608016946 (~579 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=618652212 (~589 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=629287478 (~600 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 3 loaded; advanced offset to 639918136 (~610 MB)
+[qwen3-gpu] wq off=639927352 (~610 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=642290746 (~612 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=643472444 (~613 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=644654142 (~614 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=647036480 (~617 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=657671746 (~627 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=668307012 (~637 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 4 loaded; advanced offset to 678937670 (~647 MB)
+[qwen3-gpu] wq off=678946886 (~647 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=681310280 (~649 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=682491978 (~650 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=683673676 (~652 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=686056014 (~654 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=696691280 (~664 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=707326546 (~674 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 5 loaded; advanced offset to 717957204 (~684 MB)
+[qwen3-gpu] wq off=717966420 (~684 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=720329814 (~686 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=721511512 (~688 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=722693210 (~689 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=725075548 (~691 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=735710814 (~701 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=746346080 (~711 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 6 loaded; advanced offset to 756976738 (~721 MB)
+[qwen3-gpu] wq off=756985954 (~721 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=759349348 (~724 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=760531046 (~725 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=761712744 (~726 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=764095082 (~728 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=774730348 (~738 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=785365614 (~748 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 7 loaded; advanced offset to 795996272 (~759 MB)
+[qwen3-gpu] wq off=796005488 (~759 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=798368882 (~761 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=799550580 (~762 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=800732278 (~763 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=803114616 (~765 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=813749882 (~776 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=824385148 (~786 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 8 loaded; advanced offset to 835015806 (~796 MB)
+[qwen3-gpu] wq off=835025022 (~796 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=837388416 (~798 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=838570114 (~799 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=839751812 (~800 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=842134150 (~803 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=852769416 (~813 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=863404682 (~823 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 9 loaded; advanced offset to 874035340 (~833 MB)
+[qwen3-gpu] wq off=874044556 (~833 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=876407950 (~835 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=877589648 (~836 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=878771346 (~838 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=881153684 (~840 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=891788950 (~850 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=902424216 (~860 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 10 loaded; advanced offset to 913054874 (~870 MB)
+[qwen3-gpu] wq off=913064090 (~870 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=915427484 (~873 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=916609182 (~874 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=917790880 (~875 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=920173218 (~877 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=930808484 (~887 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=941443750 (~897 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 11 loaded; advanced offset to 952074408 (~907 MB)
+[qwen3-gpu] wq off=952083624 (~907 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=954447018 (~910 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=955628716 (~911 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=956810414 (~912 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=959192752 (~914 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=969828018 (~924 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=980463284 (~935 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 12 loaded; advanced offset to 991093942 (~945 MB)
+[qwen3-gpu] wq off=991103158 (~945 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=993466552 (~947 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=994648250 (~948 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=995829948 (~949 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=998212286 (~951 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1008847552 (~962 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1019482818 (~972 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 13 loaded; advanced offset to 1030113476 (~982 MB)
+[qwen3-gpu] wq off=1030122692 (~982 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1032486086 (~984 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1033667784 (~985 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1034849482 (~986 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1037231820 (~989 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1047867086 (~999 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1058502352 (~1009 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 14 loaded; advanced offset to 1069133010 (~1019 MB)
+[qwen3-gpu] wq off=1069142226 (~1019 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1071505620 (~1021 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1072687318 (~1022 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1073869016 (~1024 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1076251354 (~1026 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1086886620 (~1036 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1097521886 (~1046 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 15 loaded; advanced offset to 1108152544 (~1056 MB)
+[qwen3-gpu] wq off=1108161760 (~1056 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1110525154 (~1059 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1111706852 (~1060 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1112888550 (~1061 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1115270888 (~1063 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1125906154 (~1073 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1136541420 (~1083 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 16 loaded; advanced offset to 1147172078 (~1094 MB)
+[qwen3-gpu] wq off=1147181294 (~1094 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1149544688 (~1096 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1150726386 (~1097 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1151908084 (~1098 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1154290422 (~1100 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1164925688 (~1110 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1175560954 (~1121 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 17 loaded; advanced offset to 1186191612 (~1131 MB)
+[qwen3-gpu] wq off=1186200828 (~1131 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1188564222 (~1133 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1189745920 (~1134 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1190927618 (~1135 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1193309956 (~1138 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1203945222 (~1148 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1214580488 (~1158 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 18 loaded; advanced offset to 1225211146 (~1168 MB)
+[qwen3-gpu] wq off=1225220362 (~1168 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1227583756 (~1170 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1228765454 (~1171 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1229947152 (~1172 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1232329490 (~1175 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1242964756 (~1185 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1253600022 (~1195 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 19 loaded; advanced offset to 1264230680 (~1205 MB)
+[qwen3-gpu] wq off=1264239896 (~1205 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1266603290 (~1207 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1267784988 (~1209 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1268966686 (~1210 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1271349024 (~1212 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1281984290 (~1222 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1292619556 (~1232 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 20 loaded; advanced offset to 1303250214 (~1242 MB)
+[qwen3-gpu] wq off=1303259430 (~1242 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1305622824 (~1245 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1306804522 (~1246 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1307986220 (~1247 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1310368558 (~1249 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1321003824 (~1259 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1331639090 (~1269 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 21 loaded; advanced offset to 1342269748 (~1280 MB)
+[qwen3-gpu] wq off=1342278964 (~1280 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1344642358 (~1282 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1345824056 (~1283 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1347005754 (~1284 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1349388092 (~1286 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1360023358 (~1297 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1370658624 (~1307 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 22 loaded; advanced offset to 1381289282 (~1317 MB)
+[qwen3-gpu] wq off=1381298498 (~1317 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1383661892 (~1319 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1384843590 (~1320 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1386025288 (~1321 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1388407626 (~1324 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1399042892 (~1334 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1409678158 (~1344 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 23 loaded; advanced offset to 1420308816 (~1354 MB)
+[qwen3-gpu] wq off=1420318032 (~1354 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1422681426 (~1356 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1423863124 (~1357 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1425044822 (~1359 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1427427160 (~1361 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1438062426 (~1371 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1448697692 (~1381 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 24 loaded; advanced offset to 1459328350 (~1391 MB)
+[qwen3-gpu] wq off=1459337566 (~1391 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
+[qwen3-gpu] wk off=1461700960 (~1393 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wv off=1462882658 (~1395 MB) qscheme=6 K=2304 N=1024 packed=1152 KB scales=2048 B
+[qwen3-gpu] wo off=1464064356 (~1396 MB) qscheme=6 K=2048 N=2304 packed=2304 KB scales=4608 B
+[qwen3-gpu] ffn_up off=1466446694 (~1398 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_gate off=1477081960 (~1408 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
+[qwen3-gpu] ffn_down off=1487717226 (~1418 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
+[qwen3-gpu] layer 25 loaded; advanced offset to 1498347884 (~1428 MB)
+[main] all 26 layers loaded in 797.3 ms; final offset=1428 MB (file=1428 MB)
+[qwen3-gpu] output_norm off=1498347884 first 8: 3.32812 3.35938 3.28125 3.23438 3.09375 3.375 3.35938 4.3125
+[qwen3-gpu] output_norm gamma -> SVM (fp32, 9216 B)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] forward scratch pool allocated for max_M=4 (hidden=2304 inter=9216 hQ=8 hKV=4 d=256)
+[qwen3-gpu] RoPE full LUT built: 20480 positions × 128 half_d (10.00 MB)
+[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+[run 0] embed=2.17 ms  chain=2910.4 ms (111.94 ms/layer)  out_norm=4.11 ms  lm_head=498.9 ms  TOTAL=3415.6 ms  (=> 0.29 TPS effective)  -> token 185
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+[run 1] embed=0.24 ms  chain=102.8 ms (3.95 ms/layer)  out_norm=2.91 ms  lm_head=315.4 ms  TOTAL=421.4 ms  (=> 2.37 TPS effective)  -> token 185
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+[run 2] embed=0.13 ms  chain=102.9 ms (3.96 ms/layer)  out_norm=2.90 ms  lm_head=311.6 ms  TOTAL=417.5 ms  (=> 2.39 TPS effective)  -> token 185
+
+[main] decode (M=1) summary:
+  predicted token over 3 runs: 185 (deterministic=1)
+  baseline reference: CausalLM ~6.7 decode TPS (== ~150 ms/decode token) on the same SD8 Elite.
+
+[main] === Phase A #2: prefill timing (M>1) ===
+  NOTE: per-token RoPE not yet implemented (task #45b);
+  output token id is not meaningful for M>1 but per-op
+  timing is.
+[qwen3-gpu] forward scratch pool allocated for max_M=1024 (hidden=2304 inter=9216 hQ=8 hKV=4 d=256)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[prefill M=   2] chain=  103.9 ms  51.938 ms/token  =>    19.3 TPS  (L0=5.3 ms, L27=3.9 ms)
+[prefill M=   8] chain=  735.1 ms  91.886 ms/token  =>    10.9 TPS  (L0=556.6 ms, L27=7.0 ms)
+[prefill M=  64] chain=  121.6 ms  1.901 ms/token  =>   526.1 TPS  (L0=2.6 ms, L27=4.7 ms)
+[prefill M= 256] chain=  428.5 ms  1.674 ms/token  =>   597.4 TPS  (L0=8.4 ms, L27=17.1 ms)
+[prefill M= 512] chain= 1281.1 ms  2.502 ms/token  =>   399.7 TPS  (L0=27.0 ms, L27=60.0 ms)
+[prefill M=1024] chain= 4547.3 ms  4.441 ms/token  =>   225.2 TPS  (L0=151.5 ms, L27=173.6 ms)
+
+[main] === prefill correctness: greedy generation from BOS ===
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+  [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] lm_head: argmax token=2 logit=31.2829 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=2 logit=42.1031 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=2 logit=44.0821 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] lm_head: argmax token=185 logit=2.48136 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] lm_head: argmax token=2299 logit=58.1206 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] lm_head: argmax token=577 logit=82.2484 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] lm_head: argmax token=947 logit=46.016 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] lm_head: argmax token=573 logit=45.1418 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] lm_head: argmax token=1618 logit=42.9818 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] lm_head: argmax token=576 logit=77.6825 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] lm_head: argmax token=476 logit=62.3945 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] lm_head: argmax token=3724 logit=45.6523 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] lm_head: argmax token=5356 logit=46.5733 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] lm_head: argmax token=575 logit=58.0599 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] lm_head: argmax token=476 logit=61.5762 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] lm_head: argmax token=1889 logit=43.5009 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
+[qwen3-gpu] lm_head: argmax token=576 logit=52.0065 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] lm_head: argmax token=9113 logit=44.8387 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] embedding[9113] dequant first 8: 0.0935555 -0.654888 -0.374222 0.654888 -2.90022 2.15178 1.02911 0.0935555
+[qwen3-gpu] lm_head: argmax token=192 logit=54.4455 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[12345] dequant first 8: -0.535583 0.535583 -1.20506 1.47285 1.20506 -2.27623 2.27623 0.267792
+[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+  [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
+  generated 21 token ids (greedy, no NaN=1):
+    2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
+
+[main] step #45 OK — multi-token prefill chain runs.
+
+[SUCCESS] Done. Re-run on device any time with:
+[INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
 
