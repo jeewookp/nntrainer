@@ -419,7 +419,16 @@ int main(int argc, char **argv) {
     // so we can see WHERE the cliff time goes. Profiling adds a
     // clFinish per stage = overhead; total ms reported INCLUDES that
     // overhead but per-stage attribution is clean.
-    const bool profile = (M_test == 256 || M_test == 1024);
+    // per-stage timing brackets each stage with clFinish(cl_q_), which DRAINS
+    // the in-order queue and destroys host/GPU dispatch overlap — i.e. it
+    // inflates the very M=256/M=1024 wall it is trying to measure (M=512 never
+    // set it, which is why M=512 looked faster per-token). Gate it OFF by
+    // default; NNTR_STAGE_PROFILE=1 restores per-stage attribution.
+    static const bool want_stage_prof = []() {
+      const char *e = std::getenv("NNTR_STAGE_PROFILE");
+      return e && std::atoi(e) != 0;
+    }();
+    const bool profile = want_stage_prof && (M_test == 256 || M_test == 1024);
     if (profile) {
       fwd.timings_.reset();
       fwd.profile_stages_ = true;

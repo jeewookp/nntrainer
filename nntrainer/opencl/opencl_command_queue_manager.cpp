@@ -465,8 +465,14 @@ void CommandQueueManager::enqueueKernel(const cl_kernel kernel,
     if (clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, sizeof(nm) - 1, nm,
                         nullptr) != CL_SUCCESS)
       nm[0] = '\0';
-    profRecs().push_back({std::string(nm), local_evt});
+    std::string key(nm);
+    if (!next_prof_label_.empty())
+      key += next_prof_label_;
+    profRecs().push_back({std::move(key), local_evt});
   }
+  // consume the per-call shape label regardless of tracking, so it never
+  // leaks onto a subsequent kernel's profile entry.
+  next_prof_label_.clear();
 }
 
 void CommandQueueManager::dumpProfile(const char *tag) {
@@ -482,6 +488,9 @@ void CommandQueueManager::dumpProfile(const char *tag) {
   };
   std::unordered_map<std::string, Agg> agg;
   double grand_ns = 0.0;
+  // ordered timeline (name, start, end) for inter-kernel GPU-idle attribution
+  std::vector<std::string> tl_name;
+  std::vector<cl_ulong> tl_start, tl_end;
   for (auto &r : recs) {
     cl_ulong start = 0, end = 0;
     if (r.evt) {
@@ -493,12 +502,35 @@ void CommandQueueManager::dumpProfile(const char *tag) {
         double ns = (double)(end - start);
         agg[r.name].total_ns += ns;
         grand_ns += ns;
+        tl_name.push_back(r.name);
+        tl_start.push_back(start);
+        tl_end.push_back(end);
       }
       agg[r.name].count++;
       clReleaseEvent(r.evt);
     }
   }
   recs.clear();
+
+  // Inter-kernel GPU-idle: gap between kernel i's end and i+1's start = host-
+  // bound dispatch overhead (the GPU waiting for the host to enqueue/prep the
+  // next kernel). Attribute each gap to the "A -> B" transition (base names,
+  // shape label stripped) so we see where the idle concentrates.
+  auto base = [](const std::string &s) {
+    auto p = s.find(':');
+    return p == std::string::npos ? s : s.substr(0, p);
+  };
+  std::unordered_map<std::string, Agg> idle;
+  double total_idle_ns = 0.0;
+  for (size_t i = 1; i < tl_start.size(); ++i) {
+    if (tl_start[i] > tl_end[i - 1]) {
+      double g = (double)(tl_start[i] - tl_end[i - 1]);
+      std::string key = base(tl_name[i - 1]) + " -> " + base(tl_name[i]);
+      idle[key].total_ns += g;
+      idle[key].count++;
+      total_idle_ns += g;
+    }
+  }
 
   std::vector<std::pair<std::string, Agg>> sorted(agg.begin(), agg.end());
   std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b) {
@@ -519,6 +551,29 @@ void CommandQueueManager::dumpProfile(const char *tag) {
            kv.second.count, avg_us, pct);
   }
   printf("  %-34s %10.2f\n", "TOTAL (sum of kernel GPU time)", grand_ns / 1e6);
+
+  // host-bound inter-kernel idle (GPU waiting for host between dispatches)
+  std::vector<std::pair<std::string, Agg>> idle_sorted(idle.begin(), idle.end());
+  std::sort(idle_sorted.begin(), idle_sorted.end(),
+            [](const auto &a, const auto &b) {
+              return a.second.total_ns > b.second.total_ns;
+            });
+  printf("\n  --- inter-kernel GPU-idle (host-bound dispatch overhead) ---\n");
+  printf("  %-44s %10s %8s %10s\n", "transition (A -> B)", "idle_ms",
+         "count", "avg_us");
+  size_t shown = 0;
+  for (auto &kv : idle_sorted) {
+    if (shown++ >= 15)
+      break;
+    double ms = kv.second.total_ns / 1e6;
+    double avg_us = kv.second.count
+                      ? (kv.second.total_ns / 1e3) / (double)kv.second.count
+                      : 0.0;
+    double pct = total_idle_ns > 0.0 ? 100.0 * kv.second.total_ns / total_idle_ns : 0.0;
+    printf("  %-44s %10.2f %8lu %10.2f  (%4.1f%%)\n", kv.first.c_str(), ms,
+           kv.second.count, avg_us, pct);
+  }
+  printf("  %-44s %10.2f\n", "TOTAL inter-kernel idle", total_idle_ns / 1e6);
   printf("=========================================================\n\n");
   fflush(stdout);
 }

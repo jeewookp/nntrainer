@@ -18,6 +18,7 @@
 #include "opencl_kernel.h"
 #include "singleton.h"
 #include <memory>
+#include <string>
 
 namespace nntrainer::opencl {
 
@@ -34,6 +35,14 @@ class CommandQueueManager : public Singleton<CommandQueueManager> {
    *
    */
   cl_command_queue command_queue_{nullptr};
+
+  /**
+   * @brief optional suffix appended to the NEXT enqueued kernel's profile key
+   * (consumed + cleared on the next enqueueKernel). Lets a caller split one
+   * kernel's profile entry by shape, e.g. v8c_gemm_int8_int4 -> ...:N9216_K2304.
+   * Host-only; never affects kernel behavior. Only read when profiling is on.
+   */
+  std::string next_prof_label_;
 
 public:
   /**
@@ -242,6 +251,13 @@ public:
    * @param tag short label printed in the report header (e.g. "PREFILL").
    */
   void dumpProfile(const char *tag);
+
+  /**
+   * @brief set a suffix appended to the next enqueued kernel's profile key,
+   * to split one kernel's aggregate entry by call-site/shape. No-op for kernel
+   * execution; the label is consumed and cleared by the next enqueueKernel.
+   */
+  void setNextProfileLabel(std::string s) { next_prof_label_ = std::move(s); }
 };
 } // namespace nntrainer::opencl
 
