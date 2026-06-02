@@ -240,15 +240,30 @@ log_step "3" "Push to device"
 "$ADB" shell "mkdir -p $INSTALL_DIR $MODEL_DIR"
 
 # The gpu binary needs these alongside it (LD_LIBRARY_PATH=$INSTALL_DIR).
-# libc++_shared.so is auto-copied into libs/ by ndk-build.
-for f in "$TARGET" libnntrainer.so libccapi-nntrainer.so libOpenCL.so libc++_shared.so; do
-  if [ -f "$LIBS_DIR/$f" ]; then
-    "$ADB" push "$LIBS_DIR/$f" "$INSTALL_DIR/" >/dev/null
-    log_info "pushed $f"
-  else
-    log_warning "$f not in $LIBS_DIR (skipping — device vendor lib may provide it)"
-  fi
-done
+# ndk-build does NOT stage them in libs/ for an executable target, so push each
+# from its real build location. libc++_shared.so comes from the NDK sysroot.
+ANDROID_LIB_DIR="$NNTRAINER_ROOT/builddir/android_build_result/lib/$ABI"
+OPENCL_LIB_DIR="$NNTRAINER_ROOT/builddir/opencl/lib/$ABI"
+LIBCXX="$(find "${ANDROID_NDK:-/nonexistent}" -name libc++_shared.so 2>/dev/null | grep -i aarch64 | head -1)"
+
+push_artifact() { # <name> <candidate-paths...>
+  local name="$1"; shift
+  local p
+  for p in "$@"; do
+    if [ -f "$p" ]; then
+      "$ADB" push "$p" "$INSTALL_DIR/$name" >/dev/null && log_info "pushed $name"
+      return 0
+    fi
+  done
+  log_warning "$name not found in build outputs (device vendor lib may provide it)"
+  return 1
+}
+
+push_artifact "$TARGET"            "$LIBS_DIR/$TARGET" "$OBJ_DIR/$TARGET"
+push_artifact libnntrainer.so      "$ANDROID_LIB_DIR/libnntrainer.so" "$LIBS_DIR/libnntrainer.so"
+push_artifact libccapi-nntrainer.so "$ANDROID_LIB_DIR/libccapi-nntrainer.so" "$LIBS_DIR/libccapi-nntrainer.so"
+push_artifact libOpenCL.so         "$OPENCL_LIB_DIR/libOpenCL.so" "$LIBS_DIR/libOpenCL.so"
+push_artifact libc++_shared.so     "$LIBS_DIR/libc++_shared.so" "$OBJ_DIR/libc++_shared.so" "$LIBCXX"
 "$ADB" shell "chmod 755 $INSTALL_DIR/$TARGET"
 
 # Weight: reuse the on-device one, or push the local one (skipping the push
