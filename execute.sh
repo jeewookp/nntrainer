@@ -288,11 +288,15 @@ log_success "Device ready"
 # Step 4: Run Gemma2-2B on the Adreno GPU.
 # ---------------------------------------------------------------------------
 log_header "Run Gemma2-2B (GPU-native, Adreno)"
+# NNTR_GPU_LMHEAD=1 routes the lm_head matvec+argmax onto the GPU
+# (forwarded from the caller's environment; default off = CPU reference).
+GPU_LMHEAD="${NNTR_GPU_LMHEAD:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
 export NNTR_NUM_THREADS=$NNTR_NUM_THREADS
 export NNTR_MODEL_GEMMA2=1
+export NNTR_GPU_LMHEAD=$GPU_LMHEAD
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF

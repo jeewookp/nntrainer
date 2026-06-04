@@ -163,6 +163,181 @@ __kernel void fused_swiglu_fp16(__global const half *gate,
 }
 )CL";
 
+// GPU lm_head: Q6_K weight × fp16 hidden -> fp16 logits (mul_mv, ported
+// from all_gpu's q6_k_sgemv_fp16.cl) followed by gpu_argmax_fp16. Moves
+// the [vocab × hidden] lm_head matvec + argmax off the CPU (env-gated by
+// NNTR_GPU_LMHEAD=1; run_lm_head_and_argmax_cpu stays the default/ref).
+static const std::string kQ6KSgemvFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define QK_K 256
+#define N_SIMDWIDTH 16
+#define N_SIMDGROUP 2
+#define N_DST 1
+#define BLOCK_STRIDE (N_SIMDWIDTH / 16)
+
+typedef char int8_t;
+typedef uchar uint8_t;
+typedef short int16_t;
+typedef ushort uint16_t;
+typedef int int32_t;
+typedef uint uint32_t;
+
+typedef struct {
+  uint8_t ql[QK_K / 2];
+  uint8_t qh[QK_K / 4];
+  int8_t scales[QK_K / 16];
+  half d;
+} block_q6_K;
+
+kernel void kernel_mul_mv_q6_K_f16(global void *src0, ulong offset0,
+                                   global half *src1, ulong offset1,
+                                   global half *dst, ulong offsetd, int ne00,
+                                   int ne01, int ne02, int ne10, int ne12,
+                                   int ne0, int ne1, int r2, int r3) {
+  __local float reduction_buf[N_SIMDGROUP][N_SIMDWIDTH];
+
+  src0 = (global void *)((global char *)src0 + offset0);
+  src1 = (global half *)((global char *)src1 + offset1);
+  dst = (global half *)((global char *)dst + offsetd);
+
+  int nb = ne00 / QK_K;
+
+  int r0 = get_group_id(0);
+  int r1 = get_group_id(1);
+  int im = get_group_id(2);
+  int lid = get_local_id(0);
+  int lsize = get_local_size(0);
+
+  int row_group = lid / N_SIMDWIDTH;
+  int lane = lid % N_SIMDWIDTH;
+  int row = r0 * N_SIMDGROUP + row_group;
+
+  int i12 = im % ne12;
+  int i13 = im / ne12;
+
+  ulong offset_src0 =
+    (i12 / r2) * (nb * ne01) + (i13 / r3) * (nb * ne01 * ne02);
+
+  global block_q6_K *x = (global block_q6_K *)src0 + row * nb + offset_src0;
+  global half *yy = (global half *)src1 + r1 * ne10 + im * ne00 * ne1;
+
+  uchar kmask1 = 0x03, kmask2 = 0x0C, kmask3 = 0x30, kmask4 = 0xC0;
+
+  int tid = lane / BLOCK_STRIDE;
+  int ix = lane % BLOCK_STRIDE;
+  int ip = tid / 8;
+  int il = tid % 8;
+  int n = 4;
+  int l0 = n * il;
+  int is = 8 * ip + l0 / 16;
+
+  int y_offset = 128 * ip + l0;
+  int q_offset_l = 64 * ip + l0;
+  int q_offset_h = 32 * ip + l0;
+
+  float sumf = 0.0f;
+
+  for (int i = ix; i < nb; i += BLOCK_STRIDE) {
+    global uint8_t *q1 = x[i].ql + q_offset_l;
+    global uint8_t *q2 = q1 + QK_K / 8;
+    global uint8_t *qh = x[i].qh + q_offset_h;
+    global int8_t *sc = x[i].scales + is;
+    global half *y = yy + i * QK_K + y_offset;
+
+    float dall = (float)x[i].d;
+    float4 sums = {0.f, 0.f, 0.f, 0.f};
+
+    for (int j = 0; j < 4; j++) {
+      sums.s0 +=
+        (float)y[j + 0] * ((float)((q1[j] & 0xF) | ((qh[j] & kmask1) << 4)) - 32.f);
+      sums.s1 +=
+        (float)y[j + 32] * ((float)((q2[j] & 0xF) | ((qh[j] & kmask2) << 2)) - 32.f);
+      sums.s2 +=
+        (float)y[j + 64] * ((float)((q1[j] >> 4) | ((qh[j] & kmask3) >> 0)) - 32.f);
+      sums.s3 +=
+        (float)y[j + 96] * ((float)((q2[j] >> 4) | ((qh[j] & kmask4) >> 2)) - 32.f);
+    }
+
+    sumf += dall * (sums.s0 * sc[0] + sums.s1 * sc[2] + sums.s2 * sc[4] +
+                    sums.s3 * sc[6]);
+  }
+
+  reduction_buf[row_group][lane] = sumf;
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  for (int offset = N_SIMDWIDTH / 2; offset > 0; offset >>= 1) {
+    if (lane < offset) {
+      reduction_buf[row_group][lane] += reduction_buf[row_group][lane + offset];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  if (lane == 0) {
+    int global_row = r0 * N_SIMDGROUP + row_group;
+    dst[r1 * ne0 + im * ne0 * ne1 + global_row] = (half)reduction_buf[row_group][0];
+  }
+}
+)CL";
+
+// GPU argmax over an fp16 logit vector (ported from all_gpu's
+// gpu_argmax_fp16.cl). Single 256-thread workgroup, strided scan +
+// tree reduction; writes the argmax index to result[0].
+static const std::string kGpuArgmaxFp16Kernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+__attribute__((reqd_work_group_size(256, 1, 1)))
+__kernel void gpu_argmax_fp16(__global const half *logits,
+                              __global int *result, const int n) {
+  __local float s_val[256];
+  __local int s_idx[256];
+  const int tid = get_local_id(0);
+  float best_val = -1e38f;
+  int best_idx = 0;
+  for (int i = tid; i < n; i += 256) {
+    const float v = (float)logits[i];
+    if (v > best_val) { best_val = v; best_idx = i; }
+  }
+  s_val[tid] = best_val;
+  s_idx[tid] = best_idx;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = 128; s > 0; s >>= 1) {
+    if (tid < s && s_val[tid + s] > s_val[tid]) {
+      s_val[tid] = s_val[tid + s];
+      s_idx[tid] = s_idx[tid + s];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) result[0] = s_idx[0];
+}
+)CL";
+
+// IEEE half (bits) -> float, host side, for logging the winning logit.
+static inline float half_bits_to_float(uint16_t h) {
+  const uint32_t sign = (uint32_t)(h & 0x8000u) << 16;
+  const uint32_t exp = (h >> 10) & 0x1Fu;
+  const uint32_t man = h & 0x3FFu;
+  uint32_t f;
+  if (exp == 0u) {
+    if (man == 0u) {
+      f = sign;
+    } else {
+      int e = -1;
+      uint32_t m = man;
+      do {
+        e++;
+        m <<= 1;
+      } while ((m & 0x400u) == 0u);
+      f = sign | ((uint32_t)(127 - 15 - e) << 23) | ((m & 0x3FFu) << 13);
+    }
+  } else if (exp == 0x1Fu) {
+    f = sign | 0x7F800000u | (man << 13);
+  } else {
+    f = sign | ((exp + (127u - 15u)) << 23) | (man << 13);
+  }
+  float out;
+  std::memcpy(&out, &f, sizeof(out));
+  return out;
+}
+
 // #46m: SVM fp16 → cl_mem fp16 GPU copy. Used to bridge attention
 // output (SVM) into quantize_act_v8c_fp16_cl input (cl_mem).
 static const std::string kCopySvmFp16Kernel = R"CL(
@@ -580,6 +755,11 @@ Qwen3Forward::~Qwen3Forward() {
     clSVMFree(cl_ctx_, output_norm_gamma_svm_);
   if (output_norm_gamma_svm_fp16_ && cl_ctx_)
     clSVMFree(cl_ctx_, output_norm_gamma_svm_fp16_);
+  // GPU lm_head scratch.
+  if (lmhead_weight_buf_) clReleaseMemObject(lmhead_weight_buf_);
+  if (lmhead_x_svm_ && cl_ctx_) clSVMFree(cl_ctx_, lmhead_x_svm_);
+  if (lmhead_y_svm_ && cl_ctx_) clSVMFree(cl_ctx_, lmhead_y_svm_);
+  if (lmhead_result_svm_ && cl_ctx_) clSVMFree(cl_ctx_, lmhead_result_svm_);
   // Generic per-layer state (loaded via load_layer).
   for (auto &lw : layers_) {
     if (lw.attn_norm_gamma_svm && cl_ctx_)
@@ -4370,6 +4550,165 @@ int Qwen3Forward::run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32) {
   std::fprintf(stderr,
                "[qwen3-gpu] lm_head: argmax token=%d logit=%g (vocab=%u)\n",
                best_token, best_logit, V);
+  return best_token;
+}
+
+// GPU lm_head: same math as run_lm_head_and_argmax_cpu but the Q6_K
+// matvec (vocab × hidden) and the argmax run on the GPU. The tied
+// embedding (Q6_K) at the start of the weight mmap is aliased once as a
+// read-only cl_mem (USE_HOST_PTR, zero copy); the fp32 post-norm hidden
+// is converted to fp16 on-GPU (cvt_f2h) into an SVM vector; logits land
+// in an fp16 SVM vector consumed by gpu_argmax_fp16. Softcap/embed_scale
+// are monotonic and irrelevant to the argmax, so they are omitted here
+// (matches the CPU path, which also applies neither to the lm_head dot).
+int Qwen3Forward::run_lm_head_and_argmax_gpu(cl_mem post_norm_fp32) {
+  if (weight_mmap_ == nullptr || cl_ctx_ == nullptr ||
+      post_norm_fp32 == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): not initialized\n");
+    return -1;
+  }
+  const unsigned int H = cfg_.hidden_size;
+  const unsigned int V = cfg_.vocab_size;
+  if (H % Q6_K_BLOCK_ELTS != 0) {
+    std::fprintf(stderr,
+                 "[qwen3-gpu] lm_head(gpu): hidden %u not multiple of Q6_K\n",
+                 H);
+    return -1;
+  }
+
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  if (cl == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): no gpu context\n");
+    return -1;
+  }
+
+  // Lazily allocate the reusable SVM scratch + the cl_mem weight alias.
+  if (lmhead_x_svm_ == nullptr)
+    lmhead_x_svm_ =
+      clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, (size_t)H * sizeof(uint16_t), 0);
+  if (lmhead_y_svm_ == nullptr)
+    lmhead_y_svm_ =
+      clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, (size_t)V * sizeof(uint16_t), 0);
+  if (lmhead_result_svm_ == nullptr)
+    lmhead_result_svm_ =
+      clSVMAlloc(cl_ctx_, CL_MEM_READ_WRITE, sizeof(int), 0);
+  if (lmhead_x_svm_ == nullptr || lmhead_y_svm_ == nullptr ||
+      lmhead_result_svm_ == nullptr) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): SVMAlloc failed\n");
+    return -1;
+  }
+  cl_int err = CL_SUCCESS;
+  if (lmhead_weight_buf_ == nullptr) {
+    const size_t row_bytes = (H / Q6_K_BLOCK_ELTS) * Q6_K_BLOCK_BYTES;
+    const size_t weight_bytes = (size_t)V * row_bytes;
+    lmhead_weight_buf_ =
+      clCreateBuffer(cl_ctx_, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                     weight_bytes, const_cast<uint8_t *>(weight_mmap_), &err);
+    if (err != CL_SUCCESS || lmhead_weight_buf_ == nullptr) {
+      std::fprintf(stderr,
+                   "[qwen3-gpu] lm_head(gpu): alias Q6_K weight err=%d\n", err);
+      return -1;
+    }
+  }
+
+  // 1. hidden fp32 (cl_mem) -> fp16 SVM via cvt_f2h.
+  {
+    auto kc = cl->registerClKernel(kCvtF2hKernel, "cvt_f2h");
+    int n = (int)H;
+    if (!kc || !kc->SetKernelArguments(0, &post_norm_fp32, sizeof(cl_mem)) ||
+        !kc->SetKernelSVMArguments(1, lmhead_x_svm_) ||
+        !kc->SetKernelArguments(2, &n, sizeof(int))) {
+      std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): cvt_f2h args failed\n");
+      return -1;
+    }
+    const size_t lws_n = 64;
+    std::array<size_t, 1> gws = {((size_t)H + lws_n - 1) / lws_n * lws_n};
+    std::array<size_t, 1> lws = {lws_n};
+    cl->command_queue_inst_.enqueueKernel(kc->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+
+  // 2. logits = Q6_K_embed[V,H] · hidden[H]  (fp16 -> fp16 SVM).
+  {
+    auto kp =
+      cl->registerClKernel(kQ6KSgemvFp16Kernel, "kernel_mul_mv_q6_K_f16");
+    if (!kp) {
+      std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): q6k register failed\n");
+      return -1;
+    }
+    cl_ulong off0 = 0, off1 = 0, offd = 0;
+    int ne00 = (int)H, ne01 = (int)V, ne02 = 1, ne10 = (int)H, ne12 = 1,
+        ne0 = (int)V, ne1 = 1, r2 = 1, r3 = 1;
+    bool ok =
+      kp->SetKernelArguments(0, &lmhead_weight_buf_, sizeof(cl_mem)) &&
+      kp->SetKernelArguments(1, &off0, sizeof(cl_ulong)) &&
+      kp->SetKernelSVMArguments(2, lmhead_x_svm_) &&
+      kp->SetKernelArguments(3, &off1, sizeof(cl_ulong)) &&
+      kp->SetKernelSVMArguments(4, lmhead_y_svm_) &&
+      kp->SetKernelArguments(5, &offd, sizeof(cl_ulong)) &&
+      kp->SetKernelArguments(6, &ne00, sizeof(int)) &&
+      kp->SetKernelArguments(7, &ne01, sizeof(int)) &&
+      kp->SetKernelArguments(8, &ne02, sizeof(int)) &&
+      kp->SetKernelArguments(9, &ne10, sizeof(int)) &&
+      kp->SetKernelArguments(10, &ne12, sizeof(int)) &&
+      kp->SetKernelArguments(11, &ne0, sizeof(int)) &&
+      kp->SetKernelArguments(12, &ne1, sizeof(int)) &&
+      kp->SetKernelArguments(13, &r2, sizeof(int)) &&
+      kp->SetKernelArguments(14, &r3, sizeof(int));
+    if (!ok) {
+      std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): q6k args failed\n");
+      return -1;
+    }
+    // 2 rows / workgroup of 32 (= N_SIMDGROUP × N_SIMDWIDTH).
+    const size_t sg = 2, sw = 16;
+    std::array<size_t, 3> gws = {((size_t)V + sg - 1) / sg * (sg * sw), 1, 1};
+    std::array<size_t, 3> lws = {sg * sw, 1, 1};
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+
+  // 3. argmax over the fp16 logits -> result[0].
+  {
+    auto ka = cl->registerClKernel(kGpuArgmaxFp16Kernel, "gpu_argmax_fp16");
+    int n = (int)V;
+    if (!ka || !ka->SetKernelSVMArguments(0, lmhead_y_svm_) ||
+        !ka->SetKernelSVMArguments(1, lmhead_result_svm_) ||
+        !ka->SetKernelArguments(2, &n, sizeof(int))) {
+      std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): argmax args failed\n");
+      return -1;
+    }
+    std::array<size_t, 1> gws = {256};
+    std::array<size_t, 1> lws = {256};
+    cl->command_queue_inst_.enqueueKernel(ka->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+  }
+  clFinish(cl_q_);
+
+  // 4. Read back the winning index (and its logit, for log parity).
+  err = clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_READ, lmhead_result_svm_,
+                        sizeof(int), 0, nullptr, nullptr);
+  if (err != CL_SUCCESS) {
+    std::fprintf(stderr, "[qwen3-gpu] lm_head(gpu): result map err=%d\n", err);
+    return -1;
+  }
+  int best_token = *static_cast<const int *>(lmhead_result_svm_);
+  clEnqueueSVMUnmap(cl_q_, lmhead_result_svm_, 0, nullptr, nullptr);
+
+  float best_logit = 0.0f;
+  if (best_token >= 0 && (unsigned int)best_token < V &&
+      clEnqueueSVMMap(cl_q_, CL_TRUE, CL_MAP_READ, lmhead_y_svm_,
+                      (size_t)V * sizeof(uint16_t), 0, nullptr,
+                      nullptr) == CL_SUCCESS) {
+    best_logit = half_bits_to_float(
+      static_cast<const uint16_t *>(lmhead_y_svm_)[best_token]);
+    clEnqueueSVMUnmap(cl_q_, lmhead_y_svm_, 0, nullptr, nullptr);
+  }
+  clFinish(cl_q_);
+
+  std::fprintf(
+    stderr, "[qwen3-gpu] lm_head(gpu): argmax token=%d logit=%g (vocab=%u)\n",
+    best_token, best_logit, V);
   return best_token;
 }
 

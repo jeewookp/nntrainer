@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
     }
     auto t_norm_done = NOW();
 
-    int next_token = fwd.run_lm_head_and_argmax_cpu(cur);
+    int next_token = fwd.run_lm_head_and_argmax(cur);
     // cur points into the persistent buf_a/buf_b ping-pong pool —
     // intentionally NOT released here so the next iteration reuses it.
     if (next_token < 0) {
@@ -553,7 +553,7 @@ int main(int argc, char **argv) {
                           H * sizeof(float), 0, nullptr, nullptr);
       clFinish(q);
       if (!fwd.run_output_norm(last_row)) return -2;
-      return fwd.run_lm_head_and_argmax_cpu(last_row);
+      return fwd.run_lm_head_and_argmax(last_row);
     };
     bool ok = true;
     for (int step = 0; step < GEN; ++step) {

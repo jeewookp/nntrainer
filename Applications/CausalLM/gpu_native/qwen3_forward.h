@@ -27,6 +27,7 @@
 #include <cl_tensor_view.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -231,10 +232,27 @@ public:
   /// cl_mem back to host, then for each vocab row dequant the Q6_K
   /// row from the tied embedding table, compute the dot product with
   /// the hidden, and finally argmax. Returns the predicted next-token
-  /// id (or -1 on failure). Q6_K kernel is CPU-only in nntrainer, so
-  /// this matmul stays on host for now — a GPU Q6_K kernel is a
-  /// separate kernel-design follow-up.
+  /// id (or -1 on failure). This is the reference path; the GPU
+  /// equivalent below (run_lm_head_and_argmax_gpu) moves the matvec +
+  /// argmax onto the device.
   int run_lm_head_and_argmax_cpu(cl_mem post_norm_fp32);
+
+  /// GPU lm_head: same result as run_lm_head_and_argmax_cpu but the
+  /// Q6_K matvec (vocab × hidden) and argmax run on the GPU via the
+  /// ported kernel_mul_mv_q6_K_f16 + gpu_argmax_fp16 kernels. The tied
+  /// embedding is aliased as a read-only cl_mem (USE_HOST_PTR).
+  int run_lm_head_and_argmax_gpu(cl_mem post_norm_fp32);
+
+  /// Dispatch lm_head on GPU when NNTR_GPU_LMHEAD=1, else on CPU. The
+  /// env is read once; the CPU path remains the default reference.
+  int run_lm_head_and_argmax(cl_mem post_norm_fp32) {
+    static const bool use_gpu = []() {
+      const char *e = std::getenv("NNTR_GPU_LMHEAD");
+      return e != nullptr && e[0] == '1';
+    }();
+    return use_gpu ? run_lm_head_and_argmax_gpu(post_norm_fp32)
+                   : run_lm_head_and_argmax_cpu(post_norm_fp32);
+  }
 
   /// Load layer 0's q_norm and k_norm gammas (fp32, [head_dim]) from
   /// the mmap'd weights. They sit between wq/wk and wk/wv in the
@@ -360,6 +378,13 @@ private:
   // (clean under the causal mask).
   void *layer0_cache_k_svm_ = nullptr;
   void *layer0_cache_v_svm_ = nullptr;
+
+  // GPU lm_head scratch (run_lm_head_and_argmax_gpu). Allocated lazily,
+  // reused across calls, freed in the destructor.
+  cl_mem lmhead_weight_buf_ = nullptr;   // Q6_K tied-embedding alias (HOST_PTR)
+  void *lmhead_x_svm_ = nullptr;         // fp16 hidden [H]
+  void *lmhead_y_svm_ = nullptr;         // fp16 logits [V]
+  void *lmhead_result_svm_ = nullptr;    // int argmax [1]
 
   /// Bundled v8c-ready state for one int4 GEMM weight. Built once by
   /// load_qint4_weight_at() from a mmap'd KAI Section A payload via
