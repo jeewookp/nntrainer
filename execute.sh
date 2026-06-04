@@ -370,13 +370,29 @@ echo ""
 #   nowfetch  : no weight fetch          => w-fetch  = full - nowfetch
 #   noafetch  : no activation fetch      => a-fetch  = full - noafetch
 # Numerics are garbage in these modes (synthetic fetch) — timing only.
-# Set GEMM_DECOMP=0 to skip the extra runs.
-GEMM_DECOMP="${GEMM_DECOMP:-1}"
+# Set GEMM_DECOMP=1 to re-run the decomposition (data already collected).
+GEMM_DECOMP="${GEMM_DECOMP:-0}"
 if [ "$GEMM_DECOMP" = "1" ]; then
   for mode in nocompute nowfetch noafetch; do
     log_info "GEMM decomp: NNTR_V8C_$(echo $mode | tr a-z A-Z)=1 (M=1024 GEMM stage times)"
     "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_STAGE_PROFILE=1 NNTR_V8C_$(echo $mode | tr a-z A-Z)=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
       | awk '/stage timings, M=1024/{f=1} f && /\((c|g|h2|h4)\)/{print} /host-timing M=1024/{f=0}'
+  done
+  echo ""
+fi
+
+# v8c GEMM local-work-size (LWS) sweep. The default is 4,16 (a sweet spot
+# swept on a different Adreno); this re-runs the prefill with several LWS
+# candidates and reports the M=1024 prefill TPS for each so we can pick the
+# best for THIS chip (Adreno 830). The winner can then be baked in as the
+# default NNTR_V8C_LWS. Set LWS_SWEEP=0 to skip.
+LWS_SWEEP="${LWS_SWEEP:-1}"
+if [ "$LWS_SWEEP" = "1" ]; then
+  log_header "v8c GEMM LWS sweep (M=1024 prefill TPS per candidate)"
+  for lws in 4,16 16,4 8,8 2,32 32,2 8,16 16,8 64,1; do
+    line=$("$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_STAGE_PROFILE=0 NNTR_V8C_LWS=$lws ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+      | grep -E '\[prefill M=1024\]' | head -1)
+    printf "  LWS=%-6s : %s\n" "$lws" "${line:-(no M=1024 line)}"
   done
   echo ""
 fi
