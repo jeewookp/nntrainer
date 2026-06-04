@@ -68,6 +68,10 @@ CAUSALLM_DIR="$NNTRAINER_ROOT/Applications/CausalLM"
 JNI_DIR="$CAUSALLM_DIR/jni"
 ABI="arm64-v8a"
 LIBS_DIR="$JNI_DIR/libs/$ABI"
+# Build output (meson/ndk/submodule) goes here so the console stays clean;
+# only profiling output is shown. Dumped on build failure.
+BUILD_LOG="$NNTRAINER_ROOT/.execute_build.log"
+: > "$BUILD_LOG"
 
 ADB="${ADB:-adb}"
 INSTALL_DIR="${INSTALL_DIR:-/data/local/tmp/nntrainer/causallm}"
@@ -166,7 +170,7 @@ else
     if [ -z "$(ls -A subprojects/iniparser 2>/dev/null)" ] || \
        [ -z "$(ls -A Applications/CausalLM/third_party/minja 2>/dev/null)" ]; then
       log_info "Initialising git submodules (iniparser, ruy, OpenBLAS, minja, ...)"
-      git submodule update --init --recursive
+      git submodule update --init --recursive >>"$BUILD_LOG" 2>&1
     fi
   fi
   [ -d builddir ] && { log_info "Removing existing builddir..."; rm -rf builddir; }
@@ -174,7 +178,13 @@ else
   # builddir/opencl that the CausalLM Android.mk links against), adds the
   # cl_operations include path (blas_kernel_interface.h) and -DENABLE_OPENCL=1.
   # The gpu-native binary needs OpenCL anyway. Extra flags via MESON_ARGS.
-  ./tools/package_android.sh -Denable-opencl=true ${MESON_ARGS:-}
+  log_info "Building nntrainer (log -> $BUILD_LOG)"
+  if ! ./tools/package_android.sh -Denable-opencl=true ${MESON_ARGS:-} \
+       >>"$BUILD_LOG" 2>&1; then
+    log_error "nntrainer build failed — tail of $BUILD_LOG:"
+    tail -40 "$BUILD_LOG"
+    exit 1
+  fi
 fi
 
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
@@ -213,11 +223,16 @@ else
   GPU_INCLUDES="-I$NNTRAINER_ROOT/nntrainer/tensor/cl_operations -I$NNTRAINER_ROOT/nntrainer/opencl"
   cd "$JNI_DIR"
   rm -rf libs obj
-  ndk-build \
-    NDK_PROJECT_PATH=. NDK_LIBS_OUT=./libs NDK_OUT=./obj \
-    APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk \
-    APP_CFLAGS="$GPU_INCLUDES" \
-    "$TARGET" -j "$(nproc 2>/dev/null || echo 4)"
+  log_info "Building $TARGET (log -> $BUILD_LOG)"
+  if ! ndk-build \
+       NDK_PROJECT_PATH=. NDK_LIBS_OUT=./libs NDK_OUT=./obj \
+       APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk \
+       APP_CFLAGS="$GPU_INCLUDES" \
+       "$TARGET" -j "$(nproc 2>/dev/null || echo 4)" >>"$BUILD_LOG" 2>&1; then
+    log_error "$TARGET build failed — tail of $BUILD_LOG:"
+    tail -40 "$BUILD_LOG"
+    exit 1
+  fi
   log_success "$TARGET built"
 fi
 
@@ -317,7 +332,13 @@ EOF
 
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
-"$ADB" shell "sh $INSTALL_DIR/run_gemma2_gpu.sh"
+# Keep only profiling / timing output: drop the per-token and per-weight
+# `[qwen3-gpu] ...` spam, but never hide a [qwen3-gpu] line that reports an
+# error/failure. Everything else ([main], [run N], [prefill M=...], the
+# (a)-(h) stage timings, [host-timing], [causal] ...) passes through.
+"$ADB" shell "sh $INSTALL_DIR/run_gemma2_gpu.sh" 2>&1 | awk '
+  /\[qwen3-gpu\]/ { if ($0 ~ /[Ff]ail|[Ee]rror|FAIL|ERROR/) print; next }
+  { print }'
 echo ""
 log_success "Done. Re-run on device any time with:"
 log_info  "  $ADB shell sh $INSTALL_DIR/run_gemma2_gpu.sh"
