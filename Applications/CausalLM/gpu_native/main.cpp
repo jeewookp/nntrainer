@@ -479,7 +479,12 @@ int main(int argc, char **argv) {
                    "    (e) KV write SVM   %7.1f ms (%4.1f%%)\n"
                    "    (f) attention      %7.1f ms (%4.1f%%)\n"
                    "    (g) wo + resid_1   %7.1f ms (%4.1f%%)\n"
-                   "    (h) ffn block      %7.1f ms (%4.1f%%)\n",
+                   "    (h) ffn block      %7.1f ms (%4.1f%%)\n"
+                   "        (h1) ffn norm+quant %7.1f ms (%4.1f%%)\n"
+                   "        (h2) gate+up GEMM   %7.1f ms (%4.1f%%)\n"
+                   "        (h3) cvt+glu+quant  %7.1f ms (%4.1f%%)\n"
+                   "        (h4) ffn_down GEMM  %7.1f ms (%4.1f%%)\n"
+                   "        (h5) post_norm+add  %7.1f ms (%4.1f%%)\n",
                    M_test, tt.calls, sum,
                    tt.pad_attn_norm_ms,   pct(tt.pad_attn_norm_ms),
                    tt.qkv_quant_image_ms, pct(tt.qkv_quant_image_ms),
@@ -488,7 +493,12 @@ int main(int argc, char **argv) {
                    tt.kv_write_ms,        pct(tt.kv_write_ms),
                    tt.attn_dispatch_ms,   pct(tt.attn_dispatch_ms),
                    tt.wo_ms,              pct(tt.wo_ms),
-                   tt.ffn_ms,             pct(tt.ffn_ms));
+                   tt.ffn_ms,             pct(tt.ffn_ms),
+                   tt.ffn_norm_ms,        pct(tt.ffn_norm_ms),
+                   tt.ffn_gateup_ms,      pct(tt.ffn_gateup_ms),
+                   tt.ffn_swiglu_ms,      pct(tt.ffn_swiglu_ms),
+                   tt.ffn_down_ms,        pct(tt.ffn_down_ms),
+                   tt.ffn_post_ms,        pct(tt.ffn_post_ms));
     }
     // ALWAYS-ON host-bridge timing (env-gated print). The host_*_ms fields
     // accumulate the host wall-clock stalls of the SVM<->cl_mem bridges

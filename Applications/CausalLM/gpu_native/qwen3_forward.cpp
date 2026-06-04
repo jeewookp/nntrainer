@@ -4254,6 +4254,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                                         scratch_.fa_sc, scratch_.fa_zp,
                                         scratch_.fa_rs, M_pad, K_h);
   }
+  stage_end_add(timings_.ffn_norm_ms);  // (h1) ffn norm + act quant
+  stage_begin();
   bar();  // quant(fa) -> ffn_up/gate GEMM
   cl_mem fa_image = scratch_.fa_act_img; // increment 2: cached view
   cl_mem fa_act_arg = use_v8c_buf ? scratch_.fa_i8 : fa_image;
@@ -4273,6 +4275,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // for the OOO queue's next consumers (cvt h2f) without stalling
   // the host. #46i — biggest single overhead lever in FFN block.
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  stage_end_add(timings_.ffn_gateup_ms);  // (h2) gate + up GEMMs
+  stage_begin();
   auto disp_cvt = [&](cl_mem hin, cl_mem fout, unsigned int n) {
     auto kp = cl->registerClKernel(kConvertFp16ToFp32Kernel, "cvt_h2f");
     int ni = (int)n;
@@ -4318,6 +4322,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
                                       scratch_.dn_sc, scratch_.dn_zp,
                                       scratch_.dn_rs, M_pad, I);
+  stage_end_add(timings_.ffn_swiglu_ms);  // (h3) cvt + glu + act quant
+  stage_begin();
   bar();  // quant(dn) -> ffn_down GEMM
   cl_mem dn_image = scratch_.dn_act_img; // increment 2: cached view
   cl_mem dn_act_arg = use_v8c_buf ? scratch_.dn_i8 : dn_image;
@@ -4329,6 +4335,8 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
                               lw.ffn_down.row_sum_w_int4, scratch_.dn_fp16,
                               M_pad, K_h, I);
   clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+  stage_end_add(timings_.ffn_down_ms);  // (h4) ffn_down GEMM
+  stage_begin();
   // #63 Gemma2 sandwich norm: out = residual_1 + post_feedforward_layernorm(ffn_out).
   // Normalize dn_fp16 in place. Gated; Qwen3 adds the raw ffn_out.
   if (cfg_.is_gemma2) {
@@ -4363,7 +4371,10 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   }
-  stage_end_add(timings_.ffn_ms);  // #46i: no extra clFinish
+  stage_end_add(timings_.ffn_post_ms);  // (h5) post_ffn norm + residual add
+  timings_.ffn_ms = timings_.ffn_norm_ms + timings_.ffn_gateup_ms +
+                    timings_.ffn_swiglu_ms + timings_.ffn_down_ms +
+                    timings_.ffn_post_ms;
   if (profile_stages_) timings_.calls += 1;
 
   // increment 2: act images are cached in scratch_ (freed with the scratch

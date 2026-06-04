@@ -175,7 +175,12 @@ public:
     double kv_write_ms = 0;          // (e) KV cache SVM bridge
     double attn_dispatch_ms = 0;     // (f) Q SVM upload + attention call
     double wo_ms = 0;                // (g) wo: cvt+quant+image+GEMM+cvt+add
-    double ffn_ms = 0;               // (h) ffn block (full)
+    double ffn_ms = 0;               // (h) ffn block (full = sum of h1..h5)
+    double ffn_norm_ms = 0;          //   (h1) ffn rmsnorm + int8 act quant
+    double ffn_gateup_ms = 0;        //   (h2) gate + up v8c GEMMs
+    double ffn_swiglu_ms = 0;        //   (h3) cvt + (ge|sw)glu + act quant
+    double ffn_down_ms = 0;          //   (h4) ffn_down v8c GEMM
+    double ffn_post_ms = 0;          //   (h5) post_ffn norm + residual add
     int    calls = 0;
     // ALWAYS-ON host-blocking bridge timers (NOT gated by profile_stages_).
     // Accumulated across all layer calls of a forward window. These measure
