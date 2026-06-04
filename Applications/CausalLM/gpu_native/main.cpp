@@ -33,6 +33,11 @@
 #include <string>
 #include <vector>
 
+// Defined in libnntrainer (blas_kernels.cpp); used by the in-process LWS sweep.
+namespace nntrainer {
+void set_v8c_lws_override(int lx, int ly);
+}
+
 // Bypass the production safety gate in two_conv_attention_prefill_f16_cl.
 // The from-scratch runtime explicitly accepts GPU baseline as reference
 // (paper §3.6 same-numerics chain), so the existing "Using CPU mha"
@@ -410,6 +415,44 @@ int main(int argc, char **argv) {
   for (unsigned int m = 0; m < M_max; ++m)
     std::memcpy(rep_input.data() + (size_t)m * H, bos_host.data(),
                 H * sizeof(float));
+
+  // In-process v8c GEMM LWS sweep (NNTR_LWS_SWEEP=1): the model is already
+  // loaded, so retune the GEMM local size and re-time M=1024 prefill for each
+  // candidate WITHOUT reloading — ~10x faster than re-launching per LWS. Exits
+  // after the sweep.
+  if (std::getenv("NNTR_LWS_SWEEP")) {
+    const int cand[][2] = {{4, 16}, {16, 4}, {8, 8},  {2, 32},
+                           {32, 2}, {8, 16}, {16, 8}, {64, 1}};
+    const unsigned int Ms = 1024;
+    clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
+                         rep_input.data(), 0, nullptr, nullptr);
+    std::fprintf(stderr, "[main] === in-process LWS sweep (M=1024) ===\n");
+    for (auto &c : cand) {
+      nntrainer::set_v8c_lws_override(c[0], c[1]);
+      double best = 1e30;
+      for (int rep = 0; rep < 3; ++rep) {  // rep 0 = warmup (JIT)
+        cl_mem a = pf_in, b = pf_out;
+        auto t0 = NOW();
+        bool ok = true;
+        for (unsigned int L = 0; L < cfg.num_layers && ok; ++L) {
+          ok = fwd.forward_one_layer_v2(L, a, b, 0, Ms);
+          std::swap(a, b);
+        }
+        clFinish(q);
+        double ms = MS(NOW(), t0);
+        if (rep > 0 && ms < best) best = ms;
+        if (!ok) { best = -1; break; }
+      }
+      if (best < 0)
+        std::fprintf(stderr, "[lws-sweep] LWS=%d,%d : FAILED\n", c[0], c[1]);
+      else
+        std::fprintf(stderr,
+                     "[lws-sweep] LWS=%d,%d : chain=%.1f ms => %.1f TPS\n",
+                     c[0], c[1], best, (double)Ms * 1000.0 / best);
+    }
+    nntrainer::set_v8c_lws_override(0, 0);
+    return 0;
+  }
 
   for (int M_test : PREFILL_MS) {
     clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0,

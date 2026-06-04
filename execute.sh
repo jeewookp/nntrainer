@@ -391,12 +391,11 @@ fi
 # default NNTR_V8C_LWS. Set LWS_SWEEP=0 to skip.
 LWS_SWEEP="${LWS_SWEEP:-0}"
 if [ "$LWS_SWEEP" = "1" ]; then
-  log_header "v8c GEMM LWS sweep (M=1024 prefill TPS per candidate)"
-  for lws in 4,16 16,4 8,8 2,32 32,2 8,16 16,8 64,1; do
-    line=$("$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_STAGE_PROFILE=0 NNTR_V8C_LWS=$lws ./$TARGET '$DEV_WEIGHT'" 2>&1 \
-      | grep -E '\[prefill M=1024\]' | head -1)
-    printf "  LWS=%-6s : %s\n" "$lws" "${line:-(no M=1024 line)}"
-  done
+  log_header "v8c GEMM LWS sweep (in-process, M=1024 — single model load)"
+  # NNTR_LWS_SWEEP=1 loads the model ONCE then re-times M=1024 prefill for each
+  # LWS candidate in-process and exits — ~10x faster than relaunching per LWS.
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_LWS_SWEEP=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+    | grep -E '\[lws-sweep\]|in-process LWS sweep'
   echo ""
 fi
 

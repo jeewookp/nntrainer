@@ -1376,8 +1376,16 @@ static const tv::DeviceImageCaps &v8c_device_caps() {
 // Shared v8c LWS policy: preferred 4×16 (env NNTR_V8C_LWS overrides), capped to
 // the device max work-group size and required to divide gws. Returns whether a
 // valid LWS was chosen; out is filled when true.
+// Runtime-settable v8c GEMM local work size override ({0,0} = use env default).
+// Lets the in-process LWS sweep (NNTR_LWS_SWEEP in main.cpp) retune the local
+// size between forwards without reloading the model.
+static std::array<size_t, 2> g_v8c_lws_override = {0, 0};
+void set_v8c_lws_override(int lx, int ly) {
+  g_v8c_lws_override = {(size_t)(lx > 0 ? lx : 0), (size_t)(ly > 0 ? ly : 0)};
+}
+
 static bool v8c_pick_lws(size_t gws_x, size_t gws_y, std::array<size_t, 2> &out) {
-  static const std::array<size_t, 2> pref = []() {
+  static const std::array<size_t, 2> env_pref = []() {
     const char *e = std::getenv("NNTR_V8C_LWS");
     size_t lx = 4, ly = 16; // swept sweet spot @ M=1024 (WG=64), 8.9× vs NULL.
     if (e) {
@@ -1389,6 +1397,11 @@ static bool v8c_pick_lws(size_t gws_x, size_t gws_y, std::array<size_t, 2> &out)
     }
     return std::array<size_t, 2>{lx, ly};
   }();
+  // Runtime override (set_v8c_lws_override) lets an in-process LWS sweep change
+  // the local size without re-loading the model. {0,0} = use the env default.
+  const std::array<size_t, 2> &pref =
+    (g_v8c_lws_override[0] && g_v8c_lws_override[1]) ? g_v8c_lws_override
+                                                     : env_pref;
   size_t ox = 0, oy = 0;
   bool ok = tv::select2dLws(gws_x, gws_y, pref[0], pref[1], v8c_device_caps(),
                             &ox, &oy);

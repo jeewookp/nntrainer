@@ -24,6 +24,11 @@
 
 namespace nntrainer {
 
+/// Override the v8c GEMM local work size at runtime (lx,ly; <=0 = use the
+/// NNTR_V8C_LWS env default). Used by the in-process LWS sweep so the local
+/// size can be retuned between forwards without reloading the model.
+void set_v8c_lws_override(int lx, int ly);
+
 /**
  * @brief     signed 4-bit integer gemv async computation : C = A*B
  * @param[in] weight std::vector<void *> for int4 quantized weight
