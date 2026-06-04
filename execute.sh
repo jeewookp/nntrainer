@@ -34,6 +34,7 @@
 #   REUSE_NNTR=1      reuse an existing nntrainer android builddir (skip step 1)
 #   SKIP_BUILD=1      skip all building, just push + run existing artifacts
 #   PULL_WEIGHT=1     adb-pull the on-device weight into ./weights/ as well
+#   NNTR_GPU_LMHEAD   GPU lm_head matvec+argmax: 1=on (default), 0=CPU ref
 #
 # Invoked as `sh execute.sh ...`? Re-exec under bash for the color logging and
 # BASH_SOURCE handling below (dash lacks both).
@@ -288,9 +289,10 @@ log_success "Device ready"
 # Step 4: Run Gemma2-2B on the Adreno GPU.
 # ---------------------------------------------------------------------------
 log_header "Run Gemma2-2B (GPU-native, Adreno)"
-# NNTR_GPU_LMHEAD=1 routes the lm_head matvec+argmax onto the GPU
-# (forwarded from the caller's environment; default off = CPU reference).
-GPU_LMHEAD="${NNTR_GPU_LMHEAD:-0}"
+# NNTR_GPU_LMHEAD routes the lm_head matvec+argmax onto the GPU. Default
+# ON so a plain `sh execute.sh` exercises it; override with
+# NNTR_GPU_LMHEAD=0 sh execute.sh to fall back to the CPU reference.
+GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
