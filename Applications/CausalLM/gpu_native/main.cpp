@@ -81,19 +81,21 @@ __kernel void dp4a_peak(__global int *out, const int iters, const uint b) {
 // would target. The recurrence a = a*b + c with b<1 CONVERGES (stays bounded),
 // so values never overflow to inf (which would trigger a slow special-case
 // path and mismeasure the peak). Call with b = 0.5h.
+// Mirrors dp4a_peak exactly but with scalar half FMA (rules out half2/spill
+// artifacts). a=a*b+c with b=0.5h converges to 2 (bounded, no inf).
 __kernel void fma_peak(__global half *out, const int iters, const half bb) {
-  half2 a[32]; half2 b = (half2)(bb, bb); half2 c = (half2)((half)1.0h);
+  half a[32]; half c = (half)1.0h;
   #pragma unroll
-  for (int j=0;j<32;j++) a[j]=(half2)((half)((get_global_id(0)+j)&3));
+  for (int j=0;j<32;j++) a[j]=(half)((get_global_id(0)+j)&3);
   for (int i=0;i<iters;i++) {
-    #define FM(j) a[j]=fma(a[j],b,c);
+    #define FM(j) a[j]=fma(a[j],bb,c);
     C32(FM)
     #undef FM
   }
-  half2 s=(half2)((half)0);
+  half s=(half)0;
   #pragma unroll
   for (int j=0;j<32;j++) s+=a[j];
-  out[get_global_id(0)]=s.x+s.y;
+  out[get_global_id(0)]=s;
 }
 )CLC";
 
@@ -177,8 +179,8 @@ static void run_peak_bench() {
                                           lws.data(), 0, nullptr, nullptr);
     clFinish(q);
     double s = SEC(NOW(), t0);
-    // 32 chains × half2(2 lanes) × fma(2 flop) = 128 flop per WI per iter.
-    double flop = (double)GS * iters * 32.0 * 2.0 * 2.0;
+    // 32 scalar-half chains × fma(2 flop) = 64 flop per WI per iter.
+    double flop = (double)GS * iters * 32.0 * 2.0;
     std::fprintf(stderr, "[peak] fp16-fma  iters=%d : %.3f ms => %.2f TOP/s\n",
                  iters, s * 1e3, flop / s / 1e12);
   }
