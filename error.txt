@@ -1,16 +1,17 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 1.40 KiB | 476.00 KiB/s, done.
+remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.77 KiB | 67.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   791df8821..6a53b07fb  jijoong    -> origin/jijoong
-Updating 791df8821..6a53b07fb
+   46654008b..9a9af3d70  jijoong    -> origin/jijoong
+Updating 46654008b..9a9af3d70
 Fast-forward
- execute.sh | 37 +++++++++++++++++++++++++++++--------
- 1 file changed, 29 insertions(+), 8 deletions(-)
+ execute.sh                                           |  3 +++
+ nntrainer/tensor/cl_operations/attention_kernels.cpp | 35 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 38 insertions(+)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -49,10 +50,10 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 [INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
 
 [main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 728.4 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.10 ms  chain=2859.8 ms (109.99 ms/layer)  out_norm=3.84 ms  lm_head=262.6 ms  TOTAL=3126.4 ms  (=> 0.32 TPS effective)  -> token 185
-[run 1] embed=0.18 ms  chain=137.9 ms (5.30 ms/layer)  out_norm=4.06 ms  lm_head=16.2 ms  TOTAL=158.4 ms  (=> 6.31 TPS effective)  -> token 185
-[run 2] embed=0.52 ms  chain=151.1 ms (5.81 ms/layer)  out_norm=3.50 ms  lm_head=12.8 ms  TOTAL=168.0 ms  (=> 5.95 TPS effective)  -> token 185
+[main] all 26 layers loaded in 728.1 ms; final offset=1428 MB (file=1428 MB)
+[run 0] embed=0.09 ms  chain=2855.2 ms (109.82 ms/layer)  out_norm=3.52 ms  lm_head=261.8 ms  TOTAL=3120.6 ms  (=> 0.32 TPS effective)  -> token 185
+[run 1] embed=0.20 ms  chain=141.8 ms (5.45 ms/layer)  out_norm=4.05 ms  lm_head=15.0 ms  TOTAL=161.1 ms  (=> 6.21 TPS effective)  -> token 185
+[run 2] embed=0.92 ms  chain=152.6 ms (5.87 ms/layer)  out_norm=3.53 ms  lm_head=13.1 ms  TOTAL=170.2 ms  (=> 5.88 TPS effective)  -> token 185
 
 [main] decode (M=1) summary:
   predicted token over 3 runs: 185 (deterministic=1)
@@ -62,32 +63,32 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
   NOTE: per-token RoPE not yet implemented (task #45b);
   output token id is not meaningful for M>1 but per-op
   timing is.
-[prefill M=   2] chain=  156.8 ms  78.399 ms/token  =>    12.8 TPS  (L0=15.0 ms, L27=7.1 ms)
-[prefill M=   8] chain= 1263.1 ms  157.883 ms/token  =>     6.3 TPS  (L0=1034.1 ms, L27=9.3 ms)
-[prefill M=  64] chain=  182.4 ms  2.850 ms/token  =>   350.8 TPS  (L0=4.6 ms, L27=7.2 ms)
-[prefill M= 256] chain=  553.3 ms  2.161 ms/token  =>   462.7 TPS  (L0=23.7 ms, L27=21.2 ms)
+[prefill M=   2] chain=  173.5 ms  86.734 ms/token  =>    11.5 TPS  (L0=25.9 ms, L27=6.3 ms)
+[prefill M=   8] chain= 1263.7 ms  157.968 ms/token  =>     6.3 TPS  (L0=1036.0 ms, L27=9.1 ms)
+[prefill M=  64] chain=  184.4 ms  2.882 ms/token  =>   347.0 TPS  (L0=4.7 ms, L27=7.1 ms)
+[prefill M= 256] chain=  554.1 ms  2.164 ms/token  =>   462.0 TPS  (L0=23.7 ms, L27=20.9 ms)
   [stage timings, M=256, 26 layer-calls totaling 553 ms]:
-    (a) pad+attn_norm     10.7 ms ( 1.9%)
-    (b) qkv quant+img     10.9 ms ( 2.0%)
-    (c) Q/K/V GEMM        39.8 ms ( 7.2%)
-    (d) qk_norm[+RoPE]    12.9 ms ( 2.3%)
-    (e) KV write SVM      14.5 ms ( 2.6%)
-    (f) attention        167.5 ms (30.3%)
-    (g) wo + resid_1      48.2 ms ( 8.7%)
-    (h) ffn block        248.2 ms (44.9%)
-  [host-timing M=256, 26 layer-calls]: kv_bridge=13.36 ms  q_bridge=0.00 ms  copy_svm=2.42 ms  => host_total=15.78 ms (2.9% of chain=553.3 ms)
-[prefill M= 512] chain= 1306.8 ms  2.552 ms/token  =>   391.8 TPS  (L0=34.3 ms, L27=54.5 ms)
-[prefill M=1024] chain= 4703.6 ms  4.593 ms/token  =>   217.7 TPS  (L0=187.9 ms, L27=180.6 ms)
-  [stage timings, M=1024, 26 layer-calls totaling 4702 ms]:
-    (a) pad+attn_norm     42.6 ms ( 0.9%)
-    (b) qkv quant+img     25.6 ms ( 0.5%)
-    (c) Q/K/V GEMM       145.9 ms ( 3.1%)
-    (d) qk_norm[+RoPE]    23.5 ms ( 0.5%)
-    (e) KV write SVM      33.9 ms ( 0.7%)
-    (f) attention       3295.9 ms (70.1%)
-    (g) wo + resid_1     136.4 ms ( 2.9%)
-    (h) ffn block        998.6 ms (21.2%)
-  [host-timing M=1024, 26 layer-calls]: kv_bridge=32.33 ms  q_bridge=0.00 ms  copy_svm=3.48 ms  => host_total=35.81 ms (0.8% of chain=4703.6 ms)
+    (a) pad+attn_norm     10.8 ms ( 1.9%)
+    (b) qkv quant+img     10.0 ms ( 1.8%)
+    (c) Q/K/V GEMM        39.9 ms ( 7.2%)
+    (d) qk_norm[+RoPE]    12.5 ms ( 2.3%)
+    (e) KV write SVM      14.4 ms ( 2.6%)
+    (f) attention        171.1 ms (30.9%)
+    (g) wo + resid_1      48.7 ms ( 8.8%)
+    (h) ffn block        246.1 ms (44.5%)
+  [host-timing M=256, 26 layer-calls]: kv_bridge=13.29 ms  q_bridge=0.00 ms  copy_svm=2.46 ms  => host_total=15.76 ms (2.8% of chain=554.1 ms)
+[prefill M= 512] chain= 1303.1 ms  2.545 ms/token  =>   392.9 TPS  (L0=35.3 ms, L27=54.4 ms)
+[prefill M=1024] chain= 4720.5 ms  4.610 ms/token  =>   216.9 TPS  (L0=196.0 ms, L27=181.6 ms)
+  [stage timings, M=1024, 26 layer-calls totaling 4719 ms]:
+    (a) pad+attn_norm     37.5 ms ( 0.8%)
+    (b) qkv quant+img     26.1 ms ( 0.6%)
+    (c) Q/K/V GEMM       140.6 ms ( 3.0%)
+    (d) qk_norm[+RoPE]    25.0 ms ( 0.5%)
+    (e) KV write SVM      37.0 ms ( 0.8%)
+    (f) attention       3303.9 ms (70.0%)
+    (g) wo + resid_1     124.6 ms ( 2.6%)
+    (h) ffn block       1024.7 ms (21.7%)
+  [host-timing M=1024, 26 layer-calls]: kv_bridge=35.43 ms  q_bridge=0.00 ms  copy_svm=3.48 ms  => host_total=38.91 ms (0.8% of chain=4720.5 ms)
 
 [main] === prefill correctness: greedy generation from BOS ===
   [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
