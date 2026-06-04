@@ -352,6 +352,15 @@ cd $INSTALL_DIR
 EOF
 "$ADB" shell "chmod 755 $INSTALL_DIR/run_gemma2_gpu.sh"
 
+# Roofline ceiling: measure THIS device's int8-dp4a / fp16 compute peak
+# (NNTR_PEAK_BENCH runs a register-only microbench, then exits). Compared
+# against the achieved GEMM TOP/s this shows how much headroom is left.
+log_info "Measuring device compute peak (roofline ceiling)..."
+"$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_PEAK_BENCH=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | awk '
+  /\[qwen3-gpu\]/ { if ($0 ~ /[Ff]ail|[Ee]rror|FAIL|ERROR/) print; next }
+  { print }'
+echo ""
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight
