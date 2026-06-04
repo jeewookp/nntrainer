@@ -35,6 +35,8 @@
 #   SKIP_BUILD=1      skip all building, just push + run existing artifacts
 #   PULL_WEIGHT=1     adb-pull the on-device weight into ./weights/ as well
 #   NNTR_GPU_LMHEAD   GPU lm_head matvec+argmax: 1=on (default), 0=CPU ref
+#   NNTR_STAGE_PROFILE per-stage prefill breakdown: 1=on (default), 0=off
+#   NNTR_HOST_TIMING  host-bridge stall timing:     1=on (default), 0=off
 #
 # Invoked as `sh execute.sh ...`? Re-exec under bash for the color logging and
 # BASH_SOURCE handling below (dash lacks both).
@@ -293,10 +295,13 @@ log_header "Run Gemma2-2B (GPU-native, Adreno)"
 # ON so a plain `sh execute.sh` exercises it; override with
 # NNTR_GPU_LMHEAD=0 sh execute.sh to fall back to the CPU reference.
 GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
-# Prefill stage profiler (per-op breakdown at M=256 / M=1024) — forwarded
-# so `NNTR_STAGE_PROFILE=1 sh execute.sh` shows where prefill time goes.
-STAGE_PROFILE="${NNTR_STAGE_PROFILE:-0}"
-HOST_TIMING="${NNTR_HOST_TIMING:-0}"
+# Prefill stage profiler (per-op breakdown at M=256 / M=1024). Default ON
+# so a plain `sh execute.sh` always shows where prefill time goes. The
+# per-stage clFinish adds overhead that slightly inflates the profiled
+# M=256/M=1024 wall, but the (a)-(h) attribution is what we want.
+# Override with NNTR_STAGE_PROFILE=0 sh execute.sh for clean wall timing.
+STAGE_PROFILE="${NNTR_STAGE_PROFILE:-1}"
+HOST_TIMING="${NNTR_HOST_TIMING:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
