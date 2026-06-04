@@ -192,6 +192,48 @@ static void run_peak_bench() {
   clReleaseMemObject(out_h);
 }
 
+// Phase-0 gate #1 for the cl_qcom_ml_ops matrix-engine GEMM: does THIS device
+// actually expose the ML-ops entrypoints? (Advertised extensions can be
+// non-functional — e.g. recordable_queues here.) The QCOM ML API is reached
+// through a versioned interface table obtained from clGetMLInterfaceVxQCOM /
+// clQueryMLInterfaceVersionsQCOM, resolved via the platform extension-function
+// query. We only check non-null here (no calls) — if these resolve, ml_ops is
+// callable and the GEMM spike is worth building; if null, ml_ops is a dead end.
+static void run_mlops_probe() {
+  auto *cl = static_cast<nntrainer::ClContext *>(
+    nntrainer::Engine::Global().getRegisteredContext("gpu"));
+  if (!cl) { std::fprintf(stderr, "[mlops] no gpu context\n"); return; }
+  cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
+  cl_device_id dev = nullptr;
+  clGetCommandQueueInfo(q, CL_QUEUE_DEVICE, sizeof(dev), &dev, nullptr);
+  cl_platform_id plat = nullptr;
+  clGetDeviceInfo(dev, CL_DEVICE_PLATFORM, sizeof(plat), &plat, nullptr);
+
+  const char *names[] = {
+    "clQueryMLInterfaceVersionsQCOM", "clGetMLInterfaceV1QCOM",
+    "clGetMLInterfaceV2QCOM",         "clGetMLInterfaceV3QCOM",
+    "clGetMLInterfaceV4QCOM",         "clGetMLInterfaceV5QCOM",
+    "clGetMLInterfaceV6QCOM",         "clCreateMLTensorQCOM",
+    "clCreateMLOpQCOM",               "clEnqueueMLOpQCOM",
+    "clReleaseMLTensorQCOM",          "clReleaseMLOpQCOM",
+    "clCreateMLTensorMemoryQCOM",     "clGetMLTensorMemoryRequirementsQCOM",
+  };
+  std::fprintf(stderr, "[mlops] probing cl_qcom_ml_ops entrypoints (platform=%p):\n",
+               (void *)plat);
+  int found = 0;
+  for (auto *nm : names) {
+    void *p = clGetExtensionFunctionAddressForPlatform(plat, nm);
+    std::fprintf(stderr, "[mlops]   %-38s : %s\n", nm, p ? "RESOLVED" : "null");
+    if (p) found++;
+  }
+  std::fprintf(stderr,
+               "[mlops] %d/%d entrypoints resolved => ml_ops %s\n",
+               found, (int)(sizeof(names) / sizeof(names[0])),
+               found ? "CALLABLE — proceed to single-GEMM spike"
+                     : "NOT callable on this device (advertised but no entry "
+                       "points — dead end, like recordable_queues)");
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     std::fprintf(stderr,
@@ -271,6 +313,11 @@ int main(int argc, char **argv) {
   // Adreno int8-dp4a + fp16 peak on THIS device, then exit.
   if (std::getenv("NNTR_PEAK_BENCH")) {
     run_peak_bench();
+    return 0;
+  }
+  // Phase-0 gate #1 for the ml_ops matrix-engine GEMM (NNTR_MLOPS_PROBE=1).
+  if (std::getenv("NNTR_MLOPS_PROBE")) {
+    run_mlops_probe();
     return 0;
   }
 
