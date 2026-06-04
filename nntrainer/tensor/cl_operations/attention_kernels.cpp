@@ -1631,6 +1631,19 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
 
   clFinish(q);
 
+  // [attn-prof] per-sub-kernel timing (NNTR_ATTN_PROFILE=1). Each of K1/K2/K3
+  // is bracketed with clFinish so the qk/softmax/sv split is clean. The
+  // clFinish serializes the queue and inflates the attention wall, so it is
+  // limited to M>=512 to leave the smaller-M sweeps undistorted.
+  static const bool attn_prof_env = []() {
+    const char *e = std::getenv("NNTR_ATTN_PROFILE");
+    return e && std::atoi(e) != 0;
+  }();
+  const bool ap = attn_prof_env && M >= 512;
+  double ap_qk = 0.0, ap_sm = 0.0, ap_sv = 0.0;
+  std::chrono::high_resolution_clock::time_point ap_t;
+  if (ap) ap_t = std::chrono::high_resolution_clock::now();
+
   // ---- K1: QK matmul OHWI — pick image2d-K kernel when caller gave
   //          us a K image, else the SVM buffer kernel.
   {
@@ -1712,6 +1725,12 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
       kp->GetKernel(), 3, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
       nullptr);
   }
+  if (ap) {
+    clFinish(q);
+    auto t = std::chrono::high_resolution_clock::now();
+    ap_qk = std::chrono::duration<double, std::milli>(t - ap_t).count();
+    ap_t = t;
+  }
 
   // ---- K2: row softmax (scores cl_mem, in-place) ----
   {
@@ -1727,6 +1746,12 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
     std::array<size_t, 3> lws = {SOFTMAX_LWS, 1, 1};
     blas_cc->command_queue_inst_.enqueueKernel(kp->GetKernel(), 3, gws.data(),
                                                lws.data(), 0, nullptr, nullptr);
+  }
+  if (ap) {
+    clFinish(q);
+    auto t = std::chrono::high_resolution_clock::now();
+    ap_sm = std::chrono::duration<double, std::milli>(t - ap_t).count();
+    ap_t = t;
   }
 
   // ---- K3: scores @ V_image -> O via sv_matmul_f16_ohwi_img ----
@@ -1801,8 +1826,18 @@ static bool two_conv_attention_prefill_f16_ohwi_img_impl(
       kp->GetKernel(), 3, gws.data(), lws_ok ? lws.data() : nullptr, 0, nullptr,
       nullptr);
   }
+  if (ap) {
+    clFinish(q);
+    auto t = std::chrono::high_resolution_clock::now();
+    ap_sv = std::chrono::duration<double, std::milli>(t - ap_t).count();
+  }
 
   clFinish(q);
+  if (ap)
+    std::fprintf(stderr,
+                 "[attn-prof] M=%u N_kv=%u  qk=%.2f  softmax=%.2f  sv=%.2f ms"
+                 "  (sum=%.2f)\n",
+                 M, N_kv, ap_qk, ap_sm, ap_sv, ap_qk + ap_sm + ap_sv);
   return true;
 }
 

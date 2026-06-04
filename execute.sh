@@ -317,6 +317,8 @@ GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
 # Override with NNTR_STAGE_PROFILE=0 sh execute.sh for clean wall timing.
 STAGE_PROFILE="${NNTR_STAGE_PROFILE:-1}"
 HOST_TIMING="${NNTR_HOST_TIMING:-1}"
+# Attention sub-kernel profiler (qk / softmax / sv split, M>=512). Default ON.
+ATTN_PROFILE="${NNTR_ATTN_PROFILE:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
@@ -325,6 +327,7 @@ export NNTR_MODEL_GEMMA2=1
 export NNTR_GPU_LMHEAD=$GPU_LMHEAD
 export NNTR_STAGE_PROFILE=$STAGE_PROFILE
 export NNTR_HOST_TIMING=$HOST_TIMING
+export NNTR_ATTN_PROFILE=$ATTN_PROFILE
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF
