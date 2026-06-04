@@ -319,6 +319,12 @@ STAGE_PROFILE="${NNTR_STAGE_PROFILE:-1}"
 HOST_TIMING="${NNTR_HOST_TIMING:-1}"
 # Attention sub-kernel profiler (qk / softmax / sv split, M>=512). Default ON.
 ATTN_PROFILE="${NNTR_ATTN_PROFILE:-1}"
+# Adreno image-attention path (texture-cached K + causal tile-skip kernels).
+# The author documents it as token-identical and ~+35% prefill @M=1024
+# (224->303 TPS) vs the plain-buffer ohwi path, but it ships default-off in the
+# gpu_native binary. The K/V OHWI images are always built, so just enable it.
+# Default ON; override with NNTR_OHWI_IMG=0 for the plain-buffer path.
+OHWI_IMG="${NNTR_OHWI_IMG:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
@@ -328,6 +334,7 @@ export NNTR_GPU_LMHEAD=$GPU_LMHEAD
 export NNTR_STAGE_PROFILE=$STAGE_PROFILE
 export NNTR_HOST_TIMING=$HOST_TIMING
 export NNTR_ATTN_PROFILE=$ATTN_PROFILE
+export NNTR_OHWI_IMG=$OHWI_IMG
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF
