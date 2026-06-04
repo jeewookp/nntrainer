@@ -361,6 +361,32 @@ log_info "Measuring device compute peak (roofline ceiling)..."
   { print }'
 echo ""
 
+# v8c GEMM in-kernel cycle decomposition (cl_khr_kernel_clock). Runs the v8c
+# GEMM with NNTR_V8C_KCLOCK in two modes and prints, per (N,K) GEMM shape, the
+# average K-loop cycles/block:  mode 1 = full (fetch+dp4a), mode 5 = compute-
+# only.  full - compute = the weight/act FETCH cost.  Each block = 256 dp4a +
+# 16 image reads (TM4xTN8). KCLOCK modes >1 emit garbage tokens (suppressed
+# fetch), so we only scrape the V8CKC lines. Set KCLOCK_PROFILE=0 to skip.
+KCLOCK_PROFILE="${KCLOCK_PROFILE:-1}"
+if [ "$KCLOCK_PROFILE" = "1" ]; then
+  for mode in 1 5; do
+    case "$mode" in
+      1) label="full (fetch+dp4a)";;
+      5) label="compute-only (dp4a)";;
+    esac
+    log_info "GEMM K-loop profile: NNTR_V8C_KCLOCK=$mode [$label]"
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_V8C_KCLOCK=$mode ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+      | awk '/^V8CKC/{
+          split($2,nn,"="); split($3,kk,"="); split($6,cb,"=");
+          key=sprintf("%5s x %-5s", nn[2], kk[2]);
+          sum[key]+=cb[2]; cnt[key]++;
+        }
+        END{ for(k in sum) printf "    N x K = %s : avg %5.0f cyc/block (n=%d)\n", k, sum[k]/cnt[k], cnt[k]; }' \
+      | sort
+  done
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight
