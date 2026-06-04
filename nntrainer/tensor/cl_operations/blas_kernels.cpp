@@ -1468,6 +1468,19 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     if (const char *mf = getenv("NNTR_V8C_MFAST"))
       if (mf[0] == '1')
         s += " -DV8C_MFAST";
+    // Wall-time fetch/compute decomposition (no in-kernel clock, no printf):
+    // suppress the weight / activation fetch or the dp4a compute on their own
+    // so the GEMM stage wall time isolates each contribution. Numerics become
+    // garbage (synthetic fetch values) — measurement-only, off by default.
+    if (const char *e = getenv("NNTR_V8C_NOWFETCH"))
+      if (e[0] == '1')
+        s += " -DV8C_KCLOCK_NOWFETCH";
+    if (const char *e = getenv("NNTR_V8C_NOAFETCH"))
+      if (e[0] == '1')
+        s += " -DV8C_KCLOCK_NOAFETCH";
+    if (const char *e = getenv("NNTR_V8C_NOCOMPUTE"))
+      if (e[0] == '1')
+        s += " -DV8C_KCLOCK_NOCOMPUTE";
     return s;
   }();
   static const bool v8c_mfast = []() {
