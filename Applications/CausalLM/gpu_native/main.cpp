@@ -76,6 +76,23 @@ __kernel void dp4a_peak(__global int *out, const int iters, const uint b) {
   for (int j=0;j<32;j++) s+=a[j];
   out[get_global_id(0)]=s;
 }
+// fp16 FMA peak: 32 independent half2 chains (2 lanes × 1 fma). Measures the
+// fp16-FMA throughput ceiling — the alternative path an int4->fp16 dequant GEMM
+// would target. If this >> the int8-dp4a peak, fp16 compute is worth pursuing.
+__kernel void fma_peak(__global half *out, const int iters, const half bb) {
+  half2 a[32]; half2 b = (half2)(bb, bb);
+  #pragma unroll
+  for (int j=0;j<32;j++) a[j]=(half2)((half)(get_global_id(0)+j+1));
+  for (int i=0;i<iters;i++) {
+    #define FM(j) a[j]=fma(a[j],b,a[j]);
+    C32(FM)
+    #undef FM
+  }
+  half2 s=(half2)((half)0);
+  #pragma unroll
+  for (int j=0;j<32;j++) s+=a[j];
+  out[get_global_id(0)]=s.x+s.y;
+}
 )CLC";
 
 static void run_peak_bench() {
@@ -142,7 +159,31 @@ static void run_peak_bench() {
   }
   std::fprintf(stderr, "[peak] (our v8c int8xint4 FC in-forward = 5.08 TOP/s; "
                        "this register-only loop is the int8-dp4a ceiling)\n");
-  (void)out_h;
+
+  // ---- fp16 half2 FMA peak ----
+  for (int iters : {4096, 16384}) {
+    auto kp = cl->registerClKernel(kPeakKernels, "fma_peak");
+    cl_half bb = 0x3C00; // 1.0h
+    kp->SetKernelArguments(0, &out_h, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &iters, sizeof(int));
+    kp->SetKernelArguments(2, &bb, sizeof(cl_half));
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(q); // warmup
+    auto t0 = NOW();
+    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                          lws.data(), 0, nullptr, nullptr);
+    clFinish(q);
+    double s = SEC(NOW(), t0);
+    // 32 chains × half2(2 lanes) × fma(2 flop) = 128 flop per WI per iter.
+    double flop = (double)GS * iters * 32.0 * 2.0 * 2.0;
+    std::fprintf(stderr, "[peak] fp16-fma  iters=%d : %.3f ms => %.2f TOP/s\n",
+                 iters, s * 1e3, flop / s / 1e12);
+  }
+  std::fprintf(stderr,
+               "[peak] (fp16 peak >> int8-dp4a peak ? then int4->fp16 dequant "
+               "GEMM can raise the compute ceiling)\n");
+
   clReleaseMemObject(out_i);
   clReleaseMemObject(out_h);
 }
