@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <engine.h>
 #include <limits>
 #include <string>
@@ -227,11 +228,50 @@ static void run_mlops_probe() {
     if (p) found++;
   }
   std::fprintf(stderr,
-               "[mlops] %d/%d entrypoints resolved => ml_ops %s\n",
-               found, (int)(sizeof(names) / sizeof(names[0])),
-               found ? "CALLABLE — proceed to single-GEMM spike"
+               "[mlops] via-loader: %d/%d entrypoints resolved\n", found,
+               (int)(sizeof(names) / sizeof(names[0])));
+
+  // Cross-check against the VENDOR driver directly — our pushed libOpenCL.so is
+  // an ICD/loader and may not forward clGetExtensionFunctionAddressForPlatform.
+  // dlopen the vendor lib, pull its own clGetPlatformIDs + extension query, and
+  // re-probe. This distinguishes "vendor genuinely lacks ml_ops" from "our
+  // loader masks it".
+  int vfound = -1;
+  const char *vpaths[] = {"/vendor/lib64/libOpenCL.so",
+                          "/system/vendor/lib64/libOpenCL.so",
+                          "/system/lib64/libOpenCL.so"};
+  for (auto *vp : vpaths) {
+    void *h = dlopen(vp, RTLD_NOW | RTLD_LOCAL);
+    if (!h) continue;
+    auto getplat = (cl_int(*)(cl_uint, cl_platform_id *, cl_uint *))dlsym(
+      h, "clGetPlatformIDs");
+    auto getext = (void *(*)(cl_platform_id, const char *))dlsym(
+      h, "clGetExtensionFunctionAddressForPlatform");
+    std::fprintf(stderr, "[mlops] vendor %s: getPlatformIDs=%p getExt=%p\n", vp,
+                 (void *)getplat, (void *)getext);
+    if (!getext) { dlclose(h); continue; }
+    cl_platform_id vplat = nullptr;
+    cl_uint np = 0;
+    if (getplat) getplat(1, &vplat, &np);
+    vfound = 0;
+    for (auto *nm : names) {
+      void *p = getext(vplat, nm);
+      if (p) {
+        vfound++;
+        std::fprintf(stderr, "[mlops]   vendor %-30s : RESOLVED\n", nm);
+      }
+    }
+    std::fprintf(stderr, "[mlops] via-vendor(%s): %d/%d entrypoints resolved\n",
+                 vp, vfound, (int)(sizeof(names) / sizeof(names[0])));
+    dlclose(h);
+    break;
+  }
+
+  const int total = found + (vfound > 0 ? vfound : 0);
+  std::fprintf(stderr, "[mlops] => ml_ops %s\n",
+               total ? "CALLABLE — proceed to single-GEMM spike"
                      : "NOT callable on this device (advertised but no entry "
-                       "points — dead end, like recordable_queues)");
+                       "points, loader+vendor — dead end like recordable_queues)");
 }
 
 int main(int argc, char **argv) {
