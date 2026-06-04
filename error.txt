@@ -1,3 +1,110 @@
+./include/nntrainer/fused_qkv_rope.h
+./include/nntrainer/half_tensor.h
+./include/nntrainer/dot.h
+./include/nntrainer/int4_quantize_input.h
+./include/nntrainer/hgemm_trans_ab.h
+./include/nntrainer/thread_manager_util.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h
+./include/nntrainer/lr_scheduler.h
+./include/nntrainer/cache_elem.h
+./include/nntrainer/layer.h
+./include/nntrainer/copy.h
+./include/nntrainer/neon_mathfun.hxx
+./include/nntrainer/neuralnet.h
+./include/nntrainer/swiglu_fp16.h
+./include/nntrainer/concat_axis_3_fp16.h
+./include/nntrainer/tensor_api.h
+./include/nntrainer/cache_pool.h
+./include/nntrainer/cl_svm_allocator.h
+./include/nntrainer/graph_core.h
+./include/nntrainer/q4_0_utils.h
+./include/nntrainer/mask_neon.h
+./include/nntrainer/hgemv.h
+./include/nntrainer/opencl_program.h
+./include/nntrainer/kai_lhs_quant_pack_qai8dxp_f16.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4_neon_i8mm.h
+./include/nntrainer/sgemm_no_trans.h
+./include/nntrainer/hgemm_padding.h
+./include/nntrainer/safetensors_util.h
+./include/nntrainer/operation_layer.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h
+./include/nntrainer/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h
+./include/nntrainer/tensor_dim.h
+./include/nntrainer/base_properties.h
+./include/nntrainer/dynamic_library_loader.h
+./include/nntrainer/basic_planner.h
+./include/nntrainer/two_conv_attention.h
+./include/nntrainer/arm_compute_backend.h
+./include/nntrainer/loss_layer.h
+./include/nntrainer/q4_0_tensor.h
+./include/nntrainer/optimizer_devel.h
+./include/nntrainer/neon_mathfun.h
+./include/nntrainer/opencl_buffer_manager.h
+./include/nntrainer/transpose_32bit_16bit.h
+./include/nntrainer/compiler_fwd.h
+./include/nntrainer/layer_impl.h
+./include/nntrainer/ggml_interface.h
+./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32.h
+./include/nntrainer/memory_data.h
+./include/nntrainer/blas_kernel_interface.h
+./include/nntrainer/q6_k_tensor.h
+./include/nntrainer/rotary_emb_fp16.h
+./include/nntrainer/transpose_axis_2.h
+./include/nntrainer/weight.h
+./include/nntrainer/kleidiai_interface.h
+./include/nntrainer/q6_k_sgemv.h
+./include/nntrainer/neon_impl.h
+./include/nntrainer/flash_attention.h
+./include/nntrainer/cl_context.h
+./include/nntrainer/addition.h
+./include/nntrainer/dot_fp16.h
+./include/nntrainer/copy_fp16.h
+./include/nntrainer/nntr_ggml_impl.h
+./include/nntrainer/hgemm_no_trans.h
+./include/nntrainer/kai_matmul_clamp_f32_qsi8d32p4x4_qsi4c32p4x4_16x4_neon_dotprod.h
+./include/nntrainer/optimizer.h
+./include/nntrainer/tensor_layer.h
+./include/nntrainer/graph_node.h
+./include/nntrainer/swap_device.h
+./include/nntrainer/transpose_axis_0_fp16.h
+./include/nntrainer/kai_lhs_quant_pack_qsi8d32p_f32_neon.h
+./include/nntrainer/sgemm_trans_b.h
+./include/nntrainer/nntrainer-api-common.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h
+./include/nntrainer/cl_platform.h
+./include/nntrainer/profiler.h
+./include/nntrainer/kai_matmul_clamp_f16_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h
+./include/nntrainer/tensor_wrap_specs.h
+./include/nntrainer/sgemv_no_trans.h
+./include/nntrainer/tizen_error.h
+./include/nntrainer/nntr_ggml_impl_utils.h
+./include/nntrainer/fallback_kleidiai.h
+./include/nntrainer/int4_gemm.h
+./include/nntrainer/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h
+./include/nntrainer/opencl_context_manager.h
+./include/nntrainer/nntr_threads.h
+./include/nntrainer/q4_0_ab_bi_8x4.h
+./include/nntrainer/util_simd.h
+./include/nntrainer/layer_node.h
+./include/nntrainer/optimizer_context.h
+./include/nntrainer/weight_layer.h
+./include/nntrainer/sgemv.h
+./include/nntrainer/hgemm_common.h
+./include/nntrainer/task_executor.h
+./include/nntrainer/nntrainer_logger.h
+./include/nntrainer/cpu_backend.h
+./include/nntrainer/matrix_transpose_neon.h
+./include/nntrainer/cl_tensor_view.h
+./include/nntrainer/cl_tensor_backing_pool.h
+./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h
+./include/nntrainer/context_data.h
+./include/nntrainer/fp16.h
+./include/nntrainer/quantizer.h
+./include/nntrainer/util_func.h
+./include/nntrainer/var_grad.h
+./include/nntrainer/memory_pool.h
+./include/nntrainer/nntrainer_log.h
+./include/nntrainer/connection.h
 ./include/nntrainer/common.h
 ./include/nntrainer/nntrainer_error.h
 ./include/nntrainer/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h
@@ -35,8 +142,8 @@
 [SUCCESS] nntrainer libraries ready
 
 [Step 2] Build nntrainer_qwen3_gpu (ndk-build)
-[arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/opencl/lib/arm64-v8a/
 [arm64-v8a] Prebuilt       : libccapi-nntrainer.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/lib/arm64-v8a/
+[arm64-v8a] Prebuilt       : libOpenCL.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/opencl/lib/arm64-v8a/
 [arm64-v8a] Prebuilt       : libnntrainer.so <= /home/jwhero94/projects/nntrainer_jijoong/builddir/android_build_result/lib/arm64-v8a/
 [arm64-v8a] Compile++      : nntrainer_qwen3_gpu <= main.cpp
 [arm64-v8a] Compile++      : nntrainer_qwen3_gpu <= qwen3_forward.cpp
@@ -59,7 +166,7 @@
 
 [main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
 [qwen3-gpu] device image caps: support=1 max=16384x16384 pitch_align=64
-[qwen3-gpu] init OK: weights=/data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin size=1428 MB cl_ctx=0xb40000752c621890
+[qwen3-gpu] init OK: weights=/data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin size=1428 MB cl_ctx=0xb4000073ba93c010
 [qwen3-gpu] cfg: hidden=2304 inter=9216 d=256 hQ=8 hKV=4 L=26 vocab=256000 S_max=20480
 [qwen3-gpu] RoPE freqs precomputed for position=0: cos[0..3] = 1 1 1 1, sin[0..3] = 0 0 0 0
 [qwen3-gpu] wq off=483849216 (~461 MB) qscheme=6 K=2304 N=2048 packed=2304 KB scales=4096 B
@@ -270,20 +377,20 @@
 [qwen3-gpu] ffn_gate off=1477081960 (~1408 MB) qscheme=6 K=2304 N=9216 packed=10368 KB scales=18432 B
 [qwen3-gpu] ffn_down off=1487717226 (~1418 MB) qscheme=6 K=9216 N=2304 packed=10368 KB scales=4608 B
 [qwen3-gpu] layer 25 loaded; advanced offset to 1498347884 (~1428 MB)
-[main] all 26 layers loaded in 1434.5 ms; final offset=1428 MB (file=1428 MB)
+[main] all 26 layers loaded in 768.1 ms; final offset=1428 MB (file=1428 MB)
 [qwen3-gpu] output_norm off=1498347884 first 8: 3.32812 3.35938 3.28125 3.23438 3.09375 3.375 3.35938 4.3125
 [qwen3-gpu] output_norm gamma -> SVM (fp32, 9216 B)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] forward scratch pool allocated for max_M=4 (hidden=2304 inter=9216 hQ=8 hKV=4 d=256)
 [qwen3-gpu] RoPE full LUT built: 20480 positions × 128 half_d (10.00 MB)
-[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
-[run 0] embed=0.12 ms  chain=4637.7 ms (178.37 ms/layer)  out_norm=3.66 ms  lm_head=734.4 ms  TOTAL=5375.9 ms  (=> 0.19 TPS effective)  -> token 185
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=3.58398 (vocab=256000)
+[run 0] embed=0.13 ms  chain=2860.5 ms (110.02 ms/layer)  out_norm=4.52 ms  lm_head=284.0 ms  TOTAL=3149.2 ms  (=> 0.32 TPS effective)  -> token 185
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
-[run 1] embed=0.29 ms  chain=153.1 ms (5.89 ms/layer)  out_norm=3.55 ms  lm_head=680.4 ms  TOTAL=837.5 ms  (=> 1.19 TPS effective)  -> token 185
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=3.58398 (vocab=256000)
+[run 1] embed=0.20 ms  chain=147.1 ms (5.66 ms/layer)  out_norm=4.20 ms  lm_head=13.2 ms  TOTAL=164.8 ms  (=> 6.07 TPS effective)  -> token 185
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
-[run 2] embed=0.26 ms  chain=157.4 ms (6.05 ms/layer)  out_norm=3.74 ms  lm_head=683.8 ms  TOTAL=845.3 ms  (=> 1.18 TPS effective)  -> token 185
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=3.58398 (vocab=256000)
+[run 2] embed=0.46 ms  chain=156.1 ms (6.00 ms/layer)  out_norm=3.96 ms  lm_head=15.2 ms  TOTAL=175.8 ms  (=> 5.69 TPS effective)  -> token 185
 
 [main] decode (M=1) summary:
   predicted token over 3 runs: 185 (deterministic=1)
@@ -295,50 +402,42 @@
   timing is.
 [qwen3-gpu] forward scratch pool allocated for max_M=1024 (hidden=2304 inter=9216 hQ=8 hKV=4 d=256)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[prefill M=   2] chain=  118.7 ms  59.345 ms/token  =>    16.9 TPS  (L0=6.8 ms, L27=6.2 ms)
-[prefill M=   8] chain= 1166.0 ms  145.746 ms/token  =>     6.9 TPS  (L0=930.2 ms, L27=9.4 ms)
-[prefill M=  64] chain=  184.7 ms  2.886 ms/token  =>   346.5 TPS  (L0=4.5 ms, L27=7.0 ms)
-[prefill M= 256] chain=  492.3 ms  1.923 ms/token  =>   520.0 TPS  (L0=11.6 ms, L27=19.2 ms)
-[prefill M= 512] chain= 1323.5 ms  2.585 ms/token  =>   386.9 TPS  (L0=35.7 ms, L27=51.7 ms)
-[prefill M=1024] chain= 4550.8 ms  4.444 ms/token  =>   225.0 TPS  (L0=151.9 ms, L27=175.9 ms)
+[prefill M=   2] chain=  102.7 ms  51.350 ms/token  =>    19.5 TPS  (L0=6.7 ms, L27=3.9 ms)
+[prefill M=   8] chain= 1164.8 ms  145.598 ms/token  =>     6.9 TPS  (L0=928.6 ms, L27=9.8 ms)
+[prefill M=  64] chain=  179.5 ms  2.805 ms/token  =>   356.5 TPS  (L0=4.8 ms, L27=6.8 ms)
+[prefill M= 256] chain=  497.0 ms  1.942 ms/token  =>   515.1 TPS  (L0=11.6 ms, L27=19.3 ms)
+[prefill M= 512] chain= 1327.2 ms  2.592 ms/token  =>   385.8 TPS  (L0=33.6 ms, L27=50.4 ms)
+[prefill M=1024] chain= 4522.6 ms  4.417 ms/token  =>   226.4 TPS  (L0=152.2 ms, L27=176.6 ms)
 
 [main] === prefill correctness: greedy generation from BOS ===
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=3.58398 (vocab=256000)
   [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
-[qwen3-gpu] lm_head: argmax token=2 logit=31.2829 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=2 logit=31.2969 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=2 logit=42.1031 (vocab=256000)
-[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
-[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=2 logit=44.0821 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=2 logit=42.0938 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] lm_head: argmax token=185 logit=2.48136 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=2 logit=44.0938 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
-[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
-[qwen3-gpu] lm_head: argmax token=2299 logit=58.1206 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=2.48438 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
-[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
-[qwen3-gpu] lm_head: argmax token=577 logit=82.2484 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=2299 logit=58.125 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -346,8 +445,7 @@
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
-[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
-[qwen3-gpu] lm_head: argmax token=947 logit=46.016 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=577 logit=82.25 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -356,8 +454,7 @@
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
 [qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
-[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
-[qwen3-gpu] lm_head: argmax token=573 logit=45.1418 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=947 logit=46.0312 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -367,8 +464,7 @@
 [qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
 [qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
 [qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
-[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
-[qwen3-gpu] lm_head: argmax token=1618 logit=42.9818 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=573 logit=45.1562 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -379,8 +475,7 @@
 [qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
 [qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
 [qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
-[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
-[qwen3-gpu] lm_head: argmax token=576 logit=77.6825 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=1618 logit=43 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -392,8 +487,7 @@
 [qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
 [qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
 [qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
-[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
-[qwen3-gpu] lm_head: argmax token=476 logit=62.3945 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=576 logit=77.6875 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -406,8 +500,7 @@
 [qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
 [qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
 [qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
-[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
-[qwen3-gpu] lm_head: argmax token=3724 logit=45.6523 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=476 logit=62.4062 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -421,8 +514,7 @@
 [qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
 [qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
 [qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
-[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
-[qwen3-gpu] lm_head: argmax token=5356 logit=46.5733 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=3724 logit=45.6562 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -437,8 +529,7 @@
 [qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
 [qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
 [qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
-[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
-[qwen3-gpu] lm_head: argmax token=575 logit=58.0599 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=5356 logit=46.5625 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -454,8 +545,7 @@
 [qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
 [qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
 [qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
-[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
-[qwen3-gpu] lm_head: argmax token=476 logit=61.5762 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=575 logit=58.0625 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -472,8 +562,7 @@
 [qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
 [qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
 [qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
-[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
-[qwen3-gpu] lm_head: argmax token=1889 logit=43.5009 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=476 logit=61.5625 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -491,8 +580,7 @@
 [qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
 [qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
 [qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
-[qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
-[qwen3-gpu] lm_head: argmax token=576 logit=52.0065 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=1889 logit=43.5 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -511,8 +599,27 @@
 [qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
 [qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
 [qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
+[qwen3-gpu] lm_head(gpu): argmax token=576 logit=52 (vocab=256000)
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
+[qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
+[qwen3-gpu] embedding[2299] dequant first 8: -2.79379 2.25306 -0.901222 1.35183 1.26171 0.360489 0.720978 -2.52342
+[qwen3-gpu] embedding[577] dequant first 8: 0.187042 -1.49634 -2.71211 0.0935211 -2.89915 1.49634 1.49634 -1.02873
+[qwen3-gpu] embedding[947] dequant first 8: 1.01039 0.0777225 -1.08812 2.09851 -1.86534 0.0777225 1.7099 1.63217
+[qwen3-gpu] embedding[573] dequant first 8: -0.995293 1.1867 0.076561 0.459366 -0.995293 0.76561 -0.612488 -0.0382805
+[qwen3-gpu] embedding[1618] dequant first 8: -0.318149 0.318149 3.28754 0.10605 -1.37864 -1.80284 0.954446 0
 [qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
-[qwen3-gpu] lm_head: argmax token=9113 logit=44.8387 (vocab=256000)
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[3724] dequant first 8: 2.53887 0.746727 0.597382 -1.19476 0.149345 2.38953 -1.19476 -1.34411
+[qwen3-gpu] embedding[5356] dequant first 8: 0.270338 4.19024 2.1627 0.135169 -2.02754 2.43304 -1.62203 1.08135
+[qwen3-gpu] embedding[575] dequant first 8: -0.198792 2.05419 -0.861434 0.927698 -1.39155 1.39155 0.861434 -0.662642
+[qwen3-gpu] embedding[476] dequant first 8: -1.29132 -0.602617 -1.20523 1.29132 -2.66873 0.516529 -1.29132 1.72176
+[qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
+[qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
+[qwen3-gpu] lm_head(gpu): argmax token=9113 logit=44.8438 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[185] dequant first 8: 0.659102 -0 -1.3182 -0.539266 -0.179755 0.539266 1.43804 -0.0599184
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
@@ -533,10 +640,10 @@
 [qwen3-gpu] embedding[1889] dequant first 8: -1.02631 -0.128288 0.76973 -1.92432 2.1809 -3.97694 -0.128288 -2.69405
 [qwen3-gpu] embedding[576] dequant first 8: -1.96044 -0.32674 -1.47033 -0.16337 -2.53224 -0 -0.408425 0.735166
 [qwen3-gpu] embedding[9113] dequant first 8: 0.0935555 -0.654888 -0.374222 0.654888 -2.90022 2.15178 1.02911 0.0935555
-[qwen3-gpu] lm_head: argmax token=192 logit=54.4455 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=192 logit=54.4375 (vocab=256000)
 [qwen3-gpu] embedding[2] dequant first 8: 0 -0.285919 1.0722 -0.607578 0.607578 -0.428879 -0.10722 0.250179
 [qwen3-gpu] embedding[12345] dequant first 8: -0.535583 0.535583 -1.20506 1.47285 1.20506 -2.27623 2.27623 0.267792
-[qwen3-gpu] lm_head: argmax token=185 logit=3.58302 (vocab=256000)
+[qwen3-gpu] lm_head(gpu): argmax token=185 logit=3.58398 (vocab=256000)
   [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
   generated 21 token ids (greedy, no NaN=1):
     2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
