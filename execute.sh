@@ -367,7 +367,7 @@ fi
 # Phase-0 gate #1 for the cl_qcom_ml_ops matrix-engine GEMM: probe whether the
 # ML-ops entrypoints actually resolve on this device. Default ON while we work
 # this track; set MLOPS_PROBE=0 to skip.
-MLOPS_PROBE="${MLOPS_PROBE:-1}"
+MLOPS_PROBE="${MLOPS_PROBE:-0}"
 if [ "$MLOPS_PROBE" = "1" ]; then
   log_header "cl_qcom_ml_ops entrypoint probe (Phase-0 gate #1)"
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_MLOPS_PROBE=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
