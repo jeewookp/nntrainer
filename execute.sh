@@ -293,12 +293,18 @@ log_header "Run Gemma2-2B (GPU-native, Adreno)"
 # ON so a plain `sh execute.sh` exercises it; override with
 # NNTR_GPU_LMHEAD=0 sh execute.sh to fall back to the CPU reference.
 GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
+# Prefill stage profiler (per-op breakdown at M=256 / M=1024) — forwarded
+# so `NNTR_STAGE_PROFILE=1 sh execute.sh` shows where prefill time goes.
+STAGE_PROFILE="${NNTR_STAGE_PROFILE:-0}"
+HOST_TIMING="${NNTR_HOST_TIMING:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
 export NNTR_NUM_THREADS=$NNTR_NUM_THREADS
 export NNTR_MODEL_GEMMA2=1
 export NNTR_GPU_LMHEAD=$GPU_LMHEAD
+export NNTR_STAGE_PROFILE=$STAGE_PROFILE
+export NNTR_HOST_TIMING=$HOST_TIMING
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF
