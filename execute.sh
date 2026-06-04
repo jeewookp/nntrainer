@@ -355,7 +355,7 @@ EOF
 # Roofline ceiling: measure THIS device's int8-dp4a / fp16 compute peak
 # (NNTR_PEAK_BENCH runs a register-only microbench, then exits). Off by
 # default (it adds a full model-load run); enable with PEAK=1.
-PEAK="${PEAK:-1}"
+PEAK="${PEAK:-0}"
 if [ "$PEAK" = "1" ]; then
   log_info "Measuring device compute peak (roofline ceiling)..."
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_PEAK_BENCH=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | awk '
