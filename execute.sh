@@ -325,6 +325,15 @@ ATTN_PROFILE="${NNTR_ATTN_PROFILE:-1}"
 # gpu_native binary. The K/V OHWI images are always built, so just enable it.
 # Default ON; override with NNTR_OHWI_IMG=0 for the plain-buffer path.
 OHWI_IMG="${NNTR_OHWI_IMG:-1}"
+# Existing-but-default-off perf flags the author documents as bit-identical
+# (correctness-preserving), targeting the current prefill bottlenecks:
+#   V8C_PREFETCH : 1-ahead weight prefetch in the int8xint4 v8c GEMM (FFN/QKV/wo)
+#   V8C_MFAST    : M-fast dispatch order for the v8c GEMM (helps large-M prefill)
+#   SV_TM2       : #72 M-tiled sv_matmul — 2 query rows/WI, halves V re-fetch
+# All default ON here; A/B any of them off (e.g. NNTR_V8C_MFAST=0 sh execute.sh).
+V8C_PREFETCH="${NNTR_V8C_PREFETCH:-1}"
+V8C_MFAST="${NNTR_V8C_MFAST:-1}"
+SV_TM2="${NNTR_SV_TM2:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
@@ -335,6 +344,9 @@ export NNTR_STAGE_PROFILE=$STAGE_PROFILE
 export NNTR_HOST_TIMING=$HOST_TIMING
 export NNTR_ATTN_PROFILE=$ATTN_PROFILE
 export NNTR_OHWI_IMG=$OHWI_IMG
+export NNTR_V8C_PREFETCH=$V8C_PREFETCH
+export NNTR_V8C_MFAST=$V8C_MFAST
+export NNTR_SV_TM2=$SV_TM2
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF
