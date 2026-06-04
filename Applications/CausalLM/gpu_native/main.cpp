@@ -263,6 +263,30 @@ static void run_mlops_probe() {
     }
     std::fprintf(stderr, "[mlops] via-vendor(%s): %d/%d entrypoints resolved\n",
                  vp, vfound, (int)(sizeof(names) / sizeof(names[0])));
+
+    // Gate #2 step 1: actually CALL clQueryMLInterfaceVersionsQCOM to learn the
+    // supported CLML interface version(s). Signature (Qualcomm CLML SDK):
+    //   cl_int clQueryMLInterfaceVersionsQCOM(cl_int *major, cl_int *minor,
+    //                                         cl_uint *numVersions, void *resv);
+    // Count-first (NULL,NULL,&n,NULL) then fill — safest probe of a live call.
+    using QueryVerFn = cl_int (*)(cl_int *, cl_int *, cl_uint *, void *);
+    auto qver = (QueryVerFn)getext(vplat, "clQueryMLInterfaceVersionsQCOM");
+    if (qver) {
+      cl_uint nv = 0;
+      cl_int rc = qver(nullptr, nullptr, &nv, nullptr);
+      std::fprintf(stderr, "[mlops] clQueryMLInterfaceVersionsQCOM count: rc=%d nv=%u\n",
+                   rc, nv);
+      if (rc == CL_SUCCESS && nv > 0 && nv < 64) {
+        std::vector<cl_int> maj(nv, 0), min(nv, 0);
+        rc = qver(maj.data(), min.data(), &nv, nullptr);
+        std::fprintf(stderr, "[mlops] supported CLML versions (rc=%d):", rc);
+        for (cl_uint i = 0; i < nv; i++)
+          std::fprintf(stderr, " v%d.%d", maj[i], min[i]);
+        std::fprintf(stderr, "\n");
+      }
+    } else {
+      std::fprintf(stderr, "[mlops] clQueryMLInterfaceVersionsQCOM did not resolve\n");
+    }
     dlclose(h);
     break;
   }
