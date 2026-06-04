@@ -78,13 +78,15 @@ __kernel void dp4a_peak(__global int *out, const int iters, const uint b) {
 }
 // fp16 FMA peak: 32 independent half2 chains (2 lanes × 1 fma). Measures the
 // fp16-FMA throughput ceiling — the alternative path an int4->fp16 dequant GEMM
-// would target. If this >> the int8-dp4a peak, fp16 compute is worth pursuing.
+// would target. The recurrence a = a*b + c with b<1 CONVERGES (stays bounded),
+// so values never overflow to inf (which would trigger a slow special-case
+// path and mismeasure the peak). Call with b = 0.5h.
 __kernel void fma_peak(__global half *out, const int iters, const half bb) {
-  half2 a[32]; half2 b = (half2)(bb, bb);
+  half2 a[32]; half2 b = (half2)(bb, bb); half2 c = (half2)((half)1.0h);
   #pragma unroll
-  for (int j=0;j<32;j++) a[j]=(half2)((half)(get_global_id(0)+j+1));
+  for (int j=0;j<32;j++) a[j]=(half2)((half)((get_global_id(0)+j)&3));
   for (int i=0;i<iters;i++) {
-    #define FM(j) a[j]=fma(a[j],b,a[j]);
+    #define FM(j) a[j]=fma(a[j],b,c);
     C32(FM)
     #undef FM
   }
@@ -163,7 +165,7 @@ static void run_peak_bench() {
   // ---- fp16 half2 FMA peak ----
   for (int iters : {4096, 16384}) {
     auto kp = cl->registerClKernel(kPeakKernels, "fma_peak");
-    cl_half bb = 0x3C00; // 1.0h
+    cl_half bb = 0x3800; // 0.5h (bounded recurrence a=a*0.5+1 -> 2)
     kp->SetKernelArguments(0, &out_h, sizeof(cl_mem));
     kp->SetKernelArguments(1, &iters, sizeof(int));
     kp->SetKernelArguments(2, &bb, sizeof(cl_half));
