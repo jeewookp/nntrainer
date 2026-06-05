@@ -406,6 +406,103 @@ __kernel void fused_geglu_h2f_fp32(__global const half *gate,
 }
 )CL";
 
+// #82 FFN GeGLU + int8 act-quant fused into ONE cooperative per-row pass.
+// Folds fused_geglu_h2f_fp32 (gate_proj/up_proj fp16 -> swiglu fp32) and
+// v8c_act_quant_f32_par (per-row min/max -> recip-scale/zp -> int8 + rowsum)
+// so the M*I fp32 swiglu_out buffer is never written/re-read (saves ~75 MB of
+// global traffic per layer + one dispatch). Bit-identical: the geglu value is
+// computed in fp32 exactly as fused_geglu_h2f_fp32, then the SAME quant math
+// runs on it. geglu is recomputed in pass 2 (cheap tanh, memory-bound stage)
+// to avoid staging the I-wide row in LDS. One workgroup (LWS=64) per row.
+static const std::string kGegluQuantF16InParKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define QLWS 64
+inline float geglu_val(__global const half *gate, __global const half *up,
+                       long idx) {
+  float g = (float)gate[idx];
+  float u = (float)up[idx];
+  const float k = 0.7978845608028654f; // sqrt(2/pi)
+  float t = tanh(k * (g + 0.044715f * g * g * g));
+  return (0.5f * g * (1.0f + t)) * u;
+}
+__attribute__((reqd_work_group_size(QLWS, 1, 1)))
+__kernel void geglu_quant_f16in_par(
+    __global const half  *gate,        // gate_proj output (fp16)
+    __global const half  *up,          // up_proj output (fp16)
+    __global       char  *act_int8,
+    __global       float *scale_per_row,
+    __global       int   *zp_per_row,
+    __global       int   *row_sum_act,
+    const int M, const int K) {
+  const int row = get_group_id(0);
+  if (row >= M) return;
+  const int tid = get_local_id(0);
+  __local float lmin[QLWS];
+  __local float lmax[QLWS];
+  __local int   lsum[QLWS];
+  __local float l_scale_q;
+  __local int   l_zp;
+
+  // pass 1: per-WI partial min/max over geglu(gate,up)
+  float pmin = 0.0f, pmax = 0.0f;
+  for (int k = tid; k < K; k += QLWS) {
+    float v = geglu_val(gate, up, (long)row * K + k);
+    pmin = fmin(pmin, v);
+    pmax = fmax(pmax, v);
+  }
+  lmin[tid] = pmin;
+  lmax[tid] = pmax;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = QLWS / 2; s > 0; s >>= 1) {
+    if (tid < s) {
+      lmin[tid] = fmin(lmin[tid], lmin[tid + s]);
+      lmax[tid] = fmax(lmax[tid], lmax[tid + s]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  if (tid == 0) {
+    const float fmn = lmin[0], fmx = lmax[0];
+    const float rmin = fmn < 0.0f ? fmn : 0.0f;
+    const float rmax = fmx > 0.0f ? fmx : 0.0f;
+    const float qmin = -128.0f, qmax = 127.0f;
+    const float range = rmax - rmin;
+    const float scale_q = range > 0.0f ? 255.0f / range : 1.0f;
+    const float recip = range > 0.0f ? range / 255.0f : 1.0f;
+    const float dmin = rmin * scale_q, dmax = rmax * scale_q;
+    const float zp_lo = qmin - dmin, zp_hi = qmax - dmax;
+    float zp_f = (qmin + dmin) + (qmax + dmax) > 0.0f ? zp_lo : zp_hi;
+    if (zp_f < qmin) zp_f = qmin;
+    if (zp_f > qmax) zp_f = qmax;
+    l_scale_q = scale_q;
+    l_zp = (int)rint(zp_f);
+    scale_per_row[row] = recip;
+    zp_per_row[row] = l_zp;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  // pass 2: recompute geglu, quantize + partial row_sum
+  const float scale_q = l_scale_q;
+  const int zp = l_zp;
+  int psum = 0;
+  for (int k = tid; k < K; k += QLWS) {
+    float v = geglu_val(gate, up, (long)row * K + k);
+    int qv = (int)rint(v * scale_q) + zp;
+    if (qv < -128) qv = -128;
+    if (qv > 127) qv = 127;
+    act_int8[(long)row * K + k] = (char)qv;
+    psum += qv;
+  }
+  lsum[tid] = psum;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = QLWS / 2; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  if (tid == 0) row_sum_act[row] = lsum[0];
+}
+)CL";
+
 // #71 fuse residual-add + RMSNorm (MLC fuse_add_norm). One workgroup (LWS=64)
 // per row: resid = a(fp32) + b(fp16) [written for the later residual add], then
 // normed = resid * rsqrt(mean(resid^2)+eps) * gamma [fp16, gamma has Gemma2
@@ -4288,40 +4385,72 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
   };
-  // #47i: swiglu product silu(gate)*up in FP32. gate/up individually fit
-  // fp16, but their product overflows fp16 (e.g. silu(30)*3000 = 90000 >
-  // 65504) at the last layer's massive activations -> inf -> the per-row
-  // int8 quant scale becomes NaN -> down GEMM spreads NaN to all 1024 dims
-  // -> garbage prefill output for those rows. Computing the product in fp32
-  // (h2f kernel) lets the per-row int8 quant absorb the large magnitude.
-  {
-    // #63 Gemma2 uses GeGLU (gelu_tanh) instead of SwiGLU (silu).
-    auto kp = cfg_.is_gemma2
-      ? cl->registerClKernel(kFusedGegluH2fFp32Kernel, "fused_geglu_h2f_fp32")
-      : cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
-    int n = (int)(M * I);
-    // #64 FFN gate/up de-swap. The loader uses an INVERTED naming: lw.ffn_up
-    // holds gate_proj weights and lw.ffn_gate holds up_proj weights (see
-    // load_layer + converter records h=gate_proj,i=up_proj). The GEMMs above
-    // therefore wrote gate_proj(x) into scratch_.up_fp16 and up_proj(x) into
-    // scratch_.gate_fp16. The kernel applies the activation to its arg0
-    // ("gate" param). (Geg/Swi)GLU must activate gate_proj, so arg0 MUST be
-    // scratch_.up_fp16 (=gate_proj output) and arg1 scratch_.gate_fp16
-    // (=up_proj output). Previously these were swapped -> act(up)*gate, which
-    // silently corrupted EVERY model's FFN (never-coherent C++ forward).
-    kp->SetKernelArguments(0, &scratch_.up_fp16, sizeof(cl_mem));    // gate_proj(x)
-    kp->SetKernelArguments(1, &scratch_.gate_fp16, sizeof(cl_mem));  // up_proj(x)
-    kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem)); // fp32
-    kp->SetKernelArguments(3, &n, sizeof(int));
-    std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
-    std::array<size_t, 1> lws = {64};
+  // #82 FFN GeGLU + int8 act-quant fused into one cooperative per-row pass.
+  // Gemma2 path only (the fused kernel computes gelu_tanh). Default ON; set
+  // NNTR_FFN_GLUQUANT_FUSE=0 to fall back to the 2-pass (geglu->fp32->quant)
+  // path for an A/B. Saves the M*I fp32 swiglu_out round-trip + one dispatch;
+  // bit-identical (same fp32 geglu, same per-row quant). Quantizes M_pad rows
+  // (gate/up have M_pad valid GEMM rows), cleaner than the old path which
+  // quantized M_pad rows over an only-M-row-initialized swiglu_out.
+  static const bool fuse_gluquant = []() {
+    const char *e = std::getenv("NNTR_FFN_GLUQUANT_FUSE");
+    return !e || std::atoi(e) != 0;
+  }();
+  if (cfg_.is_gemma2 && fuse_gluquant) {
+    auto kp = cl->registerClKernel(kGegluQuantF16InParKernel,
+                                   "geglu_quant_f16in_par");
+    int Mr = (int)M_pad, Kc = (int)I;
+    // arg0 = gate_proj(x) = scratch_.up_fp16, arg1 = up_proj(x) = gate_fp16
+    // (see #64 inverted-naming note below).
+    kp->SetKernelArguments(0, &scratch_.up_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(1, &scratch_.gate_fp16, sizeof(cl_mem));
+    kp->SetKernelArguments(2, &scratch_.dn_i8, sizeof(cl_mem));
+    kp->SetKernelArguments(3, &scratch_.dn_sc, sizeof(cl_mem));
+    kp->SetKernelArguments(4, &scratch_.dn_zp, sizeof(cl_mem));
+    kp->SetKernelArguments(5, &scratch_.dn_rs, sizeof(cl_mem));
+    kp->SetKernelArguments(6, &Mr, sizeof(int));
+    kp->SetKernelArguments(7, &Kc, sizeof(int));
+    constexpr size_t QLWS = 64;
+    std::array<size_t, 1> gws = {QLWS * (size_t)M_pad};
+    std::array<size_t, 1> lws = {QLWS};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
+  } else {
+    // #47i: swiglu product silu(gate)*up in FP32. gate/up individually fit
+    // fp16, but their product overflows fp16 (e.g. silu(30)*3000 = 90000 >
+    // 65504) at the last layer's massive activations -> inf -> the per-row
+    // int8 quant scale becomes NaN -> down GEMM spreads NaN to all 1024 dims
+    // -> garbage prefill output for those rows. Computing the product in fp32
+    // (h2f kernel) lets the per-row int8 quant absorb the large magnitude.
+    {
+      // #63 Gemma2 uses GeGLU (gelu_tanh) instead of SwiGLU (silu).
+      auto kp = cfg_.is_gemma2
+        ? cl->registerClKernel(kFusedGegluH2fFp32Kernel, "fused_geglu_h2f_fp32")
+        : cl->registerClKernel(kFusedSwigluH2fFp32Kernel, "fused_swiglu_h2f_fp32");
+      int n = (int)(M * I);
+      // #64 FFN gate/up de-swap. The loader uses an INVERTED naming: lw.ffn_up
+      // holds gate_proj weights and lw.ffn_gate holds up_proj weights (see
+      // load_layer + converter records h=gate_proj,i=up_proj). The GEMMs above
+      // therefore wrote gate_proj(x) into scratch_.up_fp16 and up_proj(x) into
+      // scratch_.gate_fp16. The kernel applies the activation to its arg0
+      // ("gate" param). (Geg/Swi)GLU must activate gate_proj, so arg0 MUST be
+      // scratch_.up_fp16 (=gate_proj output) and arg1 scratch_.gate_fp16
+      // (=up_proj output). Previously these were swapped -> act(up)*gate, which
+      // silently corrupted EVERY model's FFN (never-coherent C++ forward).
+      kp->SetKernelArguments(0, &scratch_.up_fp16, sizeof(cl_mem));    // gate_proj(x)
+      kp->SetKernelArguments(1, &scratch_.gate_fp16, sizeof(cl_mem));  // up_proj(x)
+      kp->SetKernelArguments(2, &scratch_.swiglu_out, sizeof(cl_mem)); // fp32
+      kp->SetKernelArguments(3, &n, sizeof(int));
+      std::array<size_t, 1> gws = {(((size_t)M * I) + 63) / 64 * 64};
+      std::array<size_t, 1> lws = {64};
+      cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                            lws.data(), 0, nullptr, nullptr);
+    }
+    bar();  // swiglu(swiglu_out) -> quant
+    nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
+                                        scratch_.dn_sc, scratch_.dn_zp,
+                                        scratch_.dn_rs, M_pad, I);
   }
-  bar();  // swiglu(swiglu_out) -> quant
-  nntrainer::quantize_act_v8c_fp32_cl(scratch_.swiglu_out, scratch_.dn_i8,
-                                      scratch_.dn_sc, scratch_.dn_zp,
-                                      scratch_.dn_rs, M_pad, I);
   stage_end_add(timings_.ffn_swiglu_ms);  // (h3) cvt + glu + act quant
   stage_begin();
   bar();  // quant(dn) -> ffn_down GEMM
