@@ -456,15 +456,87 @@ if [ "$TILE_AB" = "1" ]; then
 fi
 
 
+# ---------------------------------------------------------------------------
+# Golden-token correctness reference.
+#   * `MAKE_GOLDEN=1 sh execute.sh` runs the SLOW-but-accurate path (every
+#     fusion + the image-attention OFF -> the most vanilla forward; generation
+#     already uses the CPU lm_head argmax) and saves its 21 greedy token ids to
+#     golden_tokens.txt as the trusted reference.
+#   * Every normal (fast, fully-fused) run then re-extracts its token ids and
+#     diffs them against the golden, printing PASS/FAIL — so any optimization
+#     that ever changes the output is caught immediately. Commit the golden
+#     file to keep the reference across machines/sessions.
+# ---------------------------------------------------------------------------
+GOLDEN_FILE="${GOLDEN_FILE:-$NNTRAINER_ROOT/Applications/CausalLM/gpu_native/golden_tokens.txt}"
+extract_tokens() {  # $1 = raw run log -> prints the token ids (after nonan=X)
+  grep -m1 '\[gen-tokens\]' "$1" | tr -d '\r' \
+    | sed -E 's/.*\[gen-tokens\] nonan=[01] //'
+}
+extract_nonan() {   # $1 = raw run log -> prints 1 if generation had no NaN
+  grep -m1 '\[gen-tokens\]' "$1" | tr -d '\r' \
+    | sed -E 's/.*\[gen-tokens\] nonan=([01]).*/\1/'
+}
+
+if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
+  log_header "Generate GOLDEN reference (slow/accurate: all fusions + OHWI img OFF)"
+  GOLD_LOG="$NNTRAINER_ROOT/.execute_golden.log"
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+    NNTR_MODEL_GEMMA2=1 NNTR_GPU_LMHEAD=0 NNTR_OHWI_IMG=0 \
+    NNTR_FFN_GLUQUANT_FUSE=0 NNTR_FUSE_ADDNORM=0 NNTR_FUSE_NORMQUANT=0 \
+    NNTR_FUSE_POSTNORM=0 NNTR_STAGE_PROFILE=0 NNTR_ATTN_PROFILE=0 \
+    ./$TARGET '$DEV_WEIGHT'" 2>&1 | tee "$GOLD_LOG" \
+    | grep -E '\[run [0-9]|generated|\[causal\]|\[self-consistency\]|token|FAIL|ERROR'
+  G_TOK="$(extract_tokens "$GOLD_LOG")"
+  G_NONAN="$(extract_nonan "$GOLD_LOG")"
+  if [ -z "$G_TOK" ]; then
+    log_error "Golden run produced no [gen-tokens] line — not saving."
+  elif [ "$G_NONAN" != "1" ]; then
+    log_error "Golden run had NaN (nonan=$G_NONAN) — refusing to save a bad reference."
+  else
+    echo "$G_TOK" > "$GOLDEN_FILE"
+    log_success "Saved golden reference ($(echo "$G_TOK" | wc -w) tokens) -> $GOLDEN_FILE"
+    log_info "  $G_TOK"
+    log_info "  Commit it: git add $GOLDEN_FILE && git commit -m 'add golden tokens'"
+  fi
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight
 # `[qwen3-gpu] ...` spam, but never hide a [qwen3-gpu] line that reports an
 # error/failure. Everything else ([main], [run N], [prefill M=...], the
-# (a)-(h) stage timings, [host-timing], [causal] ...) passes through.
-"$ADB" shell "sh $INSTALL_DIR/run_gemma2_gpu.sh" 2>&1 | awk '
+# (a)-(h) stage timings, [host-timing], [causal] ...) passes through. Tee the
+# raw stream to a log so we can diff the generated tokens against the golden.
+RUN_LOG="$NNTRAINER_ROOT/.execute_run.log"
+"$ADB" shell "sh $INSTALL_DIR/run_gemma2_gpu.sh" 2>&1 | tee "$RUN_LOG" | awk '
   /\[qwen3-gpu\]/ { if ($0 ~ /[Ff]ail|[Ee]rror|FAIL|ERROR/) print; next }
   { print }'
+echo ""
+
+# Correctness gate: diff this run's tokens against the saved golden.
+log_header "Token correctness check vs golden"
+R_TOK="$(extract_tokens "$RUN_LOG")"
+R_NONAN="$(extract_nonan "$RUN_LOG")"
+if [ "$R_NONAN" != "1" ]; then
+  log_error "This run reported a NaN in generation (nonan=$R_NONAN) — output INVALID."
+fi
+if [ ! -f "$GOLDEN_FILE" ]; then
+  log_warning "No golden reference yet. Create one with: MAKE_GOLDEN=1 sh execute.sh"
+  [ -n "$R_TOK" ] && log_info "This run's tokens: $R_TOK"
+elif [ -z "$R_TOK" ]; then
+  log_error "This run produced no [gen-tokens] line — cannot compare."
+else
+  G_TOK="$(cat "$GOLDEN_FILE")"
+  if [ "$R_TOK" = "$G_TOK" ]; then
+    log_success "PASS — generated tokens match the golden reference."
+    log_info "  $R_TOK"
+  else
+    log_error "FAIL — generated tokens DIVERGED from the golden reference!"
+    log_info "  golden : $G_TOK"
+    log_info "  this   : $R_TOK"
+  fi
+fi
 echo ""
 log_success "Done. Re-run on device any time with:"
 log_info  "  $ADB shell sh $INSTALL_DIR/run_gemma2_gpu.sh"

@@ -961,6 +961,11 @@ int main(int argc, char **argv) {
                  seq.size(), ok);
     for (int t : seq) std::fprintf(stderr, " %d", t);
     std::fprintf(stderr, "\n");
+    // Stable single-line form for golden-reference capture/compare (execute.sh
+    // greps this). nan=0 marks an invalid generation so the harness can flag it.
+    std::fprintf(stderr, "[gen-tokens] nonan=%d", ok);
+    for (int t : seq) std::fprintf(stderr, " %d", t);
+    std::fprintf(stderr, "\n");
     clReleaseMemObject(last_row);
   }
 
