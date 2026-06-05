@@ -797,32 +797,23 @@ echo ""
 # (the [self-consistency] value, 185 for Gemma2) + no-NaN + determinism, since
 # multi-token generation is not a valid oracle yet (per-position RoPE / #45b).
 # The full 21-token sequence is reported as a secondary bit-canary only.
-log_header "Token correctness check"
+# Secondary (informational): greedy-generation tokens. NOTE: this is a FLAWED
+# oracle — it reads leftover scratch in the padded small-M steps, so it can
+# differ run-to-run / with fusions even when the real prefill is bit-identical.
+# The AUTHORITATIVE correctness gate is the forward-hash gate above. Here we only
+# assert the meaningful invariant: M=1 first-token prediction (185) + no NaN.
+log_header "Token check (secondary; forward-hash gate above is authoritative)"
 R_TOK="$(extract_tokens "$RUN_LOG")"
 R_NONAN="$(extract_nonan "$RUN_LOG")"
-# M=1 first-token: the 2nd id of the gen-tokens line (after BOS), == the
-# [self-consistency] prefill([BOS]) prediction.
 R_FIRST="$(echo "$R_TOK" | awk '{print $2}')"
 EXPECT_FIRST=185
-[ -f "$GOLDEN_FILE" ] && EXPECT_FIRST="$(awk '{print $2}' "$GOLDEN_FILE")"
 if [ "$R_NONAN" != "1" ]; then
   log_error "FAIL — NaN in generation (nonan=$R_NONAN); output INVALID."
-elif [ -z "$R_TOK" ]; then
+elif [ -z "$R_FIRST" ]; then
   log_error "FAIL — no [gen-tokens] line; cannot verify."
-elif [ -f "$GOLDEN_FILE" ] && [ "$R_TOK" = "$(cat "$GOLDEN_FILE")" ]; then
-  log_success "PASS — full token sequence matches the golden reference."
-  log_info "  $R_TOK"
 elif [ "$R_FIRST" = "$EXPECT_FIRST" ]; then
-  # Full sequence differs but the only meaningful invariant (M=1 prediction)
-  # holds — flag it loudly so a divergence is never silently accepted.
-  log_warning "PARTIAL — M=1 prediction = $R_FIRST OK, but the full sequence"
-  log_warning "  DIFFERS from the golden (an approximation like OHWI, or an"
-  log_warning "  unverified fusion, is active). To match the golden exactly,"
-  log_warning "  keep the vanilla path (all fusions off)."
-  if [ -f "$GOLDEN_FILE" ]; then
-    log_info "    golden: $(cat "$GOLDEN_FILE")"
-    log_info "    this  : $R_TOK"
-  fi
+  log_success "OK — M=1 prediction = $R_FIRST, no NaN (meaningful invariant holds)."
+  log_info "  full greedy seq (not a strict oracle): $R_TOK"
 else
   log_error "FAIL — M=1 prediction = $R_FIRST, expected $EXPECT_FIRST !"
 fi
