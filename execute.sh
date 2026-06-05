@@ -571,8 +571,9 @@ if [ "$LDS_AB" = "1" ]; then
   REG_OUT="$(lds_probe "")"
   REG_H="$(echo "$REG_OUT" | grep fnv | sort)"
   log_info "  register-tiled        : $(echo "$REG_OUT" | grep TPS)"
-  # cfg = LM,LN,TM,TN -> BM=LM*TM rows, BN=LN*TN cols, LWS=LM*LN.
-  for cfg in "16,4,4,8" "8,8,4,8" "8,8,4,4" "16,8,4,8" "16,16,4,4"; do
+  # cfg = LM,LN,TM,TN,KU -> BM=LM*TM, BN=LN*TN, LWS=LM*LN, KU=k32/LDS-fill
+  # (KU cuts the barrier count, the dominant LDS cost). Sweep KU at a fixed tile.
+  for cfg in "16,4,4,8,1" "16,4,4,8,4" "16,4,4,8,8" "8,8,4,8,8" "16,8,4,8,8" "16,16,4,4,8"; do
     OUT="$(lds_probe "NNTR_V8C_LDS=1 NNTR_V8C_LDS_CFG=$cfg")"
     H="$(echo "$OUT" | grep fnv | sort)"
     TPS="$(echo "$OUT" | grep TPS)"

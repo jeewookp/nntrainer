@@ -1501,20 +1501,21 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     const char *e = getenv("NNTR_V8C_LDS");
     return e && e[0] == '1';
   }();
-  // LDS block config (LM,LN,TM,TN) — sweepable via NNTR_V8C_LDS_CFG="16,16,4,4".
-  // BM=LM*TM rows, BN=LN*TN cols per workgroup; LWS=(LM,LN).
-  static const std::array<int, 4> lds_cfg = []() {
-    std::array<int, 4> c = {16, 16, 4, 4};
+  // LDS block config (LM,LN,TM,TN,KU) — sweepable via
+  // NNTR_V8C_LDS_CFG="16,16,4,4,1". BM=LM*TM rows, BN=LN*TN cols, LWS=(LM,LN),
+  // KU = k32-blocks staged per LDS fill (cuts barriers).
+  static const std::array<int, 5> lds_cfg = []() {
+    std::array<int, 5> c = {16, 16, 4, 4, 1};
     if (const char *e = getenv("NNTR_V8C_LDS_CFG"))
-      sscanf(e, "%d,%d,%d,%d", &c[0], &c[1], &c[2], &c[3]);
+      sscanf(e, "%d,%d,%d,%d,%d", &c[0], &c[1], &c[2], &c[3], &c[4]);
     return c;
   }();
   const int LDS_LM = lds_cfg[0], LDS_LN = lds_cfg[1], LDS_TM = lds_cfg[2],
-            LDS_TN = lds_cfg[3];
+            LDS_TN = lds_cfg[3], LDS_KU = lds_cfg[4] > 0 ? lds_cfg[4] : 1;
   const int LDS_BM = LDS_LM * LDS_TM, LDS_BN = LDS_LN * LDS_TN;
   const bool use_lds = v8c_lds && !use_buf && M > 4 && LDS_BM > 0 &&
                        LDS_BN > 0 && (M % LDS_BM == 0) && (N % LDS_BN == 0) &&
-                       (K % 32 == 0);
+                       (K % 32 == 0) && ((K / 32) % LDS_KU == 0);
   const char *kname =
     use_lds ? "v8c_gemm_int8_int4_lds"
             : use_buf
@@ -1581,7 +1582,8 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     copts += " -DV8C_LDS_LM=" + std::to_string(LDS_LM) +
              " -DV8C_LDS_LN=" + std::to_string(LDS_LN) +
              " -DV8C_LDS_TM=" + std::to_string(LDS_TM) +
-             " -DV8C_LDS_TN=" + std::to_string(LDS_TN);
+             " -DV8C_LDS_TN=" + std::to_string(LDS_TN) +
+             " -DV8C_LDS_KU=" + std::to_string(LDS_KU);
   }
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);

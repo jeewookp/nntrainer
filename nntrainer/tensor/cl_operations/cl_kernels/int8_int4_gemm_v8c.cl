@@ -502,6 +502,9 @@ __kernel void v8c_gemm_int8_int4(
 #ifndef V8C_LDS_LN
 #define V8C_LDS_LN 16
 #endif
+#ifndef V8C_LDS_KU
+#define V8C_LDS_KU 1
+#endif
 #define V8C_LDS_BM (V8C_LDS_LM * V8C_LDS_TM)
 #define V8C_LDS_BN (V8C_LDS_LN * V8C_LDS_TN)
 
@@ -525,10 +528,14 @@ __kernel void v8c_gemm_int8_int4_lds(
   const int n0 = n_wg + ln * V8C_LDS_TN;
   const int K32 = K >> 5;
 
-  // per row: 2 act texels (a_lo,a_hi = 32 int8); per col: 1 weight texel (32 int4)
-  __local uint4 a_lds[V8C_LDS_BM * 2];
-  __local uint4 w_lds[V8C_LDS_BN];
+  // KU k32-blocks staged per LDS fill -> K32/KU barrier pairs (KU cuts the
+  // barrier count, the dominant LDS overhead on Adreno). a_lds: per (ku,row) 2
+  // act texels; w_lds: per (ku,col) 1 weight texel.
+  __local uint4 a_lds[V8C_LDS_KU * V8C_LDS_BM * 2];
+  __local uint4 w_lds[V8C_LDS_KU * V8C_LDS_BN];
   const int NWI = V8C_LDS_LM * V8C_LDS_LN;
+  const int A_N = V8C_LDS_KU * V8C_LDS_BM * 2;
+  const int W_N = V8C_LDS_KU * V8C_LDS_BN;
 
   int acc[V8C_LDS_TM][V8C_LDS_TN];
   #pragma unroll
@@ -536,36 +543,46 @@ __kernel void v8c_gemm_int8_int4_lds(
     #pragma unroll
     for (int j = 0; j < V8C_LDS_TN; j++) acc[i][j] = 0;
 
-  for (int k32 = 0; k32 < K32; k32++) {
-    // cooperative load: activation panel (BM*2 texels) + weight panel (BN texels)
-    for (int idx = tid; idx < V8C_LDS_BM * 2; idx += NWI) {
-      int row = idx >> 1, hi = idx & 1;
-      a_lds[idx] = read_imageui(Ximg, SMP_v8c, (int2)(2 * k32 + hi, m_wg + row));
+  for (int kb = 0; kb < K32; kb += V8C_LDS_KU) {
+    // cooperative load: KU blocks of activation + weight panels
+    for (int idx = tid; idx < A_N; idx += NWI) {
+      int ku = idx / (V8C_LDS_BM * 2);
+      int rem = idx - ku * (V8C_LDS_BM * 2);
+      int row = rem >> 1, hi = rem & 1;
+      a_lds[idx] =
+        read_imageui(Ximg, SMP_v8c, (int2)(2 * (kb + ku) + hi, m_wg + row));
     }
-    for (int idx = tid; idx < V8C_LDS_BN; idx += NWI)
-      w_lds[idx] = read_imageui(Wimg, SMP_v8c, (int2)(k32, n_wg + idx));
+    for (int idx = tid; idx < W_N; idx += NWI) {
+      int ku = idx / V8C_LDS_BN;
+      int col = idx - ku * V8C_LDS_BN;
+      w_lds[idx] = read_imageui(Wimg, SMP_v8c, (int2)(kb + ku, n_wg + col));
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     const uint M4 = 0x0F0F0F0Fu;
     #pragma unroll
-    for (int j = 0; j < V8C_LDS_TN; j++) {
-      uint4 w = w_lds[ln * V8C_LDS_TN + j];
-      uint w0lo =  w.x        & M4, w0hi = (w.x >> 4) & M4;
-      uint w1lo =  w.y        & M4, w1hi = (w.y >> 4) & M4;
-      uint w2lo =  w.z        & M4, w2hi = (w.z >> 4) & M4;
-      uint w3lo =  w.w        & M4, w3hi = (w.w >> 4) & M4;
+    for (int ku = 0; ku < V8C_LDS_KU; ku++) {
       #pragma unroll
-      for (int i = 0; i < V8C_LDS_TM; i++) {
-        uint4 a_lo = a_lds[(lm * V8C_LDS_TM + i) * 2 + 0];
-        uint4 a_hi = a_lds[(lm * V8C_LDS_TM + i) * 2 + 1];
-        acc[i][j] += dot_4x8packed_su_int(a_lo.x, w0lo)
-                   + dot_4x8packed_su_int(a_lo.y, w0hi)
-                   + dot_4x8packed_su_int(a_lo.z, w1lo)
-                   + dot_4x8packed_su_int(a_lo.w, w1hi)
-                   + dot_4x8packed_su_int(a_hi.x, w2lo)
-                   + dot_4x8packed_su_int(a_hi.y, w2hi)
-                   + dot_4x8packed_su_int(a_hi.z, w3lo)
-                   + dot_4x8packed_su_int(a_hi.w, w3hi);
+      for (int j = 0; j < V8C_LDS_TN; j++) {
+        uint4 w = w_lds[ku * V8C_LDS_BN + ln * V8C_LDS_TN + j];
+        uint w0lo =  w.x        & M4, w0hi = (w.x >> 4) & M4;
+        uint w1lo =  w.y        & M4, w1hi = (w.y >> 4) & M4;
+        uint w2lo =  w.z        & M4, w2hi = (w.z >> 4) & M4;
+        uint w3lo =  w.w        & M4, w3hi = (w.w >> 4) & M4;
+        #pragma unroll
+        for (int i = 0; i < V8C_LDS_TM; i++) {
+          int arow = ku * V8C_LDS_BM + lm * V8C_LDS_TM + i;
+          uint4 a_lo = a_lds[arow * 2 + 0];
+          uint4 a_hi = a_lds[arow * 2 + 1];
+          acc[i][j] += dot_4x8packed_su_int(a_lo.x, w0lo)
+                     + dot_4x8packed_su_int(a_lo.y, w0hi)
+                     + dot_4x8packed_su_int(a_lo.z, w1lo)
+                     + dot_4x8packed_su_int(a_lo.w, w1hi)
+                     + dot_4x8packed_su_int(a_hi.x, w2lo)
+                     + dot_4x8packed_su_int(a_hi.y, w2hi)
+                     + dot_4x8packed_su_int(a_hi.z, w3lo)
+                     + dot_4x8packed_su_int(a_hi.w, w3hi);
+        }
       }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
