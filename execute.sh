@@ -560,7 +560,12 @@ fi
 # is bit-exact since dp4a accumulates integers) and a best-of-3 M=1024 TPS.
 # OHWI attention held on (production). LDS_AB=0 to skip.
 # ---------------------------------------------------------------------------
-LDS_AB="${LDS_AB:-1}"
+# Phase 3b LDS sweep — default OFF. Conclusion reached: the LDS-blocked GEMM is
+# bit-identical but 7-13x SLOWER than the register/texture kernel at every block
+# size AND every K-unroll (barrier count was not the cost) — the Adreno texture
+# L2 already caches the weight re-reads more cheaply than manual LDS staging. So
+# weight-fetch cannot be reduced on public OpenCL here. LDS_AB=1 to re-run.
+LDS_AB="${LDS_AB:-0}"
 if [ "$LDS_AB" = "1" ]; then
   log_header "Phase 3b — LDS-blocked GEMM block-size sweep (M=1024)"
   lds_probe() {  # $1 = extra env (LDS cfg) -> the [probe] lines

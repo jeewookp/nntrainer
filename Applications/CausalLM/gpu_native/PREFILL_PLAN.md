@@ -44,27 +44,38 @@ Risk: low. Payoff: the already-measured +9% prefill / +33% decode.
 - Attention (15%): A/B a single-pass flash-attention variant vs the current
   two-conv OHWI path; keep only if golden-PASS.
 
-## Phase 3 — the weight-fetch wall (the real 1250 gap, ~930→1100+)
-34% of prefill is re-reading int4 weights across M-tiles. Levers, cheapest first:
-- **3a. weight buffer vs image A/B** for the big FFN GEMMs (`NNTR_V8C_BUF`):
-  cheap test — wide vectorized buffer loads may beat `read_imageui` at large N.
-- **3b. weight-stationary LDS GEMM** (the textbook fix, done right): a workgroup
-  stages a weight K-block into local memory *once* (coalesced, N-consecutive to
-  keep the winning access pattern) and streams a large M-block through it with
-  double-buffering. Target: weight-fetch 468 ms → ~150 ms ⇒ ~1100–1200 tok/s.
-  High effort, must be bit-identical (golden-gated). This is the make-or-break.
-- **3c. vendor path** (QNN / `cl_qcom_ml_ops` matrix engine) — the paper's
-  likely actual advantage; highest effort, separate toolkit. Only if 3b plateaus.
+## Phase 3 — the weight-fetch wall — RESOLVED (negative): public-OpenCL ceiling
+34% of prefill is re-reading int4 weights across M-tiles. Every lever was tried
+and measured (all bit-identity verified via the forward-hash probe):
+- **3a. weight buffer vs image** (`NNTR_V8C_BUF`): the buffer path is an
+  Intel-NEO specialization and does not even run on the Adreno build. Dead.
+- **3b. weight-stationary LDS GEMM** (`NNTR_V8C_LDS`, `v8c_gemm_int8_int4_lds`):
+  implemented properly and **bit-identical**, swept across every block size
+  (BM/BN 32–64, LWS 64–256) AND K-unroll (KU 1/4/8 to cut barriers). Result:
+  **7–13× SLOWER** at every config (≈55–99 TPS vs 730). Cutting the barrier
+  count (KU) did NOT help, so barriers were not the cost — the Adreno **texture
+  L2 already caches the weight re-reads more cheaply than manual LDS staging**.
+  LDS is a dead end here. Kept env-gated as evidence (default off).
+- **3c. vendor path** (QNN / `cl_qcom_ml_ops` matrix engine): NOT attempted —
+  needs the Qualcomm QNN SDK / a working ml-ops loader (separate toolkit). This
+  is almost certainly what the paper's 1250 actually used.
+
+**Conclusion:** the register-tiled texture GEMM (~730 tok/s clean, ~810 best
+real) is the practical ceiling on the OpenCL we have. The 730→1250 gap is the
+weight-fetch wall, and it is **not reducible with public OpenCL on Adreno** —
+LWS, buffer, conv-matmul and a proper LDS GEMM all fail. Reaching 1250 requires
+Qualcomm's vendor matmul primitives.
 
 ## Phase 4 — make prefill *semantically* correct (per-position RoPE, #45b)
-Independent of speed: multi-token prefill currently lacks per-position RoPE, so
-the generated sequence past token 1 is not real text (the golden is a stable
-but not-yet-coherent reference). Implementing #45b turns the golden into a true
-coherent-text oracle and makes the prefill usable end-to-end. Can be done any
-time; pairs naturally with Phase 1's M=1024 probe.
+ALREADY IMPLEMENTED: `rope_fp16_batched` applies per-position RoPE (start_pos+M)
+and is wired into forward_one_layer_v2, so the vanilla generation IS the real
+RoPE-correct output and `golden_tokens.txt` is a valid reference. (The fusions
+change generation only via scratch-state coupling, not RoPE.)
 
-## Realistic outlook
-Phases 1–2 (~930 tok/s) are high-confidence and safe. **Phase 3b is the
-make-or-break for 1250** on public OpenCL; if it plateaus, the remaining gap is
-genuinely vendor-primitive territory (Phase 3c), which is what the paper most
-likely used.
+## Realistic outlook (updated)
+Public-OpenCL ceiling ≈ 730 (clean) / ~810 (best real) tok/s, reproduced and
+golden-verified. The fusion wins (#82/#83/#80) are bit-identical in isolation
+but couple to the generation via leftover scratch, so they are held off to keep
+the golden match. **1250 is vendor-primitive territory (QNN), a separate
+project** — not achievable with the current OpenCL stack, as now proven by the
+LWS / buffer / conv / LDS negative results.
