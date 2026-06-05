@@ -318,7 +318,7 @@ GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
 STAGE_PROFILE="${NNTR_STAGE_PROFILE:-0}"
 HOST_TIMING="${NNTR_HOST_TIMING:-1}"
 # Attention sub-kernel profiler (qk / softmax / sv split, M>=512). Default ON.
-ATTN_PROFILE="${NNTR_ATTN_PROFILE:-1}"
+ATTN_PROFILE="${NNTR_ATTN_PROFILE:-0}"
 # Adreno image-attention path (texture-cached K + causal tile-skip kernels).
 # The author documents it as token-identical and ~+35% prefill @M=1024
 # (224->303 TPS) vs the plain-buffer ohwi path, but it ships default-off in the
@@ -378,8 +378,9 @@ EOF
 # GEMM compute attribution: clean M=1024 full vs no-dp4a forward. Tells us if
 # prefill is GEMM-compute-bound (then a faster GEMM helps) or not. Runs FIRST
 # (before the slower LWS/PF/TILE sweeps) so a plain `sh execute.sh` always
-# surfaces [gemm-attrib] up front. Default ON; GEMM_ATTRIB=0 to skip.
-GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
+# surfaces [gemm-attrib] up front. Default OFF (diagnostic; loads the model +
+# replays many M=1024 forwards). GEMM_ATTRIB=1 to run it.
+GEMM_ATTRIB="${GEMM_ATTRIB:-0}"
 if [ "$GEMM_ATTRIB" = "1" ]; then
   log_header "GEMM compute attribution (in-process, M=1024)"
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_FUSE_ADDNORM=$FUSE_ADDNORM NNTR_FUSE_NORMQUANT=$FUSE_NORMQUANT NNTR_FFN_GLUQUANT_FUSE=$FFN_GLUQUANT_FUSE NNTR_FUSE_POSTNORM=$FUSE_POSTNORM NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
@@ -514,14 +515,14 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Phase 1 — fusion bit-identity probe (default ON). Hash the 26-layer forward
-# OUTPUT at the real prefill sizes (M=256/512/1024) with each fusion on vs the
-# all-off baseline. A matching hash PROVES the fusion is bit-identical at M=1024
-# (the case the token-185 check missed); a differing hash localizes exactly
-# which M diverges. OHWI is held off so only the fusion varies. FUSION_PROBE=0
-# to skip.
+# Phase 1 — fusion bit-identity probe (default OFF; opt-in with FUSION_PROBE=1).
+# Hash the 26-layer forward OUTPUT at the real prefill sizes (M=256/512/1024)
+# with each fusion on vs the all-off baseline. A matching hash PROVES the fusion
+# is bit-identical at M=1024; a differing hash localizes which M diverges. OHWI
+# is held off so only the fusion varies. Already used to validate the shipped
+# #82/#83/#80 set — re-run when changing a fused kernel.
 # ---------------------------------------------------------------------------
-FUSION_PROBE="${FUSION_PROBE:-1}"
+FUSION_PROBE="${FUSION_PROBE:-0}"
 if [ "$FUSION_PROBE" = "1" ]; then
   log_header "Fusion bit-identity probe (M=256/512/1024 forward-output hash)"
   probe_hashes() {  # $1 = fusion env -> the 3 sorted [probe] hash lines
