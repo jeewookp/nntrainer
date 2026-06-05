@@ -1,16 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 683 bytes | 170.00 KiB/s, done.
+remote: Enumerating objects: 14, done.
+remote: Counting objects: 100% (14/14), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 8 (delta 6), reused 8 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 2.56 KiB | 291.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   3ab1c562f..7195963cd  jijoong    -> origin/jijoong
-Updating 3ab1c562f..7195963cd
+   88099560c..9f1f67349  jijoong    -> origin/jijoong
+Updating 88099560c..9f1f67349
 Fast-forward
- execute.sh | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ Applications/CausalLM/gpu_native/golden_fwd_hash.txt |  3 +++
+ Applications/CausalLM/gpu_native/qwen3_forward.cpp   |  6 +++---
+ execute.sh                                           | 70 +++++++++++++++++++++++++++++++++++++++++++++++++++-------------------
+ 3 files changed, 57 insertions(+), 22 deletions(-)
+ create mode 100644 Applications/CausalLM/gpu_native/golden_fwd_hash.txt
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -48,20 +51,17 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
 
 ========================================
- Phase 1 — LDS cost decomposition (cfg 16,4,4,8,1; M=1024) 
+ Forward-hash correctness gate (production vs vanilla golden) 
 ========================================
-[INFO]   full (load+compute) : [probe] M=1024 chain=10306.4 ms => 99.4 TPS
-[INFO]   nocompute (load only): [probe] M=1024 chain=2506.4 ms => 408.6 TPS
-[INFO]   noload (compute only): [probe] M=1024 chain=10360.8 ms => 98.8 TPS
-[INFO]   (reference register-tiled ~730 TPS; barriers already ruled out)
+[SUCCESS] PASS — production forward is BIT-IDENTICAL to vanilla golden (M=256/512/1024).
 
 [INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
 
 [main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 691.3 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.09 ms  chain=3038.3 ms (116.86 ms/layer)  out_norm=3.83 ms  lm_head=267.7 ms  TOTAL=3309.9 ms  (=> 0.30 TPS effective)  -> token 185
-[run 1] embed=0.38 ms  chain=119.2 ms (4.59 ms/layer)  out_norm=3.72 ms  lm_head=13.1 ms  TOTAL=136.5 ms  (=> 7.33 TPS effective)  -> token 185
-[run 2] embed=0.31 ms  chain=121.9 ms (4.69 ms/layer)  out_norm=3.89 ms  lm_head=13.0 ms  TOTAL=139.1 ms  (=> 7.19 TPS effective)  -> token 185
+[main] all 26 layers loaded in 701.2 ms; final offset=1428 MB (file=1428 MB)
+[run 0] embed=0.10 ms  chain=2559.6 ms (98.44 ms/layer)  out_norm=3.44 ms  lm_head=256.4 ms  TOTAL=2819.5 ms  (=> 0.35 TPS effective)  -> token 185
+[run 1] embed=0.19 ms  chain=112.9 ms (4.34 ms/layer)  out_norm=3.55 ms  lm_head=13.2 ms  TOTAL=129.9 ms  (=> 7.70 TPS effective)  -> token 185
+[run 2] embed=0.67 ms  chain=111.1 ms (4.27 ms/layer)  out_norm=3.21 ms  lm_head=13.1 ms  TOTAL=128.1 ms  (=> 7.81 TPS effective)  -> token 185
 
 [main] decode (M=1) summary:
   predicted token over 3 runs: 185 (deterministic=1)
@@ -71,19 +71,19 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
   NOTE: per-token RoPE not yet implemented (task #45b);
   output token id is not meaningful for M>1 but per-op
   timing is.
-[prefill M=   2] chain=  141.8 ms  70.901 ms/token  =>    14.1 TPS  (L0=16.8 ms, L27=5.0 ms)
-[prefill M=   8] chain= 1201.7 ms  150.217 ms/token  =>     6.7 TPS  (L0=1069.9 ms, L27=5.3 ms)
-[prefill M=  64] chain=  136.6 ms  2.134 ms/token  =>   468.7 TPS  (L0=2.9 ms, L27=5.9 ms)
-[prefill M= 256] chain=  323.7 ms  1.265 ms/token  =>   790.8 TPS  (L0=5.4 ms, L27=12.8 ms)
-[prefill M= 512] chain=  602.5 ms  1.177 ms/token  =>   849.8 TPS  (L0=12.0 ms, L27=23.8 ms)
-[prefill M=1024] chain= 1328.7 ms  1.298 ms/token  =>   770.7 TPS  (L0=25.5 ms, L27=53.7 ms)
+[prefill M=   2] chain=  138.1 ms  69.052 ms/token  =>    14.5 TPS  (L0=19.9 ms, L27=4.7 ms)
+[prefill M=   8] chain= 1170.6 ms  146.323 ms/token  =>     6.8 TPS  (L0=1047.8 ms, L27=5.2 ms)
+[prefill M=  64] chain=  131.6 ms  2.056 ms/token  =>   486.3 TPS  (L0=2.7 ms, L27=5.5 ms)
+[prefill M= 256] chain=  308.2 ms  1.204 ms/token  =>   830.7 TPS  (L0=5.5 ms, L27=11.7 ms)
+[prefill M= 512] chain=  589.4 ms  1.151 ms/token  =>   868.7 TPS  (L0=11.6 ms, L27=23.7 ms)
+[prefill M=1024] chain= 1271.7 ms  1.242 ms/token  =>   805.2 TPS  (L0=25.6 ms, L27=47.4 ms)
 
 [main] === prefill correctness: greedy generation from BOS ===
   [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
   [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
   generated 21 token ids (greedy, no NaN=1):
-    2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
-[gen-tokens] nonan=1 2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
+    2 185 235269 235269 235269 192 109 235269 109 186 235269 1688 1688 1688 1688 1688 1688 1688 1688 1688 1688
+[gen-tokens] nonan=1 2 185 235269 235269 235269 192 109 235269 109 186 235269 1688 1688 1688 1688 1688 1688 1688 1688 1688 1688
 
 [main] step #45 OK — multi-token prefill chain runs.
 
@@ -91,8 +91,12 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
  Token correctness check 
 ========================================
-[SUCCESS] PASS — full token sequence matches the golden reference.
-[INFO]   2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
+[WARNING] PARTIAL — M=1 prediction = 185 OK, but the full sequence
+[WARNING]   DIFFERS from the golden (an approximation like OHWI, or an
+[WARNING]   unverified fusion, is active). To match the golden exactly,
+[WARNING]   keep the vanilla path (all fusions off).
+[INFO]     golden: 2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
+[INFO]     this  : 2 185 235269 235269 235269 192 109 235269 109 186 235269 1688 1688 1688 1688 1688 1688 1688 1688 1688 1688
 
 [SUCCESS] Done. Re-run on device any time with:
 [INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
