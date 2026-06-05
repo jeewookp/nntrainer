@@ -343,9 +343,13 @@ SV_TM2="${NNTR_SV_TM2:-1}"
 # oracle (per-position RoPE is unimplemented, #45b, so it produces garbage
 # past the first token); the meaningful invariant is the M=1 first-token
 # prediction (185) which every config preserves.
-FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-1}"
-FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-1}"
-FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-1}"
+# DEFAULT OFF: although bit-identical for M<=21 (gen_only bisect), enabling
+# them changes the full-mode M=1024 prefill output so the run no longer matches
+# the golden -> reverted to the golden-matching vanilla path until the fusions
+# are proven bit-identical at M=1024 too. Re-enable per-flag for A/B.
+FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-0}"
+FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-0}"
+FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-0}"
 FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
@@ -583,24 +587,24 @@ EXPECT_FIRST=185
 [ -f "$GOLDEN_FILE" ] && EXPECT_FIRST="$(awk '{print $2}' "$GOLDEN_FILE")"
 if [ "$R_NONAN" != "1" ]; then
   log_error "FAIL — NaN in generation (nonan=$R_NONAN); output INVALID."
-elif [ -z "$R_FIRST" ]; then
+elif [ -z "$R_TOK" ]; then
   log_error "FAIL — no [gen-tokens] line; cannot verify."
+elif [ -f "$GOLDEN_FILE" ] && [ "$R_TOK" = "$(cat "$GOLDEN_FILE")" ]; then
+  log_success "PASS — full token sequence matches the golden reference."
+  log_info "  $R_TOK"
 elif [ "$R_FIRST" = "$EXPECT_FIRST" ]; then
-  log_success "PASS — M=1 prediction = $R_FIRST (== reference), no NaN."
-else
-  log_error "FAIL — M=1 prediction = $R_FIRST, expected $EXPECT_FIRST !"
-fi
-# Secondary: full-sequence bit-canary (differs are expected for non-bit-identical
-# approximations like OHWI image attention; informational, not a hard fail).
-if [ -f "$GOLDEN_FILE" ] && [ -n "$R_TOK" ]; then
-  if [ "$R_TOK" = "$(cat "$GOLDEN_FILE")" ]; then
-    log_info "  full 21-token sequence: bit-identical to golden."
-  else
-    log_info "  full 21-token sequence: differs past token 1 (OK if OHWI/approx on;"
-    log_info "    generation is not a semantic oracle past the first token, #45b)."
+  # Full sequence differs but the only meaningful invariant (M=1 prediction)
+  # holds — flag it loudly so a divergence is never silently accepted.
+  log_warning "PARTIAL — M=1 prediction = $R_FIRST OK, but the full sequence"
+  log_warning "  DIFFERS from the golden (an approximation like OHWI, or an"
+  log_warning "  unverified fusion, is active). To match the golden exactly,"
+  log_warning "  keep the vanilla path (all fusions off)."
+  if [ -f "$GOLDEN_FILE" ]; then
     log_info "    golden: $(cat "$GOLDEN_FILE")"
     log_info "    this  : $R_TOK"
   fi
+else
+  log_error "FAIL — M=1 prediction = $R_FIRST, expected $EXPECT_FIRST !"
 fi
 echo ""
 log_success "Done. Re-run on device any time with:"
