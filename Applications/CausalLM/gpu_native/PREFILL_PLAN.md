@@ -56,15 +56,26 @@ and measured (all bit-identity verified via the forward-hash probe):
   count (KU) did NOT help, so barriers were not the cost — the Adreno **texture
   L2 already caches the weight re-reads more cheaply than manual LDS staging**.
   LDS is a dead end here. Kept env-gated as evidence (default off).
-- **3c. vendor path** (QNN / `cl_qcom_ml_ops` matrix engine): NOT attempted —
-  needs the Qualcomm QNN SDK / a working ml-ops loader (separate toolkit). This
-  is almost certainly what the paper's 1250 actually used.
+- **3c. transposed (coalesced) weight layout** (`NNTR_V8C_WT`): the paper's
+  stated "primary driver." Implemented (host-transpose [K/32 x N] -> [N x K/32],
+  V8C_WCOORD kernel reads). Result: **~4% SLOWER** (706 vs 734 TPS) — the Adreno
+  texture cache already handles the 2D access locality, so channel-contiguous
+  weights do not help; the K-contiguous default is already better here. The
+  paper's weight-layout lever does NOT transfer to our int4-dp4a texture GEMM.
+- **3d. vendor path** (QNN / `cl_qcom_ml_ops`): the paper does NOT use QNN — it
+  is an OpenCL/Metal/Vulkan GPU framework (verified in the PDF). Its 1250 comes
+  from its full co-designed conv/texture framework + per-device offline tuning,
+  NOT a single transferable trick.
 
-**Conclusion:** the register-tiled texture GEMM (~730 tok/s clean, ~810 best
-real) is the practical ceiling on the OpenCL we have. The 730→1250 gap is the
-weight-fetch wall, and it is **not reducible with public OpenCL on Adreno** —
-LWS, buffer, conv-matmul and a proper LDS GEMM all fail. Reaching 1250 requires
-Qualcomm's vendor matmul primitives.
+**Conclusion (data-backed):** every individual GPU lever — LWS reshape, buffer
+path, a full LDS-blocked GEMM (block + K-unroll sweep), conv-matmul (all_gpu),
+and the paper's own weight-layout transpose — is negative on this Adreno. Our
+register-tiled int4-dp4a texture GEMM is already at the practical OpenCL ceiling
+(~730 clean / ~810 best real); the texture hardware's 2D-tiled caching already
+does what these optimizations attempt. Matching the paper's 1250 requires
+re-implementing its entire co-designed conv framework (different compute model +
+per-device tuning), a multi-week dedicated effort whose building-block (weight
+layout) already measured negative here — i.e. high effort, low transfer odds.
 
 ## Phase 4 — make prefill *semantically* correct (per-position RoPE, #45b)
 ALREADY IMPLEMENTED: `rope_fp16_batched` applies per-position RoPE (start_pos+M)

@@ -559,7 +559,12 @@ fi
 # memory -> wavefront-coalesced weight fetch. Probe prints the forward hash
 # (must stay identical — same bytes/dp4a) + best-of-3 M=1024 TPS. WT_AB=0 skips.
 # ---------------------------------------------------------------------------
-WT_AB="${WT_AB:-1}"
+# Phase 3c WT A/B — default OFF. Result: the transposed (channel-contiguous)
+# weight image is ~4% SLOWER than the K-contiguous default (706 vs 734 TPS) —
+# the Adreno texture cache already handles the 2D access locality, so the
+# paper's weight-layout "primary driver" does not transfer to our int4-dp4a
+# texture GEMM. (The path also has a coord bug; not worth fixing since it loses.)
+WT_AB="${WT_AB:-0}"
 if [ "$WT_AB" = "1" ]; then
   log_header "Phase 3c — transposed weight layout A/B (M=1024)"
   wt_probe() {  # $1 = NNTR_V8C_WT value -> the [probe] lines
