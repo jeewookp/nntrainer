@@ -485,7 +485,7 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
   log_header "Generate GOLDEN reference (slow/accurate: all fusions + OHWI img OFF)"
   GOLD_LOG="$NNTRAINER_ROOT/.execute_golden.log"
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
-    NNTR_MODEL_GEMMA2=1 NNTR_GPU_LMHEAD=0 NNTR_OHWI_IMG=0 \
+    NNTR_MODEL_GEMMA2=1 NNTR_GPU_LMHEAD=0 NNTR_OHWI_IMG=0 NNTR_GEN_ONLY=1 \
     NNTR_FFN_GLUQUANT_FUSE=0 NNTR_FUSE_ADDNORM=0 NNTR_FUSE_NORMQUANT=0 \
     NNTR_FUSE_POSTNORM=0 NNTR_STAGE_PROFILE=0 NNTR_ATTN_PROFILE=0 \
     ./$TARGET '$DEV_WEIGHT'" 2>&1 | tee "$GOLD_LOG" \
@@ -517,10 +517,14 @@ FUSION_BISECT="${FUSION_BISECT:-1}"
 if [ "$FUSION_BISECT" = "1" ] && [ -f "$GOLDEN_FILE" ]; then
   log_header "Fusion correctness bisect (gen-only, vs golden)"
   G_TOK="$(cat "$GOLDEN_FILE")"
-  bisect_run() {  # $1 = label, $2 = fusion env assignments
+  # Every bisect run uses the SAME mode as the golden (NNTR_GEN_ONLY=1, clean KV
+  # cache) so the only variable is the optimization under test. Golden itself is
+  # the most-vanilla config (OHWI image OFF + all fusions OFF), so each line
+  # below isolates exactly one optimization vs that vanilla reference.
+  bisect_run() {  # $1 = label, $2 = env assignments (full control incl. OHWI)
     local log="$NNTRAINER_ROOT/.execute_bisect.log"
     "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
-      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_GEN_ONLY=1 \
+      NNTR_MODEL_GEMMA2=1 NNTR_GPU_LMHEAD=0 NNTR_GEN_ONLY=1 \
       $2 ./$TARGET '$DEV_WEIGHT'" > "$log" 2>&1
     local tok nonan
     tok="$(extract_tokens "$log")"
@@ -535,12 +539,13 @@ if [ "$FUSION_BISECT" = "1" ] && [ -f "$GOLDEN_FILE" ]; then
       log_error  "  $1 : FAIL  -> $tok"
     fi
   }
-  bisect_run "baseline (all fusions OFF)         " ""
-  bisect_run "#82 geglu+quant                    " "NNTR_FFN_GLUQUANT_FUSE=1"
-  bisect_run "#83 post-norm+add                  " "NNTR_FUSE_POSTNORM=1"
-  bisect_run "#80 attn norm+quant                " "NNTR_FUSE_NORMQUANT=1"
-  bisect_run "#80b FFN add+norm+quant            " "NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
-  bisect_run "ALL fusions ON                     " "NNTR_FFN_GLUQUANT_FUSE=1 NNTR_FUSE_POSTNORM=1 NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+  bisect_run "baseline (OHWI off, fusions off)   " "NNTR_OHWI_IMG=0"
+  bisect_run "OHWI image attention               " "NNTR_OHWI_IMG=1"
+  bisect_run "#82 geglu+quant                    " "NNTR_OHWI_IMG=0 NNTR_FFN_GLUQUANT_FUSE=1"
+  bisect_run "#83 post-norm+add                  " "NNTR_OHWI_IMG=0 NNTR_FUSE_POSTNORM=1"
+  bisect_run "#80 attn norm+quant                " "NNTR_OHWI_IMG=0 NNTR_FUSE_NORMQUANT=1"
+  bisect_run "#80b FFN add+norm+quant            " "NNTR_OHWI_IMG=0 NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+  bisect_run "#82+#83+#80 (safe set?)            " "NNTR_OHWI_IMG=0 NNTR_FFN_GLUQUANT_FUSE=1 NNTR_FUSE_POSTNORM=1 NNTR_FUSE_NORMQUANT=1"
   log_info "golden: $G_TOK"
   echo ""
 elif [ "$FUSION_BISECT" = "1" ]; then
