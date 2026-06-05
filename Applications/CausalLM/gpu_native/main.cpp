@@ -695,9 +695,14 @@ int main(int argc, char **argv) {
     clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
                          rep_input.data(), 0, nullptr, nullptr);
     std::fprintf(stderr, "[main] === GEMM compute attribution (M=1024) ===\n");
-    const char *labels[] = {"full", "no-dp4a (fetch only)"};
-    for (int mode = 0; mode < 2; ++mode) {
-      nntrainer::set_v8c_nocompute_override(mode);
+    // Bitmask modes decompose the prefill wall into orthogonal layers:
+    //   0=full, 1=no-dp4a, 3=no-dp4a+no-wfetch, 7=no-dp4a+no-wfetch+no-afetch.
+    const int modes[] = {0, 1, 3, 7};
+    const char *labels[] = {"full", "no-dp4a", "no-dp4a,no-wfetch",
+                            "no-dp4a,no-w/a-fetch (floor)"};
+    double walls[4] = {0, 0, 0, 0};
+    for (int mi = 0; mi < 4; ++mi) {
+      nntrainer::set_v8c_nocompute_override(modes[mi]);
       double best = 1e30;
       for (int rep = 0; rep < 3; ++rep) {
         cl_mem a = pf_in, b = pf_out;
@@ -711,9 +716,22 @@ int main(int argc, char **argv) {
         double ms = MS(NOW(), t0);
         if (rep > 0 && ms < best) best = ms;
       }
-      std::fprintf(stderr, "[gemm-attrib] %-22s chain=%.1f ms => %.1f TPS\n",
-                   labels[mode], best, (double)Ms * 1000.0 / best);
+      walls[mi] = best;
+      std::fprintf(stderr, "[gemm-attrib] %-28s chain=%.1f ms => %.1f TPS\n",
+                   labels[mi], best, (double)Ms * 1000.0 / best);
     }
+    // Orthogonal cost decomposition (each = wall delta when that layer drops).
+    // floor = pipeline/dispatch + attention + layernorm/quant/elementwise.
+    std::fprintf(stderr, "[gemm-attrib] --- decomposition (of %.1f ms full) ---\n",
+                 walls[0]);
+    std::fprintf(stderr, "[gemm-attrib]   dp4a compute     = %6.1f ms (%4.1f%%)\n",
+                 walls[0] - walls[1], 100.0 * (walls[0] - walls[1]) / walls[0]);
+    std::fprintf(stderr, "[gemm-attrib]   v8c weight fetch = %6.1f ms (%4.1f%%)\n",
+                 walls[1] - walls[2], 100.0 * (walls[1] - walls[2]) / walls[0]);
+    std::fprintf(stderr, "[gemm-attrib]   v8c act fetch    = %6.1f ms (%4.1f%%)\n",
+                 walls[2] - walls[3], 100.0 * (walls[2] - walls[3]) / walls[0]);
+    std::fprintf(stderr, "[gemm-attrib]   floor (rest)     = %6.1f ms (%4.1f%%)\n",
+                 walls[3], 100.0 * walls[3] / walls[0]);
     nntrainer::set_v8c_nocompute_override(0);
     return 0;
   }

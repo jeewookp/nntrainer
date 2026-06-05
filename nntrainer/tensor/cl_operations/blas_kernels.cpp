@@ -1390,13 +1390,20 @@ void set_v8c_lws_override(int lx, int ly) {
 static int g_v8c_prefetch_override = -1;
 void set_v8c_prefetch_override(int mode) { g_v8c_prefetch_override = mode; }
 
-// Runtime "skip dp4a compute" override for the in-process attribution A/B
-// (1 = -DV8C_KCLOCK_NOCOMPUTE: fetch+unpack but no dp4a, output garbage). Lets
-// us measure the GEMM-compute contribution to the clean forward wall time.
+// Runtime attribution-mode override for the in-process A/B. Bitmask:
+//   bit0 (1) = -DV8C_KCLOCK_NOCOMPUTE : skip dp4a (still fetch+unpack)
+//   bit1 (2) = -DV8C_KCLOCK_NOWFETCH  : replace weight texel read w/ synth value
+//   bit2 (4) = -DV8C_KCLOCK_NOAFETCH  : replace activation texel read w/ synth
+// Chaining clean forward walls across modes {0,1,3,7} decomposes prefill into
+// dp4a-compute / weight-fetch / act-fetch / everything-else (the floor).
 static int g_v8c_nocompute_override = 0;
-void set_v8c_nocompute_override(int on) { g_v8c_nocompute_override = on; }
+void set_v8c_nocompute_override(int mode) { g_v8c_nocompute_override = mode; }
 static std::string g_v8c_nocompute_copt() {
-  return g_v8c_nocompute_override ? " -DV8C_KCLOCK_NOCOMPUTE" : "";
+  std::string s;
+  if (g_v8c_nocompute_override & 1) s += " -DV8C_KCLOCK_NOCOMPUTE";
+  if (g_v8c_nocompute_override & 2) s += " -DV8C_KCLOCK_NOWFETCH";
+  if (g_v8c_nocompute_override & 4) s += " -DV8C_KCLOCK_NOAFETCH";
+  return s;
 }
 
 // Runtime register-tile override (TM x TN) for the M>4 v8c GEMM, for the
