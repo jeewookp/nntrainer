@@ -142,5 +142,3 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 
 [SUCCESS] Done. Re-run on device any time with:
 [INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
-
