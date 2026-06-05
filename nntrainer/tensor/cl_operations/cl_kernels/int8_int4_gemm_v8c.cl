@@ -478,6 +478,114 @@ __kernel void v8c_gemm_int8_int4(
 }
 
 // ============================================================
+// LDS-blocked variant (NNTR_V8C_LDS): stage one K32 block of the weight panel
+// AND the activation panel into local memory once per workgroup, then every
+// work-item reads its operands from LDS instead of re-issuing texture loads.
+// A workgroup covers BM x BN of the output (BM = LM*TM rows, BN = LN*TN cols),
+// so each int4 weight texel reaches global memory only M/BM times instead of
+// M/(LM_reg*TM) — with BM=64 that is ~4x fewer cross-workgroup weight re-reads
+// than the register-tiled kernel, directly attacking the ~34% weight-fetch
+// bottleneck. BIT-IDENTICAL to v8c_gemm_int8_int4: the per-output sum is the
+// SAME set of integer dp4a products (integer add is exact + associative), and
+// the epilogue is the same float math. Requires M%BM==0, N%BN==0, K%32==0.
+// gws = (M/TM, N/TN); LWS = (LM, LN).
+// ============================================================
+#ifndef V8C_LDS_TM
+#define V8C_LDS_TM 4
+#endif
+#ifndef V8C_LDS_TN
+#define V8C_LDS_TN 4
+#endif
+#ifndef V8C_LDS_LM
+#define V8C_LDS_LM 16
+#endif
+#ifndef V8C_LDS_LN
+#define V8C_LDS_LN 16
+#endif
+#define V8C_LDS_BM (V8C_LDS_LM * V8C_LDS_TM)
+#define V8C_LDS_BN (V8C_LDS_LN * V8C_LDS_TN)
+
+__attribute__((reqd_work_group_size(V8C_LDS_LM, V8C_LDS_LN, 1)))
+__kernel void v8c_gemm_int8_int4_lds(
+    __read_only image2d_t  Ximg,
+    __read_only image2d_t  Wimg,
+    __global const float  *scale_act,
+    __global const float  *scale_wgt,
+    __global const int    *row_sum_act,
+    __global const int    *zp_act,
+    __global const int    *row_sum_w_int4,
+    __global       half   *Y,
+    const int M, const int N, const int K) {
+  const int lm = get_local_id(0);          // 0..LM-1  (M direction)
+  const int ln = get_local_id(1);          // 0..LN-1  (N direction)
+  const int tid = lm * V8C_LDS_LN + ln;    // flat work-item id
+  const int m_wg = get_group_id(0) * V8C_LDS_BM;
+  const int n_wg = get_group_id(1) * V8C_LDS_BN;
+  const int m0 = m_wg + lm * V8C_LDS_TM;
+  const int n0 = n_wg + ln * V8C_LDS_TN;
+  const int K32 = K >> 5;
+
+  // per row: 2 act texels (a_lo,a_hi = 32 int8); per col: 1 weight texel (32 int4)
+  __local uint4 a_lds[V8C_LDS_BM * 2];
+  __local uint4 w_lds[V8C_LDS_BN];
+  const int NWI = V8C_LDS_LM * V8C_LDS_LN;
+
+  int acc[V8C_LDS_TM][V8C_LDS_TN];
+  #pragma unroll
+  for (int i = 0; i < V8C_LDS_TM; i++)
+    #pragma unroll
+    for (int j = 0; j < V8C_LDS_TN; j++) acc[i][j] = 0;
+
+  for (int k32 = 0; k32 < K32; k32++) {
+    // cooperative load: activation panel (BM*2 texels) + weight panel (BN texels)
+    for (int idx = tid; idx < V8C_LDS_BM * 2; idx += NWI) {
+      int row = idx >> 1, hi = idx & 1;
+      a_lds[idx] = read_imageui(Ximg, SMP_v8c, (int2)(2 * k32 + hi, m_wg + row));
+    }
+    for (int idx = tid; idx < V8C_LDS_BN; idx += NWI)
+      w_lds[idx] = read_imageui(Wimg, SMP_v8c, (int2)(k32, n_wg + idx));
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    const uint M4 = 0x0F0F0F0Fu;
+    #pragma unroll
+    for (int j = 0; j < V8C_LDS_TN; j++) {
+      uint4 w = w_lds[ln * V8C_LDS_TN + j];
+      uint w0lo =  w.x        & M4, w0hi = (w.x >> 4) & M4;
+      uint w1lo =  w.y        & M4, w1hi = (w.y >> 4) & M4;
+      uint w2lo =  w.z        & M4, w2hi = (w.z >> 4) & M4;
+      uint w3lo =  w.w        & M4, w3hi = (w.w >> 4) & M4;
+      #pragma unroll
+      for (int i = 0; i < V8C_LDS_TM; i++) {
+        uint4 a_lo = a_lds[(lm * V8C_LDS_TM + i) * 2 + 0];
+        uint4 a_hi = a_lds[(lm * V8C_LDS_TM + i) * 2 + 1];
+        acc[i][j] += dot_4x8packed_su_int(a_lo.x, w0lo)
+                   + dot_4x8packed_su_int(a_lo.y, w0hi)
+                   + dot_4x8packed_su_int(a_lo.z, w1lo)
+                   + dot_4x8packed_su_int(a_lo.w, w1hi)
+                   + dot_4x8packed_su_int(a_hi.x, w2lo)
+                   + dot_4x8packed_su_int(a_hi.y, w2hi)
+                   + dot_4x8packed_su_int(a_hi.z, w3lo)
+                   + dot_4x8packed_su_int(a_hi.w, w3hi);
+      }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  #pragma unroll
+  for (int i = 0; i < V8C_LDS_TM; i++) {
+    int rs = row_sum_act[m0 + i];
+    int zp = zp_act[m0 + i];
+    float s_i = scale_act[m0 + i];
+    #pragma unroll
+    for (int j = 0; j < V8C_LDS_TN; j++) {
+      int corrected = acc[i][j] - 8 * rs - zp * row_sum_w_int4[n0 + j];
+      float v = (float)corrected * s_i * scale_wgt[n0 + j];
+      Y[(long)(m0 + i) * N + (n0 + j)] = (half)v;
+    }
+  }
+}
+
+// ============================================================
 // M=1 (decode-phase) specialization. The default TM=4 kernel pads M up to
 // 4 for the M=1 decode case and burns 3× the activation reads + 3×
 // wasted output writes per work-group. This variant collapses TM=1 so

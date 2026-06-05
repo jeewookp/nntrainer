@@ -552,6 +552,41 @@ if [ "$BUF_AB" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Phase 3b — LDS-blocked GEMM A/B (default ON). The v8c GEMM re-reads each int4
+# weight ~M/16 times from texture; the LDS-blocked kernel (NNTR_V8C_LDS=1) stages
+# a BM=64 x BN=64 tile in local memory so each weight reaches global memory only
+# M/64 times -> ~4x fewer weight re-reads, directly attacking the 34% weight
+# fetch. The probe prints the forward-output hash (must stay identical — the kernel
+# is bit-exact since dp4a accumulates integers) and a best-of-3 M=1024 TPS.
+# OHWI attention held on (production). LDS_AB=0 to skip.
+# ---------------------------------------------------------------------------
+LDS_AB="${LDS_AB:-1}"
+if [ "$LDS_AB" = "1" ]; then
+  log_header "Phase 3b — LDS-blocked GEMM A/B (M=1024)"
+  lds_probe() {  # $1 = NNTR_V8C_LDS value -> the [probe] lines
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+      NNTR_V8C_LDS=$1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\]' | tr -d '\r'
+  }
+  REG_OUT="$(lds_probe 0)"
+  LDS_OUT="$(lds_probe 1)"
+  REG_H="$(echo "$REG_OUT" | grep fnv | sort)"
+  LDS_H="$(echo "$LDS_OUT" | grep fnv | sort)"
+  log_info "  register-tiled (LDS=0): $(echo "$REG_OUT" | grep TPS)"
+  log_info "  LDS-blocked    (LDS=1): $(echo "$LDS_OUT" | grep TPS)"
+  if [ -z "$REG_H" ] || [ -z "$LDS_H" ]; then
+    log_error "  probe produced no hashes (a config may have failed to build/run)."
+  elif [ "$REG_H" = "$LDS_H" ]; then
+    log_success "  BIT-IDENTICAL (LDS == register) — correctness preserved; adopt if faster."
+  else
+    log_error "  DIFFERS — LDS kernel is NOT bit-identical; bug to fix before adopting."
+    echo "$REG_H" | sed 's/^/      reg /'
+    echo "$LDS_H" | sed 's/^/      lds /'
+  fi
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
 # Phase 1 — fusion bit-identity probe (default OFF; opt-in with FUSION_PROBE=1).
 # Hash the 26-layer forward OUTPUT at the real prefill sizes (M=256/512/1024)
 # with each fusion on vs the all-off baseline. A matching hash PROVES the fusion

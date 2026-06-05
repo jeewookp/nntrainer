@@ -1494,9 +1494,20 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   // Buffer path (NNTR_V8C_BUF=1): act_image/weight_image carry the raw cl_mem
   // buffers; widths derived from K (int4 weight texel = 32 K, act texel = 16 K).
   const bool use_buf = v8c_use_buffer_path();
+  // NNTR_V8C_LDS: LDS-blocked GEMM for the large-M prefill GEMMs. Bit-identical
+  // (integer dp4a accumulation), needs M%64==0 & N%64==0 (BM=BN=64); falls back
+  // to the register-tiled kernel for the decode / odd-N shapes.
+  static const bool v8c_lds = []() {
+    const char *e = getenv("NNTR_V8C_LDS");
+    return e && e[0] == '1';
+  }();
+  const bool use_lds =
+    v8c_lds && !use_buf && M > 4 && (M % 64 == 0) && (N % 64 == 0) && (K % 32 == 0);
   const char *kname =
-    use_buf ? ((M <= 4) ? "v8c_gemm_int8_int4_m1_buf" : "v8c_gemm_int8_int4_buf")
-            : ((M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4");
+    use_lds ? "v8c_gemm_int8_int4_lds"
+            : use_buf
+                ? ((M <= 4) ? "v8c_gemm_int8_int4_m1_buf" : "v8c_gemm_int8_int4_buf")
+                : ((M <= 4) ? "v8c_gemm_int8_int4_m1" : "v8c_gemm_int8_int4");
   // Buffer path compiles the program with -DV8C_BUFFER_ONLY so the
   // image-sampling kernel bodies are excluded (Intel NEO can't compile them).
   std::string copts = use_buf ? kV8cBufCompileOpts : "";
@@ -1611,7 +1622,15 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     snprintf(lbl, sizeof(lbl), ":N%u_K%u", N, K);
     blas_cc->command_queue_inst_.setNextProfileLabel(lbl);
   }
-  if (M <= 4) {
+  if (use_lds) {
+    // LDS-blocked: gws = (M/TM_lds, N/TN_lds) with LWS = (LM, LN) = (16,16).
+    // Must match the V8C_LDS_* defines in the kernel (TM=TN=4, LM=LN=16).
+    constexpr size_t TM_LDS = 4, TN_LDS = 4, LM_LDS = 16, LN_LDS = 16;
+    std::array<size_t, 3> gws = {(size_t)M / TM_LDS, (size_t)N / TN_LDS, 1};
+    std::array<size_t, 3> lws = {LM_LDS, LN_LDS, 1};
+    blas_cc->command_queue_inst_.enqueueKernel(
+      kp->GetKernel(), 2, gws.data(), lws.data(), 0, nullptr, nullptr);
+  } else if (M <= 4) {
     // M=1 (TM=1) GEMV-style dispatch: 1-D grid over output channels.
     constexpr size_t TN_M1 = 8;
     std::array<size_t, 3> gws = {(size_t)N / TN_M1, 1, 1};
