@@ -489,14 +489,14 @@ extract_nonan() {   # $1 = raw run log -> prints 1 if generation had no NaN
 }
 
 if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
-  log_header "Generate GOLDEN reference (slow/accurate: all fusions + OHWI img OFF)"
+  log_header "Generate GOLDEN reference (production config, same as the normal run)"
+  # Golden must come from the SAME config + mode as the normal run it will be
+  # diffed against, otherwise mode/flag differences (full-vs-gen_only KV state,
+  # OHWI, fusions) cause spurious mismatches. So just run the production
+  # run_gemma2_gpu.sh and capture its generated tokens.
   GOLD_LOG="$NNTRAINER_ROOT/.execute_golden.log"
-  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
-    NNTR_MODEL_GEMMA2=1 NNTR_GPU_LMHEAD=0 NNTR_OHWI_IMG=0 NNTR_GEN_ONLY=1 \
-    NNTR_FFN_GLUQUANT_FUSE=0 NNTR_FUSE_ADDNORM=0 NNTR_FUSE_NORMQUANT=0 \
-    NNTR_FUSE_POSTNORM=0 NNTR_STAGE_PROFILE=0 NNTR_ATTN_PROFILE=0 \
-    ./$TARGET '$DEV_WEIGHT'" 2>&1 | tee "$GOLD_LOG" \
-    | grep -E '\[run [0-9]|generated|\[causal\]|\[self-consistency\]|token|FAIL|ERROR'
+  "$ADB" shell "sh $INSTALL_DIR/run_gemma2_gpu.sh" 2>&1 | tee "$GOLD_LOG" \
+    | grep -E '\[run [0-9]|generated|\[causal\]|\[self-consistency\]|gen-tokens|FAIL|ERROR'
   G_TOK="$(extract_tokens "$GOLD_LOG")"
   G_NONAN="$(extract_nonan "$GOLD_LOG")"
   if [ -z "$G_TOK" ]; then
