@@ -656,7 +656,7 @@ int main(int argc, char **argv) {
     clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
                          rep_input.data(), 0, nullptr, nullptr);
     std::fprintf(stderr, "[main] === in-process tile A/B (M=1024) ===\n");
-    const int tiles[][2] = {{4, 8}, {8, 4}, {2, 16}, {16, 2}, {8, 8}, {4, 4}};
+    const int tiles[][2] = {{4, 8}, {8, 4}, {2, 16}, {4, 4}}; // <=32 acc (8x8 spills->hang)
     for (auto &t : tiles) {
       if (Ms % (unsigned)t[0] != 0) continue;
       nntrainer::set_v8c_tile_override(t[0], t[1]);
