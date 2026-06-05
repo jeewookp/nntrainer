@@ -3747,7 +3747,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // Bit-identical to the split path. Default off for A/B.
   static const bool fuse_normquant = []() {
     const char *e = std::getenv("NNTR_FUSE_NORMQUANT");
-    return !e || std::atoi(e) != 0;  // #80 verified token-185, default ON
+    return e && std::atoi(e) != 0;  // #80 default OFF: broke M>1 generation (golden FAIL)
   }();
   cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
   if (fuse_normquant) {
@@ -4297,7 +4297,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // ffn_normed). When off, the standalone add runs here as before.
   static const bool fuse_addnorm = []() {
     const char *e = std::getenv("NNTR_FUSE_ADDNORM");
-    return !e || std::atoi(e) != 0;  // #80b verified token-185, default ON
+    return e && std::atoi(e) != 0;  // #80b default OFF: broke M>1 generation (golden FAIL)
   }();
   // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
   // accumulated in fp32 because the last layer's massive activations exceed
@@ -4446,7 +4446,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // quantized M_pad rows over an only-M-row-initialized swiglu_out.
   static const bool fuse_gluquant = []() {
     const char *e = std::getenv("NNTR_FFN_GLUQUANT_FUSE");
-    return !e || std::atoi(e) != 0;
+    return e && std::atoi(e) != 0;  // default OFF pending golden re-verify (M>1)
   }();
   if (cfg_.is_gemma2 && fuse_gluquant) {
     auto kp = cl->registerClKernel(kGegluQuantF16InParKernel,
@@ -4524,7 +4524,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // A/B). Qwen3 (non-gemma2) keeps the raw-ffn_out add path.
   static const bool fuse_postnorm = []() {
     const char *e = std::getenv("NNTR_FUSE_POSTNORM");
-    return !e || std::atoi(e) != 0;
+    return e && std::atoi(e) != 0;  // default OFF pending golden re-verify (M>1)
   }();
   if (cfg_.is_gemma2 && fuse_postnorm) {
     auto kp = cl->registerClKernel(kPostRmsnormAddH2fKernel,

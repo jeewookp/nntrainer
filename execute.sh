@@ -335,13 +335,15 @@ V8C_PREFETCH="${NNTR_V8C_PREFETCH:-1}"
 V8C_PREFETCH2="${NNTR_V8C_PREFETCH2:-0}"  # 2-ahead prefetch A/B (off by default)
 V8C_MFAST="${NNTR_V8C_MFAST:-1}"
 SV_TM2="${NNTR_SV_TM2:-1}"
-# Existing-but-default-off rmsnorm fusions (#80/#80b): fold the FFN input
-# residual-add + rmsnorm + int8 act-quant into one cooperative pass (cuts the
-# (h1) ffn norm+quant stage + dispatches). Enabled here for an A/B; both must
-# be on for the FFN path to take the fully-fused kernel. A/B: set either to 0
-# if the run's predicted token diverges from 185.
-FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-1}"
-FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-1}"
+# FFN/attn rmsnorm+quant + geglu+quant + post-norm fusions (#80/#80b/#82/#83).
+# ALL DEFAULT OFF: the golden-token check caught that with them on the multi-
+# token (M>1) greedy generation diverges (collapses to a repeated id) even
+# though the first token (M=1) stays 185. Bisect by turning ONE on, e.g.
+# `NNTR_FUSE_POSTNORM=1 sh execute.sh`, and watch the PASS/FAIL vs golden.
+FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-0}"
+FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-0}"
+FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-0}"
+FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
 export LD_LIBRARY_PATH=$INSTALL_DIR:\$LD_LIBRARY_PATH
@@ -358,6 +360,8 @@ export NNTR_V8C_MFAST=$V8C_MFAST
 export NNTR_SV_TM2=$SV_TM2
 export NNTR_FUSE_ADDNORM=$FUSE_ADDNORM
 export NNTR_FUSE_NORMQUANT=$FUSE_NORMQUANT
+export NNTR_FFN_GLUQUANT_FUSE=$FFN_GLUQUANT_FUSE
+export NNTR_FUSE_POSTNORM=$FUSE_POSTNORM
 cd $INSTALL_DIR
 ./$TARGET "$DEV_WEIGHT"
 EOF
@@ -370,7 +374,7 @@ EOF
 GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
 if [ "$GEMM_ATTRIB" = "1" ]; then
   log_header "GEMM compute attribution (in-process, M=1024)"
-  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_FUSE_ADDNORM=$FUSE_ADDNORM NNTR_FUSE_NORMQUANT=$FUSE_NORMQUANT NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_FUSE_ADDNORM=$FUSE_ADDNORM NNTR_FUSE_NORMQUANT=$FUSE_NORMQUANT NNTR_FFN_GLUQUANT_FUSE=$FFN_GLUQUANT_FUSE NNTR_FUSE_POSTNORM=$FUSE_POSTNORM NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
     | grep -E "\[gemm-attrib\]|compute attribution"
   echo ""
 fi
