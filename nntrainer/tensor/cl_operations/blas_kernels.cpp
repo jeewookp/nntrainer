@@ -1590,6 +1590,13 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
              " -DV8C_LDS_TM=" + std::to_string(LDS_TM) +
              " -DV8C_LDS_TN=" + std::to_string(LDS_TN) +
              " -DV8C_LDS_KU=" + std::to_string(LDS_KU);
+    // Profiler-free decomposition of the LDS cost (NNTR_V8C_LDS_DIAG):
+    //   noload    = synthetic operands, no texture->LDS read (isolate compute)
+    //   nocompute = load+barrier but skip dp4a (isolate texture->LDS load)
+    if (const char *d = getenv("NNTR_V8C_LDS_DIAG")) {
+      if (strstr(d, "noload")) copts += " -DV8C_LDS_NOLOAD";
+      if (strstr(d, "nocompute")) copts += " -DV8C_LDS_NOCOMPUTE";
+    }
   }
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);

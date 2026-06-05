@@ -591,6 +591,29 @@ if [ "$WT_AB" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Phase 1 diagnosis (profiler-free): decompose the LDS GEMM cost at one config
+# into texture->LDS load+barrier vs LDS-read+compute. Barriers are already known
+# innocent (KU sweep), so: if nocompute ~= full, the cooperative texture->LDS
+# LOAD is the killer (uncoalesced); if noload ~= full, the LDS compute (bank
+# conflicts) is. That tells us whether the LDS slowdown is fixable. LDS_DIAG=0
+# to skip.
+LDS_DIAG="${LDS_DIAG:-1}"
+if [ "$LDS_DIAG" = "1" ]; then
+  log_header "Phase 1 — LDS cost decomposition (cfg 16,4,4,8,1; M=1024)"
+  diag_tps() {  # $1 = NNTR_V8C_LDS_DIAG value -> the M=1024 TPS line
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+      NNTR_V8C_LDS=1 NNTR_V8C_LDS_CFG=16,4,4,8,1 NNTR_V8C_LDS_DIAG=$1 \
+      ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=1024' | tr -d '\r'
+  }
+  log_info "  full (load+compute) : $(diag_tps none)"
+  log_info "  nocompute (load only): $(diag_tps nocompute)"
+  log_info "  noload (compute only): $(diag_tps noload)"
+  log_info "  (reference register-tiled ~730 TPS; barriers already ruled out)"
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
 # Phase 3b — LDS-blocked GEMM A/B (default ON). The v8c GEMM re-reads each int4
 # weight ~M/16 times from texture; the LDS-blocked kernel (NNTR_V8C_LDS=1) stages
 # a BM=64 x BN=64 tile in local memory so each weight reaches global memory only

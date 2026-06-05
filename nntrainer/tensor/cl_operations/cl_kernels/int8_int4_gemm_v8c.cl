@@ -561,13 +561,21 @@ __kernel void v8c_gemm_int8_int4_lds(
       int ku = idx / (V8C_LDS_BM * 2);
       int rem = idx - ku * (V8C_LDS_BM * 2);
       int row = rem >> 1, hi = rem & 1;
+#ifdef V8C_LDS_NOLOAD
+      a_lds[idx] = (uint4)((uint)(kb + ku + row + hi + 1));  // synthetic (no tex)
+#else
       a_lds[idx] =
         read_imageui(Ximg, SMP_v8c, (int2)(2 * (kb + ku) + hi, m_wg + row));
+#endif
     }
     for (int idx = tid; idx < W_N; idx += NWI) {
       int ku = idx / V8C_LDS_BN;
       int col = idx - ku * V8C_LDS_BN;
+#ifdef V8C_LDS_NOLOAD
+      w_lds[idx] = (uint4)((uint)(kb + ku + col + 1));  // synthetic (no tex)
+#else
       w_lds[idx] = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(kb + ku, n_wg + col));
+#endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -586,6 +594,13 @@ __kernel void v8c_gemm_int8_int4_lds(
           int arow = ku * V8C_LDS_BM + lm * V8C_LDS_TM + i;
           uint4 a_lo = a_lds[arow * 2 + 0];
           uint4 a_hi = a_lds[arow * 2 + 1];
+#ifdef V8C_LDS_NOCOMPUTE
+          // consume LDS operands (no DCE) but skip the 8 dp4a — isolates the
+          // texture->LDS load + barrier cost from the LDS-read+compute cost.
+          acc[i][j] += (int)(w0lo + w1lo + w2lo + w3lo + w0hi + w1hi + w2hi +
+                             w3hi + a_lo.x + a_lo.y + a_lo.z + a_lo.w + a_hi.x +
+                             a_hi.y + a_hi.z + a_hi.w);
+#else
           acc[i][j] += dot_4x8packed_su_int(a_lo.x, w0lo)
                      + dot_4x8packed_su_int(a_lo.y, w0hi)
                      + dot_4x8packed_su_int(a_lo.z, w1lo)
@@ -594,6 +609,7 @@ __kernel void v8c_gemm_int8_int4_lds(
                      + dot_4x8packed_su_int(a_hi.y, w2hi)
                      + dot_4x8packed_su_int(a_hi.z, w3lo)
                      + dot_4x8packed_su_int(a_hi.w, w3hi);
+#endif
         }
       }
     }
