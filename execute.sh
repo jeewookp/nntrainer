@@ -523,7 +523,11 @@ fi
 # both the forward-output hash (must be identical -> correctness preserved) and a
 # best-of-3 M=1024 TPS. OHWI attention is held on (production). BUF_AB=0 to skip.
 # ---------------------------------------------------------------------------
-BUF_AB="${BUF_AB:-1}"
+# Default OFF: on Adreno the buffer-load path (NNTR_V8C_BUF=1) is an Intel-NEO
+# device specialization whose i8-activation/ordering deps aren't satisfied by a
+# runtime toggle, so it fails to run here (and texture/image is Adreno's
+# strength anyway). BUF_AB=1 to retry if the buffer path is ever plumbed.
+BUF_AB="${BUF_AB:-0}"
 if [ "$BUF_AB" = "1" ]; then
   log_header "Phase 3a — weight buffer vs image A/B (M=1024)"
   buf_probe() {  # $1 = NNTR_V8C_BUF value -> the [probe] lines
