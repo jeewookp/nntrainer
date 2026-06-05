@@ -358,7 +358,7 @@ EOF
 # prefill is GEMM-compute-bound (then a faster GEMM helps) or not. Runs FIRST
 # (before the slower LWS/PF/TILE sweeps) so a plain `sh execute.sh` always
 # surfaces [gemm-attrib] up front. Default ON; GEMM_ATTRIB=0 to skip.
-GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
+GEMM_ATTRIB="${GEMM_ATTRIB:-0}"
 if [ "$GEMM_ATTRIB" = "1" ]; then
   log_header "GEMM compute attribution (in-process, M=1024)"
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
@@ -414,7 +414,7 @@ fi
 # candidates and reports the M=1024 prefill TPS for each so we can pick the
 # best for THIS chip (Adreno 830). The winner can then be baked in as the
 # default NNTR_V8C_LWS. Set LWS_SWEEP=0 to skip.
-LWS_SWEEP="${LWS_SWEEP:-0}"
+LWS_SWEEP="${LWS_SWEEP:-1}"
 if [ "$LWS_SWEEP" = "1" ]; then
   log_header "v8c GEMM LWS sweep (in-process, M=1024 — single model load)"
   # NNTR_LWS_SWEEP=1 loads the model ONCE then re-times M=1024 prefill for each
