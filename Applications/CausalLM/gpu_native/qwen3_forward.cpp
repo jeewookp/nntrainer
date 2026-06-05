@@ -367,6 +367,58 @@ __kernel void fused_add_h2f_fp32(__global const float *a,
 }
 )CL";
 
+// #83 Gemma2 post-FFN sandwich norm fused with the end-of-layer residual add.
+// Replaces (h5)'s two passes — rmsnorm_cl_fp16_coop (in-place on dn_fp16) then
+// fused_add_h2f_fp32 (residual_1 + dn_fp16 -> out_fp32) — with ONE cooperative
+// per-row pass, removing the dn_fp16 in-place write+re-read round-trip, a
+// dispatch, and a barrier. Bit-identical: same float8 sum-of-squares + same
+// rsqrt(mean+eps) scale + the normed value is rounded to half (hv * a8) exactly
+// as rmsnorm_cl_fp16_coop wrote it, THEN widened to float for the fp32 add (so
+// it passes through the same fp16 rounding the 2-pass path did). M rows only
+// (the layer output is M rows; padded rows are never read downstream).
+static const std::string kPostRmsnormAddH2fKernel = R"CL(
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#define PLWS 64
+__attribute__((reqd_work_group_size(PLWS, 1, 1)))
+__kernel void post_rmsnorm_add_h2f(__global const half  *dn,       // raw ffn_out fp16
+                                   __global const float *residual, // residual_1 fp32
+                                   __global       float *out,      // out_fp32
+                                   __global const half  *alpha,    // gamma fp16 (1+w)
+                                   const half epsilon,
+                                   const int n_rows, const int W) {
+  const int row = get_group_id(0);
+  const int tid = get_local_id(0);
+  if (row >= n_rows) return;
+  const long base = (long)row * (long)W;
+  const int W8 = W >> 3;
+  __global const half8 *in8 = (__global const half8 *)(dn + base);
+
+  float partial = 0.0f;
+  for (int i = tid; i < W8; i += PLWS) {
+    const float8 v = convert_float8(in8[i]);
+    partial += dot(v.lo, v.lo) + dot(v.hi, v.hi);
+  }
+  __local float lsum[PLWS];
+  lsum[tid] = partial;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for (int s = PLWS >> 1; s > 0; s >>= 1) {
+    if (tid < s) lsum[tid] += lsum[tid + s];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  const float mean = lsum[0] / (float)W;
+  const float scale = rsqrt(mean + (float)epsilon);
+
+  __global       float8 *out8 = (__global float8 *)(out + base);
+  __global const float8 *res8 = (__global const float8 *)(residual + base);
+  __global const half8  *a8   = (__global const half8 *)(alpha);
+  for (int i = tid; i < W8; i += PLWS) {
+    // normed exactly as rmsnorm_cl_fp16_coop: (half)(in*scale) * gamma
+    const half8 hv = convert_half8(convert_float8(in8[i]) * scale) * a8[i];
+    out8[i] = res8[i] + convert_float8(hv);
+  }
+}
+)CL";
+
 // Fused cvt+swiglu (#46j). Replaces 3 dispatches (cvt up_fp16->up_fp32,
 // cvt gate_fp16->gate_fp32, swiglu(gate,up)->out_fp32) with one. Saves
 // ~2 dispatch overheads per layer × 28 layers ≈ 100-150 ms at M=1024.
@@ -3695,7 +3747,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // Bit-identical to the split path. Default off for A/B.
   static const bool fuse_normquant = []() {
     const char *e = std::getenv("NNTR_FUSE_NORMQUANT");
-    return e && std::atoi(e) != 0;
+    return !e || std::atoi(e) != 0;  // #80 verified token-185, default ON
   }();
   cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
   if (fuse_normquant) {
@@ -4245,7 +4297,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // ffn_normed). When off, the standalone add runs here as before.
   static const bool fuse_addnorm = []() {
     const char *e = std::getenv("NNTR_FUSE_ADDNORM");
-    return e && std::atoi(e) != 0;
+    return !e || std::atoi(e) != 0;  // #80b verified token-185, default ON
   }();
   // #47j: in_padded(FP32) + wo_y(fp16) → residual_1 (FP32). The residual is
   // accumulated in fp32 because the last layer's massive activations exceed
@@ -4467,38 +4519,63 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   stage_end_add(timings_.ffn_down_ms);  // (h4) ffn_down GEMM
   stage_begin();
   // #63 Gemma2 sandwich norm: out = residual_1 + post_feedforward_layernorm(ffn_out).
-  // Normalize dn_fp16 in place. Gated; Qwen3 adds the raw ffn_out.
-  if (cfg_.is_gemma2) {
-    auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
-                                   "rmsnorm_cl_fp16_coop");
+  // #83: fuse the post-FFN rmsnorm with the end-of-layer residual add into one
+  // cooperative per-row pass (default ON; NNTR_FUSE_POSTNORM=0 for the 2-pass
+  // A/B). Qwen3 (non-gemma2) keeps the raw-ffn_out add path.
+  static const bool fuse_postnorm = []() {
+    const char *e = std::getenv("NNTR_FUSE_POSTNORM");
+    return !e || std::atoi(e) != 0;
+  }();
+  if (cfg_.is_gemma2 && fuse_postnorm) {
+    auto kp = cl->registerClKernel(kPostRmsnormAddH2fKernel,
+                                   "post_rmsnorm_add_h2f");
     uint16_t eps_h = f2h(cfg_.rms_norm_eps);
-    int n_rows = (int)M_pad, W = (int)K_h;
-    kp->SetKernelArguments(0, &scratch_.dn_fp16, sizeof(cl_mem));
-    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem)); // in place
-    kp->SetKernelSVMArguments(2, lw.post_ffn_norm_gamma_svm_fp16);
-    kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
-    kp->SetKernelArguments(4, &n_rows, sizeof(int));
-    kp->SetKernelArguments(5, &W, sizeof(int));
-    constexpr size_t RMSN_LWS = 64;
-    std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
-    std::array<size_t, 1> lws = {RMSN_LWS};
-    cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
-                                          lws.data(), 0, nullptr, nullptr);
-    clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
-  }
-  // #47j: end-of-layer boundary. residual_1 (FP32) + dn_fp16 → out_fp32.
-  {
-    auto kp =
-      cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
-    int n = (int)(M * K_h);
-    kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem)); // fp32
-    kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));    // fp16
+    int n_rows = (int)M, W = (int)K_h;
+    kp->SetKernelArguments(0, &scratch_.dn_fp16, sizeof(cl_mem));    // raw ffn_out
+    kp->SetKernelArguments(1, &scratch_.residual_1, sizeof(cl_mem)); // fp32
     kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
-    kp->SetKernelArguments(3, &n, sizeof(int));
-    std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
-    std::array<size_t, 1> lws = {64};
+    kp->SetKernelSVMArguments(3, lw.post_ffn_norm_gamma_svm_fp16);
+    kp->SetKernelArguments(4, &eps_h, sizeof(uint16_t));
+    kp->SetKernelArguments(5, &n_rows, sizeof(int));
+    kp->SetKernelArguments(6, &W, sizeof(int));
+    constexpr size_t PLWS = 64;
+    std::array<size_t, 1> gws = {PLWS * (size_t)M};
+    std::array<size_t, 1> lws = {PLWS};
     cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
                                           lws.data(), 0, nullptr, nullptr);
+  } else {
+    if (cfg_.is_gemma2) {
+      auto kp = cl->registerClKernel(nntrainer::rmsnorm_fp16_kernel,
+                                     "rmsnorm_cl_fp16_coop");
+      uint16_t eps_h = f2h(cfg_.rms_norm_eps);
+      int n_rows = (int)M_pad, W = (int)K_h;
+      kp->SetKernelArguments(0, &scratch_.dn_fp16, sizeof(cl_mem));
+      kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem)); // in place
+      kp->SetKernelSVMArguments(2, lw.post_ffn_norm_gamma_svm_fp16);
+      kp->SetKernelArguments(3, &eps_h, sizeof(uint16_t));
+      kp->SetKernelArguments(4, &n_rows, sizeof(int));
+      kp->SetKernelArguments(5, &W, sizeof(int));
+      constexpr size_t RMSN_LWS = 64;
+      std::array<size_t, 1> gws = {RMSN_LWS * (size_t)n_rows};
+      std::array<size_t, 1> lws = {RMSN_LWS};
+      cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                            lws.data(), 0, nullptr, nullptr);
+      clEnqueueBarrierWithWaitList(cl_q_, 0, nullptr, nullptr);
+    }
+    // #47j: end-of-layer boundary. residual_1 (FP32) + dn_fp16 → out_fp32.
+    {
+      auto kp =
+        cl->registerClKernel(kFusedAddH2fFp32Kernel, "fused_add_h2f_fp32");
+      int n = (int)(M * K_h);
+      kp->SetKernelArguments(0, &scratch_.residual_1, sizeof(cl_mem)); // fp32
+      kp->SetKernelArguments(1, &scratch_.dn_fp16, sizeof(cl_mem));    // fp16
+      kp->SetKernelArguments(2, &out_fp32, sizeof(cl_mem));
+      kp->SetKernelArguments(3, &n, sizeof(int));
+      std::array<size_t, 1> gws = {(((size_t)M * K_h) + 63) / 64 * 64};
+      std::array<size_t, 1> lws = {64};
+      cl->command_queue_inst_.enqueueKernel(kp->GetKernel(), 1, gws.data(),
+                                            lws.data(), 0, nullptr, nullptr);
+    }
   }
   stage_end_add(timings_.ffn_post_ms);  // (h5) post_ffn norm + residual add
   timings_.ffn_ms = timings_.ffn_norm_ms + timings_.ffn_gateup_ms +
