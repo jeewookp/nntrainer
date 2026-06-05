@@ -1,16 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 11, done.
-remote: Counting objects: 100% (11/11), done.
+remote: Enumerating objects: 23, done.
+remote: Counting objects: 100% (23/23), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 1.53 KiB | 313.00 KiB/s, done.
+remote: Total 12 (delta 10), reused 12 (delta 10), pack-reused 0 (from 0)
+Unpacking objects: 100% (12/12), 2.80 KiB | 89.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   9f3947dfb..2849c6892  jijoong    -> origin/jijoong
-Updating 9f3947dfb..2849c6892
+   b866c20a5..949c19372  jijoong    -> origin/jijoong
+Updating b866c20a5..949c19372
 Fast-forward
- Applications/CausalLM/gpu_native/main.cpp | 24 ++++++++++++++++++++++++
- 1 file changed, 24 insertions(+)
+ Applications/CausalLM/gpu_native/main.cpp       | 37 +++++++++++++++++++++++++++++++++++++
+ execute.sh                                      | 11 +++++++++++
+ nntrainer/tensor/cl_operations/blas_kernels.cpp | 31 +++++++++++++++++++++++--------
+ nntrainer/tensor/cl_operations/blas_kernels.h   |  5 +++++
+ 4 files changed, 76 insertions(+), 8 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -48,37 +51,19 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
 
 ========================================
- cl_qcom_ml_ops entrypoint probe (Phase-0 gate #1) 
+ v8c GEMM prefetch A/B (in-process, M=1024) 
 ========================================
-[mlops] probing cl_qcom_ml_ops entrypoints (platform=0xde763ed3):
-[mlops]   clQueryMLInterfaceVersionsQCOM         : null
-[mlops]   clGetMLInterfaceV1QCOM                 : null
-[mlops]   clGetMLInterfaceV2QCOM                 : null
-[mlops]   clGetMLInterfaceV3QCOM                 : null
-[mlops]   clGetMLInterfaceV4QCOM                 : null
-[mlops]   clGetMLInterfaceV5QCOM                 : null
-[mlops]   clGetMLInterfaceV6QCOM                 : null
-[mlops]   clCreateMLTensorQCOM                   : null
-[mlops]   clCreateMLOpQCOM                       : null
-[mlops]   clEnqueueMLOpQCOM                      : null
-[mlops]   clReleaseMLTensorQCOM                  : null
-[mlops]   clReleaseMLOpQCOM                      : null
-[mlops]   clCreateMLTensorMemoryQCOM             : null
-[mlops]   clGetMLTensorMemoryRequirementsQCOM    : null
-[mlops] via-loader: 0/14 entrypoints resolved
-[mlops] vendor /vendor/lib64/libOpenCL.so: getPlatformIDs=0x72fccea2e4 getExt=0x72fccea5e8
-[mlops]   vendor clQueryMLInterfaceVersionsQCOM : RESOLVED
-[mlops] via-vendor(/vendor/lib64/libOpenCL.so): 1/14 entrypoints resolved
-[mlops] clQueryMLInterfaceVersionsQCOM count: rc=0 nv=0
-[mlops] => ml_ops CALLABLE — proceed to single-GEMM spike
+[main] === in-process prefetch A/B (M=1024) ===
+[pf-ab] prefetch=1-ahead : chain=1464.9 ms => 699.0 TPS
+[pf-ab] prefetch=2-ahead : chain=1462.9 ms => 700.0 TPS
 
 [INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
 
 [main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 726.8 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.10 ms  chain=2865.7 ms (110.22 ms/layer)  out_norm=3.52 ms  lm_head=263.4 ms  TOTAL=3132.8 ms  (=> 0.32 TPS effective)  -> token 185
-[run 1] embed=0.12 ms  chain=114.2 ms (4.39 ms/layer)  out_norm=3.56 ms  lm_head=12.5 ms  TOTAL=130.4 ms  (=> 7.67 TPS effective)  -> token 185
-[run 2] embed=0.35 ms  chain=127.1 ms (4.89 ms/layer)  out_norm=3.81 ms  lm_head=12.4 ms  TOTAL=143.7 ms  (=> 6.96 TPS effective)  -> token 185
+[main] all 26 layers loaded in 703.2 ms; final offset=1428 MB (file=1428 MB)
+[run 0] embed=0.10 ms  chain=2952.6 ms (113.56 ms/layer)  out_norm=3.61 ms  lm_head=401.4 ms  TOTAL=3357.7 ms  (=> 0.30 TPS effective)  -> token 185
+[run 1] embed=0.14 ms  chain=118.4 ms (4.55 ms/layer)  out_norm=3.91 ms  lm_head=13.8 ms  TOTAL=136.3 ms  (=> 7.34 TPS effective)  -> token 185
+[run 2] embed=0.32 ms  chain=122.8 ms (4.72 ms/layer)  out_norm=3.46 ms  lm_head=12.9 ms  TOTAL=139.6 ms  (=> 7.17 TPS effective)  -> token 185
 
 [main] decode (M=1) summary:
   predicted token over 3 runs: 185 (deterministic=1)
@@ -88,94 +73,94 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
   NOTE: per-token RoPE not yet implemented (task #45b);
   output token id is not meaningful for M>1 but per-op
   timing is.
-[prefill M=   2] chain=  144.7 ms  72.340 ms/token  =>    13.8 TPS  (L0=26.6 ms, L27=5.0 ms)
-[prefill M=   8] chain= 1130.6 ms  141.330 ms/token  =>     7.1 TPS  (L0=1000.7 ms, L27=5.9 ms)
-[prefill M=  64] chain=  137.4 ms  2.147 ms/token  =>   465.7 TPS  (L0=3.0 ms, L27=5.3 ms)
-[prefill M= 256] chain=  424.8 ms  1.659 ms/token  =>   602.7 TPS  (L0=18.0 ms, L27=16.5 ms)
+[prefill M=   2] chain=   94.7 ms  47.355 ms/token  =>    21.1 TPS  (L0=5.2 ms, L27=3.7 ms)
+[prefill M=   8] chain=  697.8 ms  87.221 ms/token  =>    11.5 TPS  (L0=571.3 ms, L27=5.4 ms)
+[prefill M=  64] chain=  137.3 ms  2.145 ms/token  =>   466.3 TPS  (L0=4.9 ms, L27=5.6 ms)
+[prefill M= 256] chain=  424.7 ms  1.659 ms/token  =>   602.8 TPS  (L0=19.4 ms, L27=16.3 ms)
   [stage timings, M=256, 26 layer-calls totaling 424 ms]:
-    (a) pad+attn_norm     13.7 ms ( 3.2%)
-    (b) qkv quant+img     10.9 ms ( 2.6%)
-    (c) Q/K/V GEMM        39.7 ms ( 9.4%)
-    (d) qk_norm[+RoPE]    12.5 ms ( 2.9%)
+    (a) pad+attn_norm     11.3 ms ( 2.7%)
+    (b) qkv quant+img     10.4 ms ( 2.5%)
+    (c) Q/K/V GEMM        41.0 ms ( 9.7%)
+    (d) qk_norm[+RoPE]    14.0 ms ( 3.3%)
     (e) KV write SVM       9.0 ms ( 2.1%)
-    (f) attention         35.0 ms ( 8.3%)
-    (g) wo + resid_1      49.9 ms (11.8%)
-    (h) ffn block        253.2 ms (59.7%)
-        (h1) ffn norm+quant    13.8 ms ( 3.3%)
-        (h2) gate+up GEMM     129.8 ms (30.6%)
-        (h3) cvt+glu+quant     26.5 ms ( 6.3%)
-        (h4) ffn_down GEMM     67.6 ms (16.0%)
-        (h5) post_norm+add     15.4 ms ( 3.6%)
-  [host-timing M=256, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=2.46 ms  => host_total=2.46 ms (0.6% of chain=424.8 ms)
-[attn-prof] M=512 N_kv=512  qk=0.97  softmax=0.35  sv=0.85 ms  (sum=2.17)
-[attn-prof] M=512 N_kv=512  qk=1.21  softmax=0.75  sv=0.98 ms  (sum=2.94)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.47  sv=1.00 ms  (sum=2.50)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.47  sv=1.00 ms  (sum=2.49)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.46  sv=1.01 ms  (sum=2.50)
-[attn-prof] M=512 N_kv=512  qk=1.02  softmax=0.46  sv=1.08 ms  (sum=2.56)
-[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.73  sv=1.07 ms  (sum=2.97)
-[attn-prof] M=512 N_kv=512  qk=1.10  softmax=0.47  sv=1.05 ms  (sum=2.62)
-[attn-prof] M=512 N_kv=512  qk=1.10  softmax=0.47  sv=1.08 ms  (sum=2.65)
-[attn-prof] M=512 N_kv=512  qk=1.34  softmax=0.50  sv=0.99 ms  (sum=2.83)
-[attn-prof] M=512 N_kv=512  qk=1.02  softmax=0.50  sv=0.98 ms  (sum=2.51)
-[attn-prof] M=512 N_kv=512  qk=1.02  softmax=0.56  sv=1.28 ms  (sum=2.87)
-[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.46  sv=1.00 ms  (sum=2.53)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.01 ms  (sum=2.53)
-[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.46  sv=1.01 ms  (sum=2.54)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=0.99 ms  (sum=2.51)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.46  sv=1.00 ms  (sum=2.49)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.46  sv=1.00 ms  (sum=2.49)
-[attn-prof] M=512 N_kv=512  qk=1.12  softmax=0.44  sv=0.98 ms  (sum=2.54)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.01 ms  (sum=2.53)
-[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.47  sv=0.97 ms  (sum=2.51)
-[attn-prof] M=512 N_kv=512  qk=1.03  softmax=0.43  sv=0.98 ms  (sum=2.44)
-[attn-prof] M=512 N_kv=512  qk=1.02  softmax=0.43  sv=0.98 ms  (sum=2.44)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.53)
-[attn-prof] M=512 N_kv=512  qk=1.02  softmax=0.46  sv=1.00 ms  (sum=2.49)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.53)
-[prefill M= 512] chain=  614.5 ms  1.200 ms/token  =>   833.2 TPS  (L0=10.5 ms, L27=23.7 ms)
-[attn-prof] M=1024 N_kv=1024  qk=2.82  softmax=0.93  sv=2.73 ms  (sum=6.48)
-[attn-prof] M=1024 N_kv=1024  qk=3.14  softmax=1.84  sv=5.53 ms  (sum=10.52)
-[attn-prof] M=1024 N_kv=1024  qk=3.37  softmax=1.45  sv=3.46 ms  (sum=8.27)
-[attn-prof] M=1024 N_kv=1024  qk=5.87  softmax=4.56  sv=3.42 ms  (sum=13.85)
-[attn-prof] M=1024 N_kv=1024  qk=2.88  softmax=0.97  sv=2.71 ms  (sum=6.56)
-[attn-prof] M=1024 N_kv=1024  qk=2.77  softmax=0.97  sv=3.29 ms  (sum=7.03)
-[attn-prof] M=1024 N_kv=1024  qk=5.51  softmax=1.60  sv=3.57 ms  (sum=10.68)
-[attn-prof] M=1024 N_kv=1024  qk=2.77  softmax=0.97  sv=2.88 ms  (sum=6.62)
-[attn-prof] M=1024 N_kv=1024  qk=3.60  softmax=1.41  sv=3.33 ms  (sum=8.34)
-[attn-prof] M=1024 N_kv=1024  qk=3.47  softmax=1.29  sv=3.50 ms  (sum=8.26)
-[attn-prof] M=1024 N_kv=1024  qk=3.37  softmax=1.44  sv=3.04 ms  (sum=7.85)
-[attn-prof] M=1024 N_kv=1024  qk=5.96  softmax=1.29  sv=3.12 ms  (sum=10.37)
-[attn-prof] M=1024 N_kv=1024  qk=2.88  softmax=1.27  sv=2.75 ms  (sum=6.90)
-[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.96  sv=2.76 ms  (sum=6.52)
-[attn-prof] M=1024 N_kv=1024  qk=3.48  softmax=1.41  sv=3.25 ms  (sum=8.14)
-[attn-prof] M=1024 N_kv=1024  qk=3.16  softmax=0.95  sv=2.87 ms  (sum=6.99)
-[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.97  sv=2.74 ms  (sum=6.52)
-[attn-prof] M=1024 N_kv=1024  qk=3.43  softmax=1.56  sv=3.08 ms  (sum=8.06)
-[attn-prof] M=1024 N_kv=1024  qk=2.71  softmax=0.83  sv=2.62 ms  (sum=6.17)
-[attn-prof] M=1024 N_kv=1024  qk=2.68  softmax=0.83  sv=2.58 ms  (sum=6.09)
-[attn-prof] M=1024 N_kv=1024  qk=2.94  softmax=1.36  sv=2.73 ms  (sum=7.03)
-[attn-prof] M=1024 N_kv=1024  qk=3.73  softmax=1.51  sv=3.04 ms  (sum=8.27)
-[attn-prof] M=1024 N_kv=1024  qk=2.78  softmax=1.01  sv=2.75 ms  (sum=6.54)
-[attn-prof] M=1024 N_kv=1024  qk=2.84  softmax=0.97  sv=3.26 ms  (sum=7.06)
-[attn-prof] M=1024 N_kv=1024  qk=3.15  softmax=0.95  sv=2.75 ms  (sum=6.85)
-[attn-prof] M=1024 N_kv=1024  qk=3.46  softmax=1.41  sv=3.52 ms  (sum=8.39)
-[prefill M=1024] chain= 1608.0 ms  1.570 ms/token  =>   636.8 TPS  (L0=71.4 ms, L27=61.8 ms)
-  [stage timings, M=1024, 26 layer-calls totaling 1606 ms]:
-    (a) pad+attn_norm     36.7 ms ( 2.3%)
-    (b) qkv quant+img     22.1 ms ( 1.4%)
-    (c) Q/K/V GEMM       137.3 ms ( 8.5%)
-    (d) qk_norm[+RoPE]    23.8 ms ( 1.5%)
-    (e) KV write SVM      56.6 ms ( 3.5%)
-    (f) attention        247.3 ms (15.4%)
-    (g) wo + resid_1     107.9 ms ( 6.7%)
-    (h) ffn block        974.5 ms (60.7%)
-        (h1) ffn norm+quant    31.5 ms ( 2.0%)
-        (h2) gate+up GEMM     512.5 ms (31.9%)
-        (h3) cvt+glu+quant    106.7 ms ( 6.6%)
-        (h4) ffn_down GEMM    274.5 ms (17.1%)
-        (h5) post_norm+add     49.2 ms ( 3.1%)
-  [host-timing M=1024, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=1.54 ms  => host_total=1.54 ms (0.1% of chain=1608.0 ms)
+    (f) attention         35.6 ms ( 8.4%)
+    (g) wo + resid_1      49.1 ms (11.6%)
+    (h) ffn block        253.4 ms (59.8%)
+        (h1) ffn norm+quant    13.7 ms ( 3.2%)
+        (h2) gate+up GEMM     131.3 ms (31.0%)
+        (h3) cvt+glu+quant     26.1 ms ( 6.1%)
+        (h4) ffn_down GEMM     66.8 ms (15.8%)
+        (h5) post_norm+add     15.6 ms ( 3.7%)
+  [host-timing M=256, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=2.44 ms  => host_total=2.44 ms (0.6% of chain=424.7 ms)
+[attn-prof] M=512 N_kv=512  qk=1.00  softmax=0.35  sv=0.85 ms  (sum=2.21)
+[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.46  sv=0.97 ms  (sum=2.61)
+[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.47  sv=1.00 ms  (sum=2.54)
+[attn-prof] M=512 N_kv=512  qk=1.22  softmax=0.94  sv=1.13 ms  (sum=3.29)
+[attn-prof] M=512 N_kv=512  qk=1.09  softmax=0.47  sv=1.01 ms  (sum=2.57)
+[attn-prof] M=512 N_kv=512  qk=1.97  softmax=0.48  sv=1.01 ms  (sum=3.46)
+[attn-prof] M=512 N_kv=512  qk=1.05  softmax=0.53  sv=1.29 ms  (sum=2.87)
+[attn-prof] M=512 N_kv=512  qk=1.14  softmax=0.77  sv=1.01 ms  (sum=2.92)
+[attn-prof] M=512 N_kv=512  qk=1.24  softmax=0.77  sv=0.96 ms  (sum=2.97)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.05 ms  (sum=2.65)
+[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.82  sv=0.98 ms  (sum=2.97)
+[attn-prof] M=512 N_kv=512  qk=1.39  softmax=0.50  sv=0.97 ms  (sum=2.86)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.03 ms  (sum=2.56)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.50  sv=1.21 ms  (sum=2.78)
+[attn-prof] M=512 N_kv=512  qk=1.12  softmax=0.44  sv=1.06 ms  (sum=2.62)
+[attn-prof] M=512 N_kv=512  qk=1.46  softmax=0.79  sv=0.96 ms  (sum=3.21)
+[attn-prof] M=512 N_kv=512  qk=1.18  softmax=0.74  sv=1.01 ms  (sum=2.93)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.00 ms  (sum=2.60)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.46  sv=1.04 ms  (sum=2.63)
+[attn-prof] M=512 N_kv=512  qk=1.14  softmax=0.47  sv=1.05 ms  (sum=2.66)
+[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.79  sv=0.96 ms  (sum=2.92)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.01 ms  (sum=2.61)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.49  sv=1.00 ms  (sum=2.55)
+[attn-prof] M=512 N_kv=512  qk=1.21  softmax=0.44  sv=1.01 ms  (sum=2.65)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.00 ms  (sum=2.60)
+[attn-prof] M=512 N_kv=512  qk=1.21  softmax=0.76  sv=0.96 ms  (sum=2.93)
+[prefill M= 512] chain=  624.3 ms  1.219 ms/token  =>   820.1 TPS  (L0=10.9 ms, L27=24.2 ms)
+[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.91  sv=2.71 ms  (sum=6.46)
+[attn-prof] M=1024 N_kv=1024  qk=2.79  softmax=0.95  sv=2.75 ms  (sum=6.49)
+[attn-prof] M=1024 N_kv=1024  qk=3.40  softmax=1.43  sv=3.44 ms  (sum=8.27)
+[attn-prof] M=1024 N_kv=1024  qk=6.07  softmax=1.36  sv=2.79 ms  (sum=10.22)
+[attn-prof] M=1024 N_kv=1024  qk=3.19  softmax=0.96  sv=2.75 ms  (sum=6.90)
+[attn-prof] M=1024 N_kv=1024  qk=5.87  softmax=1.82  sv=3.35 ms  (sum=11.04)
+[attn-prof] M=1024 N_kv=1024  qk=3.59  softmax=1.71  sv=5.99 ms  (sum=11.30)
+[attn-prof] M=1024 N_kv=1024  qk=3.48  softmax=1.40  sv=3.45 ms  (sum=8.32)
+[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.99  sv=2.92 ms  (sum=6.74)
+[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.95  sv=2.82 ms  (sum=6.58)
+[attn-prof] M=1024 N_kv=1024  qk=3.19  softmax=0.93  sv=3.12 ms  (sum=7.24)
+[attn-prof] M=1024 N_kv=1024  qk=2.87  softmax=0.95  sv=2.75 ms  (sum=6.58)
+[attn-prof] M=1024 N_kv=1024  qk=5.81  softmax=3.77  sv=3.47 ms  (sum=13.05)
+[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=1.02  sv=2.79 ms  (sum=6.62)
+[attn-prof] M=1024 N_kv=1024  qk=2.80  softmax=0.93  sv=2.73 ms  (sum=6.45)
+[attn-prof] M=1024 N_kv=1024  qk=3.50  softmax=1.35  sv=3.02 ms  (sum=7.86)
+[attn-prof] M=1024 N_kv=1024  qk=5.94  softmax=1.61  sv=3.47 ms  (sum=11.02)
+[attn-prof] M=1024 N_kv=1024  qk=3.58  softmax=1.39  sv=3.49 ms  (sum=8.47)
+[attn-prof] M=1024 N_kv=1024  qk=2.79  softmax=0.99  sv=2.73 ms  (sum=6.52)
+[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.95  sv=6.04 ms  (sum=9.80)
+[attn-prof] M=1024 N_kv=1024  qk=2.80  softmax=0.95  sv=3.16 ms  (sum=6.91)
+[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.94  sv=2.74 ms  (sum=6.52)
+[attn-prof] M=1024 N_kv=1024  qk=3.13  softmax=0.96  sv=3.17 ms  (sum=7.25)
+[attn-prof] M=1024 N_kv=1024  qk=3.40  softmax=1.42  sv=3.53 ms  (sum=8.36)
+[attn-prof] M=1024 N_kv=1024  qk=2.85  softmax=0.94  sv=3.05 ms  (sum=6.84)
+[attn-prof] M=1024 N_kv=1024  qk=3.61  softmax=1.49  sv=3.49 ms  (sum=8.59)
+[prefill M=1024] chain= 1644.9 ms  1.606 ms/token  =>   622.5 TPS  (L0=73.0 ms, L27=64.5 ms)
+  [stage timings, M=1024, 26 layer-calls totaling 1643 ms]:
+    (a) pad+attn_norm     38.4 ms ( 2.3%)
+    (b) qkv quant+img     24.7 ms ( 1.5%)
+    (c) Q/K/V GEMM       135.5 ms ( 8.2%)
+    (d) qk_norm[+RoPE]    23.9 ms ( 1.5%)
+    (e) KV write SVM      52.2 ms ( 3.2%)
+    (f) attention        253.6 ms (15.4%)
+    (g) wo + resid_1     115.9 ms ( 7.1%)
+    (h) ffn block        999.0 ms (60.8%)
+        (h1) ffn norm+quant    31.8 ms ( 1.9%)
+        (h2) gate+up GEMM     514.8 ms (31.3%)
+        (h3) cvt+glu+quant     97.5 ms ( 5.9%)
+        (h4) ffn_down GEMM    302.4 ms (18.4%)
+        (h5) post_norm+add     52.4 ms ( 3.2%)
+  [host-timing M=1024, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=1.50 ms  => host_total=1.50 ms (0.1% of chain=1644.9 ms)
 
 [main] === prefill correctness: greedy generation from BOS ===
   [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
