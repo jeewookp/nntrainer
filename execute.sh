@@ -604,7 +604,7 @@ if [ "$LDS_DIAG" = "1" ]; then
     "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
       NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
       NNTR_V8C_LDS=1 NNTR_V8C_LDS_CFG=16,4,4,8,1 NNTR_V8C_LDS_DIAG=$1 \
-      ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=1024' | tr -d '\r'
+      ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=1024 chain' | tr -d '\r'
   }
   log_info "  full (load+compute) : $(diag_tps none)"
   log_info "  nocompute (load only): $(diag_tps nocompute)"
