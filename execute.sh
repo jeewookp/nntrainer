@@ -343,13 +343,14 @@ SV_TM2="${NNTR_SV_TM2:-1}"
 # oracle (per-position RoPE is unimplemented, #45b, so it produces garbage
 # past the first token); the meaningful invariant is the M=1 first-token
 # prediction (185) which every config preserves.
-# DEFAULT OFF: although bit-identical for M<=21 (gen_only bisect), enabling
-# them changes the full-mode M=1024 prefill output so the run no longer matches
-# the golden -> reverted to the golden-matching vanilla path until the fusions
-# are proven bit-identical at M=1024 too. Re-enable per-flag for A/B.
-FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-0}"
-FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-0}"
-FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-0}"
+# #82/#83/#80 DEFAULT ON: the bit-identity probe proved they produce a
+# byte-identical 26-layer forward output at M=256/512/1024 (and the bisect at
+# M<=21), so they are bit-identical at every prefill size -> safe. (The earlier
+# full-mode golden "break" was non-deterministic generation noise, not these
+# fusions.) #80b DIFFERS in the probe -> kept OFF.
+FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-1}"
+FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-1}"
+FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-1}"
 FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
@@ -528,9 +529,12 @@ if [ "$FUSION_PROBE" = "1" ]; then
       NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=0 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
       $1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=' | tr -d '\r' | sort
   }
-  BASE_H="$(probe_hashes "")"
-  probe_cmp() {  # $1 = label, $2 = fusion env
-    local h; h="$(probe_hashes "$2")"
+  # Explicit all-off baseline (code defaults are now ON, so an empty env is NOT
+  # a vanilla baseline). Each test then flips exactly one fusion on.
+  OFF="NNTR_FFN_GLUQUANT_FUSE=0 NNTR_FUSE_POSTNORM=0 NNTR_FUSE_NORMQUANT=0 NNTR_FUSE_ADDNORM=0"
+  BASE_H="$(probe_hashes "$OFF")"
+  probe_cmp() {  # $1 = label, $2 = the one flag to flip on (rest stay off)
+    local h; h="$(probe_hashes "$OFF $2")"
     if [ -z "$h" ]; then
       log_error  "  $1 : no probe output (run failed)"
     elif [ "$h" = "$BASE_H" ]; then
@@ -548,6 +552,7 @@ if [ "$FUSION_PROBE" = "1" ]; then
     probe_cmp "#83 post-norm+add     " "NNTR_FUSE_POSTNORM=1"
     probe_cmp "#80 attn norm+quant   " "NNTR_FUSE_NORMQUANT=1"
     probe_cmp "#80b FFN add+norm+q   " "NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+    probe_cmp "#82+#83+#80 (default) " "NNTR_FFN_GLUQUANT_FUSE=1 NNTR_FUSE_POSTNORM=1 NNTR_FUSE_NORMQUANT=1"
   fi
   echo ""
 fi
