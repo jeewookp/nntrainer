@@ -1,18 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 17, done.
-remote: Counting objects: 100% (17/17), done.
+remote: Enumerating objects: 25, done.
+remote: Counting objects: 100% (25/25), done.
 remote: Compressing objects: 100% (1/1), done.
-remote: Total 9 (delta 8), reused 9 (delta 8), pack-reused 0 (from 0)
-Unpacking objects: 100% (9/9), 2.33 KiB | 199.00 KiB/s, done.
+remote: Total 13 (delta 12), reused 13 (delta 12), pack-reused 0 (from 0)
+Unpacking objects: 100% (13/13), 3.64 KiB | 338.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   37e46bcaa..05dddeeb1  jijoong    -> origin/jijoong
-Updating 37e46bcaa..05dddeeb1
+   34ae9e729..57da56faf  jijoong    -> origin/jijoong
+Updating 34ae9e729..57da56faf
 Fast-forward
- execute.sh                                                      |  5 +++--
- nntrainer/tensor/cl_operations/blas_kernels.cpp                 | 18 ++++++++++--------
- nntrainer/tensor/cl_operations/cl_kernels/int8_int4_gemm_v8c.cl | 71 ++++++++++++++++++++++++++++++++++++++++++++---------------------------
- 3 files changed, 57 insertions(+), 37 deletions(-)
+ Applications/CausalLM/gpu_native/qwen3_forward.cpp              | 19 ++++++++++++++++---
+ execute.sh                                                      | 34 ++++++++++++++++++++++++++++++++++
+ nntrainer/tensor/cl_operations/blas_kernels.cpp                 | 28 ++++++++++++++++++++++++++++
+ nntrainer/tensor/cl_operations/cl_kernels/int8_int4_gemm_v8c.cl | 30 +++++++++++++++++++++---------
+ 4 files changed, 99 insertions(+), 12 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -30,76 +31,44 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 [Step 1] Build nntrainer for Android (arm64-v8a, OpenCL enabled)
 [INFO] Removing existing builddir...
 [INFO] Building nntrainer (log -> /home/jwhero94/projects/nntrainer_jijoong/.execute_build.log)
-[SUCCESS] nntrainer libraries ready
-
-[Step 2] Build nntrainer_qwen3_gpu (ndk-build)
-[INFO] Building nntrainer_qwen3_gpu (log -> /home/jwhero94/projects/nntrainer_jijoong/.execute_build.log)
-[SUCCESS] nntrainer_qwen3_gpu built
-
-[Step 3] Push to device
-[INFO] pushed nntrainer_qwen3_gpu
-[INFO] pushed libnntrainer.so
-[INFO] pushed libccapi-nntrainer.so
-[INFO] pushed libOpenCL.so
-[INFO] pushed libc++_shared.so
-[INFO] weight already on device (nntr_gemma2_2b_qint4.bin, 1498357100 bytes) — skipping push
-[SUCCESS] Device ready
-
-========================================
- Run Gemma2-2B (GPU-native, Adreno) 
-========================================
-
-========================================
- Phase 3b — LDS-blocked GEMM block-size sweep (M=1024) 
-========================================
-[INFO]   register-tiled        : [probe] M=1024 chain=1444.8 ms => 708.7 TPS
-[SUCCESS]   LDS cfg=16,4,4,8,1 (bit-ident): [probe] M=1024 chain=10377.0 ms => 98.7 TPS
-[SUCCESS]   LDS cfg=16,4,4,8,4 (bit-ident): [probe] M=1024 chain=10569.1 ms => 96.9 TPS
-[SUCCESS]   LDS cfg=16,4,4,8,8 (bit-ident): [probe] M=1024 chain=18509.4 ms => 55.3 TPS
-[SUCCESS]   LDS cfg=8,8,4,8,8 (bit-ident): [probe] M=1024 chain=11718.9 ms => 87.4 TPS
-[SUCCESS]   LDS cfg=16,8,4,8,8 (bit-ident): [probe] M=1024 chain=11474.1 ms => 89.2 TPS
-[SUCCESS]   LDS cfg=16,16,4,4,8 (bit-ident): [probe] M=1024 chain=10658.3 ms => 96.1 TPS
-
-[INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
-
-[main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 699.6 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.10 ms  chain=3123.9 ms (120.15 ms/layer)  out_norm=3.45 ms  lm_head=258.0 ms  TOTAL=3385.4 ms  (=> 0.30 TPS effective)  -> token 185
-[run 1] embed=0.18 ms  chain=112.6 ms (4.33 ms/layer)  out_norm=3.66 ms  lm_head=13.0 ms  TOTAL=129.5 ms  (=> 7.72 TPS effective)  -> token 185
-[run 2] embed=0.30 ms  chain=121.6 ms (4.68 ms/layer)  out_norm=3.36 ms  lm_head=12.7 ms  TOTAL=138.0 ms  (=> 7.25 TPS effective)  -> token 185
-
-[main] decode (M=1) summary:
-  predicted token over 3 runs: 185 (deterministic=1)
-  baseline reference: CausalLM ~6.7 decode TPS (== ~150 ms/decode token) on the same SD8 Elite.
-
-[main] === Phase A #2: prefill timing (M>1) ===
-  NOTE: per-token RoPE not yet implemented (task #45b);
-  output token id is not meaningful for M>1 but per-op
-  timing is.
-[prefill M=   2] chain=  126.0 ms  62.988 ms/token  =>    15.9 TPS  (L0=22.5 ms, L27=5.0 ms)
-[prefill M=   8] chain= 1172.5 ms  146.558 ms/token  =>     6.8 TPS  (L0=1045.8 ms, L27=6.0 ms)
-[prefill M=  64] chain=  137.6 ms  2.149 ms/token  =>   465.2 TPS  (L0=2.9 ms, L27=5.5 ms)
-[prefill M= 256] chain=  323.6 ms  1.264 ms/token  =>   791.0 TPS  (L0=5.3 ms, L27=12.8 ms)
-[prefill M= 512] chain=  611.8 ms  1.195 ms/token  =>   836.9 TPS  (L0=11.7 ms, L27=28.7 ms)
-[prefill M=1024] chain= 1327.6 ms  1.296 ms/token  =>   771.3 TPS  (L0=26.7 ms, L27=52.5 ms)
-
-[main] === prefill correctness: greedy generation from BOS ===
-  [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
-  [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
-  generated 21 token ids (greedy, no NaN=1):
-    2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
-[gen-tokens] nonan=1 2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
-
-[main] step #45 OK — multi-token prefill chain runs.
-
-
-========================================
- Token correctness check 
-========================================
-[SUCCESS] PASS — full token sequence matches the golden reference.
-[INFO]   2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
-
-[SUCCESS] Done. Re-run on device any time with:
-[INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
-jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
-
+[ERROR] nntrainer build failed — tail of /home/jwhero94/projects/nntrainer_jijoong/.execute_build.log:
+make: *** [/home/jwhero94/neo/android-ndk-r26d/build/core/build-binary.mk:415: obj/local/arm64-v8a/objs/nntrainer//home/jwhero94/projects/nntrainer_jijoong/nntrainer/tensor/cl_operations/blas_kernels.o] Error 1
+make: *** Waiting for unfinished jobs....
+[arm64-v8a] Compile++      : nntrainer <= ggml_interface_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_buffer_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_context_manager.cpp
+[arm64-v8a] Compile++      : nntrainer <= graph_core.cpp
+[arm64-v8a] Compile++      : nntrainer <= base_properties.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_device_info.cpp
+[arm64-v8a] Compile++      : nntrainer <= profiler.cpp
+[arm64-v8a] Compile++      : nntrainer <= node_exporter.cpp
+[arm64-v8a] Compile++      : nntrainer <= opencl_command_queue_manager.cpp
+/home/jwhero94/projects/nntrainer_jijoong/nntrainer/opencl/opencl_command_queue_manager.cpp:89:25: warning: data argument not used by format string [-Wformat-extra-args]
+            error_code, OpenCLErrorCodeToString(error_code));
+                        ^
+/home/jwhero94/projects/nntrainer_jijoong/nntrainer/nntrainer_log.h:50:52: note: expanded from macro 'ml_loge'
+  __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, __VA_ARGS__)
+                                                   ^~~~~~~~~~~
+1 warning generated.
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels_fp16.cpp
+[arm64-v8a] Compile++      : clblast <= tuning_api.cpp
+[arm64-v8a] Compile++      : nntrainer <= nntr_threads.cpp
+[arm64-v8a] Compile++      : nntrainer <= connection.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernel_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= cl_compute_ops.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernels_fp16.cpp
+[arm64-v8a] Compile++      : nntrainer <= clblast_interface.cpp
+[arm64-v8a] Compile++      : nntrainer <= util_func.cpp
+[arm64-v8a] Compile++      : nntrainer <= attention_kernels.cpp
+[arm64-v8a] Compile++      : nntrainer <= ini_wrapper.cpp
+[arm64-v8a] Compile++      : nntrainer <= blas_kernel_interface.cpp
+/home/jwhero94/projects/nntrainer_jijoong/nntrainer/tensor/cl_operations/blas_kernel_interface.cpp:1377:7: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+      input.height(),
+      ^~~~~~~~~~~~~~
+/home/jwhero94/projects/nntrainer_jijoong/nntrainer/tensor/cl_operations/blas_kernel_interface.cpp:1378:7: warning: format specifies type 'unsigned int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+      (input.getFormat() == Tformat::NHWC) ? input.channel() : input.width(),
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+[arm64-v8a] Compile++      : nntrainer <= network_graph.cpp
+[arm64-v8a] Compile++      : nntrainer <= neuralnet.cpp
+ninja: build stopped: subcommand failed.
