@@ -505,6 +505,49 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
   echo ""
 fi
 
+# ---------------------------------------------------------------------------
+# Fusion correctness bisect (default ON). For each fusion (and the all-off
+# baseline) run the FAST generation-only path (NNTR_GEN_ONLY=1 skips the decode
+# + prefill-timing benchmarks) and diff the 21 greedy tokens against the golden,
+# printing PASS/FAIL per fusion — so a plain `sh execute.sh` pinpoints which
+# optimization preserves the output and which breaks multi-token generation.
+# Needs a golden (MAKE_GOLDEN=1 sh execute.sh once). Set FUSION_BISECT=0 to skip.
+# ---------------------------------------------------------------------------
+FUSION_BISECT="${FUSION_BISECT:-1}"
+if [ "$FUSION_BISECT" = "1" ] && [ -f "$GOLDEN_FILE" ]; then
+  log_header "Fusion correctness bisect (gen-only, vs golden)"
+  G_TOK="$(cat "$GOLDEN_FILE")"
+  bisect_run() {  # $1 = label, $2 = fusion env assignments
+    local log="$NNTRAINER_ROOT/.execute_bisect.log"
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_GEN_ONLY=1 \
+      $2 ./$TARGET '$DEV_WEIGHT'" > "$log" 2>&1
+    local tok nonan
+    tok="$(extract_tokens "$log")"
+    nonan="$(extract_nonan "$log")"
+    if [ -z "$tok" ]; then
+      log_error  "  $1 : no tokens (run failed)"
+    elif [ "$nonan" != "1" ]; then
+      log_error  "  $1 : FAIL (NaN in generation)"
+    elif [ "$tok" = "$G_TOK" ]; then
+      log_success "  $1 : PASS"
+    else
+      log_error  "  $1 : FAIL  -> $tok"
+    fi
+  }
+  bisect_run "baseline (all fusions OFF)         " ""
+  bisect_run "#82 geglu+quant                    " "NNTR_FFN_GLUQUANT_FUSE=1"
+  bisect_run "#83 post-norm+add                  " "NNTR_FUSE_POSTNORM=1"
+  bisect_run "#80 attn norm+quant                " "NNTR_FUSE_NORMQUANT=1"
+  bisect_run "#80b FFN add+norm+quant            " "NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+  bisect_run "ALL fusions ON                     " "NNTR_FFN_GLUQUANT_FUSE=1 NNTR_FUSE_POSTNORM=1 NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+  log_info "golden: $G_TOK"
+  echo ""
+elif [ "$FUSION_BISECT" = "1" ]; then
+  log_warning "Fusion bisect skipped: no golden yet. Run: MAKE_GOLDEN=1 sh execute.sh"
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight

@@ -441,12 +441,20 @@ int main(int argc, char **argv) {
   cl_command_queue q = cl->command_queue_inst_.GetCommandQueue();
   const unsigned int H = cfg.hidden_size;
 
+  // NNTR_GEN_ONLY: skip the decode + prefill-timing benchmarks and jump
+  // straight to the greedy generation (correctness). Keeps each invocation
+  // fast so execute.sh can bisect fusions against the golden in one run.
+  const bool gen_only = []() {
+    const char *e = std::getenv("NNTR_GEN_ONLY");
+    return e && std::atoi(e) != 0;
+  }();
+
   // Step 9: run 3 iterations to measure timing breakdown + verify
   // determinism (same predicted token every run).
   constexpr int NUM_RUNS = 3;
   int prev_token = -1;
   bool deterministic = true;
-  for (int run = 0; run < NUM_RUNS; ++run) {
+  for (int run = 0; run < NUM_RUNS && !gen_only; ++run) {
     auto t_embed_start = NOW();
     cl_mem cur = fwd.embedding_lookup_to_fp32_clmem(BOS_TOKEN);
     if (cur == nullptr) {
@@ -522,12 +530,13 @@ int main(int argc, char **argv) {
     prev_token = next_token;
   }
 
-  std::fprintf(stderr,
-               "\n[main] decode (M=1) summary:\n"
-               "  predicted token over %d runs: %d (deterministic=%d)\n"
-               "  baseline reference: CausalLM ~6.7 decode TPS "
-               "(== ~150 ms/decode token) on the same SD8 Elite.\n",
-               NUM_RUNS, prev_token, deterministic ? 1 : 0);
+  if (!gen_only)
+    std::fprintf(stderr,
+                 "\n[main] decode (M=1) summary:\n"
+                 "  predicted token over %d runs: %d (deterministic=%d)\n"
+                 "  baseline reference: CausalLM ~6.7 decode TPS "
+                 "(== ~150 ms/decode token) on the same SD8 Elite.\n",
+                 NUM_RUNS, prev_token, deterministic ? 1 : 0);
 
   // ===== Phase A #2: multi-token prefill timing (task #45) =====
   // Measure 28-layer chain at various M values. Initial input is the
@@ -786,6 +795,7 @@ int main(int argc, char **argv) {
   }
 
   for (int M_test : PREFILL_MS) {
+    if (gen_only) break;  // skip prefill-timing benchmarks in generation-only mode
     clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0,
                          (size_t)M_test * H * sizeof(float),
                          rep_input.data(), 0, nullptr, nullptr);
