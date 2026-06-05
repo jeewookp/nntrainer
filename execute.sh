@@ -343,14 +343,15 @@ SV_TM2="${NNTR_SV_TM2:-1}"
 # oracle (per-position RoPE is unimplemented, #45b, so it produces garbage
 # past the first token); the meaningful invariant is the M=1 first-token
 # prediction (185) which every config preserves.
-# #82/#83/#80 DEFAULT ON: the bit-identity probe proved they produce a
-# byte-identical 26-layer forward output at M=256/512/1024 (and the bisect at
-# M<=21), so they are bit-identical at every prefill size -> safe. (The earlier
-# full-mode golden "break" was non-deterministic generation noise, not these
-# fusions.) #80b DIFFERS in the probe -> kept OFF.
-FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-1}"
-FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-1}"
-FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-1}"
+# ALL DEFAULT OFF. Although the bit-identity probe shows #82/#83/#80 produce a
+# byte-identical forward OUTPUT, they write DIFFERENT scratch buffers, and the
+# full-mode greedy generation (which runs after the prefill benchmarks and reads
+# leftover scratch via M_pad padding) then diverges from the golden. So they are
+# kept off until the generation harness is made scratch-state-independent
+# (Phase 1b). Flip one on for an A/B; the run will show PARTIAL vs golden.
+FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-0}"
+FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-0}"
+FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-0}"
 FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
