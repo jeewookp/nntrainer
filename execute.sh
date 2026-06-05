@@ -354,6 +354,18 @@ cd $INSTALL_DIR
 EOF
 "$ADB" shell "chmod 755 $INSTALL_DIR/run_gemma2_gpu.sh"
 
+# GEMM compute attribution: clean M=1024 full vs no-dp4a forward. Tells us if
+# prefill is GEMM-compute-bound (then a faster GEMM helps) or not. Runs FIRST
+# (before the slower LWS/PF/TILE sweeps) so a plain `sh execute.sh` always
+# surfaces [gemm-attrib] up front. Default ON; GEMM_ATTRIB=0 to skip.
+GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
+if [ "$GEMM_ATTRIB" = "1" ]; then
+  log_header "GEMM compute attribution (in-process, M=1024)"
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+    | grep -E "\[gemm-attrib\]|compute attribution"
+  echo ""
+fi
+
 # Roofline ceiling: measure THIS device's int8-dp4a / fp16 compute peak
 # (NNTR_PEAK_BENCH runs a register-only microbench, then exits). Off by
 # default (it adds a full model-load run); enable with PEAK=1.
@@ -434,15 +446,6 @@ if [ "$TILE_AB" = "1" ]; then
   echo ""
 fi
 
-# GEMM compute attribution: clean M=1024 full vs no-dp4a forward. Tells us if
-# prefill is GEMM-compute-bound (then a faster GEMM helps) or not. Default ON.
-GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
-if [ "$GEMM_ATTRIB" = "1" ]; then
-  log_header "GEMM compute attribution (in-process, M=1024)"
-  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
-    | grep -E "\[gemm-attrib\]|compute attribution"
-  echo ""
-fi
 
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
