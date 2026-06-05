@@ -315,7 +315,7 @@ GPU_LMHEAD="${NNTR_GPU_LMHEAD:-1}"
 # per-stage clFinish adds overhead that slightly inflates the profiled
 # M=256/M=1024 wall, but the (a)-(h) attribution is what we want.
 # Override with NNTR_STAGE_PROFILE=0 sh execute.sh for clean wall timing.
-STAGE_PROFILE="${NNTR_STAGE_PROFILE:-1}"
+STAGE_PROFILE="${NNTR_STAGE_PROFILE:-0}"
 HOST_TIMING="${NNTR_HOST_TIMING:-1}"
 # Attention sub-kernel profiler (qk / softmax / sv split, M>=512). Default ON.
 ATTN_PROFILE="${NNTR_ATTN_PROFILE:-1}"
@@ -415,7 +415,7 @@ fi
 # v8c GEMM weight-prefetch A/B (1-ahead vs 2-ahead), in-process, single model
 # load. Default ON so a plain `sh execute.sh` shows whether the deeper prefetch
 # helps the latency-bound K-loop on this chip. Set PF_AB=0 to skip.
-PF_AB="${PF_AB:-1}"
+PF_AB="${PF_AB:-0}"
 if [ "$PF_AB" = "1" ]; then
   log_header "v8c GEMM prefetch A/B (in-process, M=1024)"
   "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_PF_AB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
