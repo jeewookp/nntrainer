@@ -34,6 +34,11 @@ void set_v8c_lws_override(int lx, int ly);
 /// without reloading; the matching compiled kernel is registered on demand.
 void set_v8c_prefetch_override(int mode);
 
+/// Override the v8c GEMM register tile (TM x TN) at runtime for the M>4 path
+/// (0,0 = default 4x8). e.g. 8x4 doubles weight reuse (halves weight bandwidth)
+/// at the cost of activation bandwidth. Requires M_pad % TM == 0.
+void set_v8c_tile_override(int tm, int tn);
+
 /**
  * @brief     signed 4-bit integer gemv async computation : C = A*B
  * @param[in] weight std::vector<void *> for int4 quantized weight

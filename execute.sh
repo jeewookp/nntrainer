@@ -423,6 +423,17 @@ if [ "$PF_AB" = "1" ]; then
   echo ""
 fi
 
+# v8c GEMM register-tile A/B (4x8 default vs 8x4 = 2x weight reuse, + others).
+# In-process, single model load. Default ON — this directly tests whether a
+# higher-weight-reuse tile speeds up the (weight-bandwidth-bound) forward GEMM.
+TILE_AB="${TILE_AB:-1}"
+if [ "$TILE_AB" = "1" ]; then
+  log_header "v8c GEMM register-tile A/B (in-process, M=1024)"
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_TILE_AB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+    | grep -E '\[tile-ab\]|tile A/B'
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight

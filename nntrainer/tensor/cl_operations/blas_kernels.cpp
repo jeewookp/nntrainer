@@ -1389,6 +1389,21 @@ void set_v8c_lws_override(int lx, int ly) {
 // switching this re-registers the matching compiled kernel without reloading.
 static int g_v8c_prefetch_override = -1;
 void set_v8c_prefetch_override(int mode) { g_v8c_prefetch_override = mode; }
+
+// Runtime register-tile override (TM x TN) for the M>4 v8c GEMM, for the
+// in-process A/B (e.g. 4x8 default vs 8x4 = 2x weight reuse). {0,0} = default
+// 4,8. Both the copts (-DV8C_TM/-DV8C_TN) and the wrapper gws read this, so a
+// matching kernel is compiled and dispatched. Requires M_pad % TM == 0.
+static std::array<int, 2> g_v8c_tile_override = {0, 0};
+void set_v8c_tile_override(int tm, int tn) {
+  g_v8c_tile_override = {tm > 0 ? tm : 0, tn > 0 ? tn : 0};
+}
+static std::string g_v8c_tile_copt() {
+  if (g_v8c_tile_override[0] > 0 && g_v8c_tile_override[1] > 0)
+    return " -DV8C_TM=" + std::to_string(g_v8c_tile_override[0]) +
+           " -DV8C_TN=" + std::to_string(g_v8c_tile_override[1]);
+  return "";
+}
 static std::string g_v8c_prefetch_copt() {
   int m = g_v8c_prefetch_override;
   if (m < 0) { // use env (default path)
@@ -1521,6 +1536,7 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   }();
   copts += v8c_env_copts;
   copts += g_v8c_prefetch_copt(); // runtime-switchable prefetch depth (A/B)
+  copts += g_v8c_tile_copt();     // runtime-switchable TMxTN register tile (A/B)
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)
@@ -1585,7 +1601,12 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     blas_cc->command_queue_inst_.enqueueKernel(
       kp->GetKernel(), 1, gws.data(), nullptr, 0, nullptr, nullptr);
   } else {
-    constexpr size_t TM = 4, TN = 8;
+    // Tile defaults 4x8; the runtime override (set_v8c_tile_override) must
+    // match the -DV8C_TM/-DV8C_TN copts appended above so kernel + grid agree.
+    const size_t TM = g_v8c_tile_override[0] > 0 ? (size_t)g_v8c_tile_override[0]
+                                                 : 4;
+    const size_t TN = g_v8c_tile_override[1] > 0 ? (size_t)g_v8c_tile_override[1]
+                                                 : 8;
     // NNTR_V8C_MFAST: swap so M/TM is the fast-varying (dim0) axis; the kernel
     // (-DV8C_MFAST) reads m0 from gid0, n0 from gid1 to match. Weight-reuse
     // dispatch order. Default keeps {N/TN, M/TM}.
