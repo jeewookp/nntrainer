@@ -1,19 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 23, done.
-remote: Counting objects: 100% (23/23), done.
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (14/14), done.
 remote: Compressing objects: 100% (2/2), done.
-remote: Total 12 (delta 10), reused 12 (delta 10), pack-reused 0 (from 0)
-Unpacking objects: 100% (12/12), 2.80 KiB | 89.00 KiB/s, done.
+remote: Total 15 (delta 12), reused 14 (delta 12), pack-reused 1 (from 1)
+Unpacking objects: 100% (15/15), 3.66 KiB | 107.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   b866c20a5..949c19372  jijoong    -> origin/jijoong
-Updating b866c20a5..949c19372
+   0fbab5ef4..f6faa7fe2  jijoong    -> origin/jijoong
+Updating 0fbab5ef4..f6faa7fe2
 Fast-forward
- Applications/CausalLM/gpu_native/main.cpp       | 37 +++++++++++++++++++++++++++++++++++++
- execute.sh                                      | 11 +++++++++++
- nntrainer/tensor/cl_operations/blas_kernels.cpp | 31 +++++++++++++++++++++++--------
+ Applications/CausalLM/gpu_native/main.cpp       | 38 ++++++++++++++++++++++++++++++++++++++
+ execute.sh                                      | 15 +++++++++++++--
+ nntrainer/tensor/cl_operations/blas_kernels.cpp | 23 ++++++++++++++++++++++-
  nntrainer/tensor/cl_operations/blas_kernels.h   |  5 +++++
- 4 files changed, 76 insertions(+), 8 deletions(-)
+ 4 files changed, 78 insertions(+), 3 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -51,126 +51,13 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
 
 ========================================
- v8c GEMM prefetch A/B (in-process, M=1024) 
+ v8c GEMM register-tile A/B (in-process, M=1024) 
 ========================================
-[main] === in-process prefetch A/B (M=1024) ===
-[pf-ab] prefetch=1-ahead : chain=1464.9 ms => 699.0 TPS
-[pf-ab] prefetch=2-ahead : chain=1462.9 ms => 700.0 TPS
-
-[INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
-
-[main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 703.2 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.10 ms  chain=2952.6 ms (113.56 ms/layer)  out_norm=3.61 ms  lm_head=401.4 ms  TOTAL=3357.7 ms  (=> 0.30 TPS effective)  -> token 185
-[run 1] embed=0.14 ms  chain=118.4 ms (4.55 ms/layer)  out_norm=3.91 ms  lm_head=13.8 ms  TOTAL=136.3 ms  (=> 7.34 TPS effective)  -> token 185
-[run 2] embed=0.32 ms  chain=122.8 ms (4.72 ms/layer)  out_norm=3.46 ms  lm_head=12.9 ms  TOTAL=139.6 ms  (=> 7.17 TPS effective)  -> token 185
-
-[main] decode (M=1) summary:
-  predicted token over 3 runs: 185 (deterministic=1)
-  baseline reference: CausalLM ~6.7 decode TPS (== ~150 ms/decode token) on the same SD8 Elite.
-
-[main] === Phase A #2: prefill timing (M>1) ===
-  NOTE: per-token RoPE not yet implemented (task #45b);
-  output token id is not meaningful for M>1 but per-op
-  timing is.
-[prefill M=   2] chain=   94.7 ms  47.355 ms/token  =>    21.1 TPS  (L0=5.2 ms, L27=3.7 ms)
-[prefill M=   8] chain=  697.8 ms  87.221 ms/token  =>    11.5 TPS  (L0=571.3 ms, L27=5.4 ms)
-[prefill M=  64] chain=  137.3 ms  2.145 ms/token  =>   466.3 TPS  (L0=4.9 ms, L27=5.6 ms)
-[prefill M= 256] chain=  424.7 ms  1.659 ms/token  =>   602.8 TPS  (L0=19.4 ms, L27=16.3 ms)
-  [stage timings, M=256, 26 layer-calls totaling 424 ms]:
-    (a) pad+attn_norm     11.3 ms ( 2.7%)
-    (b) qkv quant+img     10.4 ms ( 2.5%)
-    (c) Q/K/V GEMM        41.0 ms ( 9.7%)
-    (d) qk_norm[+RoPE]    14.0 ms ( 3.3%)
-    (e) KV write SVM       9.0 ms ( 2.1%)
-    (f) attention         35.6 ms ( 8.4%)
-    (g) wo + resid_1      49.1 ms (11.6%)
-    (h) ffn block        253.4 ms (59.8%)
-        (h1) ffn norm+quant    13.7 ms ( 3.2%)
-        (h2) gate+up GEMM     131.3 ms (31.0%)
-        (h3) cvt+glu+quant     26.1 ms ( 6.1%)
-        (h4) ffn_down GEMM     66.8 ms (15.8%)
-        (h5) post_norm+add     15.6 ms ( 3.7%)
-  [host-timing M=256, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=2.44 ms  => host_total=2.44 ms (0.6% of chain=424.7 ms)
-[attn-prof] M=512 N_kv=512  qk=1.00  softmax=0.35  sv=0.85 ms  (sum=2.21)
-[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.46  sv=0.97 ms  (sum=2.61)
-[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.47  sv=1.00 ms  (sum=2.54)
-[attn-prof] M=512 N_kv=512  qk=1.22  softmax=0.94  sv=1.13 ms  (sum=3.29)
-[attn-prof] M=512 N_kv=512  qk=1.09  softmax=0.47  sv=1.01 ms  (sum=2.57)
-[attn-prof] M=512 N_kv=512  qk=1.97  softmax=0.48  sv=1.01 ms  (sum=3.46)
-[attn-prof] M=512 N_kv=512  qk=1.05  softmax=0.53  sv=1.29 ms  (sum=2.87)
-[attn-prof] M=512 N_kv=512  qk=1.14  softmax=0.77  sv=1.01 ms  (sum=2.92)
-[attn-prof] M=512 N_kv=512  qk=1.24  softmax=0.77  sv=0.96 ms  (sum=2.97)
-[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.05 ms  (sum=2.65)
-[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.82  sv=0.98 ms  (sum=2.97)
-[attn-prof] M=512 N_kv=512  qk=1.39  softmax=0.50  sv=0.97 ms  (sum=2.86)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.03 ms  (sum=2.56)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.50  sv=1.21 ms  (sum=2.78)
-[attn-prof] M=512 N_kv=512  qk=1.12  softmax=0.44  sv=1.06 ms  (sum=2.62)
-[attn-prof] M=512 N_kv=512  qk=1.46  softmax=0.79  sv=0.96 ms  (sum=3.21)
-[attn-prof] M=512 N_kv=512  qk=1.18  softmax=0.74  sv=1.01 ms  (sum=2.93)
-[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.00 ms  (sum=2.60)
-[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.46  sv=1.04 ms  (sum=2.63)
-[attn-prof] M=512 N_kv=512  qk=1.14  softmax=0.47  sv=1.05 ms  (sum=2.66)
-[attn-prof] M=512 N_kv=512  qk=1.17  softmax=0.79  sv=0.96 ms  (sum=2.92)
-[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.01 ms  (sum=2.61)
-[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.49  sv=1.00 ms  (sum=2.55)
-[attn-prof] M=512 N_kv=512  qk=1.21  softmax=0.44  sv=1.01 ms  (sum=2.65)
-[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.47  sv=1.00 ms  (sum=2.60)
-[attn-prof] M=512 N_kv=512  qk=1.21  softmax=0.76  sv=0.96 ms  (sum=2.93)
-[prefill M= 512] chain=  624.3 ms  1.219 ms/token  =>   820.1 TPS  (L0=10.9 ms, L27=24.2 ms)
-[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.91  sv=2.71 ms  (sum=6.46)
-[attn-prof] M=1024 N_kv=1024  qk=2.79  softmax=0.95  sv=2.75 ms  (sum=6.49)
-[attn-prof] M=1024 N_kv=1024  qk=3.40  softmax=1.43  sv=3.44 ms  (sum=8.27)
-[attn-prof] M=1024 N_kv=1024  qk=6.07  softmax=1.36  sv=2.79 ms  (sum=10.22)
-[attn-prof] M=1024 N_kv=1024  qk=3.19  softmax=0.96  sv=2.75 ms  (sum=6.90)
-[attn-prof] M=1024 N_kv=1024  qk=5.87  softmax=1.82  sv=3.35 ms  (sum=11.04)
-[attn-prof] M=1024 N_kv=1024  qk=3.59  softmax=1.71  sv=5.99 ms  (sum=11.30)
-[attn-prof] M=1024 N_kv=1024  qk=3.48  softmax=1.40  sv=3.45 ms  (sum=8.32)
-[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.99  sv=2.92 ms  (sum=6.74)
-[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.95  sv=2.82 ms  (sum=6.58)
-[attn-prof] M=1024 N_kv=1024  qk=3.19  softmax=0.93  sv=3.12 ms  (sum=7.24)
-[attn-prof] M=1024 N_kv=1024  qk=2.87  softmax=0.95  sv=2.75 ms  (sum=6.58)
-[attn-prof] M=1024 N_kv=1024  qk=5.81  softmax=3.77  sv=3.47 ms  (sum=13.05)
-[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=1.02  sv=2.79 ms  (sum=6.62)
-[attn-prof] M=1024 N_kv=1024  qk=2.80  softmax=0.93  sv=2.73 ms  (sum=6.45)
-[attn-prof] M=1024 N_kv=1024  qk=3.50  softmax=1.35  sv=3.02 ms  (sum=7.86)
-[attn-prof] M=1024 N_kv=1024  qk=5.94  softmax=1.61  sv=3.47 ms  (sum=11.02)
-[attn-prof] M=1024 N_kv=1024  qk=3.58  softmax=1.39  sv=3.49 ms  (sum=8.47)
-[attn-prof] M=1024 N_kv=1024  qk=2.79  softmax=0.99  sv=2.73 ms  (sum=6.52)
-[attn-prof] M=1024 N_kv=1024  qk=2.81  softmax=0.95  sv=6.04 ms  (sum=9.80)
-[attn-prof] M=1024 N_kv=1024  qk=2.80  softmax=0.95  sv=3.16 ms  (sum=6.91)
-[attn-prof] M=1024 N_kv=1024  qk=2.83  softmax=0.94  sv=2.74 ms  (sum=6.52)
-[attn-prof] M=1024 N_kv=1024  qk=3.13  softmax=0.96  sv=3.17 ms  (sum=7.25)
-[attn-prof] M=1024 N_kv=1024  qk=3.40  softmax=1.42  sv=3.53 ms  (sum=8.36)
-[attn-prof] M=1024 N_kv=1024  qk=2.85  softmax=0.94  sv=3.05 ms  (sum=6.84)
-[attn-prof] M=1024 N_kv=1024  qk=3.61  softmax=1.49  sv=3.49 ms  (sum=8.59)
-[prefill M=1024] chain= 1644.9 ms  1.606 ms/token  =>   622.5 TPS  (L0=73.0 ms, L27=64.5 ms)
-  [stage timings, M=1024, 26 layer-calls totaling 1643 ms]:
-    (a) pad+attn_norm     38.4 ms ( 2.3%)
-    (b) qkv quant+img     24.7 ms ( 1.5%)
-    (c) Q/K/V GEMM       135.5 ms ( 8.2%)
-    (d) qk_norm[+RoPE]    23.9 ms ( 1.5%)
-    (e) KV write SVM      52.2 ms ( 3.2%)
-    (f) attention        253.6 ms (15.4%)
-    (g) wo + resid_1     115.9 ms ( 7.1%)
-    (h) ffn block        999.0 ms (60.8%)
-        (h1) ffn norm+quant    31.8 ms ( 1.9%)
-        (h2) gate+up GEMM     514.8 ms (31.3%)
-        (h3) cvt+glu+quant     97.5 ms ( 5.9%)
-        (h4) ffn_down GEMM    302.4 ms (18.4%)
-        (h5) post_norm+add     52.4 ms ( 3.2%)
-  [host-timing M=1024, 26 layer-calls]: kv_bridge=0.00 ms  q_bridge=0.00 ms  copy_svm=1.50 ms  => host_total=1.50 ms (0.1% of chain=1644.9 ms)
-
-[main] === prefill correctness: greedy generation from BOS ===
-  [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
-  [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
-  generated 21 token ids (greedy, no NaN=1):
-    2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
-
-[main] step #45 OK — multi-token prefill chain runs.
-
-[SUCCESS] Done. Re-run on device any time with:
-[INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
+[main] === in-process tile A/B (M=1024) ===
+[tile-ab] TMxTN=4x8 : chain=1405.1 ms => 728.8 TPS
+[tile-ab] TMxTN=8x4 : chain=1560.5 ms => 656.2 TPS
+[tile-ab] TMxTN=2x16 : chain=1879.8 ms => 544.7 TPS
+[tile-ab] TMxTN=16x2 : chain=4129.0 ms => 248.0 TPS
+^C
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
 
