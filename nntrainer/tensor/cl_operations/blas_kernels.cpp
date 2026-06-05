@@ -1478,6 +1478,11 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     if (const char *pf = getenv("NNTR_V8C_PREFETCH"))
       if (pf[0] == '1')
         s += " -DV8C_PREFETCH";
+    // 2-ahead weight prefetch (deeper outstanding loads for the latency-bound
+    // K-loop). Takes precedence over 1-ahead in the kernel. Bit-identical.
+    if (const char *pf = getenv("NNTR_V8C_PREFETCH2"))
+      if (pf[0] == '1')
+        s += " -DV8C_PREFETCH2";
     if (const char *mf = getenv("NNTR_V8C_MFAST"))
       if (mf[0] == '1')
         s += " -DV8C_MFAST";

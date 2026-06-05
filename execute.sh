@@ -332,6 +332,7 @@ OHWI_IMG="${NNTR_OHWI_IMG:-1}"
 #   SV_TM2       : #72 M-tiled sv_matmul — 2 query rows/WI, halves V re-fetch
 # All default ON here; A/B any of them off (e.g. NNTR_V8C_MFAST=0 sh execute.sh).
 V8C_PREFETCH="${NNTR_V8C_PREFETCH:-1}"
+V8C_PREFETCH2="${NNTR_V8C_PREFETCH2:-0}"  # 2-ahead prefetch A/B (off by default)
 V8C_MFAST="${NNTR_V8C_MFAST:-1}"
 SV_TM2="${NNTR_SV_TM2:-1}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
@@ -345,6 +346,7 @@ export NNTR_HOST_TIMING=$HOST_TIMING
 export NNTR_ATTN_PROFILE=$ATTN_PROFILE
 export NNTR_OHWI_IMG=$OHWI_IMG
 export NNTR_V8C_PREFETCH=$V8C_PREFETCH
+export NNTR_V8C_PREFETCH2=$V8C_PREFETCH2
 export NNTR_V8C_MFAST=$V8C_MFAST
 export NNTR_SV_TM2=$SV_TM2
 cd $INSTALL_DIR

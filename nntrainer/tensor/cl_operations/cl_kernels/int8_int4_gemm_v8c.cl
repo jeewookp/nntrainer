@@ -368,7 +368,13 @@ __kernel void v8c_gemm_int8_int4(
       a_hi[i] = read_imageui(Ximg, SMP_v8c, (int2)(2*k32+1, m0 + i));
 #endif
     }
-#if defined(V8C_PREFETCH) && !defined(V8C_KCLOCK_NOWFETCH)
+#if defined(V8C_PREFETCH2) && !defined(V8C_KCLOCK_NOWFETCH)
+    // 2-ahead weight prefetch: keep TWO weight texel loads outstanding so more
+    // of the texture-fetch latency overlaps the dp4a (the loop is ~2/3 weight-
+    // fetch latency-bound). Bit-identical math; +1 uint4 live vs 1-ahead.
+    uint4 wpf0 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0));
+    uint4 wpf1 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + 1));
+#elif defined(V8C_PREFETCH) && !defined(V8C_KCLOCK_NOWFETCH)
     // 1-ahead weight prefetch: issue the NEXT column's texel load before
     // consuming the current one, so the texture-fetch latency overlaps the 8
     // dp4a. Bit-identical math (only reorders the loads). The in-kernel clock
@@ -384,6 +390,11 @@ __kernel void v8c_gemm_int8_int4(
       // kclock mode 3/5: suppress the weight fetch (synthetic runtime value)
       // to isolate the weight-fetch contribution.
       uint4 w = (uint4)((uint)(k32 * 13u + (uint)j + 1u));
+#elif defined(V8C_PREFETCH2)
+      uint4 w = wpf0;
+      wpf0 = wpf1;
+      if (j + 2 < V8C_TN)
+        wpf1 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j + 2));
 #elif defined(V8C_PREFETCH)
       uint4 w = wpf_carry;
       if (j + 1 < V8C_TN)
