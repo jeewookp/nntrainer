@@ -1,17 +1,18 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 13, done.
-remote: Counting objects: 100% (13/13), done.
-remote: Compressing objects: 100% (1/1), done.
-remote: Total 7 (delta 6), reused 7 (delta 6), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 2.10 KiB | 268.00 KiB/s, done.
+remote: Enumerating objects: 20, done.
+remote: Counting objects: 100% (20/20), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 12 (delta 10), reused 10 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (12/12), 4.88 KiB | 555.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   c4bf4a6f6..6244d69c3  jijoong    -> origin/jijoong
-Updating c4bf4a6f6..6244d69c3
+   d1a92df63..0a26810a6  jijoong    -> origin/jijoong
+Updating d1a92df63..0a26810a6
 Fast-forward
- Applications/CausalLM/gpu_native/main.cpp | 23 +++++++++++++++++++++++
- execute.sh                                | 32 ++++++++++++++++++++++++++++++++
- 2 files changed, 55 insertions(+)
+ execute.sh                                                      |  41 ++++++++++++++++++++++++++++++++++++++++-
+ nntrainer/tensor/cl_operations/blas_kernels.cpp                 |  25 ++++++++++++++++++++++---
+ nntrainer/tensor/cl_operations/cl_kernels/int8_int4_gemm_v8c.cl | 108 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 170 insertions(+), 4 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -49,19 +50,19 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
 
 ========================================
- Phase 3a — weight buffer vs image A/B (M=1024) 
+ Phase 3b — LDS-blocked GEMM A/B (M=1024) 
 ========================================
-[INFO]   image  (V8C_BUF=0): [probe] M=1024 chain=1409.1 ms => 726.7 TPS
-[INFO]   buffer (V8C_BUF=1): 
-[ERROR]   probe produced no hashes (a config may have failed to build/run).
+[INFO]   register-tiled (LDS=0): [probe] M=1024 chain=1471.1 ms => 696.1 TPS
+[INFO]   LDS-blocked    (LDS=1): [probe] M=1024 chain=10356.9 ms => 98.9 TPS
+[SUCCESS]   BIT-IDENTICAL (LDS == register) — correctness preserved; adopt if faster.
 
 [INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
 
 [main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
-[main] all 26 layers loaded in 700.9 ms; final offset=1428 MB (file=1428 MB)
-[run 0] embed=0.09 ms  chain=2954.7 ms (113.64 ms/layer)  out_norm=3.77 ms  lm_head=268.2 ms  TOTAL=3226.8 ms  (=> 0.31 TPS effective)  -> token 185
-[run 1] embed=0.20 ms  chain=118.6 ms (4.56 ms/layer)  out_norm=3.85 ms  lm_head=13.6 ms  TOTAL=136.2 ms  (=> 7.34 TPS effective)  -> token 185
-[run 2] embed=0.30 ms  chain=124.8 ms (4.80 ms/layer)  out_norm=3.86 ms  lm_head=13.0 ms  TOTAL=142.1 ms  (=> 7.04 TPS effective)  -> token 185
+[main] all 26 layers loaded in 697.3 ms; final offset=1428 MB (file=1428 MB)
+[run 0] embed=0.10 ms  chain=3010.3 ms (115.78 ms/layer)  out_norm=3.71 ms  lm_head=261.0 ms  TOTAL=3275.1 ms  (=> 0.31 TPS effective)  -> token 185
+[run 1] embed=0.40 ms  chain=118.0 ms (4.54 ms/layer)  out_norm=4.01 ms  lm_head=13.3 ms  TOTAL=135.7 ms  (=> 7.37 TPS effective)  -> token 185
+[run 2] embed=0.32 ms  chain=126.5 ms (4.86 ms/layer)  out_norm=3.83 ms  lm_head=15.9 ms  TOTAL=146.6 ms  (=> 6.82 TPS effective)  -> token 185
 
 [main] decode (M=1) summary:
   predicted token over 3 runs: 185 (deterministic=1)
@@ -71,12 +72,12 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
   NOTE: per-token RoPE not yet implemented (task #45b);
   output token id is not meaningful for M>1 but per-op
   timing is.
-[prefill M=   2] chain=  168.5 ms  84.267 ms/token  =>    11.9 TPS  (L0=40.1 ms, L27=5.0 ms)
-[prefill M=   8] chain= 1152.0 ms  143.997 ms/token  =>     6.9 TPS  (L0=1022.0 ms, L27=5.2 ms)
-[prefill M=  64] chain=  134.5 ms  2.101 ms/token  =>   476.0 TPS  (L0=3.0 ms, L27=5.5 ms)
-[prefill M= 256] chain=  321.3 ms  1.255 ms/token  =>   796.9 TPS  (L0=5.3 ms, L27=12.3 ms)
-[prefill M= 512] chain=  609.3 ms  1.190 ms/token  =>   840.3 TPS  (L0=11.6 ms, L27=23.7 ms)
-[prefill M=1024] chain= 1318.3 ms  1.287 ms/token  =>   776.8 TPS  (L0=25.2 ms, L27=52.0 ms)
+[prefill M=   2] chain=  157.7 ms  78.844 ms/token  =>    12.7 TPS  (L0=28.3 ms, L27=5.0 ms)
+[prefill M=   8] chain= 1207.2 ms  150.902 ms/token  =>     6.6 TPS  (L0=1078.2 ms, L27=5.0 ms)
+[prefill M=  64] chain=  135.2 ms  2.112 ms/token  =>   473.5 TPS  (L0=2.9 ms, L27=5.2 ms)
+[prefill M= 256] chain=  323.2 ms  1.262 ms/token  =>   792.1 TPS  (L0=5.6 ms, L27=12.8 ms)
+[prefill M= 512] chain=  604.2 ms  1.180 ms/token  =>   847.3 TPS  (L0=11.2 ms, L27=23.9 ms)
+[prefill M=1024] chain= 1304.4 ms  1.274 ms/token  =>   785.0 TPS  (L0=27.9 ms, L27=49.5 ms)
 
 [main] === prefill correctness: greedy generation from BOS ===
   [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
