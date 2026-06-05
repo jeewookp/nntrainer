@@ -733,6 +733,55 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[gemm-attrib]   floor (rest)     = %6.1f ms (%4.1f%%)\n",
                  walls[3], 100.0 * walls[3] / walls[0]);
     nntrainer::set_v8c_nocompute_override(0);
+
+    // One profiled pass (per-stage clFinish) to break the floor down into the
+    // actual ops, so we know WHICH non-GEMM kernels to fuse. Absolute ms here
+    // are inflated by the per-stage drain, but the relative split is clean.
+    fwd.timings_.reset();
+    fwd.profile_stages_ = true;
+    {
+      cl_mem a = pf_in, b = pf_out;
+      for (unsigned int L = 0; L < cfg.num_layers; ++L) {
+        if (!fwd.forward_one_layer_v2(L, a, b, 0, Ms)) break;
+        std::swap(a, b);
+      }
+      clFinish(q);
+    }
+    fwd.profile_stages_ = false;
+    const auto &tt = fwd.timings_;
+    const double psum = tt.pad_attn_norm_ms + tt.qkv_quant_image_ms +
+                        tt.qkv_gemm_ms + tt.qk_norm_rope_ms + tt.kv_write_ms +
+                        tt.attn_dispatch_ms + tt.wo_ms + tt.ffn_ms;
+    auto ppct = [&](double v) { return psum > 0 ? 100.0 * v / psum : 0.0; };
+    std::fprintf(stderr,
+                 "[gemm-attrib] --- per-stage (profiled, %d calls, %.0f ms) ---\n"
+                 "[gemm-attrib]   (a) pad+attn_norm   %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (b) qkv quant+img   %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (c) Q/K/V GEMM      %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (d) qk_norm[+RoPE]  %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (e) KV write SVM    %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (f) attention       %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (g) wo + resid_1    %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]   (h) ffn block       %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]       (h1) ffn norm+quant %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]       (h2) gate+up GEMM   %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]       (h3) cvt+glu+quant  %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]       (h4) ffn_down GEMM  %7.1f ms (%4.1f%%)\n"
+                 "[gemm-attrib]       (h5) post_norm+add  %7.1f ms (%4.1f%%)\n",
+                 tt.calls, psum,
+                 tt.pad_attn_norm_ms, ppct(tt.pad_attn_norm_ms),
+                 tt.qkv_quant_image_ms, ppct(tt.qkv_quant_image_ms),
+                 tt.qkv_gemm_ms, ppct(tt.qkv_gemm_ms),
+                 tt.qk_norm_rope_ms, ppct(tt.qk_norm_rope_ms),
+                 tt.kv_write_ms, ppct(tt.kv_write_ms),
+                 tt.attn_dispatch_ms, ppct(tt.attn_dispatch_ms),
+                 tt.wo_ms, ppct(tt.wo_ms),
+                 tt.ffn_ms, ppct(tt.ffn_ms),
+                 tt.ffn_norm_ms, ppct(tt.ffn_norm_ms),
+                 tt.ffn_gateup_ms, ppct(tt.ffn_gateup_ms),
+                 tt.ffn_swiglu_ms, ppct(tt.ffn_swiglu_ms),
+                 tt.ffn_down_ms, ppct(tt.ffn_down_ms),
+                 tt.ffn_post_ms, ppct(tt.ffn_post_ms));
     return 0;
   }
 
