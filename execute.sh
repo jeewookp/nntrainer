@@ -562,27 +562,28 @@ fi
 # ---------------------------------------------------------------------------
 LDS_AB="${LDS_AB:-1}"
 if [ "$LDS_AB" = "1" ]; then
-  log_header "Phase 3b — LDS-blocked GEMM A/B (M=1024)"
-  lds_probe() {  # $1 = NNTR_V8C_LDS value -> the [probe] lines
+  log_header "Phase 3b — LDS-blocked GEMM block-size sweep (M=1024)"
+  lds_probe() {  # $1 = extra env (LDS cfg) -> the [probe] lines
     "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
       NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
-      NNTR_V8C_LDS=$1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\]' | tr -d '\r'
+      $1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\]' | tr -d '\r'
   }
-  REG_OUT="$(lds_probe 0)"
-  LDS_OUT="$(lds_probe 1)"
+  REG_OUT="$(lds_probe "")"
   REG_H="$(echo "$REG_OUT" | grep fnv | sort)"
-  LDS_H="$(echo "$LDS_OUT" | grep fnv | sort)"
-  log_info "  register-tiled (LDS=0): $(echo "$REG_OUT" | grep TPS)"
-  log_info "  LDS-blocked    (LDS=1): $(echo "$LDS_OUT" | grep TPS)"
-  if [ -z "$REG_H" ] || [ -z "$LDS_H" ]; then
-    log_error "  probe produced no hashes (a config may have failed to build/run)."
-  elif [ "$REG_H" = "$LDS_H" ]; then
-    log_success "  BIT-IDENTICAL (LDS == register) — correctness preserved; adopt if faster."
-  else
-    log_error "  DIFFERS — LDS kernel is NOT bit-identical; bug to fix before adopting."
-    echo "$REG_H" | sed 's/^/      reg /'
-    echo "$LDS_H" | sed 's/^/      lds /'
-  fi
+  log_info "  register-tiled        : $(echo "$REG_OUT" | grep TPS)"
+  # cfg = LM,LN,TM,TN -> BM=LM*TM rows, BN=LN*TN cols, LWS=LM*LN.
+  for cfg in "16,4,4,8" "8,8,4,8" "8,8,4,4" "16,8,4,8" "16,16,4,4"; do
+    OUT="$(lds_probe "NNTR_V8C_LDS=1 NNTR_V8C_LDS_CFG=$cfg")"
+    H="$(echo "$OUT" | grep fnv | sort)"
+    TPS="$(echo "$OUT" | grep TPS)"
+    if [ -z "$TPS" ]; then
+      log_error  "  LDS cfg=$cfg : no output (failed)"
+    elif [ "$H" = "$REG_H" ]; then
+      log_success "  LDS cfg=$cfg (bit-ident): $TPS"
+    else
+      log_error  "  LDS cfg=$cfg : DIFFERS (bug)"
+    fi
+  done
   echo ""
 fi
 

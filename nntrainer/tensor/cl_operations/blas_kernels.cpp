@@ -1501,8 +1501,20 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     const char *e = getenv("NNTR_V8C_LDS");
     return e && e[0] == '1';
   }();
-  const bool use_lds =
-    v8c_lds && !use_buf && M > 4 && (M % 64 == 0) && (N % 64 == 0) && (K % 32 == 0);
+  // LDS block config (LM,LN,TM,TN) — sweepable via NNTR_V8C_LDS_CFG="16,16,4,4".
+  // BM=LM*TM rows, BN=LN*TN cols per workgroup; LWS=(LM,LN).
+  static const std::array<int, 4> lds_cfg = []() {
+    std::array<int, 4> c = {16, 16, 4, 4};
+    if (const char *e = getenv("NNTR_V8C_LDS_CFG"))
+      sscanf(e, "%d,%d,%d,%d", &c[0], &c[1], &c[2], &c[3]);
+    return c;
+  }();
+  const int LDS_LM = lds_cfg[0], LDS_LN = lds_cfg[1], LDS_TM = lds_cfg[2],
+            LDS_TN = lds_cfg[3];
+  const int LDS_BM = LDS_LM * LDS_TM, LDS_BN = LDS_LN * LDS_TN;
+  const bool use_lds = v8c_lds && !use_buf && M > 4 && LDS_BM > 0 &&
+                       LDS_BN > 0 && (M % LDS_BM == 0) && (N % LDS_BN == 0) &&
+                       (K % 32 == 0);
   const char *kname =
     use_lds ? "v8c_gemm_int8_int4_lds"
             : use_buf
@@ -1565,6 +1577,12 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   copts += g_v8c_prefetch_copt(); // runtime-switchable prefetch depth (A/B)
   copts += g_v8c_tile_copt();     // runtime-switchable TMxTN register tile (A/B)
   copts += g_v8c_nocompute_copt(); // runtime skip-dp4a for compute attribution
+  if (use_lds) {
+    copts += " -DV8C_LDS_LM=" + std::to_string(LDS_LM) +
+             " -DV8C_LDS_LN=" + std::to_string(LDS_LN) +
+             " -DV8C_LDS_TM=" + std::to_string(LDS_TM) +
+             " -DV8C_LDS_TN=" + std::to_string(LDS_TN);
+  }
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)
@@ -1623,11 +1641,10 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     blas_cc->command_queue_inst_.setNextProfileLabel(lbl);
   }
   if (use_lds) {
-    // LDS-blocked: gws = (M/TM_lds, N/TN_lds) with LWS = (LM, LN) = (16,16).
-    // Must match the V8C_LDS_* defines in the kernel (TM=TN=4, LM=LN=16).
-    constexpr size_t TM_LDS = 4, TN_LDS = 4, LM_LDS = 16, LN_LDS = 16;
-    std::array<size_t, 3> gws = {(size_t)M / TM_LDS, (size_t)N / TN_LDS, 1};
-    std::array<size_t, 3> lws = {LM_LDS, LN_LDS, 1};
+    // LDS-blocked: gws = (M/TM, N/TN), LWS = (LM, LN) — matches the -DV8C_LDS_*
+    // copts above and the kernel's reqd_work_group_size.
+    std::array<size_t, 3> gws = {(size_t)M / LDS_TM, (size_t)N / LDS_TN, 1};
+    std::array<size_t, 3> lws = {(size_t)LDS_LM, (size_t)LDS_LN, 1};
     blas_cc->command_queue_inst_.enqueueKernel(
       kp->GetKernel(), 2, gws.data(), lws.data(), 0, nullptr, nullptr);
   } else if (M <= 4) {
