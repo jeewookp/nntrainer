@@ -3760,7 +3760,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // Bit-identical to the split path. Default off for A/B.
   static const bool fuse_normquant = []() {
     const char *e = std::getenv("NNTR_FUSE_NORMQUANT");
-    return e && std::atoi(e) != 0;  // #80 default OFF: changes full-mode generation (scratch-state coupling)
+    return !e || std::atoi(e) != 0;  // #80 default ON: probe-proven bit-identical at prefill M (forward-hash gated)
   }();
   cl_mem act_image = scratch_.qkv_act_img; // increment 2: cached view (no create)
   if (fuse_normquant) {
@@ -4459,7 +4459,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // quantized M_pad rows over an only-M-row-initialized swiglu_out.
   static const bool fuse_gluquant = []() {
     const char *e = std::getenv("NNTR_FFN_GLUQUANT_FUSE");
-    return e && std::atoi(e) != 0;  // #82 default OFF: changes full-mode generation (scratch-state coupling)
+    return !e || std::atoi(e) != 0;  // #82 default ON: probe-proven bit-identical at prefill M (forward-hash gated)
   }();
   if (cfg_.is_gemma2 && fuse_gluquant) {
     auto kp = cl->registerClKernel(kGegluQuantF16InParKernel,
@@ -4537,7 +4537,7 @@ bool Qwen3Forward::forward_one_layer_v2(unsigned int layer_id,
   // A/B). Qwen3 (non-gemma2) keeps the raw-ffn_out add path.
   static const bool fuse_postnorm = []() {
     const char *e = std::getenv("NNTR_FUSE_POSTNORM");
-    return e && std::atoi(e) != 0;  // #83 default OFF: changes full-mode generation (scratch-state coupling)
+    return !e || std::atoi(e) != 0;  // #83 default ON: probe-proven bit-identical at prefill M (forward-hash gated)
   }();
   if (cfg_.is_gemma2 && fuse_postnorm) {
     auto kp = cl->registerClKernel(kPostRmsnormAddH2fKernel,

@@ -335,23 +335,16 @@ V8C_PREFETCH="${NNTR_V8C_PREFETCH:-1}"
 V8C_PREFETCH2="${NNTR_V8C_PREFETCH2:-0}"  # 2-ahead prefetch A/B (off by default)
 V8C_MFAST="${NNTR_V8C_MFAST:-1}"
 SV_TM2="${NNTR_SV_TM2:-1}"
-# FFN/attn fusions. The fusion bisect (vs a clean gen_only vanilla golden)
-# proved #82 geglu+quant, #83 post-norm+add and #80 attn-norm+quant are
-# BIT-IDENTICAL to the vanilla path -> safe, default ON. #80b (FFN
-# add+norm+quant) changed the (already-degenerate) multi-token output ->
-# kept OFF. NOTE: the greedy multi-token generation is not a correctness
-# oracle (per-position RoPE is unimplemented, #45b, so it produces garbage
-# past the first token); the meaningful invariant is the M=1 first-token
-# prediction (185) which every config preserves.
-# ALL DEFAULT OFF. Although the bit-identity probe shows #82/#83/#80 produce a
-# byte-identical forward OUTPUT, they write DIFFERENT scratch buffers, and the
-# full-mode greedy generation (which runs after the prefill benchmarks and reads
-# leftover scratch via M_pad padding) then diverges from the golden. So they are
-# kept off until the generation harness is made scratch-state-independent
-# (Phase 1b). Flip one on for an A/B; the run will show PARTIAL vs golden.
-FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-0}"
-FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-0}"
-FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-0}"
+# FFN/attn fusions. The bit-identity PROBE proved #82 geglu+quant, #83
+# post-norm+add and #80 attn-norm+quant produce a byte-identical 26-layer
+# forward output at the real prefill sizes (M=256/512/1024) -> they are correct
+# for prefill and are gated by the deterministic forward-hash golden below (NOT
+# the flawed greedy-generation oracle, which only diverges via leftover scratch
+# in the padded small-M steps). Default ON to cut the floor. #80b DIFFERS in the
+# probe -> kept OFF.
+FFN_GLUQUANT_FUSE="${NNTR_FFN_GLUQUANT_FUSE:-1}"
+FUSE_POSTNORM="${NNTR_FUSE_POSTNORM:-1}"
+FUSE_NORMQUANT="${NNTR_FUSE_NORMQUANT:-1}"
 FUSE_ADDNORM="${NNTR_FUSE_ADDNORM:-0}"
 "$ADB" shell "cat > $INSTALL_DIR/run_gemma2_gpu.sh" << EOF
 #!/system/bin/sh
@@ -491,6 +484,20 @@ extract_nonan() {   # $1 = raw run log -> prints 1 if generation had no NaN
     | sed -E 's/.*\[gen-tokens\] nonan=([01]).*/\1/'
 }
 
+# Deterministic forward-output hash gate — the REAL prefill correctness oracle
+# (the greedy generation is flawed: it reads leftover scratch in padded small-M
+# steps). The probe hashes the 26-layer forward output at M=256/512/1024; the
+# golden is the vanilla (all-fusions-off) hash set. A production run (fusions on)
+# must reproduce it bit-for-bit -> proves the fusions changed nothing in the
+# real prefill computation.
+GOLDEN_FWD_FILE="${GOLDEN_FWD_FILE:-$NNTRAINER_ROOT/Applications/CausalLM/gpu_native/golden_fwd_hash.txt}"
+fwd_hashes() {  # $1 = extra env -> sorted [probe] fnv lines
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+    NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+    $1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=[0-9]+ fnv' \
+    | tr -d '\r' | sort
+}
+
 if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
   log_header "Generate GOLDEN reference (production config, same as the normal run)"
   # Golden must come from the SAME config + mode as the normal run it will be
@@ -510,7 +517,32 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
     echo "$G_TOK" > "$GOLDEN_FILE"
     log_success "Saved golden reference ($(echo "$G_TOK" | wc -w) tokens) -> $GOLDEN_FILE"
     log_info "  $G_TOK"
-    log_info "  Commit it: git add $GOLDEN_FILE && git commit -m 'add golden tokens'"
+  fi
+  log_info "Saving forward-hash golden (vanilla: all fusions/LDS/WT OFF)..."
+  fwd_hashes "NNTR_FFN_GLUQUANT_FUSE=0 NNTR_FUSE_POSTNORM=0 NNTR_FUSE_NORMQUANT=0 \
+    NNTR_FUSE_ADDNORM=0 NNTR_V8C_LDS=0 NNTR_V8C_WT=0" > "$GOLDEN_FWD_FILE"
+  if [ -s "$GOLDEN_FWD_FILE" ]; then
+    log_success "Saved forward-hash golden -> $GOLDEN_FWD_FILE"
+    sed 's/^/  /' "$GOLDEN_FWD_FILE"
+  else
+    log_error "forward-hash golden capture failed (no probe output)."
+  fi
+  echo ""
+fi
+
+# Primary correctness gate: production forward (default fusions ON) must be
+# bit-identical to the vanilla forward-hash golden.
+if [ -f "$GOLDEN_FWD_FILE" ]; then
+  log_header "Forward-hash correctness gate (production vs vanilla golden)"
+  PROD_H="$(fwd_hashes "")"
+  if [ -z "$PROD_H" ]; then
+    log_error "FAIL — production probe produced no hashes."
+  elif [ "$PROD_H" = "$(sort "$GOLDEN_FWD_FILE")" ]; then
+    log_success "PASS — production forward is BIT-IDENTICAL to vanilla golden (M=256/512/1024)."
+  else
+    log_error "FAIL — production forward DIFFERS from vanilla golden!"
+    echo "$PROD_H" | sed 's/^/    prod   /'
+    sort "$GOLDEN_FWD_FILE" | sed 's/^/    golden /'
   fi
   echo ""
 fi
@@ -597,7 +629,7 @@ fi
 # LOAD is the killer (uncoalesced); if noload ~= full, the LDS compute (bank
 # conflicts) is. That tells us whether the LDS slowdown is fixable. LDS_DIAG=0
 # to skip.
-LDS_DIAG="${LDS_DIAG:-1}"
+LDS_DIAG="${LDS_DIAG:-0}"
 if [ "$LDS_DIAG" = "1" ]; then
   log_header "Phase 1 — LDS cost decomposition (cfg 16,4,4,8,1; M=1024)"
   diag_tps() {  # $1 = NNTR_V8C_LDS_DIAG value -> the M=1024 TPS line
