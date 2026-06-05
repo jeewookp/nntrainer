@@ -1,19 +1,19 @@
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ git pull origin jijoong 
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (14/14), done.
-remote: Compressing objects: 100% (2/2), done.
-remote: Total 15 (delta 12), reused 14 (delta 12), pack-reused 1 (from 1)
-Unpacking objects: 100% (15/15), 3.66 KiB | 107.00 KiB/s, done.
+remote: Enumerating objects: 30, done.
+remote: Counting objects: 100% (30/30), done.
+remote: Compressing objects: 100% (7/7), done.
+remote: Total 19 (delta 15), reused 16 (delta 12), pack-reused 0 (from 0)
+Unpacking objects: 100% (19/19), 3.73 KiB | 424.00 KiB/s, done.
 From https://github.com/jeewookp/nntrainer
  * branch                jijoong    -> FETCH_HEAD
-   0fbab5ef4..f6faa7fe2  jijoong    -> origin/jijoong
-Updating 0fbab5ef4..f6faa7fe2
+   94e762593..1b2cfe236  jijoong    -> origin/jijoong
+Updating 94e762593..1b2cfe236
 Fast-forward
- Applications/CausalLM/gpu_native/main.cpp       | 38 ++++++++++++++++++++++++++++++++++++++
- execute.sh                                      | 15 +++++++++++++--
- nntrainer/tensor/cl_operations/blas_kernels.cpp | 23 ++++++++++++++++++++++-
- nntrainer/tensor/cl_operations/blas_kernels.h   |  5 +++++
- 4 files changed, 78 insertions(+), 3 deletions(-)
+ Applications/CausalLM/gpu_native/main.cpp       | 35 ++++++++++++++++++++++++++++++++++-
+ execute.sh                                      | 12 +++++++++++-
+ nntrainer/tensor/cl_operations/blas_kernels.cpp | 10 ++++++++++
+ nntrainer/tensor/cl_operations/blas_kernels.h   |  4 ++++
+ 4 files changed, 59 insertions(+), 2 deletions(-)
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh 
 
 ========================================
@@ -51,13 +51,96 @@ jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ sh execute.sh
 ========================================
 
 ========================================
- v8c GEMM register-tile A/B (in-process, M=1024) 
+ GEMM compute attribution (in-process, M=1024) 
 ========================================
-[main] === in-process tile A/B (M=1024) ===
-[tile-ab] TMxTN=4x8 : chain=1405.1 ms => 728.8 TPS
-[tile-ab] TMxTN=8x4 : chain=1560.5 ms => 656.2 TPS
-[tile-ab] TMxTN=2x16 : chain=1879.8 ms => 544.7 TPS
-[tile-ab] TMxTN=16x2 : chain=4129.0 ms => 248.0 TPS
-^C
+[main] === GEMM compute attribution (M=1024) ===
+[gemm-attrib] full                   chain=1413.9 ms => 724.2 TPS
+[gemm-attrib] no-dp4a (fetch only)   chain=1292.9 ms => 792.0 TPS
+
+[INFO] Launching: NNTR_MODEL_GEMMA2=1 ./nntrainer_qwen3_gpu /data/local/tmp/nntrainer/causallm/models/gemma2-2b/nntr_gemma2_2b_qint4.bin
+
+[main] model=Gemma2-2B hidden=2304 L=26 hQ=8 hKV=4 hd=256 V=256000 gemma2=1
+[main] all 26 layers loaded in 696.1 ms; final offset=1428 MB (file=1428 MB)
+[run 0] embed=0.09 ms  chain=2926.8 ms (112.57 ms/layer)  out_norm=3.59 ms  lm_head=276.0 ms  TOTAL=3206.5 ms  (=> 0.31 TPS effective)  -> token 185
+[run 1] embed=0.25 ms  chain=117.6 ms (4.52 ms/layer)  out_norm=3.46 ms  lm_head=13.2 ms  TOTAL=134.6 ms  (=> 7.43 TPS effective)  -> token 185
+[run 2] embed=0.30 ms  chain=125.8 ms (4.84 ms/layer)  out_norm=3.82 ms  lm_head=13.1 ms  TOTAL=143.1 ms  (=> 6.99 TPS effective)  -> token 185
+
+[main] decode (M=1) summary:
+  predicted token over 3 runs: 185 (deterministic=1)
+  baseline reference: CausalLM ~6.7 decode TPS (== ~150 ms/decode token) on the same SD8 Elite.
+
+[main] === Phase A #2: prefill timing (M>1) ===
+  NOTE: per-token RoPE not yet implemented (task #45b);
+  output token id is not meaningful for M>1 but per-op
+  timing is.
+[prefill M=   2] chain=  118.9 ms  59.454 ms/token  =>    16.8 TPS  (L0=6.2 ms, L27=5.1 ms)
+[prefill M=   8] chain= 1150.1 ms  143.758 ms/token  =>     7.0 TPS  (L0=1018.9 ms, L27=5.1 ms)
+[prefill M=  64] chain=  135.8 ms  2.121 ms/token  =>   471.4 TPS  (L0=2.8 ms, L27=5.2 ms)
+[prefill M= 256] chain=  322.0 ms  1.258 ms/token  =>   795.1 TPS  (L0=5.4 ms, L27=12.5 ms)
+[attn-prof] M=512 N_kv=512  qk=1.37  softmax=0.58  sv=1.24 ms  (sum=3.20)
+[attn-prof] M=512 N_kv=512  qk=1.50  softmax=0.48  sv=0.97 ms  (sum=2.94)
+[attn-prof] M=512 N_kv=512  qk=1.24  softmax=0.72  sv=1.04 ms  (sum=3.00)
+[attn-prof] M=512 N_kv=512  qk=1.08  softmax=0.47  sv=1.01 ms  (sum=2.56)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.52)
+[attn-prof] M=512 N_kv=512  qk=1.07  softmax=0.47  sv=1.05 ms  (sum=2.58)
+[attn-prof] M=512 N_kv=512  qk=1.08  softmax=0.47  sv=1.04 ms  (sum=2.58)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.01 ms  (sum=2.54)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.51  sv=0.97 ms  (sum=2.54)
+[attn-prof] M=512 N_kv=512  qk=1.42  softmax=0.46  sv=0.98 ms  (sum=2.87)
+[attn-prof] M=512 N_kv=512  qk=1.10  softmax=0.47  sv=0.97 ms  (sum=2.54)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.08 ms  (sum=2.60)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.01 ms  (sum=2.54)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.01 ms  (sum=2.53)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.01 ms  (sum=2.53)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.52)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.53)
+[attn-prof] M=512 N_kv=512  qk=1.08  softmax=0.47  sv=1.00 ms  (sum=2.55)
+[attn-prof] M=512 N_kv=512  qk=1.09  softmax=0.45  sv=0.97 ms  (sum=2.52)
+[attn-prof] M=512 N_kv=512  qk=1.08  softmax=0.51  sv=0.98 ms  (sum=2.57)
+[attn-prof] M=512 N_kv=512  qk=1.09  softmax=0.50  sv=0.98 ms  (sum=2.57)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.47  sv=1.00 ms  (sum=2.53)
+[attn-prof] M=512 N_kv=512  qk=1.05  softmax=0.47  sv=1.42 ms  (sum=2.94)
+[attn-prof] M=512 N_kv=512  qk=1.06  softmax=0.46  sv=1.21 ms  (sum=2.73)
+[attn-prof] M=512 N_kv=512  qk=1.13  softmax=0.81  sv=1.01 ms  (sum=2.96)
+[attn-prof] M=512 N_kv=512  qk=1.18  softmax=0.73  sv=1.01 ms  (sum=2.92)
+[prefill M= 512] chain=  627.2 ms  1.225 ms/token  =>   816.3 TPS  (L0=13.9 ms, L27=24.7 ms)
+[attn-prof] M=1024 N_kv=1024  qk=2.71  softmax=0.84  sv=2.63 ms  (sum=6.18)
+[attn-prof] M=1024 N_kv=1024  qk=2.95  softmax=1.21  sv=2.77 ms  (sum=6.93)
+[attn-prof] M=1024 N_kv=1024  qk=3.57  softmax=1.25  sv=2.90 ms  (sum=7.71)
+[attn-prof] M=1024 N_kv=1024  qk=3.02  softmax=1.23  sv=2.75 ms  (sum=7.00)
+[attn-prof] M=1024 N_kv=1024  qk=3.27  softmax=1.23  sv=2.75 ms  (sum=7.25)
+[attn-prof] M=1024 N_kv=1024  qk=3.02  softmax=1.24  sv=2.73 ms  (sum=6.98)
+[attn-prof] M=1024 N_kv=1024  qk=3.32  softmax=1.25  sv=2.71 ms  (sum=7.29)
+[attn-prof] M=1024 N_kv=1024  qk=3.01  softmax=1.23  sv=2.80 ms  (sum=7.03)
+[attn-prof] M=1024 N_kv=1024  qk=3.00  softmax=1.23  sv=2.77 ms  (sum=7.00)
+[attn-prof] M=1024 N_kv=1024  qk=3.06  softmax=1.17  sv=2.75 ms  (sum=6.98)
+[attn-prof] M=1024 N_kv=1024  qk=3.06  softmax=1.23  sv=2.74 ms  (sum=7.02)
+[attn-prof] M=1024 N_kv=1024  qk=2.98  softmax=1.25  sv=2.75 ms  (sum=6.97)
+[attn-prof] M=1024 N_kv=1024  qk=2.87  softmax=1.12  sv=3.05 ms  (sum=7.03)
+[attn-prof] M=1024 N_kv=1024  qk=2.94  softmax=1.25  sv=2.73 ms  (sum=6.93)
+[attn-prof] M=1024 N_kv=1024  qk=3.22  softmax=1.31  sv=2.71 ms  (sum=7.25)
+[attn-prof] M=1024 N_kv=1024  qk=3.56  softmax=1.23  sv=2.79 ms  (sum=7.58)
+[attn-prof] M=1024 N_kv=1024  qk=6.03  softmax=1.84  sv=5.85 ms  (sum=13.71)
+[attn-prof] M=1024 N_kv=1024  qk=3.25  softmax=1.25  sv=2.75 ms  (sum=7.25)
+[attn-prof] M=1024 N_kv=1024  qk=2.92  softmax=1.23  sv=2.76 ms  (sum=6.91)
+[attn-prof] M=1024 N_kv=1024  qk=3.38  softmax=1.25  sv=2.71 ms  (sum=7.34)
+[attn-prof] M=1024 N_kv=1024  qk=3.18  softmax=1.25  sv=2.76 ms  (sum=7.19)
+[attn-prof] M=1024 N_kv=1024  qk=3.01  softmax=1.19  sv=2.76 ms  (sum=6.97)
+[attn-prof] M=1024 N_kv=1024  qk=3.37  softmax=1.21  sv=2.73 ms  (sum=7.31)
+[attn-prof] M=1024 N_kv=1024  qk=3.30  softmax=1.23  sv=2.75 ms  (sum=7.28)
+[attn-prof] M=1024 N_kv=1024  qk=3.02  softmax=1.23  sv=2.76 ms  (sum=7.01)
+[attn-prof] M=1024 N_kv=1024  qk=2.96  softmax=1.25  sv=2.79 ms  (sum=7.00)
+[prefill M=1024] chain= 1352.2 ms  1.320 ms/token  =>   757.3 TPS  (L0=31.9 ms, L27=54.6 ms)
+
+[main] === prefill correctness: greedy generation from BOS ===
+  [self-consistency] prefill([BOS]) -> 185 (decode=7212, match=0)
+  [causal] prefill([BOS,12345]) row0 -> 185 (match=0)
+  generated 21 token ids (greedy, no NaN=1):
+    2 185 2 2 2 185 2299 577 947 573 1618 576 476 3724 5356 575 476 1889 576 9113 192
+
+[main] step #45 OK — multi-token prefill chain runs.
+
+[SUCCESS] Done. Re-run on device any time with:
+[INFO]   adb shell sh /data/local/tmp/nntrainer/causallm/run_gemma2_gpu.sh
 jwhero94@jwhero94-400TFA-400SFA:~/projects/nntrainer_jijoong$ 
 
