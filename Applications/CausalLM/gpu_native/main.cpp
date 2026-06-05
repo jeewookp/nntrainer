@@ -39,6 +39,7 @@ namespace nntrainer {
 void set_v8c_lws_override(int lx, int ly);
 void set_v8c_prefetch_override(int mode);
 void set_v8c_tile_override(int tm, int tn);
+void set_v8c_nocompute_override(int on);
 }
 
 // Bypass the production safety gate in two_conv_attention_prefill_f16_cl.
@@ -682,6 +683,38 @@ int main(int argc, char **argv) {
                      t[0], t[1], best, (double)Ms * 1000.0 / best);
     }
     nntrainer::set_v8c_tile_override(0, 0);
+    return 0;
+  }
+
+  // In-process GEMM-compute attribution (NNTR_GEMM_ATTRIB=1): clean M=1024
+  // forward wall for (a) full, (b) dp4a removed from every v8c GEMM. The diff
+  // is the share of prefill the GEMM *compute* actually costs — tells us
+  // whether a faster GEMM kernel can move the needle, or the gap is elsewhere.
+  if (std::getenv("NNTR_GEMM_ATTRIB")) {
+    const unsigned int Ms = 1024;
+    clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
+                         rep_input.data(), 0, nullptr, nullptr);
+    std::fprintf(stderr, "[main] === GEMM compute attribution (M=1024) ===\n");
+    const char *labels[] = {"full", "no-dp4a (fetch only)"};
+    for (int mode = 0; mode < 2; ++mode) {
+      nntrainer::set_v8c_nocompute_override(mode);
+      double best = 1e30;
+      for (int rep = 0; rep < 3; ++rep) {
+        cl_mem a = pf_in, b = pf_out;
+        auto t0 = NOW();
+        bool ok = true;
+        for (unsigned int L = 0; L < cfg.num_layers && ok; ++L) {
+          ok = fwd.forward_one_layer_v2(L, a, b, 0, Ms);
+          std::swap(a, b);
+        }
+        clFinish(q);
+        double ms = MS(NOW(), t0);
+        if (rep > 0 && ms < best) best = ms;
+      }
+      std::fprintf(stderr, "[gemm-attrib] %-22s chain=%.1f ms => %.1f TPS\n",
+                   labels[mode], best, (double)Ms * 1000.0 / best);
+    }
+    nntrainer::set_v8c_nocompute_override(0);
     return 0;
   }
 

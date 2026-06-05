@@ -1390,6 +1390,15 @@ void set_v8c_lws_override(int lx, int ly) {
 static int g_v8c_prefetch_override = -1;
 void set_v8c_prefetch_override(int mode) { g_v8c_prefetch_override = mode; }
 
+// Runtime "skip dp4a compute" override for the in-process attribution A/B
+// (1 = -DV8C_KCLOCK_NOCOMPUTE: fetch+unpack but no dp4a, output garbage). Lets
+// us measure the GEMM-compute contribution to the clean forward wall time.
+static int g_v8c_nocompute_override = 0;
+void set_v8c_nocompute_override(int on) { g_v8c_nocompute_override = on; }
+static std::string g_v8c_nocompute_copt() {
+  return g_v8c_nocompute_override ? " -DV8C_KCLOCK_NOCOMPUTE" : "";
+}
+
 // Runtime register-tile override (TM x TN) for the M>4 v8c GEMM, for the
 // in-process A/B (e.g. 4x8 default vs 8x4 = 2x weight reuse). {0,0} = default
 // 4,8. Both the copts (-DV8C_TM/-DV8C_TN) and the wrapper gws read this, so a
@@ -1537,6 +1546,7 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   copts += v8c_env_copts;
   copts += g_v8c_prefetch_copt(); // runtime-switchable prefetch depth (A/B)
   copts += g_v8c_tile_copt();     // runtime-switchable TMxTN register tile (A/B)
+  copts += g_v8c_nocompute_copt(); // runtime skip-dp4a for compute attribution
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)

@@ -39,6 +39,10 @@ void set_v8c_prefetch_override(int mode);
 /// at the cost of activation bandwidth. Requires M_pad % TM == 0.
 void set_v8c_tile_override(int tm, int tn);
 
+/// Skip the dp4a compute in the v8c GEMM at runtime (1=on) to attribute the
+/// GEMM-compute share of the clean forward wall time. Output is garbage.
+void set_v8c_nocompute_override(int on);
+
 /**
  * @brief     signed 4-bit integer gemv async computation : C = A*B
  * @param[in] weight std::vector<void *> for int4 quantized weight

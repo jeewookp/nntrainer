@@ -434,6 +434,16 @@ if [ "$TILE_AB" = "1" ]; then
   echo ""
 fi
 
+# GEMM compute attribution: clean M=1024 full vs no-dp4a forward. Tells us if
+# prefill is GEMM-compute-bound (then a faster GEMM helps) or not. Default ON.
+GEMM_ATTRIB="${GEMM_ATTRIB:-1}"
+if [ "$GEMM_ATTRIB" = "1" ]; then
+  log_header "GEMM compute attribution (in-process, M=1024)"
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GEMM_ATTRIB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+    | grep -E "\[gemm-attrib\]|compute attribution"
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight
