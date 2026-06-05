@@ -615,6 +615,29 @@ int main(int argc, char **argv) {
       std::fprintf(stderr, "[probe] M=%u fnv=%016llx\n", Ms,
                    (unsigned long long)h);
     }
+    // Timed M=1024 forward (best-of-3, clean — no per-stage clFinish) so the
+    // same probe invocation reports BOTH bit-identity (hash above) and prefill
+    // speed for a buffer-vs-image / kernel A/B.
+    {
+      const unsigned int Ms = 1024;
+      clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
+                           rep_input.data(), 0, nullptr, nullptr);
+      double best = 1e30;
+      for (int rep = 0; rep < 3; ++rep) {
+        cl_mem a = pf_in, b = pf_out;
+        auto t0 = NOW();
+        bool ok = true;
+        for (unsigned int L = 0; L < cfg.num_layers && ok; ++L) {
+          ok = fwd.forward_one_layer_v2(L, a, b, 0, Ms);
+          std::swap(a, b);
+        }
+        clFinish(q);
+        double ms = MS(NOW(), t0);
+        if (rep > 0 && ms < best) best = ms;
+      }
+      std::fprintf(stderr, "[probe] M=1024 chain=%.1f ms => %.1f TPS\n", best,
+                   (double)Ms * 1000.0 / best);
+    }
     return 0;
   }
 

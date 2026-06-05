@@ -516,6 +516,38 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Phase 3a — weight buffer vs image A/B (default ON). The v8c GEMM can read int4
+# weights from an image2d (texture, current default) or a raw buffer
+# (NNTR_V8C_BUF=1). Weight fetch is ~34% of prefill, so this tests cheaply
+# whether wide buffer loads beat read_imageui at the big FFN N. The probe prints
+# both the forward-output hash (must be identical -> correctness preserved) and a
+# best-of-3 M=1024 TPS. OHWI attention is held on (production). BUF_AB=0 to skip.
+# ---------------------------------------------------------------------------
+BUF_AB="${BUF_AB:-1}"
+if [ "$BUF_AB" = "1" ]; then
+  log_header "Phase 3a — weight buffer vs image A/B (M=1024)"
+  buf_probe() {  # $1 = NNTR_V8C_BUF value -> the [probe] lines
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+      NNTR_V8C_BUF=$1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\]' | tr -d '\r'
+  }
+  IMG_OUT="$(buf_probe 0)"
+  BUF_OUT="$(buf_probe 1)"
+  IMG_H="$(echo "$IMG_OUT" | grep fnv | sort)"
+  BUF_H="$(echo "$BUF_OUT" | grep fnv | sort)"
+  log_info "  image  (V8C_BUF=0): $(echo "$IMG_OUT" | grep TPS)"
+  log_info "  buffer (V8C_BUF=1): $(echo "$BUF_OUT" | grep TPS)"
+  if [ -z "$IMG_H" ] || [ -z "$BUF_H" ]; then
+    log_error "  probe produced no hashes (a config may have failed to build/run)."
+  elif [ "$IMG_H" = "$BUF_H" ]; then
+    log_success "  bit-identical (buffer == image) — buffer is a correctness-safe option."
+  else
+    log_error "  DIFFERS — buffer path is NOT bit-identical to image; do not adopt as-is."
+  fi
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
 # Phase 1 — fusion bit-identity probe (default OFF; opt-in with FUSION_PROBE=1).
 # Hash the 26-layer forward OUTPUT at the real prefill sizes (M=256/512/1024)
 # with each fusion on vs the all-off baseline. A matching hash PROVES the fusion
