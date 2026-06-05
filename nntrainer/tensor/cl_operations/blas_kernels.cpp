@@ -1480,6 +1480,10 @@ static bool v8c_use_buffer_path() {
 // must pass the IDENTICAL string so the same cached program is reused.
 static const char *kV8cBufCompileOpts = "-DV8C_BUFFER_ONLY -cl-std=CL3.0";
 
+// Defined later in this TU (second nntrainer namespace block); declared here so
+// the GEMM dispatch can gate the -DV8C_WT copt on the transposed weight layout.
+bool v8c_weight_transpose_enabled();
+
 void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
                       cl_mem scale_wgt, cl_mem row_sum_act, cl_mem zp_act,
                       cl_mem row_sum_w_int4, cl_mem output_fp16, unsigned int M,
