@@ -1384,6 +1384,25 @@ void set_v8c_lws_override(int lx, int ly) {
   g_v8c_lws_override = {(size_t)(lx > 0 ? lx : 0), (size_t)(ly > 0 ? ly : 0)};
 }
 
+// Runtime weight-prefetch override for the in-process A/B (-1 = use env;
+// 0 = none; 1 = 1-ahead; 2 = 2-ahead). The copt is appended per dispatch so
+// switching this re-registers the matching compiled kernel without reloading.
+static int g_v8c_prefetch_override = -1;
+void set_v8c_prefetch_override(int mode) { g_v8c_prefetch_override = mode; }
+static std::string g_v8c_prefetch_copt() {
+  int m = g_v8c_prefetch_override;
+  if (m < 0) { // use env (default path)
+    const char *p2 = getenv("NNTR_V8C_PREFETCH2");
+    if (p2 && p2[0] == '1') return " -DV8C_PREFETCH2";
+    const char *p1 = getenv("NNTR_V8C_PREFETCH");
+    if (p1 && p1[0] == '1') return " -DV8C_PREFETCH";
+    return "";
+  }
+  if (m == 2) return " -DV8C_PREFETCH2";
+  if (m == 1) return " -DV8C_PREFETCH";
+  return "";
+}
+
 static bool v8c_pick_lws(size_t gws_x, size_t gws_y, std::array<size_t, 2> &out) {
   static const std::array<size_t, 2> env_pref = []() {
     const char *e = std::getenv("NNTR_V8C_LWS");
@@ -1475,14 +1494,9 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
       if (m == '4' || m == '5')
         s += " -DV8C_KCLOCK_NOAFETCH";
     }
-    if (const char *pf = getenv("NNTR_V8C_PREFETCH"))
-      if (pf[0] == '1')
-        s += " -DV8C_PREFETCH";
-    // 2-ahead weight prefetch (deeper outstanding loads for the latency-bound
-    // K-loop). Takes precedence over 1-ahead in the kernel. Bit-identical.
-    if (const char *pf = getenv("NNTR_V8C_PREFETCH2"))
-      if (pf[0] == '1')
-        s += " -DV8C_PREFETCH2";
+    // NOTE: prefetch (-DV8C_PREFETCH / -DV8C_PREFETCH2) is appended per-call
+    // below (g_v8c_prefetch_copt) so the in-process A/B can switch it at
+    // runtime without reloading; it is NOT baked into this static string.
     if (const char *mf = getenv("NNTR_V8C_MFAST"))
       if (mf[0] == '1')
         s += " -DV8C_MFAST";
@@ -1506,6 +1520,7 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
     return mf && mf[0] == '1';
   }();
   copts += v8c_env_copts;
+  copts += g_v8c_prefetch_copt(); // runtime-switchable prefetch depth (A/B)
   ClContext::SharedPtrClKernel kp =
     blas_cc->registerClKernel(int8_int4_gemm_v8c_kernel, kname, copts);
   if (!kp)

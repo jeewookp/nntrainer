@@ -29,6 +29,11 @@ namespace nntrainer {
 /// size can be retuned between forwards without reloading the model.
 void set_v8c_lws_override(int lx, int ly);
 
+/// Override the v8c GEMM weight-prefetch depth at runtime (mode: -1=env default,
+/// 0=none, 1=1-ahead, 2=2-ahead). Lets the in-process A/B switch prefetch depth
+/// without reloading; the matching compiled kernel is registered on demand.
+void set_v8c_prefetch_override(int mode);
+
 /**
  * @brief     signed 4-bit integer gemv async computation : C = A*B
  * @param[in] weight std::vector<void *> for int4 quantized weight

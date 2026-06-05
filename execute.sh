@@ -412,6 +412,17 @@ if [ "$LWS_SWEEP" = "1" ]; then
   echo ""
 fi
 
+# v8c GEMM weight-prefetch A/B (1-ahead vs 2-ahead), in-process, single model
+# load. Default ON so a plain `sh execute.sh` shows whether the deeper prefetch
+# helps the latency-bound K-loop on this chip. Set PF_AB=0 to skip.
+PF_AB="${PF_AB:-1}"
+if [ "$PF_AB" = "1" ]; then
+  log_header "v8c GEMM prefetch A/B (in-process, M=1024)"
+  "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_PF_AB=1 ./$TARGET '$DEV_WEIGHT'" 2>&1 \
+    | grep -E '\[pf-ab\]|prefetch A/B'
+  echo ""
+fi
+
 log_info "Launching: NNTR_MODEL_GEMMA2=1 ./$TARGET $DEV_WEIGHT"
 echo ""
 # Keep only profiling / timing output: drop the per-token and per-weight
