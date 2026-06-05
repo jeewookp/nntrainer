@@ -584,6 +584,40 @@ int main(int argc, char **argv) {
     std::memcpy(rep_input.data() + (size_t)m * H, bos_host.data(),
                 H * sizeof(float));
 
+  // Fusion bit-identity probe (NNTR_FUSION_PROBE=1): hash the 26-layer forward
+  // OUTPUT at the real prefill sizes (M=256/512/1024) so execute.sh can diff the
+  // hash across fusion on/off and prove (or disprove) bit-identity at M=1024 —
+  // the exact case the token-185 check missed. Fusion flags are process-static,
+  // so each config is a separate invocation; the hash is config-independent iff
+  // the fusion does not change a single output bit. Exits after hashing.
+  if (std::getenv("NNTR_FUSION_PROBE")) {
+    const unsigned int probe_Ms[] = {256, 512, 1024};
+    std::fprintf(stderr, "[main] === fusion bit-identity probe ===\n");
+    std::vector<float> hostout((size_t)M_max * H);
+    for (unsigned int Ms : probe_Ms) {
+      clEnqueueWriteBuffer(q, pf_in, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
+                           rep_input.data(), 0, nullptr, nullptr);
+      cl_mem a = pf_in, b = pf_out;
+      bool ok = true;
+      for (unsigned int L = 0; L < cfg.num_layers && ok; ++L) {
+        ok = fwd.forward_one_layer_v2(L, a, b, 0, Ms);
+        std::swap(a, b);
+      }
+      clFinish(q);
+      if (!ok) { std::fprintf(stderr, "[probe] M=%u FAILED\n", Ms); continue; }
+      clEnqueueReadBuffer(q, a, CL_TRUE, 0, (size_t)Ms * H * sizeof(float),
+                          hostout.data(), 0, nullptr, nullptr);
+      uint64_t h = 1469598103934665603ULL;  // FNV-1a 64
+      const unsigned char *p =
+        reinterpret_cast<const unsigned char *>(hostout.data());
+      const size_t nbytes = (size_t)Ms * H * sizeof(float);
+      for (size_t i = 0; i < nbytes; ++i) { h ^= p[i]; h *= 1099511628211ULL; }
+      std::fprintf(stderr, "[probe] M=%u fnv=%016llx\n", Ms,
+                   (unsigned long long)h);
+    }
+    return 0;
+  }
+
   // In-process v8c GEMM LWS sweep (NNTR_LWS_SWEEP=1): the model is already
   // loaded, so retune the GEMM local size and re-time M=1024 prefill for each
   // candidate WITHOUT reloading — ~10x faster than re-launching per LWS. Exits

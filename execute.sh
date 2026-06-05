@@ -513,8 +513,49 @@ if [ "${MAKE_GOLDEN:-0}" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Fusion correctness bisect (default ON). For each fusion (and the all-off
-# baseline) run the FAST generation-only path (NNTR_GEN_ONLY=1 skips the decode
+# Phase 1 — fusion bit-identity probe (default ON). Hash the 26-layer forward
+# OUTPUT at the real prefill sizes (M=256/512/1024) with each fusion on vs the
+# all-off baseline. A matching hash PROVES the fusion is bit-identical at M=1024
+# (the case the token-185 check missed); a differing hash localizes exactly
+# which M diverges. OHWI is held off so only the fusion varies. FUSION_PROBE=0
+# to skip.
+# ---------------------------------------------------------------------------
+FUSION_PROBE="${FUSION_PROBE:-1}"
+if [ "$FUSION_PROBE" = "1" ]; then
+  log_header "Fusion bit-identity probe (M=256/512/1024 forward-output hash)"
+  probe_hashes() {  # $1 = fusion env -> the 3 sorted [probe] hash lines
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=0 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+      $1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\] M=' | tr -d '\r' | sort
+  }
+  BASE_H="$(probe_hashes "")"
+  probe_cmp() {  # $1 = label, $2 = fusion env
+    local h; h="$(probe_hashes "$2")"
+    if [ -z "$h" ]; then
+      log_error  "  $1 : no probe output (run failed)"
+    elif [ "$h" = "$BASE_H" ]; then
+      log_success "  $1 : BIT-IDENTICAL at M=256/512/1024"
+    else
+      log_error  "  $1 : DIFFERS"
+      echo "$h" | sed 's/^/      /'
+    fi
+  }
+  if [ -z "$BASE_H" ]; then
+    log_error "baseline probe produced no hashes — skipping."
+  else
+    echo "$BASE_H" | sed 's/^/  [baseline] /'
+    probe_cmp "#82 geglu+quant       " "NNTR_FFN_GLUQUANT_FUSE=1"
+    probe_cmp "#83 post-norm+add     " "NNTR_FUSE_POSTNORM=1"
+    probe_cmp "#80 attn norm+quant   " "NNTR_FUSE_NORMQUANT=1"
+    probe_cmp "#80b FFN add+norm+q   " "NNTR_FUSE_ADDNORM=1 NNTR_FUSE_NORMQUANT=1"
+  fi
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
+# Fusion correctness bisect (opt-in, FUSION_BISECT=1). For each fusion (and the
+# all-off baseline) run the FAST generation-only path (NNTR_GEN_ONLY=1 skips the
+# decode
 # + prefill-timing benchmarks) and diff the 21 greedy tokens against the golden,
 # printing PASS/FAIL per fusion — so a plain `sh execute.sh` pinpoints which
 # optimization preserves the output and which breaks multi-token generation.
