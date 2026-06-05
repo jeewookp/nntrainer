@@ -1578,6 +1578,8 @@ void gemm_int8_v8c_cl(cl_mem act_image, cl_mem weight_image, cl_mem scale_act,
   copts += g_v8c_prefetch_copt(); // runtime-switchable prefetch depth (A/B)
   copts += g_v8c_tile_copt();     // runtime-switchable TMxTN register tile (A/B)
   copts += g_v8c_nocompute_copt(); // runtime skip-dp4a for compute attribution
+  if (v8c_weight_transpose_enabled())
+    copts += " -DV8C_WT"; // coalesced (transposed) weight image read
   if (use_lds) {
     copts += " -DV8C_LDS_LM=" + std::to_string(LDS_LM) +
              " -DV8C_LDS_LN=" + std::to_string(LDS_LN) +
@@ -1855,6 +1857,28 @@ static inline float h2f_host(uint16_t h) {
 
 namespace nntrainer {
 
+// NNTR_V8C_WT: transpose the row-major v8c weight bytes [N x K/2] into a
+// [K/32 x N*16] layout so the image view (x=n, y=k32) places adjacent output
+// channels adjacent in memory -> wavefront-coalesced weight fetch. Bit-identical
+// (same bytes, just reordered; the kernel's V8C_WCOORD reads the matching axis).
+bool v8c_weight_transpose_enabled() {
+  static const bool on = []() {
+    const char *e = getenv("NNTR_V8C_WT");
+    return e && e[0] == '1';
+  }();
+  return on;
+}
+static void v8c_transpose_weight_packed(std::vector<uint8_t> &packed,
+                                        unsigned int N, unsigned int K) {
+  const size_t k32 = K / 32;          // texels per output channel
+  const size_t row = (size_t)K / 2;   // bytes per output channel (= k32*16)
+  std::vector<uint8_t> t(packed.size());
+  for (unsigned int n = 0; n < N; ++n)
+    for (size_t kb = 0; kb < k32; ++kb)
+      std::memcpy(&t[(kb * N + n) * 16], &packed[(size_t)n * row + kb * 16], 16);
+  packed.swap(t);
+}
+
 std::unique_ptr<tv::TensorBacking>
 make_v8c_weight_backing(const uint8_t *osv32_packed,
                         const uint16_t *fp16_scales, unsigned int group_size,
@@ -1920,6 +1944,8 @@ make_v8c_weight_backing(const uint8_t *osv32_packed,
   }
 
   // 2) Upload packed weight to a new cl_mem buffer, wrap in TensorBacking.
+  if (v8c_weight_transpose_enabled())
+    v8c_transpose_weight_packed(packed, N, K);
   cl_int err = CL_SUCCESS;
   cl_mem w_buf =
     clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -2018,6 +2044,8 @@ make_v8c_weight_backing_from_kai_section_a(const uint8_t *section_a,
   cl_context ctx = blas_cc->context_inst_.GetContext();
 
   // Upload packed weight buffer.
+  if (v8c_weight_transpose_enabled())
+    v8c_transpose_weight_packed(packed, N, K);
   cl_int err = CL_SUCCESS;
   cl_mem w_buf =
     clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, packed.size(),

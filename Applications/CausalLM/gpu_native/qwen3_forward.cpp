@@ -1439,9 +1439,22 @@ bool Qwen3Forward::load_qint4_weight_at(size_t file_offset, unsigned int K,
     ws.image_channel_order = CL_RGBA;
     ws.image_channel_type = CL_UNSIGNED_INT32;
     // int8: 16 int8/texel -> width K/16, pitch K. int4: 32 int4/texel -> K/32, K/2.
-    ws.width = is_int8 ? K / 16 : K / 32;
-    ws.height = N;
-    ws.row_pitch_bytes = is_int8 ? K : K / 2;
+    // NNTR_V8C_WT (int4 only): transpose to [N x K/32] so adjacent output
+    // channels are adjacent in memory (coalesced weight fetch); must match the
+    // host transpose + the kernel's V8C_WCOORD.
+    const bool wt = !is_int8 && []() {
+      const char *e = std::getenv("NNTR_V8C_WT");
+      return e && e[0] == '1';
+    }();
+    if (wt) {
+      ws.width = N;
+      ws.height = K / 32;
+      ws.row_pitch_bytes = (size_t)N * 16;
+    } else {
+      ws.width = is_int8 ? K / 16 : K / 32;
+      ws.height = N;
+      ws.row_pitch_bytes = is_int8 ? K : K / 2;
+    }
     try {
       out->weight_image = backing->imageView(ws);
     } catch (const std::exception &e) {

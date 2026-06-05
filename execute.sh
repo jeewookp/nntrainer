@@ -552,6 +552,40 @@ if [ "$BUF_AB" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Phase 3c — transposed (coalesced) weight layout A/B (default ON). The paper's
+# "primary driver" is the weight tensor layout. Our weight image is [K/32 x N]
+# so adjacent output channels (adjacent work-items) read K/32-strided memory.
+# NNTR_V8C_WT transposes it to [N x K/32] so adjacent channels are adjacent in
+# memory -> wavefront-coalesced weight fetch. Probe prints the forward hash
+# (must stay identical — same bytes/dp4a) + best-of-3 M=1024 TPS. WT_AB=0 skips.
+# ---------------------------------------------------------------------------
+WT_AB="${WT_AB:-1}"
+if [ "$WT_AB" = "1" ]; then
+  log_header "Phase 3c — transposed weight layout A/B (M=1024)"
+  wt_probe() {  # $1 = NNTR_V8C_WT value -> the [probe] lines
+    "$ADB" shell "cd $INSTALL_DIR; LD_LIBRARY_PATH=$INSTALL_DIR \
+      NNTR_MODEL_GEMMA2=1 NNTR_OHWI_IMG=1 NNTR_GPU_LMHEAD=0 NNTR_FUSION_PROBE=1 \
+      NNTR_V8C_WT=$1 ./$TARGET '$DEV_WEIGHT'" 2>&1 | grep -E '^\[probe\]' | tr -d '\r'
+  }
+  STD_OUT="$(wt_probe 0)"
+  WT_OUT="$(wt_probe 1)"
+  STD_H="$(echo "$STD_OUT" | grep fnv | sort)"
+  WT_H="$(echo "$WT_OUT" | grep fnv | sort)"
+  log_info "  standard layout (WT=0): $(echo "$STD_OUT" | grep TPS)"
+  log_info "  transposed      (WT=1): $(echo "$WT_OUT" | grep TPS)"
+  if [ -z "$STD_H" ] || [ -z "$WT_H" ]; then
+    log_error "  probe produced no hashes (a config may have failed)."
+  elif [ "$STD_H" = "$WT_H" ]; then
+    log_success "  BIT-IDENTICAL — correctness preserved; adopt if faster."
+  else
+    log_error "  DIFFERS — transpose bug (layout/coord mismatch)."
+    echo "$STD_H" | sed 's/^/      std /'
+    echo "$WT_H"  | sed 's/^/      wt  /'
+  fi
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
 # Phase 3b — LDS-blocked GEMM A/B (default ON). The v8c GEMM re-reads each int4
 # weight ~M/16 times from texture; the LDS-blocked kernel (NNTR_V8C_LDS=1) stages
 # a BM=64 x BN=64 tile in local memory so each weight reaches global memory only

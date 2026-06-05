@@ -320,6 +320,18 @@ __kernel void v8c_act_quant_f16_par(
 // with no option, so this path stays bit-identical there.
 #ifndef V8C_BUFFER_ONLY
 
+// Weight texel coordinate. Default: x=k32, y=n (image [K/32 x N]); the K-loop is
+// contiguous per output channel. -DV8C_WT transposes the weight image to
+// [N x K/32] (x=n, y=k32) so adjacent output channels (adjacent work-items) read
+// adjacent memory -> wavefront-coalesced weight fetch (paper's weight-layout
+// lever). The host packs the buffer transposed and the imageView swaps dims to
+// match; the dp4a math is unchanged so the result is bit-identical.
+#ifdef V8C_WT
+#define V8C_WCOORD(k32, n) ((int2)((n), (k32)))
+#else
+#define V8C_WCOORD(k32, n) ((int2)((k32), (n)))
+#endif
+
 __kernel void v8c_gemm_int8_int4(
     __read_only image2d_t  Ximg,            // act image view (RGBA UINT32, K/16 × M)
     __read_only image2d_t  Wimg,            // weight image view (RGBA UINT32, K/32 × N)
@@ -372,8 +384,8 @@ __kernel void v8c_gemm_int8_int4(
     // 2-ahead weight prefetch: keep TWO weight texel loads outstanding so more
     // of the texture-fetch latency overlaps the dp4a (the loop is ~2/3 weight-
     // fetch latency-bound). Bit-identical math; +1 uint4 live vs 1-ahead.
-    uint4 wpf0 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0));
-    uint4 wpf1 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + 1));
+    uint4 wpf0 = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0));
+    uint4 wpf1 = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + 1));
 #elif defined(V8C_PREFETCH) && !defined(V8C_KCLOCK_NOWFETCH)
     // 1-ahead weight prefetch: issue the NEXT column's texel load before
     // consuming the current one, so the texture-fetch latency overlaps the 8
@@ -381,7 +393,7 @@ __kernel void v8c_gemm_int8_int4(
     // profile showed this loop is ~2/3 weight-fetch latency, so giving the HW
     // an extra outstanding load to hide should help. Cost: +1 uint4 live (~4
     // regs), well under the register-spill cliff.
-    uint4 wpf_carry = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0));
+    uint4 wpf_carry = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0));
 #endif
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) {
@@ -394,13 +406,13 @@ __kernel void v8c_gemm_int8_int4(
       uint4 w = wpf0;
       wpf0 = wpf1;
       if (j + 2 < V8C_TN)
-        wpf1 = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j + 2));
+        wpf1 = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + j + 2));
 #elif defined(V8C_PREFETCH)
       uint4 w = wpf_carry;
       if (j + 1 < V8C_TN)
-        wpf_carry = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j + 1));
+        wpf_carry = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + j + 1));
 #else
-      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+      uint4 w = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + j));
 #endif
       // Mask-only unpack: each masked uint = 4 unsigned bytes in [0..15]
       // (= encoded values; real value = encoded - 8).
@@ -555,7 +567,7 @@ __kernel void v8c_gemm_int8_int4_lds(
     for (int idx = tid; idx < W_N; idx += NWI) {
       int ku = idx / V8C_LDS_BN;
       int col = idx - ku * V8C_LDS_BN;
-      w_lds[idx] = read_imageui(Wimg, SMP_v8c, (int2)(kb + ku, n_wg + col));
+      w_lds[idx] = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(kb + ku, n_wg + col));
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -636,7 +648,7 @@ __kernel void v8c_gemm_int8_int4_m1(
     uint4 a_hi = read_imageui(Ximg, SMP_v8c, (int2)(2*k32+1, 0));
     #pragma unroll
     for (int j = 0; j < V8C_TN_M1; j++) {
-      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+      uint4 w = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + j));
       const uint M4 = 0x0F0F0F0Fu;
       uint w0lo =  w.x        & M4;
       uint w0hi = (w.x >> 4)  & M4;
@@ -711,7 +723,7 @@ __kernel void v8c_gemm_int8_int4_v_ohwi(
     }
     #pragma unroll
     for (int j = 0; j < V8C_TN; j++) {
-      uint4 w = read_imageui(Wimg, SMP_v8c, (int2)(k32, n0 + j));
+      uint4 w = read_imageui(Wimg, SMP_v8c, V8C_WCOORD(k32, n0 + j));
       const uint M4 = 0x0F0F0F0Fu;
       uint w0lo =  w.x        & M4;
       uint w0hi = (w.x >> 4)  & M4;
